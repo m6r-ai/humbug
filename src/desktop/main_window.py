@@ -29,6 +29,7 @@ from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
 from git_ai_tool.git_ai_tool import GitAITool
 from help_ai_tool.help_ai_tool import HelpAITool
+from http_ai_tool.http_access_settings import HttpAccessSettings
 from http_ai_tool.http_ai_tool import HttpAITool
 from menai_ai_tool.menai_ai_tool import MenaiAITool
 from mindspace.mindspace_error import (
@@ -821,7 +822,8 @@ class MainWindow(QMainWindow):
             HelpAITool(self._ai_tool_manager), "Help: provides detailed documentation for AI tools and operations"
         )
         self._ai_tool_manager.register_tool(
-            HttpAITool(mindspace), "HTTP: fetch URLs, make POST requests, and download files"
+            HttpAITool(mindspace, self._get_http_access_settings),
+            "HTTP: fetch URLs, make POST requests, and download files"
         )
         self._ai_tool_manager.register_tool(
             self._menai_tool, "Menai: evaluates expressions using Menai Language syntax"
@@ -2726,6 +2728,16 @@ class MainWindow(QMainWindow):
             allow_external_access=user_settings.allow_external_file_access,
             external_allowlist=user_settings.external_file_allowlist,
             external_denylist=denylist
+        )
+
+    def _get_http_access_settings(self) -> HttpAccessSettings:
+        """Get HTTP access settings from user settings."""
+        user_settings = self._user_manager.settings()
+
+        return HttpAccessSettings(
+            allow_external_http_access=user_settings.allow_external_http_access,
+            external_http_allowlist=user_settings.external_http_allowlist,
+            external_http_denylist=user_settings.external_http_denylist
         )
 
     def _on_open_conversation(self) -> None:

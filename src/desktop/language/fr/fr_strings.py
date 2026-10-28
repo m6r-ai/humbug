@@ -190,6 +190,14 @@ def get_french_strings() -> LanguageStrings:
         external_file_allowlist="Chemins autorisés (motifs glob, un par ligne) :",
         external_file_denylist="Chemins toujours refusés (motifs glob, un par ligne) :",
 
+        # User Settings dialog - external HTTP access
+        settings_network_access="Accès réseau",
+        external_http_access="Accès réseau",
+        allow_external_http_access="Autoriser l'IA à récupérer les URL autorisées sans demander",
+        external_http_allowlist="URL approuvées automatiquement "
+                                "(une par ligne, ex. api.example.com ou https://api.example.com:8443) :",
+        external_http_denylist="URL toujours refusées (une par ligne, ex. localhost ou 10.0.0.0/8) :",
+
         # Mindspace tree
         mindspace_label_none="Aucun espace mental actif",
         window_title="Humbug : {}",

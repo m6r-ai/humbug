@@ -240,6 +240,11 @@ AI tool implementation for tool documentation.
 ### `src/http_ai_tool/`
 AI tool implementation for HTTP operations, wrapping the `http_client` library.
 Exposes GET, HEAD, POST, PUT, PATCH, DELETE, and download operations.
+GET and HEAD are auto-approved when their URL matches the user's allowlist and does
+not match the denylist; every other operation always prompts.  `HttpAccessSettings`
+holds the master switch and the two lists.  Every redirect target is re-checked before
+it is followed, so the client is used with `follow_redirects=False` for these methods.
+See ADR-0016.
 
 ### `src/html_/`
 HTML document processing. Includes a self-contained lexer and DOM-building parser

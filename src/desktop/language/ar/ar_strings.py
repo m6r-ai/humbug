@@ -191,6 +191,13 @@ def get_arabic_strings() -> LanguageStrings:
         external_file_allowlist="المسارات المسموح بها (أنماط glob، واحد لكل سطر):",
         external_file_denylist="المسارات المرفوضة دائماً (أنماط glob، واحد لكل سطر):",
 
+        # User Settings dialog - external HTTP access
+        settings_network_access="الوصول إلى الشبكة",
+        external_http_access="الوصول إلى الشبكة",
+        allow_external_http_access="السماح للذكاء الاصطناعي بجلب عناوين URL المسموح بها دون سؤال",
+        external_http_allowlist="عناوين URL المعتمدة تلقائياً (واحد لكل سطر، مثل api.example.com أو https://api.example.com:8443):",
+        external_http_denylist="عناوين URL المرفوضة دائماً (واحد لكل سطر، مثل localhost أو 10.0.0.0/8):",
+
         # Mindspace tree
         mindspace_label_none="لا توجد مساحة ذهنية نشطة",
         window_title="Humbug: {}",

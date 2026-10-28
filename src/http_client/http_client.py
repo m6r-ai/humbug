@@ -380,6 +380,7 @@ class HttpClient:
         read_timeout: float = _DEFAULT_READ_TIMEOUT,
         proxy: str | None = None,
         compress_request_body: bool = False,
+        follow_redirects: bool = True,
     ) -> None:
         """
         Initialize the HTTP client.
@@ -395,6 +396,9 @@ class HttpClient:
             compress_request_body: Gzip request bodies at or above
                 _COMPRESS_MIN_BYTES.  Only enable this for endpoints known to
                 accept Content-Encoding: gzip on requests.
+            follow_redirects: Follow 3xx responses automatically.  When False,
+                a redirect is returned to the caller so that it can inspect the
+                Location header before deciding whether to continue.
         """
         self._ssl_context = ssl_context
         self._family = family
@@ -403,6 +407,7 @@ class HttpClient:
         self._read_timeout = read_timeout
         self._proxy = proxy
         self._compress_request_body = compress_request_body
+        self._follow_redirects = follow_redirects
 
     async def get(self, url: str, headers: dict[str, str] | None = None) -> HttpResponse:
         """
@@ -620,7 +625,7 @@ class HttpClient:
             response = await self._read_response(reader, writer)
 
             # Handle redirects
-            if response.status() in (301, 302, 303, 307, 308):
+            if self._follow_redirects and response.status() in (301, 302, 303, 307, 308):
                 if redirect_count >= _MAX_REDIRECTS:
                     await response.text()
                     raise ClientResponseError(

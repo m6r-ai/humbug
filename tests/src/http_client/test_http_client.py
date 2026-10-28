@@ -1021,6 +1021,27 @@ class TestRedirects:
 
         asyncio.run(run())
 
+    def test_redirect_returned_when_following_disabled(self) -> None:
+        """With redirect following disabled the 3xx response is returned to the caller."""
+        request_count = 0
+
+        async def handler(request: dict, writer: asyncio.StreamWriter) -> None:
+            nonlocal request_count
+            request_count += 1
+            _write_response(writer, 302, b"", headers={"Location": "/final"})
+
+        async def run() -> None:
+            async with MockHTTPServer(handler) as server:
+                async with HttpClient(follow_redirects=False) as client:
+                    response = await client.get(server.url("/start"))
+                    assert response.status() == 302
+                    assert response.headers().get("location") == "/final"
+                    # Consume the body so the connection closes cleanly.
+                    await response.text()
+
+        asyncio.run(run())
+        assert request_count == 1
+
 
 # --- Tests: TLS ---
 

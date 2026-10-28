@@ -79,7 +79,7 @@ class ImportParser:
 
             # Internet protocols and support
             'urllib', 'http', 'ftplib', 'poplib', 'imaplib', 'nntplib', 'smtplib', 'smtpd',
-            'telnetlib', 'uuid', 'socketserver', 'xmlrpc',
+            'telnetlib', 'uuid', 'socketserver', 'xmlrpc', 'ipaddress',
 
             # Multimedia services
             'audioop', 'aifc', 'sunau', 'wave', 'chunk', 'colorsys', 'imghdr', 'sndhdr', 'ossaudiodev',

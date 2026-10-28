@@ -181,6 +181,13 @@ class LanguageStrings:
     external_file_allowlist: str
     external_file_denylist: str
 
+    # User Settings dialog - external HTTP access
+    settings_network_access: str
+    external_http_access: str
+    allow_external_http_access: str
+    external_http_allowlist: str
+    external_http_denylist: str
+
     # Mindspace tree
     mindspace_label_none: str
     window_title: str

@@ -85,3 +85,4 @@ What costs, risks, or constraints does this decision impose?
 | [0013](0013-filesystem-transform-and-bounds.md) | Filesystem transforms, binary content, context-window bounds, and transform symmetry | Accepted |
 | [0014](0014-multiple-instances-and-mindspaces.md) | Multiple instances and multiple mindspaces | Accepted |
 | [0015](0015-interruptible-tool-waits.md) | Interruptible tool waits | Accepted |
+| [0016](0016-http-access-allowlist.md) | HTTP access allowlist for read-only requests | Accepted |

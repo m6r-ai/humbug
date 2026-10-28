@@ -190,6 +190,13 @@ def get_english_strings() -> LanguageStrings:
         external_file_allowlist="Allowed paths (glob patterns, one per line):",
         external_file_denylist="Always denied paths (glob patterns, one per line):",
 
+        # User Settings dialog - external HTTP access
+        settings_network_access="Network Access",
+        external_http_access="Network Access",
+        allow_external_http_access="Allow AI to fetch allowlisted URLs without asking",
+        external_http_allowlist="Auto-approved URLs (one per line, e.g. api.example.com or https://api.example.com:8443):",
+        external_http_denylist="Always denied URLs (one per line, e.g. localhost or 10.0.0.0/8):",
+
         # Mindspace tree
         mindspace_label_none="No mindspace active",
         window_title="Humbug: {}",
