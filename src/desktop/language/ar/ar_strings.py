@@ -77,6 +77,8 @@ def get_arabic_strings() -> LanguageStrings:
         mindspace_search="بحث شامل",
         quick_switcher="التبديل السريع",
         quick_switcher_placeholder="ابحث في الملفات والمحادثات والعلامات المفتوحة...",
+        quick_switcher_prefix_hint="> الأوامر   @ المحادثات   :السطر   ملف:سطر",
+        quick_switcher_goto_line="الانتقال إلى السطر {0}",
         quick_switcher_limited="يقتصر على أول {0} ملف",
         mindspace_settings="إعدادات المساحة الذهنية",
         conversation_settings="إعدادات المحادثة",

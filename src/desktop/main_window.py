@@ -77,6 +77,7 @@ from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar_manager import SidebarManager
 from desktop.usage_tab.usage_tab import UsageTab
 from desktop.style_manager import StyleManager
+from desktop.tab.tab_base import TabBase
 from desktop.color_theme import ColorTheme
 from desktop.status_message import StatusMessage
 from desktop.tab_manager import TabManager
@@ -1874,10 +1875,21 @@ class MainWindow(QMainWindow):
             self._quick_switcher.dismissed.connect(self._hide_quick_switcher)
 
         entries, truncated = self._build_quick_switcher_entries()
-        notice = strings.quick_switcher_limited.format(self._MAX_QUICK_SWITCHER_FILES) if truncated else ""
+        # The prefix hint lives in the footer rather than the placeholder so the
+        # placeholder can keep saying what the box searches, and so the hint stays
+        # visible once the user has typed something.
+        notice = strings.quick_switcher_prefix_hint
+        if truncated:
+            notice = f"{strings.quick_switcher_limited.format(self._MAX_QUICK_SWITCHER_FILES)}   {notice}"
 
         self._quick_switcher.set_placeholder(strings.quick_switcher_placeholder)
         self._quick_switcher.set_notice(notice)
+        self._quick_switcher.set_command_entries(self._quick_switcher_command_entries())
+        current_tab = self._tab_manager.get_current_tab()
+        self._quick_switcher.set_goto_line(
+            strings.quick_switcher_goto_line,
+            current_tab is not None and current_tab.can_show_goto_line()
+        )
         self._quick_switcher.set_entries(entries)
         self._quick_switcher.setGeometry(self._main_widget.rect())
         self._quick_switcher.show()
@@ -1892,6 +1904,32 @@ class MainWindow(QMainWindow):
     def _on_quick_switcher_entry_activated(self, entry_id: str) -> None:
         """Open or focus whatever the chosen Quick Switcher entry refers to."""
         self._hide_quick_switcher()
+
+        if entry_id.startswith("command:"):
+            self._run_quick_switcher_command(entry_id.removeprefix("command:"))
+            return
+
+        if entry_id.startswith("goto:"):
+            line = self._line_from_entry_id(entry_id.removeprefix("goto:"))
+            if line is not None:
+                self._goto_line_in_tab(self._tab_manager.get_current_tab(), line)
+
+            return
+
+        if entry_id.startswith("file-line:"):
+            # The entry carries a file path, never a context id: _open_by_panel_id
+            # focuses the editor already showing that path, or opens one.  Routing
+            # every case through it keeps a path the only thing this branch handles.
+            _prefix, line_text, path = entry_id.split(":", 2)
+            line = self._line_from_entry_id(line_text)
+            if line is None:
+                return
+
+            context_id = self._open_by_panel_id("files", path, ephemeral=False)
+            if context_id is not None:
+                self._goto_line_in_tab(self._tab_manager.get_tab_by_id(context_id), line)
+
+            return
 
         kind, _, value = entry_id.partition(":")
         if kind == "tab":
@@ -1914,6 +1952,132 @@ class MainWindow(QMainWindow):
             conversations_dir=mindspace.conversations_dir(),
             max_files=self._MAX_QUICK_SWITCHER_FILES,
         )
+
+    def _line_from_entry_id(self, line_text: str) -> int | None:
+        """
+        Read the line number out of a Quick Switcher entry ID.
+
+        The widget only ever builds these from digits, so a bad value means the
+        signal did not come from where it should have.  Logging and ignoring it
+        keeps a malformed ID from reaching int() and raising.
+
+        Args:
+            line_text: The line portion of the entry ID.
+
+        Returns:
+            The line number, or None if it was not a number.
+        """
+        try:
+            return int(line_text)
+
+        except ValueError:
+            self._logger.warning("Ignoring Quick Switcher entry with a bad line number: %s", line_text)
+            return None
+
+    def _goto_line_in_tab(self, tab: TabBase | None, line: int) -> None:
+        """
+        Scroll a tab to a line, where the tab supports going to one.
+
+        The Quick Switcher offers a line number without knowing how long the file
+        is, so asking for a line past its end is an ordinary thing to type.  The
+        tab clamps it to its own content.
+
+        Args:
+            tab: The tab to scroll, which may be None or may not support lines.
+            line: The 1-based line asked for, which may be out of range.
+        """
+        if tab is None or not tab.can_show_goto_line():
+            return
+
+        tab.goto_line_clamped(line)
+
+    def _quick_switcher_commands(self) -> dict[str, tuple[QAction, str]]:
+        """
+        Return the application commands reachable through the Go to Anything ``>`` prefix.
+
+        This is the single source of truth for the palette: both the entries that are
+        listed and the action run on activation are derived from it, so the two cannot
+        drift apart.  Each command maps to its action and the icon to show beside it.
+
+        Returns:
+            Command id mapped to the QAction it runs and its icon name.
+        """
+        return {
+            "new-conversation": (self._new_conv_action, "plus"),
+            "new-file": (self._new_file_action, "plus"),
+            "new-terminal": (self._new_terminal_action, "terminal"),
+            "open-file": (self._open_file_action, "files"),
+            "open-conversation": (self._open_conv_action, "conversation"),
+            "open-preview": (self._open_preview_action, "preview"),
+            "open-diff": (self._open_diff_action, "diff"),
+            "save": (self._save_action, "floppy"),
+            "save-as": (self._save_as_action, "floppy"),
+            "close-tab": (self._close_tab_action, "close"),
+            "goto-line": (self._goto_line_action, "arrow-right"),
+            "find": (self._find_action, "search"),
+            "find-replace": (self._find_replace_action, "search"),
+            "mindspace-search": (self._global_search_action, "search"),
+            "mindspace-settings": (self._mindspace_settings_action, "cog"),
+            "conversation-settings": (self._conv_settings_action, "cog"),
+            "settings": (self._settings_action, "cog"),
+            "mindspace-log": (self._open_mindspace_log_action, "log"),
+            "humbug-shell": (self._open_humbug_shell_action, "shell"),
+            "token-usage": (self._open_token_usage_action, "usage"),
+            "tab-overview": (self._show_tab_overview_action, "tab-overview"),
+            "tab-carousel": (self._show_tab_carousel_action, "tab-carousel"),
+            "show-all-columns": (self._show_all_columns_action, "tab-overview"),
+            "split-column-left": (self._split_column_left_action, "arrow-left"),
+            "split-column-right": (self._split_column_right_action, "arrow-right"),
+            "merge-column-left": (self._merge_column_left_action, "arrow-left"),
+            "merge-column-right": (self._merge_column_right_action, "arrow-right"),
+            "swap-column-left": (self._swap_column_left_action, "arrow-left"),
+            "swap-column-right": (self._swap_column_right_action, "arrow-right"),
+            "move-tab-to-left-column": (self._move_tab_to_left_column_action, "arrow-left"),
+            "move-tab-to-right-column": (self._move_tab_to_right_column_action, "arrow-right"),
+            "move-tab-left": (self._move_tab_left_action, "arrow-left"),
+            "move-tab-right": (self._move_tab_right_action, "arrow-right"),
+            "zoom-in": (self._zoom_in_action, "plus"),
+            "zoom-out": (self._zoom_out_action, "minimize"),
+            "reset-zoom": (self._reset_zoom_action, "restore"),
+            "new-mindspace": (self._new_mindspace_action, "files"),
+            "open-mindspace": (self._open_mindspace_action, "files"),
+            "close-mindspace": (self._close_mindspace_action, "close"),
+            "take-tour": (self._take_tour_action, "question"),
+        }
+
+    def _quick_switcher_command_entries(self) -> list[QuickSwitcherEntry]:
+        """
+        Return palette entries for the commands that can be run right now.
+
+        Commands that are not currently valid are left out rather than listed and
+        silently ignored, and each entry carries its keyboard shortcut so the palette
+        teaches the shortcut rather than replacing it.
+        """
+        entries = []
+        for command_id, (action, icon_name) in self._quick_switcher_commands().items():
+            if not action.isEnabled():
+                continue
+
+            shortcut = action.shortcut().toString(QKeySequence.SequenceFormat.NativeText)
+            entries.append(QuickSwitcherEntry(
+                entry_id=f"command:{command_id}",
+                kind="command",
+                title=action.text(),
+                subtitle=shortcut,
+                icon_name=icon_name,
+            ))
+
+        return entries
+
+    def _run_quick_switcher_command(self, command_id: str) -> None:
+        """Trigger a command selected through the Go to Anything overlay."""
+        command = self._quick_switcher_commands().get(command_id)
+        if command is None:
+            return
+
+        action, _icon_name = command
+        if action.isEnabled():
+            action.trigger()
 
     def _on_show_about_dialog(self) -> None:
         """Show the About dialog."""

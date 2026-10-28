@@ -6,6 +6,10 @@ New features:
 
 - The clock tool's `sleep` and `alarm` operations now show a cancel control inside the executing tool-call message when
   the wait is longer than five seconds.  Cancelling ends the wait immediately and the AI is told the user interrupted it.
+- Quick Switcher now supports Go to Anything prefixes: `@` searches conversations, `>` runs
+  commands, `:line` jumps in the current editor, and `file:line` opens a file at a line.  The
+  command palette covers the application menus, lists only commands that are valid right now, and
+  shows each command's keyboard shortcut.
 - Tabs can now be moved without dragging them.  A tab's context menu can send it to the column on either side, to a new
   column, or to a different place in its own column, and the View menu offers the same for the current tab.  Ctrl+Alt+Left
   and Ctrl+Alt+Right move the current tab between columns, creating an adjacent column at an edge when the source column

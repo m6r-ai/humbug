@@ -76,6 +76,8 @@ def get_english_strings() -> LanguageStrings:
         mindspace_search="Mindspace Search",
         quick_switcher="Quick Switcher",
         quick_switcher_placeholder="Search files, conversations, and open tabs...",
+        quick_switcher_prefix_hint="> commands   @ conversations   :line   file:line",
+        quick_switcher_goto_line="Go to line {0}",
         quick_switcher_limited="Limited to the first {0} files",
         mindspace_settings="Mindspace Settings",
         conversation_settings="Conversation Settings",
