@@ -392,6 +392,23 @@ class AIConversationSettings:
                 AIReasoningEffort.MAX
             ],
         ),
+        ("minimax-m3.1-flash:cloud", "ollama-cloud"): AIModel(
+            name="minimax-m3.1-flash:cloud",
+            provider="ollama-cloud",
+            display_name="MiniMax M3.1 Flash",
+            context_window=999424,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
+            ],
+        ),
         ("minimax-m3:cloud", "ollama-cloud"): AIModel(
             name="minimax-m3:cloud",
             provider="ollama-cloud",
@@ -402,7 +419,11 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
-                AIReasoningEffort.HIGH
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
             ],
         ),
         ("mistral-large-3:675b-cloud", "ollama-cloud"): AIModel(
@@ -441,6 +462,24 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
+            ],
+        ),
+        ("gpt-6.1-terra", "openai"): AIModel(
+            name="gpt-6.1-terra",
+            provider="openai",
+            display_name="GPT 6.1 Terra",
+            context_window=1050000,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
                 AIReasoningEffort.HIGH,
