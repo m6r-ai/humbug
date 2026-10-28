@@ -436,20 +436,6 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        ("qwen3.5:cloud", "ollama-cloud"): AIModel(
-            name="qwen3.5:cloud",
-            provider="ollama-cloud",
-            display_name="Qwen 3.5",
-            context_window=256000,
-            max_output_tokens=2048,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
-                AIReasoningEffort.HIGH
-            ],
-        ),
 
         # OpenAI models
         ("gpt-6.1-sol", "openai"): AIModel(
