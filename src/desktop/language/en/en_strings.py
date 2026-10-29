@@ -383,6 +383,7 @@ def get_english_strings() -> LanguageStrings:
         terminal_status="Terminal: {name} ({columns}x{rows})",
         system_status="System",
         log_status="Log",
+        log_status_entries="Log: entries {first:,}-{last:,} of {total:,}",
         preview_status="Preview: {path}",
         diff_status="Diff: {path} | {rows} changed rows",
 

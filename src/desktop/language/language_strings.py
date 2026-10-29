@@ -352,6 +352,7 @@ class LanguageStrings:
     terminal_status: str
     system_status: str
     log_status: str
+    log_status_entries: str
     preview_status: str
     diff_status: str
 

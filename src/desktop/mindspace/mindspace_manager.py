@@ -10,6 +10,7 @@ from mindspace.mindspace_error import (
 )
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_message import MindspaceMessage
+from mindspace.mindspace_interactions import MindspaceInteractions
 from mindspace.mindspace_settings import MindspaceSettings
 
 from desktop import json_store
@@ -279,9 +280,9 @@ class MindspaceManager(QObject):
         """Append a message to the interaction log and persist it."""
         return self._mindspace.add_interaction(level, content)
 
-    def get_interactions(self) -> list[MindspaceMessage]:
-        """Return all interaction log messages."""
-        return self._mindspace.get_interactions()
+    def interactions(self) -> MindspaceInteractions:
+        """Return the interaction log store for sequence-addressed reads."""
+        return self._mindspace.interactions()
 
     def save_mindspace_state(self, state: dict) -> None:
         """Persist session state (open tabs, layout) to disk."""

@@ -1,6 +1,7 @@
 """Log widget implementation for displaying mindspace message log."""
 
 import logging
+import re
 from typing import Any
 
 from PySide6.QtWidgets import (
@@ -10,6 +11,7 @@ from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
 from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
 
 from mindspace.mindspace_message import MindspaceMessage
+from mindspace.mindspace_interactions import MindspaceInteractions
 
 from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
@@ -32,6 +34,12 @@ class LogWidget(QWidget):
 
     # Emits when the has-seen-latest-update state changes
     has_seen_latest_update_changed = Signal(bool)
+
+    VIEW_PAGE_SIZE = 500
+
+    MAX_FIND_MATCHES = 500
+
+    FIND_BATCH_SIZE = 500
 
     def __init__(
         self,
@@ -129,12 +137,24 @@ class LogWidget(QWidget):
         self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
 
 
-        # Find functionality
-        self._matches: list[tuple[LogMessage, list[tuple[int, int]]]] = []
-        self._current_widget_index = -1
+        # Find functionality.  Matches are found by searching the log store, so they
+        # cover entries the view is not showing; each match is identified by the
+        # sequence number of its entry and its ordinal within that entry.
+        self._find_matches: list[tuple[int, int]] = []
+        self._find_truncated = False
         self._current_match_index = -1
         self._last_search: tuple = ("", False, False)
         self._highlighted_widgets: set[LogMessage] = set()
+
+        self._find_scroll_timer = QTimer(self)
+        self._find_scroll_timer.setSingleShot(True)
+        self._find_scroll_timer.setInterval(0)
+        self._find_scroll_timer.timeout.connect(self._apply_find_scroll)
+        self._pending_find_scroll: tuple[int, int] | None = None
+
+        # True while the view follows the end of the log; False once a find has
+        # pinned it to an older page.
+        self._showing_tail = True
 
         # Load messages when initialized
         if self._mindspace_manager.has_mindspace():
@@ -142,75 +162,117 @@ class LogWidget(QWidget):
 
     def load_messages(self) -> None:
         """
-        Load mindspace messages, optimizing to only remove early messages 
-        and add new messages at the end.
+        Load the interaction log entries that are not yet in the view.
 
-        This optimized implementation assumes messages are only ever removed from the beginning
-        of the list or added to the end of the list, and are never reordered.
+        The log store is unbounded, so the view holds at most VIEW_PAGE_SIZE entries
+        and reads only the entries appended since the last load.  Entries that fall
+        off the front of the page are discarded, which is what keeps the number of
+        widgets bounded however long the log grows.
         """
         if not self._mindspace_manager.has_mindspace():
             return
 
-        # Get messages from mindspace manager
-        mindspace_messages = self._mindspace_manager.get_interactions()
+        store = self._mindspace_manager.interactions()
+        total = store.count()
 
-        # Handle empty cases
-        if not mindspace_messages:
-            # Clear all existing messages if there are none from the system
-            for msg in self._messages:
-                self._messages_layout.removeWidget(msg)
-                msg.deleteLater()
-
-            self._messages.clear()
+        if not self._messages or total < self._messages[-1].sequence():
+            self._showing_tail = True
+            self._load_page(store, total)
             return
 
-        # Handle case where we don't have any messages yet
-        if not self._messages:
-            # Simply add all messages
-            for message in mindspace_messages:
-                self._add_log_message(message)
+        if not self._showing_tail:
+            # The view is pinned to an older page by a find; only the status changes.
+            self.status_updated.emit()
+            return
 
-            self._auto_scroll = True
+        last_loaded = self._messages[-1].sequence()
+        appended = store.read(last_loaded + 1, total - last_loaded)
+        if not appended:
+            return
+
+        for message in appended:
+            self._add_log_message(message)
+
+        self._trim_to_page()
+
+        if self._auto_scroll:
             self._scroll_to_bottom()
+
+        else:
+            # User is scrolled up, notify them there's new content below
+            self.update_label.emit()
+
+        self.status_updated.emit()
+
+    def _load_page(self, store: MindspaceInteractions, total: int) -> None:
+        """
+        Rebuild the view with the newest page of entries.
+
+        Args:
+            store: The interaction log store to read from.
+            total: Number of entries in the log.
+        """
+        self._clear_messages()
+
+        self._showing_tail = True
+        if total == 0:
+            self.status_updated.emit()
             return
 
-        # Find matching messages between existing UI messages and new mindspace messages
-        # First, check if first mindspace message exists in our UI message list
-        first_mindspace_msg_id = mindspace_messages[0].message_id
+        page_start = max(1, total - self.VIEW_PAGE_SIZE + 1)
+        for message in store.read(page_start, self.VIEW_PAGE_SIZE):
+            self._add_log_message(message)
 
-        # Look for the first matching message ID in our existing messages
-        first_match_index = -1
-        for i, msg in enumerate(self._messages):
-            if msg.message_id() == first_mindspace_msg_id:
-                first_match_index = i
-                break
+        self._auto_scroll = True
+        self._scroll_to_bottom()
+        self.status_updated.emit()
 
-        # If found, remove any UI messages before this match (older messages removed from system)
-        if first_match_index > 0:
-            # Remove messages that are no longer at the beginning of the mindspace interactions
-            for i in range(first_match_index):
-                msg = self._messages[0]  # Always remove the first message
-                self._messages_layout.removeWidget(msg)
-                msg.deleteLater()
-                self._messages.pop(0)  # Remove from list
+    def page_status(self) -> tuple[int, int, int]:
+        """
+        Return the range of entries the view is showing and the log's total.
 
-        # Find how many existing messages we have that match mindspace messages
-        matching_count = min(len(self._messages), len(mindspace_messages))
+        Returns:
+            Tuple of (first_sequence, last_sequence, total_entries), with the
+            sequence range reported as (0, 0) when the view is empty.
+        """
+        if not self._mindspace_manager.has_mindspace():
+            return 0, 0, 0
 
-        # Check if we need to add new messages at the end
-        if len(mindspace_messages) > matching_count:
-            # Add only the new messages that don't exist yet (at the end)
-            for message in mindspace_messages[matching_count:]:
-                self._add_log_message(message)
+        total = self._mindspace_manager.interactions().count()
+        if not self._messages:
+            return 0, 0, total
 
-        # Scroll to bottom if in auto-scroll mode, otherwise mark tab as updated
-        if len(mindspace_messages) > matching_count:
-            if self._auto_scroll:
-                self._scroll_to_bottom()
+        return self._messages[0].sequence(), self._messages[-1].sequence(), total
 
-            else:
-                # User is scrolled up, notify them there's new content below
-                self.update_label.emit()
+    def _trim_to_page(self) -> None:
+        """Discard the oldest entries once the view holds more than one page."""
+        excess = len(self._messages) - self.VIEW_PAGE_SIZE
+        if excess <= 0:
+            return
+
+        for _ in range(excess):
+            message = self._messages.pop(0)
+            self._messages_layout.removeWidget(message)
+            message.deleteLater()
+
+        if self._message_with_selection not in self._messages:
+            self._message_with_selection = None
+
+        if self._spotlighted_message_index != -1:
+            self._spotlighted_message_index = max(-1, self._spotlighted_message_index - excess)
+
+        self._highlighted_widgets.clear()
+
+    def _clear_messages(self) -> None:
+        """Remove every message widget from the view."""
+        for msg in self._messages:
+            self._messages_layout.removeWidget(msg)
+            msg.deleteLater()
+
+        self._messages.clear()
+        self._message_with_selection = None
+        self._spotlighted_message_index = -1
+        self._highlighted_widgets.clear()
 
     def _add_log_message(self, message: MindspaceMessage) -> None:
         """Add a message from the mindspace message log."""
@@ -218,7 +280,7 @@ class LogWidget(QWidget):
             message.content,
             message.level,
             message.timestamp,
-            message.message_id,
+            message.sequence,
             self
         )
         msg_widget.selection_changed.connect(
@@ -648,11 +710,16 @@ class LogWidget(QWidget):
         Create a dictionary capturing the log view's state.
 
         Returns:
-            Dictionary containing the scroll position and spotlighted message index.
+            Dictionary containing the scroll position and the sequence number of the
+            spotlighted message, or -1 if no message is spotlighted.
         """
+        sequence = -1
+        if 0 <= self._spotlighted_message_index < len(self._messages):
+            sequence = self._messages[self._spotlighted_message_index].sequence()
+
         return {
             "scroll_position": self._scroll_area.verticalScrollBar().value(),
-            "spotlighted_message_index": self._spotlighted_message_index,
+            "spotlighted_message_sequence": sequence,
         }
 
     def restore_view_state(self, state: dict[str, Any]) -> None:
@@ -675,12 +742,24 @@ class LogWidget(QWidget):
             self._deferred_scroll_position = state["scroll_position"]
             self._deferred_scroll_timer.start()
 
-        # Restore spotlighted message index if specified
-        if "spotlighted_message_index" in state:
-            self._spotlighted_message_index = state["spotlighted_message_index"]
-            if 0 <= self._spotlighted_message_index < len(self._messages):
-                self._messages[self._spotlighted_message_index].set_spotlighted(True)
-                self._messages[self._spotlighted_message_index].setFocus()
+        self._restore_spotlight(state.get("spotlighted_message_sequence", -1))
+
+    def _restore_spotlight(self, sequence: int) -> None:
+        """
+        Spotlight the message with the given sequence number, if it is loaded.
+
+        Args:
+            sequence: Sequence number of the message to spotlight, or -1 for none.
+        """
+        self._spotlighted_message_index = -1
+        for index, message in enumerate(self._messages):
+            if message.sequence() != sequence:
+                continue
+
+            self._spotlighted_message_index = index
+            message.set_spotlighted(True)
+            message.setFocus()
+            return
 
     def get_selected_text(self) -> str:
         """
@@ -698,7 +777,11 @@ class LogWidget(QWidget):
         self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False
     ) -> tuple[int, int, bool]:
         """
-        Find all instances of text and highlight them.
+        Find text across the whole log and move to the next or previous match.
+
+        Every record in the log is searched, not only the entries the view is
+        showing, so a search cannot miss an entry that lies outside the current
+        page.  Showing a match loads the page of entries containing it.
 
         Args:
             text: Text to search for
@@ -707,88 +790,168 @@ class LogWidget(QWidget):
             regexp: If True, treat text as a regular expression.
 
         Returns:
-            Tuple of (current_match, total_matches)
+            Tuple of (current_match, total_matches, truncated)
         """
-        # Get searchable widgets
-        widgets = self._messages
-
-        # Clear existing highlights if search text changed
         if (text, case_sensitive, regexp) != self._last_search:
-            self._clear_highlights()
-            self._matches = []
-            self._current_widget_index = -1
-            self._current_match_index = -1
+            self._reset_find()
             self._last_search = (text, case_sensitive, regexp)
 
-        # Find all matches if this is a new search
-        if not self._matches and text:
-            total_so_far = 0
-            for widget in widgets:
-                widget_matches = widget.find_text(text, case_sensitive, regexp)
-                if widget_matches:
-                    remaining = 500 - total_so_far
-                    widget_matches = widget_matches[:remaining]
-                    self._matches.append((widget, widget_matches))
-                    total_so_far += len(widget_matches)
-                    if total_so_far >= 500:
-                        break
-
-        if not self._matches:
+        if not text:
+            self._return_to_tail()
             return 0, 0, False
 
-        # Move to next/previous match
-        if self._current_widget_index == -1:
-            # First search - start at beginning or end depending on direction
-            if forward:
-                self._current_widget_index = 0
-                self._current_match_index = 0
+        if not self._find_matches:
+            self._find_matches, self._find_truncated = self._search_log(
+                text, case_sensitive, regexp
+            )
 
-            else:
-                self._current_widget_index = len(self._matches) - 1
-                self._current_match_index = len(self._matches[self._current_widget_index][1]) - 1
+        if not self._find_matches:
+            return 0, 0, False
 
-        else:
-            # Move to next/previous match
-            if forward:
-                self._current_match_index += 1
-                # If we've reached the end of matches in current widget
-                if self._current_match_index >= len(self._matches[self._current_widget_index][1]):
-                    self._current_widget_index += 1
-                    # If we've reached the end of widgets, wrap around
-                    if self._current_widget_index >= len(self._matches):
-                        self._current_widget_index = 0
-
-                    self._current_match_index = 0
-
-            else:
-                self._current_match_index -= 1
-                # If we've reached the start of matches in current widget
-                if self._current_match_index < 0:
-                    self._current_widget_index -= 1
-                    # If we've reached the start of widgets, wrap around
-                    if self._current_widget_index < 0:
-                        self._current_widget_index = len(self._matches) - 1
-
-                    self._current_match_index = len(self._matches[self._current_widget_index][1]) - 1
-
-        self._highlight_matches()
-        self._scroll_to_current_match()
+        self._current_match_index = self._next_match_index(forward)
+        self._show_current_match()
         return self.get_match_status()
 
-    def _highlight_matches(self) -> None:
-        """Update the highlighting of all matches."""
+    def _search_log(
+        self, text: str, case_sensitive: bool, regexp: bool
+    ) -> tuple[list[tuple[int, int]], bool]:
+        """
+        Search every entry in the log.
+
+        Args:
+            text: Text or pattern to search for
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
+
+        Returns:
+            The (sequence, ordinal) of every match, and whether the match limit was
+            reached before the whole log had been searched.
+        """
+        if not self._mindspace_manager.has_mindspace():
+            return [], False
+
+        try:
+            pattern = re.compile(
+                text if regexp else re.escape(text),
+                0 if case_sensitive else re.IGNORECASE
+            )
+
+        except re.error:
+            return [], False
+
+        store = self._mindspace_manager.interactions()
+        total = store.count()
+        matches: list[tuple[int, int]] = []
+        sequence = 1
+
+        while sequence <= total:
+            batch = store.read(sequence, self.FIND_BATCH_SIZE)
+            if not batch:
+                break
+
+            for message in batch:
+                for ordinal in range(sum(1 for _ in pattern.finditer(message.content))):
+                    matches.append((message.sequence, ordinal))
+                    if len(matches) >= self.MAX_FIND_MATCHES:
+                        return matches, True
+
+            sequence = batch[-1].sequence + 1
+
+        return matches, False
+
+    def _next_match_index(self, forward: bool) -> int:
+        """
+        Return the index of the match to move to, wrapping at either end.
+
+        Args:
+            forward: Whether to move forward rather than back.
+        """
+        last = len(self._find_matches) - 1
+        if self._current_match_index == -1:
+            return 0 if forward else last
+
+        index = self._current_match_index + (1 if forward else -1)
+        if index > last:
+            return 0
+
+        if index < 0:
+            return last
+
+        return index
+
+    def _show_current_match(self) -> None:
+        """Load the page containing the current match and scroll to it."""
+        self._auto_scroll = False
+        sequence, _ = self._find_matches[self._current_match_index]
+        self._ensure_page_shows(sequence)
+        self._highlight_page_matches()
+
+        self._pending_find_scroll = self._find_matches[self._current_match_index]
+        self._find_scroll_timer.start()
+
+    def _ensure_page_shows(self, sequence: int) -> None:
+        """
+        Load a page of entries containing the given sequence number.
+
+        Args:
+            sequence: Sequence number that the view must contain.
+        """
+        first = self._messages[0].sequence() if self._messages else 0
+        last = self._messages[-1].sequence() if self._messages else 0
+        if first <= sequence <= last:
+            return
+
+        store = self._mindspace_manager.interactions()
+        page_start = max(1, sequence - self.VIEW_PAGE_SIZE // 2)
+        total = store.count()
+
+        self._clear_messages()
+        for message in store.read(page_start, self.VIEW_PAGE_SIZE):
+            self._add_log_message(message)
+
+        self._showing_tail = bool(self._messages) and self._messages[-1].sequence() == total
+        self._auto_scroll = False
+        self.status_updated.emit()
+
+    def _highlight_page_matches(self) -> None:
+        """Highlight the matches held by the entries the view is showing."""
         self._clear_highlights()
+        if not self._find_matches or self._current_match_index == -1:
+            return
 
-        # Highlight matches in each widget
-        for widget_idx, (widget, matches) in enumerate(self._matches):
-            # Set current_match_index to highlight the current match
-            current_match_idx = self._current_match_index if widget_idx == self._current_widget_index else -1
+        text, case_sensitive, regexp = self._last_search
+        current_sequence, current_ordinal = self._find_matches[self._current_match_index]
+        matching_sequences = {sequence for sequence, _ in self._find_matches}
 
-            # Highlight matches in this widget
-            widget.highlight_matches(matches, current_match_idx)
+        for widget in self._messages:
+            if widget.sequence() not in matching_sequences:
+                continue
 
-            # Track highlighted widgets
+            matches = widget.find_text(text, case_sensitive, regexp)
+            if not matches:
+                continue
+
+            current = current_ordinal if widget.sequence() == current_sequence else -1
+            widget.highlight_matches(matches, current)
             self._highlighted_widgets.add(widget)
+
+    def _apply_find_scroll(self) -> None:
+        """Scroll to the pending find match once the layout has settled."""
+        pending = self._pending_find_scroll
+        self._pending_find_scroll = None
+        if pending is None:
+            return
+
+        text, case_sensitive, regexp = self._last_search
+        for widget in self._messages:
+            if widget.sequence() != pending[0]:
+                continue
+
+            matches = widget.find_text(text, case_sensitive, regexp)
+            if pending[1] < len(matches):
+                self._handle_find_scroll(widget, matches[pending[1]][0])
+
+            return
 
     def _handle_find_scroll(self, widget: LogMessage, position: int) -> None:
         """
@@ -810,14 +973,6 @@ class LogWidget(QWidget):
         target = max(scrollbar.minimum(), min(scrollbar.maximum(), target))
         self._start_smooth_scroll(target)
 
-    def _scroll_to_current_match(self) -> None:
-        """Request scroll to ensure the current match is visible."""
-        widget, matches = self._matches[self._current_widget_index]
-        start, _ = matches[self._current_match_index]
-
-        # Trigger scrolling to this position
-        self._handle_find_scroll(widget, start)
-
     def _clear_highlights(self) -> None:
         """Clear all highlights from all widgets."""
         for widget in self._highlighted_widgets:
@@ -825,13 +980,26 @@ class LogWidget(QWidget):
 
         self._highlighted_widgets.clear()
 
+    def _reset_find(self) -> None:
+        """Discard the current search results and their highlights."""
+        self._clear_highlights()
+        self._find_matches = []
+        self._find_truncated = False
+        self._current_match_index = -1
+
+    def _return_to_tail(self) -> None:
+        """Return the view to the newest page if a find had pinned it elsewhere."""
+        if self._showing_tail or not self._mindspace_manager.has_mindspace():
+            return
+
+        store = self._mindspace_manager.interactions()
+        self._load_page(store, store.count())
+
     def clear_highlights(self) -> None:
         """Public method to clear highlights."""
-        self._clear_highlights()
-        self._matches = []
-        self._current_widget_index = -1
-        self._current_match_index = -1
+        self._reset_find()
         self._last_search = ("", False, False)
+        self._return_to_tail()
 
     def get_match_status(self) -> tuple[int, int, bool]:
         """
@@ -840,314 +1008,8 @@ class LogWidget(QWidget):
         Returns:
             Tuple of (current_match, total_matches, truncated)
         """
-        # Calculate total matches
-        total_matches = sum(len(m[1]) for m in self._matches)
+        total_matches = len(self._find_matches)
+        if self._current_match_index == -1:
+            return 0, total_matches, self._find_truncated
 
-        # Calculate current match
-        if self._current_widget_index == -1 or self._current_match_index == -1:
-            return 0, total_matches, total_matches == 500
-
-        current_global_match = sum(len(m[1]) for m in self._matches[:self._current_widget_index]) + self._current_match_index + 1
-
-        return current_global_match, total_matches, total_matches == 500
-
-    def get_log_info(self) -> dict[str, Any]:
-        """
-        Get high-level metadata about the log.
-
-        Returns:
-            Dictionary containing log metadata
-        """
-        if not self._mindspace_manager.has_mindspace():
-            raise ValueError("No mindspace available")
-
-        messages = self._mindspace_manager.get_interactions()
-
-        if not messages:
-            return {
-                "message_count": 0,
-                "first_message_timestamp": None,
-                "last_message_timestamp": None,
-                "level_distribution": {
-                    "trace": 0,
-                    "info": 0,
-                    "warn": 0,
-                    "error": 0
-                }
-            }
-
-        # Calculate level distribution
-        level_distribution = {
-            "trace": 0,
-            "info": 0,
-            "warn": 0,
-            "error": 0
-        }
-
-        for msg in messages:
-            level_str = msg.level.value
-            if level_str in level_distribution:
-                level_distribution[level_str] += 1
-
-        return {
-            "message_count": len(messages),
-            "first_message_timestamp": messages[0].timestamp.isoformat(),
-            "last_message_timestamp": messages[-1].timestamp.isoformat(),
-            "level_distribution": level_distribution
-        }
-
-    def read_messages(
-        self,
-        start_index: int | None = None,
-        end_index: int | None = None,
-        levels: list[str] | None = None,
-        limit: int | None = None,
-        include_content: bool = True
-    ) -> dict[str, Any]:
-        """
-        Read log messages with filtering and pagination.
-
-        Args:
-            start_index: Starting message index (0-based, inclusive)
-            end_index: Ending message index (0-based, inclusive)
-            levels: List of log levels to include (trace, info, warn, error)
-            limit: Maximum number of messages to return
-            include_content: Include full message content
-
-        Returns:
-            Dictionary containing messages and metadata
-        """
-        if not self._mindspace_manager.has_mindspace():
-            raise ValueError("No mindspace available")
-
-        messages = self._mindspace_manager.get_interactions()
-
-        # Apply range filtering
-        if start_index is not None:
-            start_index = max(0, start_index)
-
-        else:
-            start_index = 0
-
-        if end_index is not None:
-            end_index = min(len(messages) - 1, end_index)
-
-        else:
-            end_index = len(messages) - 1
-
-        # Get messages in range
-        filtered_messages = messages[start_index:end_index + 1]
-
-        # Apply level filtering
-        if levels:
-            filtered_messages = [
-                msg for msg in filtered_messages
-                if msg.level.value in levels
-            ]
-
-        # Apply limit
-        if limit and limit > 0:
-            filtered_messages = filtered_messages[:limit]
-
-        # Convert to dictionaries
-        result_messages = []
-        for msg in filtered_messages:
-            msg_dict = {
-                "index": messages.index(msg),  # Original index in full log
-                "message_id": msg.message_id,
-                "level": msg.level.value,
-                "timestamp": msg.timestamp.isoformat()
-            }
-
-            # Optionally include content
-            if include_content:
-                msg_dict["content"] = msg.content
-
-            result_messages.append(msg_dict)
-
-        return {
-            "total_messages": len(messages),
-            "returned_count": len(result_messages),
-            "start_index": start_index,
-            "end_index": end_index,
-            "messages": result_messages
-        }
-
-    def get_message_by_id_or_index(
-        self,
-        message_id: str | None = None,
-        message_index: int | None = None
-    ) -> dict[str, Any] | None:
-        """
-        Get a specific log message by ID or index.
-
-        Args:
-            message_id: Message UUID
-            message_index: Message index (0-based)
-
-        Returns:
-            Message dictionary or None if not found
-        """
-        if not self._mindspace_manager.has_mindspace():
-            raise ValueError("No mindspace available")
-
-        if message_id is None and message_index is None:
-            raise ValueError("Must provide either message_id or message_index")
-
-        messages = self._mindspace_manager.get_interactions()
-
-        # Find by index
-        if message_index is not None:
-            if 0 <= message_index < len(messages):
-                msg = messages[message_index]
-                return {
-                    "index": message_index,
-                    "message_id": msg.message_id,
-                    "level": msg.level.value,
-                    "content": msg.content,
-                    "timestamp": msg.timestamp.isoformat()
-                }
-
-            return None
-
-        # Find by ID
-        for idx, msg in enumerate(messages):
-            if msg.message_id == message_id:
-                return {
-                    "index": idx,
-                    "message_id": msg.message_id,
-                    "level": msg.level.value,
-                    "content": msg.content,
-                    "timestamp": msg.timestamp.isoformat()
-                }
-
-        return None
-
-    def search_messages(
-        self,
-        search_text: str,
-        case_sensitive: bool = False,
-        levels: list[str] | None = None,
-        max_results: int = 50
-    ) -> dict[str, Any]:
-        """
-        Search for text across all log messages.
-
-        Args:
-            search_text: Text to search for
-            case_sensitive: Case-sensitive search
-            levels: Filter to specific log levels
-            max_results: Maximum results to return
-
-        Returns:
-            Dictionary containing search results
-        """
-        if not self._mindspace_manager.has_mindspace():
-            raise ValueError("No mindspace available")
-
-        if not search_text:
-            return {
-                "search_text": search_text,
-                "case_sensitive": case_sensitive,
-                "total_matches": 0,
-                "returned_count": 0,
-                "matches": []
-            }
-
-        messages = self._mindspace_manager.get_interactions()
-
-        # Prepare search
-        search_str = search_text if case_sensitive else search_text.lower()
-        matches = []
-
-        for idx, msg in enumerate(messages):
-            # Apply level filter
-            if levels:
-                if msg.level.value not in levels:
-                    continue
-
-            # Search in content
-            content = msg.content if case_sensitive else msg.content.lower()
-            pos = 0
-
-            while True:
-                pos = content.find(search_str, pos)
-                if pos == -1:
-                    break
-
-                # Extract context (50 chars before and after)
-                context_start = max(0, pos - 50)
-                context_end = min(len(msg.content), pos + len(search_text) + 50)
-
-                match_info = {
-                    "message_index": idx,
-                    "message_id": msg.message_id,
-                    "level": msg.level.value,
-                    "timestamp": msg.timestamp.isoformat(),
-                    "match_position": pos,
-                    "context_before": msg.content[context_start:pos],
-                    "match_text": msg.content[pos:pos + len(search_text)],
-                    "context_after": msg.content[pos + len(search_text):context_end]
-                }
-
-                matches.append(match_info)
-
-                # Check if we've hit the limit
-                if len(matches) >= max_results:
-                    break
-
-                pos += 1
-
-            if len(matches) >= max_results:
-                break
-
-        return {
-            "search_text": search_text,
-            "case_sensitive": case_sensitive,
-            "total_matches": len(matches),
-            "returned_count": len(matches),
-            "matches": matches
-        }
-
-    def scroll_to_message_by_id_or_index(
-        self,
-        message_id: str | None = None,
-        message_index: int | None = None
-    ) -> bool:
-        """
-        Scroll to a specific log message.
-
-        Args:
-            message_id: Message UUID
-            message_index: Message index (0-based)
-
-        Returns:
-            True if successful, False if message not found
-        """
-        if message_id is None and message_index is None:
-            raise ValueError("Must provide either message_id or message_index")
-
-        # Find message index if ID provided
-        if message_id is not None:
-            messages = self._mindspace_manager.get_interactions()
-            message_index = None
-            for idx, msg in enumerate(messages):
-                if msg.message_id == message_id:
-                    message_index = idx
-                    break
-
-            if message_index is None:
-                return False
-
-        # Validate index
-        if message_index is None or message_index < 0 or message_index >= len(self._messages):
-            return False
-
-        # Get the message widget
-        message_widget = self._messages[message_index]
-
-        # Scroll so message is at top of viewport with spacing
-        bubble_spacing = self._style_manager.message_bubble_spacing()
-        self._perform_scroll_to_position(message_widget, int(bubble_spacing))
-
-        return True
+        return self._current_match_index + 1, total_matches, self._find_truncated

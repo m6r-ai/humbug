@@ -40,6 +40,10 @@ shows a notification indicator when new entries arrive below your current positi
 
 Each entry's header shows its severity level and a timestamp precise to the millisecond.
 
+The tab shows the most recent entries. The status bar reports which entries are on screen and
+how many the log holds in total, so you can always tell whether you are looking at the newest
+entries or how much older history exists.
+
 ---
 
 ## Finding and searching
@@ -47,6 +51,9 @@ Each entry's header shows its severity level and a timestamp precise to the mill
 Press **Cmd+F** / **Ctrl+F** to open the find bar and search within the log. The find bar
 supports case-sensitive search, regular expressions, and whole-word matching, and shows a
 match count with next/previous navigation.
+
+Searches cover the entire log, not just the entries on screen. Moving to a match brings the
+entries around it into view, so an event from long ago is reachable by searching for it.
 
 ---
 
@@ -61,6 +68,11 @@ conversation tabs.
 
 The log is stored in the `.humbug` directory within the mindspace and persists across sessions.
 It is mindspace-scoped: each mindspace has its own independent log.
+
+Entries are appended as they happen and are never removed or rewritten, so the log is a complete
+record of the mindspace's activity for as long as the mindspace exists. The log is split into
+segment files as it grows; older segments remain readable and nothing is discarded. The tab shows
+the most recent entries.
 
 ---
 

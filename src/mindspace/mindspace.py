@@ -30,7 +30,7 @@ class Mindspace:
     MINDSPACE_DIR = ".humbug"
     SETTINGS_FILE = "settings.json"
     SESSION_FILE = "session.json"
-    INTERACTIONS_FILE = "system.json"
+    INTERACTIONS_DIR = "log"
     USAGE_FILE = "usage.json"
     CONVERSATIONS_DIR = "conversations"
     TRASH_DIR = "trash"
@@ -149,7 +149,7 @@ class Mindspace:
             self._path = path
             self._migrate_conversations()
             self._settings = settings
-            self._load_interactions()
+            self._open_interactions()
             self._load_usage()
             self._apply_tool_settings(settings)
             self._on_settings_changed()
@@ -163,7 +163,7 @@ class Mindspace:
         if self.has_mindspace():
             self._path = ""
             self._settings = None
-            self._interactions.clear()
+            self._interactions.close()
             self._usage = MindspaceUsage()
             self._context_registry.clear()
             self._reset_tool_manager()
@@ -1030,7 +1030,7 @@ class Mindspace:
 
     def add_interaction(self, level: MindspaceLogLevel, content: str) -> MindspaceMessage:
         """
-        Append a message to the interaction log and persist it.
+        Append a message to the interaction log.
 
         Args:
             level: Severity level of the message.
@@ -1040,21 +1040,20 @@ class Mindspace:
             The created MindspaceMessage.
         """
         assert self.has_mindspace(), "No mindspace is currently open"
-        message = MindspaceMessage.create(level, content)
-        self._interactions.add_message(message)
-        self._save_interactions()
+        message = self._interactions.append(level, content)
         self._on_interactions_updated()
         return message
 
-    def get_interactions(self) -> list[MindspaceMessage]:
+    def interactions(self) -> MindspaceInteractions:
         """
-        Return all interaction log messages.
+        Return the interaction log store.
 
         Returns:
-            List of MindspaceMessage objects.
+            The store, which answers sequence-addressed reads and reports whether
+            appends are succeeding.
         """
         assert self.has_mindspace(), "No mindspace is currently open"
-        return self._interactions.get_messages()
+        return self._interactions
 
     def save_mindspace_state(self, state: dict) -> None:
         """
@@ -1286,23 +1285,12 @@ class Mindspace:
             self._logger.info("Failed to load usage stats: %s", e)
             self._usage = MindspaceUsage()
 
-    def _save_interactions(self) -> None:
-        """Persist the interaction log to disk."""
+    def _open_interactions(self) -> None:
+        """Attach the interaction log store to this mindspace's log directory."""
         try:
-            mindspace_dir = os.path.join(self._path, self.MINDSPACE_DIR)
-            os.makedirs(mindspace_dir, exist_ok=True)
-            self._interactions.save(os.path.join(mindspace_dir, self.INTERACTIONS_FILE))
-
-        except OSError as e:
-            self._logger.error("Failed to save interactions: %s", e)
-
-    def _load_interactions(self) -> None:
-        """Load the interaction log from disk."""
-        try:
-            interactions_path = os.path.join(
-                self._path, self.MINDSPACE_DIR, self.INTERACTIONS_FILE
+            self._interactions.open(
+                os.path.join(self._path, self.MINDSPACE_DIR, self.INTERACTIONS_DIR)
             )
-            self._interactions.load(interactions_path)
 
         except Exception as e:
-            self._logger.info("Failed to load interactions: %s", e)
+            self._logger.info("Failed to open interactions: %s", e)

@@ -32,7 +32,7 @@ class LogMessage(QFrame):
         text: str,
         level: MindspaceLogLevel,
         timestamp: datetime,
-        message_id: str,
+        sequence: int,
         parent: QWidget | None = None
     ) -> None:
         """
@@ -42,7 +42,7 @@ class LogMessage(QFrame):
             text: The message text content
             level: The log level of the message
             timestamp: datetime object for the message timestamp
-            message_id: Unique identifier for the message
+            sequence: Sequence number that identifies the message in the log
             parent: Optional parent widget
         """
         super().__init__(parent)
@@ -99,7 +99,7 @@ class LogMessage(QFrame):
         self._is_spotlighted = False
         self._mouse_left_button_pressed = False
 
-        self._message_id = message_id
+        self._sequence = sequence
         self._message_level = level
         self._message_timestamp = timestamp
         self._message_content = text
@@ -122,9 +122,9 @@ class LogMessage(QFrame):
         self.apply_style()
         self._on_language_changed()
 
-    def message_id(self) -> str | None:
-        """Get the message ID."""
-        return self._message_id
+    def sequence(self) -> int:
+        """Get the message's sequence number."""
+        return self._sequence
 
     def is_spotlighted(self) -> bool:
         """Check if this message is spotlighted."""

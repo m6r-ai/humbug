@@ -382,6 +382,7 @@ def get_french_strings() -> LanguageStrings:
         terminal_status="Terminal : {name} ({columns}x{rows})",
         system_status="Statut du système",
         log_status="Journal",
+        log_status_entries="Journal : entrées {first:,}-{last:,} sur {total:,}",
         preview_status="Aperçu : {path}",
         diff_status="Diff : {path} | {rows} lignes modifiées",
 

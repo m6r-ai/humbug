@@ -381,6 +381,7 @@ def get_arabic_strings() -> LanguageStrings:
         terminal_status="طرفية: {name} ({columns}x{rows})",
         system_status="نظام",
         log_status="سجل",
+        log_status_entries="السجل: المدخلات {first:,}-{last:,} من {total:,}",
         preview_status="معاينة: {path}",
         diff_status="فرق: {path} | {rows} صفوف متغيرة",
 

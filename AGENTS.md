@@ -272,6 +272,12 @@ interactions log, the context registry, and the conversations directory (`.humbu
 Conversations are migrated from the legacy `conversations/` root directory on open.
 No Qt or GUI dependencies.
 
+The interaction log (`MindspaceInteractions`) is an append-only store of segmented JSON Lines
+files under `.humbug/log/`, addressed by contiguous sequence numbers that start at 1.  It never
+truncates, never rewrites and never deletes: segments rotate at a size threshold and that is the
+only limit on the log.  Individual records are bounded in size and reads are bounded by the
+caller.  See ADR-0017.
+
 `Mindspace.resolve_tool_path()` is the single mechanism every AI tool must use to
 resolve a path argument.  It enforces the mindspace boundary and rejects paths inside
 the `.humbug/` directory (via `Mindspace.is_humbug_path()`), resolving symlinks on both
