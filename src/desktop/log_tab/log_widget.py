@@ -41,6 +41,8 @@ class LogWidget(QWidget):
 
     FIND_BATCH_SIZE = 500
 
+    MAX_LOADED_PAGES = 4
+
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -66,7 +68,8 @@ class LogWidget(QWidget):
 
         # Initialize tracking variables
         self._auto_scroll = True
-        self._last_scroll_maximum = 0
+        self._pending_anchor: tuple[int, int] | None = None
+        self._window_extended = False
 
         # Create layout
         log_layout = QVBoxLayout(self)
@@ -245,10 +248,17 @@ class LogWidget(QWidget):
         return self._messages[0].sequence(), self._messages[-1].sequence(), total
 
     def _trim_to_page(self) -> None:
-        """Discard the oldest entries once the view holds more than one page."""
-        excess = len(self._messages) - self.VIEW_PAGE_SIZE
+        """Discard the oldest entries once the view holds more pages than it keeps."""
+        limit = self.VIEW_PAGE_SIZE
+        if self._window_extended:
+            limit = self.MAX_LOADED_PAGES * self.VIEW_PAGE_SIZE
+
+        excess = len(self._messages) - limit
         if excess <= 0:
             return
+
+        if not self._auto_scroll:
+            self._anchor_view()
 
         for _ in range(excess):
             message = self._messages.pop(0)
@@ -273,9 +283,35 @@ class LogWidget(QWidget):
         self._message_with_selection = None
         self._spotlighted_message_index = -1
         self._highlighted_widgets.clear()
+        self._window_extended = False
 
     def _add_log_message(self, message: MindspaceMessage) -> None:
-        """Add a message from the mindspace message log."""
+        """Add a message widget below the ones already shown."""
+        msg_widget = self._create_log_message(message)
+
+        # Add widget before the stretch
+        self._messages_layout.insertWidget(self._messages_layout.count() - 1, msg_widget)
+        self._messages.append(msg_widget)
+
+    def _prepend_log_message(self, message: MindspaceMessage) -> None:
+        """Add a message widget above the ones already shown."""
+        msg_widget = self._create_log_message(message)
+        self._messages_layout.insertWidget(0, msg_widget)
+        self._messages.insert(0, msg_widget)
+
+        if self._spotlighted_message_index != -1:
+            self._spotlighted_message_index += 1
+
+    def _create_log_message(self, message: MindspaceMessage) -> LogMessage:
+        """
+        Create the widget for one log entry.
+
+        Args:
+            message: Entry to create a widget for.
+
+        Returns:
+            The widget, wired up to this widget's selection and scroll handling.
+        """
         msg_widget = LogMessage(
             message.content,
             message.level,
@@ -290,10 +326,7 @@ class LogWidget(QWidget):
         msg_widget.scroll_requested.connect(self._on_scroll_requested)
         msg_widget.mouse_released.connect(self._stop_scroll)
 
-        # Add widget before the stretch
-        count = self._messages_layout.count()
-        self._messages_layout.insertWidget(count - 1, msg_widget)
-        self._messages.append(msg_widget)
+        return msg_widget
 
     def _on_scroll_requested(self, mouse_pos: QPoint) -> None:
         """Begin scroll handling for selection drag."""
@@ -407,45 +440,130 @@ class LogWidget(QWidget):
         Args:
             value (int): The new scroll value
         """
-        # Get the vertical scrollbar
         vbar = self._scroll_area.verticalScrollBar()
 
-        # Check if we're at the bottom
         at_bottom = value == vbar.maximum()
-
-        # If user scrolls up, disable auto-scroll
-        if not at_bottom:
-            self._auto_scroll = False
-
-        # If user scrolls to bottom, re-enable auto-scroll
-        if at_bottom:
-            self._auto_scroll = True
+        self._auto_scroll = at_bottom
 
         self.has_seen_latest_update_changed.emit(at_bottom)
 
-    def _on_scroll_range_changed(self, _minimum: int, maximum: int) -> None:
-        """Handle the scroll range changing."""
-        # If we're set to auto-scroll then do so now
-        current_pos = self._scroll_area.verticalScrollBar().value()
+        if value == vbar.minimum() and not self._auto_scroll:
+            self._load_earlier()
 
+        if at_bottom and not self._showing_tail:
+            self._load_later()
+
+    def _on_scroll_range_changed(self, _minimum: int, _maximum: int) -> None:
+        """
+        Handle the scroll range changing.
+
+        Args:
+            _minimum: New minimum scroll value.
+            _maximum: New maximum scroll value.
+        """
         if self._auto_scroll:
             self._scroll_to_bottom()
 
-        elif current_pos < maximum:
-            if self._last_scroll_maximum != maximum:
-                max_diff = maximum - self._last_scroll_maximum
-                self._scroll_area.verticalScrollBar().setValue(current_pos + max_diff)
-
-        self._last_scroll_maximum = maximum
-
     def _scroll_to_bottom(self) -> None:
         """Scroll to the bottom of the content."""
+        if self._pending_anchor is not None:
+            self._pending_anchor = None
+            self._deferred_scroll_timer.stop()
+
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
 
     def _on_deferred_scroll(self) -> None:
         """Restore scroll position after layout has settled."""
-        self._scroll_area.verticalScrollBar().setValue(self._deferred_scroll_position)
+        scrollbar = self._scroll_area.verticalScrollBar()
+        anchor = self._pending_anchor
+        self._pending_anchor = None
+        if anchor is not None:
+            sequence, offset = anchor
+            for widget in self._messages:
+                if widget.sequence() != sequence:
+                    continue
+
+                scrollbar.setValue(widget.mapTo(self._messages_container, QPoint(0, 0)).y() + offset)
+                return
+
+            return
+
+        scrollbar.setValue(self._deferred_scroll_position)
+
+    def _anchor_view(self) -> None:
+        """
+        Keep the reader on the same entry while entries are added or removed.
+
+        The entry at the top of the viewport and how far into it the viewport
+        starts are remembered, and the scroll position is put back to them once
+        the layout that follows the change has settled.
+        """
+        scroll_value = self._scroll_area.verticalScrollBar().value()
+
+        for widget in self._messages:
+            top = widget.mapTo(self._messages_container, QPoint(0, 0)).y()
+            if top + widget.height() > scroll_value:
+                self._pending_anchor = (widget.sequence(), scroll_value - top)
+                self._deferred_scroll_timer.start()
+                return
+
+    def _load_earlier(self) -> None:
+        """
+        Load the page of entries before the ones on show.
+        Loading stops once the view holds MAX_LOADED_PAGES pages; the status bar
+        reports the range on show, so the reader can see how far back they are.
+        """
+        if not self._messages or not self._mindspace_manager.has_mindspace():
+            return
+
+        first = self._messages[0].sequence()
+        if first == 1 or len(self._messages) >= self.MAX_LOADED_PAGES * self.VIEW_PAGE_SIZE:
+            return
+
+        store = self._mindspace_manager.interactions()
+        page_start = max(1, first - self.VIEW_PAGE_SIZE)
+        messages = store.read(page_start, first - page_start)
+        if not messages:
+            return
+
+        self._anchor_view()
+        for message in reversed(messages):
+            self._prepend_log_message(message)
+
+        self._window_extended = True
+        self.status_updated.emit()
+
+    def _load_later(self) -> None:
+        """
+        Load the page of entries after the ones on show.
+
+        This is how the reader gets from a page they arrived at by searching back to
+        the end of the log.  The view stays on the entries being read and the newly
+        loaded page is added below them.
+        """
+        if not self._messages or not self._mindspace_manager.has_mindspace():
+            return
+
+        store = self._mindspace_manager.interactions()
+        total = store.count()
+        last = self._messages[-1].sequence()
+        if last >= total:
+            return
+
+        messages = store.read(last + 1, self.VIEW_PAGE_SIZE)
+        if not messages:
+            return
+
+        self._anchor_view()
+        self._auto_scroll = False
+        for message in messages:
+            self._add_log_message(message)
+
+        self._window_extended = True
+        self._showing_tail = self._messages[-1].sequence() == total
+        self._trim_to_page()
+        self.status_updated.emit()
 
     def set_active(self, widget: QWidget, active: bool) -> None:
         """

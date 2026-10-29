@@ -141,9 +141,10 @@ have preserved a fragment of a fragment.
   or a corrupt record makes the count an upper bound.
 - Rotation, `fsync` and truncation are policy that now lives in the store and must be respected
   by anything that writes to it.
-- The log tab shows the newest page of entries rather than the whole log. It reports which range
-  it is showing in the status bar, and find searches the whole log and loads the page holding a
-  match, but browsing backwards page by page is a view-layer feature this ADR does not deliver.
+- The log tab keeps a window of a few pages of entries rather than the whole log. It reports the
+  range it is showing in the status bar, find searches the whole log and loads the page holding a
+  match, and reaching either end of the loaded window loads the page beyond it; entries outside
+  that window are not rendered.
 - Find highlights are computed when a search runs, so entries appended afterwards are matched by
   the count but not highlighted until the next search.
 - Humbug's planned internal versioning of `.humbug/` will have to treat an append-only log

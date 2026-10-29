@@ -39,6 +39,10 @@ class LogTab(TabBase):
         self._logger = logging.getLogger("LogTab")
         self._mindspace_manager = MindspaceManager()
 
+        # Created before any child widget, because a child can report a status
+        # update as soon as it is laid out, including while this tab is being built.
+        self._language_manager = LanguageManager()
+
         # Create layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -68,7 +72,6 @@ class LogTab(TabBase):
         log_container_layout.addWidget(self._log_widget)
         layout.addWidget(log_container)
 
-        self._language_manager = LanguageManager()
         self.apply_style()
 
         # Connect only once the widgets the handler depends on exist, so a

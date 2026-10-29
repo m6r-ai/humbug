@@ -215,3 +215,116 @@ class TestFind:
         first, last, total = log_widget.page_status()
         assert (first, last) == pinned[:2]
         assert total == 13
+
+
+class TestLoadEarlier:
+    """Tests for loading the entries before the ones on show."""
+
+    def test_loads_the_page_before_the_visible_one(self, mindspace_sandbox, log_widget) -> None:
+        """Loading earlier extends the range backwards by one page."""
+        _add_entries(mindspace_sandbox.manager, _entries(12))
+
+        log_widget._load_earlier()
+
+        first, last, total = log_widget.page_status()
+        assert (first, last, total) == (3, 12, 12)
+
+    def test_stops_when_the_start_of_the_log_is_reached(self, mindspace_sandbox, log_widget) -> None:
+        """Loading earlier stops once the first entry is on show."""
+        _add_entries(mindspace_sandbox.manager, _entries(12))
+
+        for _ in range(5):
+            log_widget._load_earlier()
+
+        first, last, total = log_widget.page_status()
+        assert (first, last, total) == (1, 12, 12)
+
+    def test_stops_at_the_loaded_page_limit(self, mindspace_sandbox, log_widget) -> None:
+        """The view holds no more than MAX_LOADED_PAGES pages of entries."""
+        _add_entries(mindspace_sandbox.manager, _entries(60))
+
+        for _ in range(10):
+            log_widget._load_earlier()
+
+        first, last, _ = log_widget.page_status()
+        assert last == 60
+        assert (last - first + 1) == LogWidget.MAX_LOADED_PAGES * LogWidget.VIEW_PAGE_SIZE
+
+    def test_entries_already_on_show_stay_on_show(self, mindspace_sandbox, log_widget) -> None:
+        """The entries already loaded are still shown after loading earlier."""
+        _add_entries(mindspace_sandbox.manager, _entries(12))
+        before = [message.sequence() for message in log_widget._messages]
+
+        log_widget._load_earlier()
+
+        assert [message.sequence() for message in log_widget._messages][-len(before):] == before
+
+    def test_loaded_entries_are_in_sequence_order(self, mindspace_sandbox, log_widget) -> None:
+        """Loaded entries are inserted above the existing ones, in order."""
+        _add_entries(mindspace_sandbox.manager, _entries(12))
+
+        log_widget._load_earlier()
+
+        assert [message.sequence() for message in log_widget._messages] == list(range(3, 13))
+
+
+class TestLoadLater:
+    """Tests for loading the entries after the ones on show."""
+
+    def test_loads_the_page_after_the_visible_one(self, mindspace_sandbox, log_widget) -> None:
+        """Loading later extends the range forwards by one page."""
+        _add_entries(mindspace_sandbox.manager, _entries(12, needle_at=1))
+        log_widget.find_text("needle")
+
+        log_widget._load_later()
+
+        assert log_widget.page_status() == (1, 10, 12)
+
+    def test_stops_at_the_end_of_the_log(self, mindspace_sandbox, log_widget) -> None:
+        """Loading later stops once the newest entry is on show."""
+        _add_entries(mindspace_sandbox.manager, _entries(12, needle_at=1))
+        log_widget.find_text("needle")
+
+        for _ in range(5):
+            log_widget._load_later()
+
+        assert log_widget.page_status() == (1, 12, 12)
+
+    def test_reaching_the_end_resumes_following_new_entries(
+        self, mindspace_sandbox, log_widget
+    ) -> None:
+        """Once the newest entry is on show, entries appended later join the view."""
+        _add_entries(mindspace_sandbox.manager, _entries(12, needle_at=1))
+        log_widget.find_text("needle")
+        for _ in range(5):
+            log_widget._load_later()
+
+        _add_entries(mindspace_sandbox.manager, ["later entry"])
+
+        first, last, total = log_widget.page_status()
+        assert (first, last, total) == (1, 13, 13)
+
+    def test_loaded_entries_are_appended_in_order(self, mindspace_sandbox, log_widget) -> None:
+        """Loaded entries follow the existing ones, in sequence order."""
+        _add_entries(mindspace_sandbox.manager, _entries(12, needle_at=1))
+        log_widget.find_text("needle")
+
+        log_widget._load_later()
+
+        assert [message.sequence() for message in log_widget._messages] == list(range(1, 11))
+
+
+class TestFollowingTheTail:
+    """Tests for the view keeping up with entries appended while at the end."""
+
+    def test_appending_while_at_the_end_does_not_anchor_the_view(
+        self, mindspace_sandbox, log_widget
+    ) -> None:
+        """Following the tail is never interrupted by an anchor to an older entry."""
+        _add_entries(mindspace_sandbox.manager, _entries(12))
+
+        for index in range(12, 20):
+            _add_entries(mindspace_sandbox.manager, [f"entry {index}"])
+            assert log_widget._pending_anchor is None
+
+        assert log_widget.page_status() == (16, 20, 20)
