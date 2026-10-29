@@ -45,6 +45,13 @@ class LanguageStrings:
     close_tabs_to_right: str
     close_other_tabs: str
     close_column: str
+    move_tab_to_left_column: str
+    move_tab_to_right_column: str
+    move_tab_to_new_column: str
+    move_tab_left: str
+    move_tab_right: str
+    move_tab_to_start: str
+    move_tab_to_end: str
 
     # Edit menu items
     submit_message: str
@@ -60,6 +67,8 @@ class LanguageStrings:
     mindspace_search: str
     quick_switcher: str
     quick_switcher_placeholder: str
+    quick_switcher_prefix_hint: str
+    quick_switcher_goto_line: str
     quick_switcher_limited: str  # Format: "Limited to the first {0} files"
     mindspace_settings: str
     conversation_settings: str
@@ -173,6 +182,13 @@ class LanguageStrings:
     allow_external_file_access: str
     external_file_allowlist: str
     external_file_denylist: str
+
+    # User Settings dialog - external HTTP access
+    settings_network_access: str
+    external_http_access: str
+    allow_external_http_access: str
+    external_http_allowlist: str
+    external_http_denylist: str
 
     # Mindspace tree
     mindspace_label_none: str
@@ -446,6 +462,8 @@ class LanguageStrings:
     approve_tool_call: str
     i_am_unsure_about_tool_call: str
     reject_tool_call: str
+    interruptible_wait_message: str  # Format: "Waiting {duration} seconds..."
+    finish_waiting_now: str
     retry_error: str
 
     # Update checker

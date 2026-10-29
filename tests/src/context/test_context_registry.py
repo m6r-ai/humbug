@@ -1,6 +1,8 @@
 """Tests for the ContextRegistry: path normalisation, layout, and state persistence."""
 import os
 
+import pytest
+
 from context.context_registry import ContextEvent, ContextRegistry
 
 
@@ -640,3 +642,103 @@ class TestCurrentByColumn:
         restored.clear()
 
         assert restored.get_current_by_column() == {}
+
+
+class TestReorderWithinColumn:
+    """Tests for moving a context to a different position in its own column."""
+
+    def _open_three(self, registry: ContextRegistry) -> list[str]:
+        """Open three contexts in column 0 and return their IDs in position order."""
+        return [registry.open(context_type="editor", column=0) for _ in range(3)]
+
+    def _order(self, registry: ContextRegistry, column: int = 0) -> list[str]:
+        """Return the context IDs of a column in position order."""
+        return [info.context_id for info in registry.column_members(column)]
+
+    def test_moving_a_context_later_shifts_the_others_back(self) -> None:
+        """A context moved down the column displaces those it passes."""
+        registry = ContextRegistry()
+        first, second, third = self._open_three(registry)
+
+        registry.reorder(first, 2)
+
+        assert self._order(registry) == [second, third, first]
+
+    def test_moving_a_context_earlier_shifts_the_others_along(self) -> None:
+        """A context moved up the column displaces those it passes."""
+        registry = ContextRegistry()
+        first, second, third = self._open_three(registry)
+
+        registry.reorder(third, 0)
+
+        assert self._order(registry) == [third, first, second]
+
+    def test_positions_stay_contiguous_from_zero(self) -> None:
+        """Reordering must not leave gaps that would break save_state ordering."""
+        registry = ContextRegistry()
+        self._open_three(registry)
+        registry.reorder(self._order(registry)[1], 0)
+
+        assert [registry.get(cid).position for cid in self._order(registry)] == [0, 1, 2]
+
+    def test_reorder_only_touches_its_own_column(self) -> None:
+        """Contexts in other columns keep their positions."""
+        registry = ContextRegistry()
+        first, second, third = self._open_three(registry)
+        other = registry.open(context_type="terminal", column=1)
+        original_order = self._order(registry)
+
+        registry.reorder(second, 0)
+
+        assert self._order(registry) == [second, first, third]
+        assert original_order[2] == third
+        assert registry.get(other).column == 1
+        assert registry.get(other).position == 0
+
+    def test_reorder_emits_event(self) -> None:
+        """Reordering emits REORDERED so the frontend can mirror the change."""
+        registry = ContextRegistry()
+        first, _, _ = self._open_three(registry)
+        events = []
+        registry.register_callback(ContextEvent.REORDERED, lambda cid, pos: events.append((cid, pos)))
+
+        registry.reorder(first, 2)
+
+        assert events == [(first, 2)]
+
+    def test_reorder_to_the_same_position_is_a_no_op(self) -> None:
+        """Nothing is emitted when the context is already where it was asked to go."""
+        registry = ContextRegistry()
+        first, _, _ = self._open_three(registry)
+        events = []
+        registry.register_callback(ContextEvent.REORDERED, lambda cid, pos: events.append((cid, pos)))
+
+        registry.reorder(first, 0)
+
+        assert events == []
+
+    def test_reorder_rejects_an_unknown_context(self) -> None:
+        """An unknown context is a programming error, not a silent no-op."""
+        registry = ContextRegistry()
+
+        with pytest.raises(ValueError, match="Context not found"):
+            registry.reorder("no-such-context", 0)
+
+    def test_reorder_rejects_a_position_outside_the_column(self) -> None:
+        """A position beyond the column's contents is rejected."""
+        registry = ContextRegistry()
+        first, _, _ = self._open_three(registry)
+
+        with pytest.raises(ValueError, match="Position must be"):
+            registry.reorder(first, 3)
+
+    def test_reordering_survives_save_state(self) -> None:
+        """save_state orders contexts by position, so a reorder must persist."""
+        registry = ContextRegistry()
+        first, second, third = self._open_three(registry)
+
+        registry.reorder(third, 0)
+        saved = registry.save_state()
+
+        order = [entry["layout"]["context_id"] for entry in saved["contexts"]]
+        assert order == [third, first, second]

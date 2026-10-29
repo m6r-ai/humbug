@@ -300,7 +300,9 @@ class DiffPane(QPlainTextEdit):
         cursor = self.cursorForPosition(event.pos())
         block = cursor.block()
         block_number = block.blockNumber()
-        column = cursor.positionInBlock() + 1
+        # Clamp to the row's own text so the column can never exceed the length of
+        # the line it was measured against.
+        column = min(cursor.positionInBlock() + 1, block.length())
         menu = self._style_manager.create_menu(self)
         strings = self._language_manager.strings()
         copy_action = menu.addAction(strings.copy)

@@ -54,6 +54,13 @@ def get_french_strings() -> LanguageStrings:
         close_tabs_to_right="Fermer les onglets à droite",
         close_other_tabs="Fermer les autres onglets",
         close_column="Fermer la colonne",
+        move_tab_to_left_column="Déplacer l'onglet vers la colonne de gauche",
+        move_tab_to_right_column="Déplacer l'onglet vers la colonne de droite",
+        move_tab_to_new_column="Déplacer l'onglet vers une nouvelle colonne",
+        move_tab_left="Déplacer l'onglet à gauche",
+        move_tab_right="Déplacer l'onglet à droite",
+        move_tab_to_start="Déplacer l'onglet au début",
+        move_tab_to_end="Déplacer l'onglet à la fin",
 
         # Edit menu items
         submit_message="Envoyer le message",
@@ -69,6 +76,8 @@ def get_french_strings() -> LanguageStrings:
         mindspace_search="Recherche globale",
         quick_switcher="Sélecteur rapide",
         quick_switcher_placeholder="Rechercher fichiers, conversations et onglets ouverts...",
+        quick_switcher_prefix_hint="> commandes   @ conversations   :ligne   fichier:ligne",
+        quick_switcher_goto_line="Aller à la ligne {0}",
         quick_switcher_limited="Limité aux {0} premiers fichiers",
         mindspace_settings="Paramètres de l'espace mental",
         conversation_settings="Paramètres de conversation",
@@ -182,6 +191,14 @@ def get_french_strings() -> LanguageStrings:
         allow_external_file_access="Autoriser l'IA à lire des fichiers en dehors du mindspace",
         external_file_allowlist="Chemins autorisés (motifs glob, un par ligne) :",
         external_file_denylist="Chemins toujours refusés (motifs glob, un par ligne) :",
+
+        # User Settings dialog - external HTTP access
+        settings_network_access="Accès réseau",
+        external_http_access="Accès réseau",
+        allow_external_http_access="Autoriser l'IA à récupérer les URL autorisées sans demander",
+        external_http_allowlist="URL approuvées automatiquement "
+                                "(une par ligne, ex. api.example.com ou https://api.example.com:8443) :",
+        external_http_denylist="URL toujours refusées (une par ligne, ex. localhost ou 10.0.0.0/8) :",
 
         # Mindspace tree
         mindspace_label_none="Aucun espace mental actif",
@@ -496,6 +513,8 @@ def get_french_strings() -> LanguageStrings:
         approve_tool_call="Approuver",
         i_am_unsure_about_tool_call="Je ne suis pas sûr à propos",
         reject_tool_call="Rejeter",
+        interruptible_wait_message="Attente de {duration} secondes \u2014 {remaining} restantes...",
+        finish_waiting_now="Terminer l'attente maintenant",
         retry_error="Réessayer",
 
         # Update checker

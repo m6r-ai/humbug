@@ -51,6 +51,7 @@ _FETCHED_MODELS_CACHE = os.path.join(os.path.expanduser("~"), ".humbug", "fetche
 # Section identifier constants
 SECTION_DISPLAY = "display"
 SECTION_FILE_ACCESS = "file_access"
+SECTION_NETWORK_ACCESS = "network_access"
 SECTION_AI_BACKENDS = "ai_backends"
 SECTION_AI_MODEL = "ai_model"
 SECTION_AI_TOOLS = "ai_tools"
@@ -59,7 +60,7 @@ SECTION_DIFF = "diff"
 SECTION_TERMINAL = "terminal"
 SECTION_CONVERSATION = "conversation"
 
-_ALL_MINDSPACES_SECTIONS = [SECTION_DISPLAY, SECTION_FILE_ACCESS, SECTION_AI_BACKENDS]
+_ALL_MINDSPACES_SECTIONS = [SECTION_DISPLAY, SECTION_FILE_ACCESS, SECTION_NETWORK_ACCESS, SECTION_AI_BACKENDS]
 _THIS_MINDSPACE_SECTIONS = [
     SECTION_AI_MODEL, SECTION_AI_TOOLS, SECTION_EDITOR, SECTION_DIFF, SECTION_TERMINAL, SECTION_CONVERSATION
 ]
@@ -140,6 +141,12 @@ class SettingsDialog(QDialog):
         self._external_allowlist_area: SettingsTextArea
         self._external_denylist_area: SettingsTextArea
         self._file_access_container: SettingsContainer
+
+        self._network_access_heading: SettingsPageHeading
+        self._allow_external_http_access_switch: SettingsSwitch
+        self._external_http_allowlist_area: SettingsTextArea
+        self._external_http_denylist_area: SettingsTextArea
+        self._network_access_container: SettingsContainer
 
         self._ai_backends_heading: SettingsPageHeading
         self._ai_backends_container: SettingsContainer
@@ -264,6 +271,7 @@ class SettingsDialog(QDialog):
         self._add_nav_group(strings.settings_all_mindspaces, "settings_all_mindspaces")
         self._build_display_page()
         self._build_file_access_page()
+        self._build_network_access_page()
         self._build_ai_backends_page()
 
         self._add_nav_group(strings.settings_this_mindspace, "settings_this_mindspace")
@@ -394,6 +402,42 @@ class SettingsDialog(QDialog):
         self._stack.addWidget(page)
         self._section_pages[SECTION_FILE_ACCESS] = page
         self._add_nav_section(SECTION_FILE_ACCESS, strings.settings_file_access)
+
+    def _build_network_access_page(self) -> None:
+        """Build the Network Access settings page."""
+        strings = self._language_manager.strings()
+        container = SettingsContainer()
+
+        self._network_access_heading = SettingsFactory.create_page_heading(strings.external_http_access)
+        container.add_setting(self._network_access_heading)
+
+        self._allow_external_http_access_switch = SettingsFactory.create_switch(
+            strings.allow_external_http_access
+        )
+        container.add_setting(self._allow_external_http_access_switch)
+
+        self._external_http_allowlist_area = SettingsFactory.create_text_area(
+            strings.external_http_allowlist
+        )
+        container.add_setting(self._external_http_allowlist_area)
+
+        self._external_http_denylist_area = SettingsFactory.create_text_area(
+            strings.external_http_denylist
+        )
+        container.add_setting(self._external_http_denylist_area)
+
+        self._allow_external_http_access_switch.value_changed.connect(
+            self._handle_http_access_enabled
+        )
+
+        container.add_stretch()
+        container.value_changed.connect(self._on_value_changed)
+
+        self._network_access_container = container
+        page = self._make_scroll_page(container)
+        self._stack.addWidget(page)
+        self._section_pages[SECTION_NETWORK_ACCESS] = page
+        self._add_nav_section(SECTION_NETWORK_ACCESS, strings.settings_network_access)
 
     def _build_ai_backends_page(self) -> None:
         """Build the AI Backends settings page."""
@@ -766,6 +810,9 @@ class SettingsDialog(QDialog):
             allow_external_file_access=self._allow_external_access_switch.get_value(),
             external_file_allowlist=self._external_allowlist_area.get_value(),
             external_file_denylist=self._external_denylist_area.get_value(),
+            allow_external_http_access=self._allow_external_http_access_switch.get_value(),
+            external_http_allowlist=self._external_http_allowlist_area.get_value(),
+            external_http_denylist=self._external_http_denylist_area.get_value(),
             check_for_updates=self._check_for_updates_check.get_value(),
             onboarding_tour_status=(
                 initial.onboarding_tour_status if initial is not None else OnboardingTourStatus.NOT_STARTED
@@ -857,6 +904,12 @@ class SettingsDialog(QDialog):
         self._external_allowlist_area.set_value(settings.external_file_allowlist)
         self._external_denylist_area.set_value(settings.external_file_denylist)
         self._external_allowlist_area.set_enabled(settings.allow_external_file_access)
+
+        # Network access
+        self._allow_external_http_access_switch.set_value(settings.allow_external_http_access)
+        self._external_http_allowlist_area.set_value(settings.external_http_allowlist)
+        self._external_http_denylist_area.set_value(settings.external_http_denylist)
+        self._external_http_allowlist_area.set_enabled(settings.allow_external_http_access)
 
         # AI backends
         for backend_id, controls in self._ai_backend_controls.items():
@@ -968,6 +1021,7 @@ class SettingsDialog(QDialog):
             for c in [
                 self._display_container,
                 self._file_access_container,
+                self._network_access_container,
                 self._ai_backends_container,
                 self._ai_model_container,
                 self._tools_container,
@@ -982,6 +1036,11 @@ class SettingsDialog(QDialog):
         """Enable or disable external file access text areas."""
         enabled = self._allow_external_access_switch.get_value()
         self._external_allowlist_area.set_enabled(enabled)
+
+    def _handle_http_access_enabled(self) -> None:
+        """Enable or disable HTTP allowlist text areas."""
+        enabled = self._allow_external_http_access_switch.get_value()
+        self._external_http_allowlist_area.set_enabled(enabled)
 
     def _handle_backend_enabled(self, backend_id: str) -> None:
         """Enable or disable key/URL fields for a backend."""
@@ -1407,6 +1466,7 @@ class SettingsDialog(QDialog):
         label_map = {
             SECTION_DISPLAY: strings.settings_display,
             SECTION_FILE_ACCESS: strings.settings_file_access,
+            SECTION_NETWORK_ACCESS: strings.settings_network_access,
             SECTION_AI_BACKENDS: strings.settings_ai_backends,
             SECTION_AI_MODEL: strings.settings_ai_model,
             SECTION_AI_TOOLS: strings.settings_ai_tools,
@@ -1421,6 +1481,7 @@ class SettingsDialog(QDialog):
         # Update page headings
         self._display_heading.set_label(strings.display_settings)
         self._file_access_heading.set_label(strings.external_file_access)
+        self._network_access_heading.set_label(strings.external_http_access)
         self._ai_backends_heading.set_label(strings.ai_backend_config)
         self._ai_model_heading.set_label(strings.model_settings)
         self._tools_heading.set_label(strings.tool_settings)
@@ -1471,6 +1532,11 @@ class SettingsDialog(QDialog):
         self._allow_external_access_switch.set_label(strings.allow_external_file_access)
         self._external_allowlist_area.set_label(strings.external_file_allowlist)
         self._external_denylist_area.set_label(strings.external_file_denylist)
+
+        # Update Network Access page controls
+        self._allow_external_http_access_switch.set_label(strings.allow_external_http_access)
+        self._external_http_allowlist_area.set_label(strings.external_http_allowlist)
+        self._external_http_denylist_area.set_label(strings.external_http_denylist)
 
         # Update AI Backends page controls
         for backend_id, controls in self._ai_backend_controls.items():
@@ -1599,6 +1665,7 @@ class SettingsDialog(QDialog):
         for container in [
             self._display_container,
             self._file_access_container,
+            self._network_access_container,
             self._ai_backends_container,
             self._ai_model_container,
             self._tools_container,
@@ -1627,6 +1694,9 @@ class SettingsDialog(QDialog):
             allow_external_file_access=settings.allow_external_file_access,
             external_file_allowlist=list(settings.external_file_allowlist),
             external_file_denylist=list(settings.external_file_denylist),
+            allow_external_http_access=settings.allow_external_http_access,
+            external_http_allowlist=list(settings.external_http_allowlist),
+            external_http_denylist=list(settings.external_http_denylist),
             check_for_updates=settings.check_for_updates,
             onboarding_tour_status=settings.onboarding_tour_status,
             onboarding_tour_version=settings.onboarding_tour_version,

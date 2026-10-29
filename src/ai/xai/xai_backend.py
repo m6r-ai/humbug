@@ -16,6 +16,10 @@ from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 class XAIBackend(AIBackend):
     """xAI API backend implementation with streaming support."""
 
+    def _supports_compressed_requests(self) -> bool:
+        """Return True: the xAI API decompresses gzip-encoded request bodies."""
+        return True
+
     async def fetch_models(self) -> list[str]:
         """Fetch available model IDs from the xAI API."""
         url = self._api_url.replace("/chat/completions", "/models")

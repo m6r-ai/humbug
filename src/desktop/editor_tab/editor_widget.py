@@ -1985,7 +1985,7 @@ class EditorWidget(QPlainTextEdit):
             column: Target column number (1-indexed, default 1)
 
         Raises:
-            ValueError: If line or column is invalid
+            ValueError: If line is invalid
         """
         document = self.document()
         total_lines = document.blockCount()
@@ -2004,8 +2004,10 @@ class EditorWidget(QPlainTextEdit):
             raise ValueError(f"Invalid line number: {line}")
 
         line_length = target_block.length() - 1  # -1 for newline character
-        if column > line_length + 1:  # +1 because we can position at end of line
-            raise ValueError(f"column ({column}) exceeds line length ({line_length})")
+        # A column past the end of the line is clamped rather than rejected: the
+        # column is a navigation hint and may originate from a view whose text does
+        # not match this document, so it must never raise.
+        column = min(column, line_length + 1)  # +1 because we can position at end of line
 
         cursor = QTextCursor(target_block)
         cursor.movePosition(

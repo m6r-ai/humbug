@@ -22,6 +22,8 @@ _DEFAULT_CONNECT_TIMEOUT = 20.0
 _DEFAULT_SSL_HANDSHAKE_TIMEOUT = 20.0
 _DEFAULT_READ_TIMEOUT = 30.0
 _DEFAULT_USER_AGENT = "Humbug"
+_COMPRESS_MIN_BYTES = 64 * 1024
+_COMPRESS_LEVEL = 1
 
 
 class HttpResponse:
@@ -118,31 +120,104 @@ class HttpResponse:
             return
 
         encoding = self._headers.get("content-encoding", "").lower()
-        if encoding in ("gzip", "deflate"):
-            data = await self._read_full_body()
-            for line in data.splitlines(keepends=True):
-                yield line
-
-            return
-
         self._body_read = True
         try:
-            chunked = self._headers.get("transfer-encoding", "").lower() == "chunked"
-
-            if chunked:
-                async for line in self._read_chunked_lines():
+            if encoding in ("gzip", "deflate"):
+                async for line in self._read_decompressed_lines(encoding):
                     yield line
 
             else:
-                while True:
-                    line = await self._timed_readline()
-                    if not line:
-                        break
-
+                async for line in self._read_raw_lines():
                     yield line
 
         finally:
             self._close_writer()
+
+    async def _read_raw_lines(self) -> AsyncGenerator[bytes, None]:
+        """
+        Yield lines from the undecoded response body.
+
+        Yields:
+            Lines from the response body as bytes
+        """
+        chunked = self._headers.get("transfer-encoding", "").lower() == "chunked"
+
+        if chunked:
+            async for line in self._read_chunked_lines():
+                yield line
+
+        else:
+            while True:
+                line = await self._timed_readline()
+                if not line:
+                    break
+
+                yield line
+
+    async def _read_decompressed_lines(self, encoding: str) -> AsyncGenerator[bytes, None]:
+        """
+        Yield lines from a compressed response body, decoding it incrementally.
+
+        The body is decoded as it arrives rather than being buffered in full, so
+        server-sent event streams remain incremental even when the server applies
+        transfer compression.
+
+        Args:
+            encoding: The Content-Encoding value ("gzip" or "deflate")
+
+        Yields:
+            Decompressed lines from the response body as bytes
+        """
+        # gzip uses a 16-bit window with the gzip framing; deflate uses the raw zlib window.
+        window_bits = 31 if encoding == "gzip" else 15
+        decompressor = zlib.decompressobj(window_bits)
+        buffer = bytearray()
+
+        async for chunk in self._read_raw_data():
+            buffer.extend(decompressor.decompress(chunk))
+            while b"\n" in buffer:
+                idx = buffer.index(b"\n") + 1
+                yield bytes(buffer[:idx])
+                buffer = buffer[idx:]
+
+        buffer.extend(decompressor.flush())
+        if buffer:
+            yield bytes(buffer)
+
+    async def _read_raw_data(self) -> AsyncGenerator[bytes, None]:
+        """
+        Yield the undecoded response body in chunks as they arrive.
+
+        Yields:
+            Chunks of the response body as bytes
+        """
+        chunked = self._headers.get("transfer-encoding", "").lower() == "chunked"
+
+        if chunked:
+            async for chunk in self._read_chunked_data():
+                yield chunk
+
+            return
+
+        content_length = self._headers.get("content-length")
+        if content_length is not None:
+            remaining = int(content_length)
+            while remaining > 0:
+                chunk = await self._timed_read(min(remaining, 65536))
+                if not chunk:
+                    break
+
+                remaining -= len(chunk)
+                yield chunk
+
+            return
+
+        while True:
+            chunk = await self._timed_read(65536)
+            if not chunk:
+                break
+
+            yield chunk
 
     async def _read_full_body(self) -> bytes:
         """Read the complete response body as bytes."""
@@ -304,6 +379,8 @@ class HttpClient:
         ssl_handshake_timeout: float = _DEFAULT_SSL_HANDSHAKE_TIMEOUT,
         read_timeout: float = _DEFAULT_READ_TIMEOUT,
         proxy: str | None = None,
+        compress_request_body: bool = False,
+        follow_redirects: bool = True,
     ) -> None:
         """
         Initialize the HTTP client.
@@ -316,6 +393,12 @@ class HttpClient:
             read_timeout: Seconds to wait for each read operation.
             proxy: Proxy URL (e.g. 'http://proxy:8080' or 'socks5://proxy:1080').
                 When set, all connections are tunneled through the proxy.
+            compress_request_body: Gzip request bodies at or above
+                _COMPRESS_MIN_BYTES.  Only enable this for endpoints known to
+                accept Content-Encoding: gzip on requests.
+            follow_redirects: Follow 3xx responses automatically.  When False,
+                a redirect is returned to the caller so that it can inspect the
+                Location header before deciding whether to continue.
         """
         self._ssl_context = ssl_context
         self._family = family
@@ -323,6 +406,8 @@ class HttpClient:
         self._ssl_handshake_timeout = ssl_handshake_timeout
         self._read_timeout = read_timeout
         self._proxy = proxy
+        self._compress_request_body = compress_request_body
+        self._follow_redirects = follow_redirects
 
     async def get(self, url: str, headers: dict[str, str] | None = None) -> HttpResponse:
         """
@@ -494,6 +579,19 @@ class HttpClient:
             body = json_module.dumps(json).encode("utf-8")
             request_headers.setdefault("Content-Type", "application/json")
 
+        # Compress before the redirect recursion below so that a redirect re-sends the
+        # compressed bytes rather than the original body with a stale Content-Encoding.
+        if (
+            self._compress_request_body
+            and body is not None
+            and len(body) >= _COMPRESS_MIN_BYTES
+            and "content-encoding" not in {k.lower() for k in request_headers}
+        ):
+            body = gzip.compress(body, compresslevel=_COMPRESS_LEVEL)
+            request_headers["Content-Encoding"] = "gzip"
+            json = None
+            data = body
+
         if method in ("POST", "PUT", "PATCH"):
             request_headers["Content-Length"] = str(len(body) if body is not None else 0)
 
@@ -527,7 +625,7 @@ class HttpClient:
             response = await self._read_response(reader, writer)
 
             # Handle redirects
-            if response.status() in (301, 302, 303, 307, 308):
+            if self._follow_redirects and response.status() in (301, 302, 303, 307, 308):
                 if redirect_count >= _MAX_REDIRECTS:
                     await response.text()
                     raise ClientResponseError(
@@ -544,6 +642,7 @@ class HttpClient:
                     redirect_method = method
                     redirect_json = json
                     redirect_data = data
+                    redirect_headers = headers
 
                     # 301, 302, 303: methods with a body are changed to GET
                     if response.status() in (301, 302, 303) and method in ("POST", "PUT", "PATCH"):
@@ -551,10 +650,17 @@ class HttpClient:
                         redirect_json = None
                         redirect_data = None
 
+                    else:
+                        # Carry the compressed body and its Content-Encoding across the
+                        # redirect; the caller's original headers do not record it.
+                        if "Content-Encoding" in request_headers:
+                            redirect_headers = dict(headers or {})
+                            redirect_headers["Content-Encoding"] = request_headers["Content-Encoding"]
+
                     return await self._request(
                         redirect_method,
                         redirect_url,
-                        headers=headers,
+                        headers=redirect_headers,
                         json=redirect_json,
                         data=redirect_data,
                         redirect_count=redirect_count + 1,

@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from dataclasses import replace
 from enum import Enum, auto
 import logging
 import os.path
@@ -15,6 +16,7 @@ class ContextEvent(Enum):
     UPDATED = auto()       # args: (context_info: ContextInfo)
     FOCUSED = auto()       # args: (context_id: str)
     MOVED = auto()         # args: (context_id: str, column: int)
+    REORDERED = auto()     # args: (context_id: str, position: int)
     COLUMN_SPLIT = auto()  # args: (context_id: str, split_left: bool)
     COLUMN_MERGE = auto()  # args: (column: int, merge_left: bool)
     COLUMN_SWAP = auto()   # args: (column: int, swap_left: bool)
@@ -261,6 +263,58 @@ class ContextRegistry:
         self._normalize_positions(column)
         self._emit(ContextEvent.MOVED, context_id, column)
 
+    def reorder(self, context_id: str, position: int) -> None:
+        """
+        Move a context to a different position within its own column.
+
+        Contexts between the old and new positions shift to close the gap, so
+        the column keeps contiguous positions from zero.  Emits REORDERED.
+
+        Args:
+            context_id: ID of the context to move.
+            position:   Target position within the column (0-based).
+
+        Raises:
+            ValueError: If the context does not exist or position is out of range.
+        """
+        info = self._contexts.get(context_id)
+        if info is None:
+            raise ValueError(f"Context not found: {context_id}")
+
+        members = self.column_members(info.column)
+        if not 0 <= position < len(members):
+            raise ValueError(
+                f"Position must be 0-{len(members) - 1}, got {position}"
+            )
+
+        current = next(
+            index for index, other in enumerate(members)
+            if other.context_id == context_id
+        )
+        if current == position:
+            return
+
+        members.insert(position, members.pop(current))
+        for index, member in enumerate(members):
+            self._set_position(member.context_id, index)
+
+        self._emit(ContextEvent.REORDERED, context_id, position)
+
+    def column_members(self, column: int) -> list[ContextInfo]:
+        """
+        Return a column's contexts in position order.
+
+        Args:
+            column: Column index to inspect.
+
+        Returns:
+            Contexts assigned to the column, ordered by position.
+        """
+        return sorted(
+            (info for info in self._contexts.values() if info.column == column),
+            key=lambda info: info.position,
+        )
+
     def split_column(self, context_id: str, split_left: bool) -> None:
         """
         Split the column containing a context, moving that context to a new column.
@@ -383,16 +437,24 @@ class ContextRegistry:
             column:     New column index.
         """
         info = self._contexts[context_id]
-        self._contexts[context_id] = ContextInfo(
-            context_id=info.context_id,
-            context_type=info.context_type,
-            path=info.path,
-            title=info.title,
-            is_modified=info.is_modified,
-            is_ephemeral=info.is_ephemeral,
-            column=column,
-            position=info.position,
-        )
+        self._contexts[context_id] = replace(info, column=column)
+
+    def _set_position(self, context_id: str, position: int) -> None:
+        """
+        Update a context's position without emitting an event.
+
+        Used internally by the ordering operations, which emit a single
+        high-level event after updating all affected contexts.
+
+        Args:
+            context_id: ID of the context to update.
+            position:   New position within its column.
+        """
+        info = self._contexts[context_id]
+        if info.position == position:
+            return
+
+        self._contexts[context_id] = replace(info, position=position)
 
     def _next_position(self, column: int) -> int:
         """
@@ -419,24 +481,8 @@ class ContextRegistry:
         Args:
             column: Column index to renumber.
         """
-        members = sorted(
-            (info for info in self._contexts.values() if info.column == column),
-            key=lambda info: info.position,
-        )
-        for position, info in enumerate(members):
-            if info.position == position:
-                continue
-
-            self._contexts[info.context_id] = ContextInfo(
-                context_id=info.context_id,
-                context_type=info.context_type,
-                path=info.path,
-                title=info.title,
-                is_modified=info.is_modified,
-                is_ephemeral=info.is_ephemeral,
-                column=info.column,
-                position=position,
-            )
+        for position, info in enumerate(self.column_members(column)):
+            self._set_position(info.context_id, position)
 
     def _normalize_all_positions(self) -> None:
         """Renumber positions in every column that currently has contexts."""

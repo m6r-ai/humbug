@@ -54,6 +54,13 @@ def get_english_strings() -> LanguageStrings:
         close_tabs_to_right="Close Tabs to the Right",
         close_other_tabs="Close Other Tabs",
         close_column="Close Column",
+        move_tab_to_left_column="Move Tab to Left Column",
+        move_tab_to_right_column="Move Tab to Right Column",
+        move_tab_to_new_column="Move Tab to New Column",
+        move_tab_left="Move Tab Left",
+        move_tab_right="Move Tab Right",
+        move_tab_to_start="Move Tab to Start",
+        move_tab_to_end="Move Tab to End",
 
         # Edit menu items
         submit_message="Submit Message",
@@ -69,6 +76,8 @@ def get_english_strings() -> LanguageStrings:
         mindspace_search="Mindspace Search",
         quick_switcher="Quick Switcher",
         quick_switcher_placeholder="Search files, conversations, and open tabs...",
+        quick_switcher_prefix_hint="> commands   @ conversations   :line   file:line",
+        quick_switcher_goto_line="Go to line {0}",
         quick_switcher_limited="Limited to the first {0} files",
         mindspace_settings="Mindspace Settings",
         conversation_settings="Conversation Settings",
@@ -182,6 +191,13 @@ def get_english_strings() -> LanguageStrings:
         allow_external_file_access="Allow AI to read files outside mindspace",
         external_file_allowlist="Allowed paths (glob patterns, one per line):",
         external_file_denylist="Always denied paths (glob patterns, one per line):",
+
+        # User Settings dialog - external HTTP access
+        settings_network_access="Network Access",
+        external_http_access="Network Access",
+        allow_external_http_access="Allow AI to fetch allowlisted URLs without asking",
+        external_http_allowlist="Auto-approved URLs (one per line, e.g. api.example.com or https://api.example.com:8443):",
+        external_http_denylist="Always denied URLs (one per line, e.g. localhost or 10.0.0.0/8):",
 
         # Mindspace tree
         mindspace_label_none="No mindspace active",
@@ -495,6 +511,8 @@ def get_english_strings() -> LanguageStrings:
         approve_tool_call="Approve",
         i_am_unsure_about_tool_call="I'm Unsure About This",
         reject_tool_call="Reject",
+        interruptible_wait_message="Waiting for {duration} seconds \u2014 {remaining} remaining...",
+        finish_waiting_now="Finish Waiting Now",
         retry_error="Retry",
 
         # Update checker

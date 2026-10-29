@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication,
     QGraphicsOpacityEffect,
 )
-from PySide6.QtCore import Signal, QPoint, Qt, QEvent, QObject
+from PySide6.QtCore import Signal, QPoint, Qt, QEvent, QObject, QTimer
 from PySide6.QtGui import QGuiApplication, QPaintEvent, QColor, QPainter, QPen, QFont, QFontMetrics
 
 from ai import AIMessageSource
@@ -29,6 +29,9 @@ from desktop.widgets.elided_label import ElidedLabel
 
 _APPROVAL_BUTTON_BASE_WIDTH = 220
 _APPROVAL_BUTTON_BASE_HEIGHT = 40
+
+# How often the interruptible wait countdown refreshes.
+_WAIT_COUNTDOWN_INTERVAL_MS = 1000
 
 _BORDER_WIDTH = 1
 _BORDER_WIDTH_ACTIVE = 2  # animated or spotlighted
@@ -53,6 +56,7 @@ class ConversationMessage(QFrame):
     tool_call_approved = Signal(AIToolCall)
     tool_call_i_am_unsure = Signal()
     tool_call_rejected = Signal(str)
+    wait_cancelled = Signal()
     retry_requested = Signal()
 
     def __init__(
@@ -312,6 +316,16 @@ class ConversationMessage(QFrame):
         self._pending_tool_reason: str | None = None
         self._pending_tool_context: str | None = None
         self._pending_tool_destructive: bool | None = None
+
+        # Interruptible wait widgets (shown inside the executing tool-call message)
+        self._wait_widget: QWidget | None = None
+        self._wait_text_edit: MarkdownTextEdit | None = None
+        self._wait_finish_button: QPushButton | None = None
+        self._wait_duration: float | None = None
+        self._wait_elapsed_ms = 0
+        self._wait_timer = QTimer(self)
+        self._wait_timer.setInterval(_WAIT_COUNTDOWN_INTERVAL_MS)
+        self._wait_timer.timeout.connect(self._on_wait_tick)
 
         # Retry widget (shown on the last SYSTEM error message)
         self._retry_widget: QWidget | None = None
@@ -680,6 +694,11 @@ class ConversationMessage(QFrame):
         if self._approval_reject_button:
             self._approval_reject_button.setText(strings.reject_tool_call)
 
+        if self._wait_finish_button:
+            self._wait_finish_button.setText(strings.finish_waiting_now)
+
+        self._update_wait_text()
+
         if self._retry_button:
             self._retry_button.setText(strings.retry_error)
 
@@ -891,6 +910,103 @@ class ConversationMessage(QFrame):
             "context": self._pending_tool_context,
             "destructive": self._pending_tool_destructive
         }
+
+    def show_interruptible_wait_ui(self, duration: float) -> None:
+        """
+        Show a control for ending an interruptible tool wait early.
+
+        Args:
+            duration: The number of seconds the tool expects to wait.
+        """
+        assert self._wait_widget is None, "Interruptible wait widget already exists"
+
+        self._wait_duration = duration
+        self._wait_elapsed_ms = 0
+        style_manager = self._style_manager
+        spacing = int(style_manager.message_bubble_spacing())
+        font = self.font()
+        base_font_size = style_manager.base_font_size()
+        font.setPointSizeF(base_font_size * style_manager.zoom_factor())
+        strings = self._language_manager.strings()
+
+        self._wait_widget = QWidget()
+        self._wait_widget.setObjectName("_wait_widget")
+        layout = QVBoxLayout(self._wait_widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(spacing)
+
+        self._wait_text_edit = MarkdownTextEdit(False)
+        self._wait_text_edit.setObjectName("_wait_text_edit")
+        self._update_wait_text()
+        self._wait_text_edit.setReadOnly(True)
+        layout.addWidget(self._wait_text_edit)
+
+        button_layout = QHBoxLayout()
+        button_layout.setSpacing(spacing)
+        button_layout.addStretch()
+
+        zoom = style_manager.zoom_factor()
+        min_button_width = int(_APPROVAL_BUTTON_BASE_WIDTH * zoom)
+        min_button_height = int(_APPROVAL_BUTTON_BASE_HEIGHT * zoom)
+
+        self._wait_finish_button = QPushButton(strings.finish_waiting_now)
+        self._wait_finish_button.setObjectName("_wait_finish_button")
+        self._wait_finish_button.clicked.connect(self._finish_wait)
+        self._wait_finish_button.setMinimumWidth(min_button_width)
+        self._wait_finish_button.setMinimumHeight(min_button_height)
+        self._wait_finish_button.setContentsMargins(8, 8, 8, 8)
+        self._wait_finish_button.setFont(font)
+
+        button_layout.addWidget(self._wait_finish_button)
+        button_layout.addStretch()
+
+        layout.addSpacing(2)
+        layout.addLayout(button_layout)
+
+        self._layout.addWidget(self._wait_widget)
+
+        self.set_expanded(True)
+
+        self._wait_timer.start()
+
+    def _update_wait_text(self) -> None:
+        """Render the wait message with the time remaining."""
+        if self._wait_text_edit is None or self._wait_duration is None:
+            return
+
+        strings = self._language_manager.strings()
+        elapsed = self._wait_elapsed_ms / 1000.0
+        remaining = max(0, round(self._wait_duration - elapsed))
+        self._wait_text_edit.set_text(
+            strings.interruptible_wait_message.format(
+                duration=f"{round(self._wait_duration)}",
+                remaining=f"{remaining}"
+            )
+        )
+
+    def _on_wait_tick(self) -> None:
+        """Advance the wait countdown by one interval."""
+        self._wait_elapsed_ms += _WAIT_COUNTDOWN_INTERVAL_MS
+        self._update_wait_text()
+
+    def _finish_wait(self) -> None:
+        """Handle the user ending an interruptible tool wait early."""
+        self.wait_cancelled.emit()
+        self.remove_interruptible_wait_ui()
+
+    def remove_interruptible_wait_ui(self) -> None:
+        """Remove the interruptible wait UI."""
+        self._wait_timer.stop()
+        self._wait_elapsed_ms = 0
+
+        if self._wait_widget:
+            self.set_expanded(False)
+            self._layout.removeWidget(self._wait_widget)
+            self._wait_widget.deleteLater()
+            self._wait_widget = None
+            self._wait_text_edit = None
+            self._wait_finish_button = None
+            self._wait_duration = None
 
     def show_retry_ui(self) -> None:
         """Show a Retry button on this SYSTEM error message."""

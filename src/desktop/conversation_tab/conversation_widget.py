@@ -353,6 +353,9 @@ class ConversationWidget(QWidget):
         # Any active tool approval
         self._pending_tool_call_approval: ConversationMessage | None = None
 
+        # The message widget showing an interruptible tool wait, if any
+        self._pending_interruptible_wait: ConversationMessage | None = None
+
         # The last SYSTEM error message widget that has a retry button showing
         self._last_error_message_widget: ConversationMessage | None = None
 
@@ -772,6 +775,12 @@ class ConversationWidget(QWidget):
             AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._on_tool_approval_required
         )
         self._ai_conversation.unregister_callback(
+            AIConversationEvent.TOOL_INTERRUPTIBLE_WAIT_STARTED, self._on_interruptible_wait_started
+        )
+        self._ai_conversation.unregister_callback(
+            AIConversationEvent.TOOL_INTERRUPTIBLE_WAIT_ENDED, self._on_interruptible_wait_ended
+        )
+        self._ai_conversation.unregister_callback(
             AIConversationEvent.STREAMING_UPDATE, self._on_streaming_update
         )
         self._ai_conversation.unregister_callback(
@@ -803,6 +812,12 @@ class ConversationWidget(QWidget):
         )
         self._ai_conversation.register_callback(
             AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._on_tool_approval_required
+        )
+        self._ai_conversation.register_callback(
+            AIConversationEvent.TOOL_INTERRUPTIBLE_WAIT_STARTED, self._on_interruptible_wait_started
+        )
+        self._ai_conversation.register_callback(
+            AIConversationEvent.TOOL_INTERRUPTIBLE_WAIT_ENDED, self._on_interruptible_wait_ended
         )
         self._ai_conversation.register_callback(
             AIConversationEvent.STREAMING_UPDATE, self._on_streaming_update
@@ -1100,6 +1115,47 @@ class ConversationWidget(QWidget):
                 msg_widget.show_tool_approval_ui(tool_call, reason, context, destructive)
                 self.update_label.emit()
                 break
+
+    async def _on_interruptible_wait_started(
+        self,
+        message: AIMessage | None,
+        duration: float
+    ) -> None:
+        """
+        Show a cancel control for an interruptible tool wait.
+
+        Args:
+            message: The tool call message whose tool is waiting
+            duration: The number of seconds the tool expects to wait
+        """
+        if message is None:
+            return
+
+        for msg_widget in self._messages:
+            if msg_widget.message_id() == message.id:
+                self._pending_interruptible_wait = msg_widget
+                msg_widget.wait_cancelled.connect(self._on_interruptible_wait_cancelled)
+                msg_widget.show_interruptible_wait_ui(duration)
+                self.update_label.emit()
+                break
+
+    def _on_interruptible_wait_cancelled(self) -> None:
+        """Handle the user cancelling an interruptible tool wait."""
+        if self._mindspace_manager.has_mindspace():
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                "Human interrupted tool wait"
+            )
+
+        loop = asyncio.get_event_loop()
+        loop.create_task(self._ai_conversation.interrupt_pending_wait())
+
+    async def _on_interruptible_wait_ended(self) -> None:
+        """Remove the cancel control once an interruptible tool wait ends."""
+        if self._pending_interruptible_wait:
+            self._pending_interruptible_wait.remove_interruptible_wait_ui()
+            self._pending_interruptible_wait = None
+            self.update_label.emit()
 
     def _on_tool_call_approved(self, _tool_call: AIToolCall) -> None:
         """Handle user approval of tool calls."""
@@ -2548,6 +2604,11 @@ class ConversationWidget(QWidget):
         if self._pending_tool_call_approval:
             self._pending_tool_call_approval.remove_tool_approval_ui()
             self._pending_tool_call_approval = None
+
+        # Remove any active interruptible wait UI
+        if self._pending_interruptible_wait:
+            self._pending_interruptible_wait.remove_interruptible_wait_ui()
+            self._pending_interruptible_wait = None
 
         self._ai_conversation.cancel_current_tasks(notify)
 

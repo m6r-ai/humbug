@@ -19,10 +19,12 @@ def make_entries():
         QuickSwitcherEntry(
             entry_id="file:/mindspace/main.py", kind="file",
             title="main.py", subtitle=".", icon_name="files",
+            file_path="/mindspace/main.py",
         ),
         QuickSwitcherEntry(
             entry_id="file:/mindspace/src/utils.py", kind="file",
             title="utils.py", subtitle="src", icon_name="files",
+            file_path="/mindspace/src/utils.py",
         ),
         QuickSwitcherEntry(
             entry_id="conversation:/mindspace/.humbug/conversations/plan.conv", kind="conversation",
@@ -33,6 +35,14 @@ def make_entries():
             title="README.md", subtitle=".", icon_name="editor",
         ),
     ]
+
+
+def open_conversation_tab():
+    """An entry for a conversation that is currently open, so listed as its tab."""
+    return QuickSwitcherEntry(
+        entry_id="tab:def456", kind="tab",
+        title="roadmap", subtitle=".humbug/conversations", icon_name="conversation",
+    )
 
 
 def press_key(qapp, widget, key, modifier=Qt.KeyboardModifier.NoModifier):
@@ -83,6 +93,17 @@ class TestStyleChanges:
 
         assert "QuickSwitcherPanel" in switcher._panel.styleSheet()
 
+    def test_style_change_repopulates_the_current_results(self, qapp, host):
+        switcher = make_switcher(host)
+        switcher.set_entries(make_entries())
+        switcher._input.setText("plan")
+        qapp.processEvents()
+
+        switcher._style_manager.style_changed.emit()
+
+        assert switcher._list.count() == 1
+        assert switcher.selected_entry_id() == "conversation:/mindspace/.humbug/conversations/plan.conv"
+
 
 class TestFiltering:
     def test_typing_filters_out_non_matching_entries(self, qapp, host):
@@ -108,6 +129,86 @@ class TestFiltering:
         switcher._input.setText("")
         qapp.processEvents()
         assert switcher._list.count() == 4
+
+    def test_at_prefix_limits_results_to_conversations(self, qapp, host):
+        switcher = make_switcher(host)
+        switcher.set_entries(make_entries())
+        switcher._input.setText("@plan")
+        qapp.processEvents()
+        assert switcher.selected_entry_id() == "conversation:/mindspace/.humbug/conversations/plan.conv"
+
+    def test_line_prefix_creates_a_goto_result(self, qapp, host):
+        switcher = make_switcher(host)
+        switcher.set_goto_line("Go to line {0}", True)
+        switcher.set_entries(make_entries())
+        switcher._input.setText(":42")
+        qapp.processEvents()
+        assert switcher.selected_entry_id() == "goto:42"
+
+    def test_command_prefix_filters_commands(self, qapp, host):
+        switcher = make_switcher(host)
+        switcher.set_entries(make_entries())
+        switcher.set_command_entries([
+            QuickSwitcherEntry("command:new-file", "command", "New File", "", "editor"),
+            QuickSwitcherEntry("command:new-conversation", "command", "New Conversation", "", "conversation"),
+        ])
+        switcher._input.setText(">conversation")
+        qapp.processEvents()
+        assert switcher.selected_entry_id() == "command:new-conversation"
+
+    def test_file_and_line_query_creates_a_file_line_result(self, qapp, host):
+        switcher = make_switcher(host)
+        switcher.set_entries(make_entries())
+        switcher._input.setText("utils:18")
+        qapp.processEvents()
+        assert switcher.selected_entry_id() == "file-line:18:/mindspace/src/utils.py"
+
+    def test_file_and_line_skips_entries_with_no_file(self, qapp, host):
+        """A conversation or terminal tab has no path, so it cannot take a line number."""
+        switcher = make_switcher(host)
+        switcher.set_entries([
+            QuickSwitcherEntry(
+                entry_id="tab:conv1", kind="tab", title="roadmap",
+                subtitle=".humbug/conversations", icon_name="conversation",
+            ),
+        ])
+        switcher._input.setText("roadmap:18")
+        qapp.processEvents()
+        assert switcher._list.count() == 0
+
+    def test_at_prefix_finds_a_conversation_that_is_already_open(self, qapp, host):
+        """An open conversation is listed as a tab, and must still be reachable with @."""
+        switcher = make_switcher(host)
+        switcher.set_entries(make_entries() + [open_conversation_tab()])
+        switcher._input.setText("@roadmap")
+        qapp.processEvents()
+        assert switcher.selected_entry_id() == "tab:def456"
+
+    def test_at_prefix_still_excludes_non_conversation_tabs(self, qapp, host):
+        """Widening @ to tabs must not let ordinary file tabs through."""
+        switcher = make_switcher(host)
+        switcher.set_entries(make_entries() + [open_conversation_tab()])
+        switcher._input.setText("@README")
+        qapp.processEvents()
+        assert switcher._list.count() == 0
+
+    def test_line_prefix_offers_nothing_without_an_editor(self, qapp, host):
+        """Offering a jump that silently does nothing would be worse than offering none."""
+        switcher = make_switcher(host)
+        switcher.set_goto_line("Go to line {0}", False)
+        switcher.set_entries(make_entries())
+        switcher._input.setText(":42")
+        qapp.processEvents()
+        assert switcher._list.count() == 0
+
+    def test_the_goto_line_label_comes_from_the_supplied_template(self, qapp, host):
+        """The label is localized by the caller, so the widget must not build its own."""
+        switcher = make_switcher(host)
+        switcher.set_goto_line("Aller a la ligne {0}", True)
+        switcher.set_entries(make_entries())
+        switcher._input.setText(":42")
+        qapp.processEvents()
+        assert switcher._list.item(0).data(Qt.ItemDataRole.DisplayRole) == "Aller a la ligne 42"
 
 
 class TestKeyboardInteraction:
@@ -163,3 +264,29 @@ class TestMouseInteraction:
         mouse(switcher._list.viewport(), QEvent.Type.MouseButtonPress, rect.center())
         mouse(switcher._list.viewport(), QEvent.Type.MouseButtonRelease, rect.center())
         assert activated == ["conversation:/mindspace/.humbug/conversations/plan.conv"]
+
+
+class TestStyleChanges:
+    """Tests for the overlay surviving a theme or zoom change while it is open."""
+
+    def test_the_highlighted_row_is_kept(self, qapp, host):
+        """Changing zoom with the overlay open must not throw away a part-made choice."""
+        switcher = make_switcher(host)
+        switcher.set_entries(make_entries())
+        switcher._list.setCurrentRow(2)
+        chosen = switcher.selected_entry_id()
+
+        switcher._on_style_changed()
+
+        assert switcher.selected_entry_id() == chosen
+
+    def test_a_row_that_is_gone_leaves_the_first_selected(self, qapp, host):
+        """With nothing to restore, the usual first-result highlight stands."""
+        switcher = make_switcher(host)
+        switcher.set_entries(make_entries())
+        switcher._list.setCurrentRow(2)
+        switcher.set_entries(make_entries()[:1])
+
+        switcher._on_style_changed()
+
+        assert switcher._list.currentRow() == 0

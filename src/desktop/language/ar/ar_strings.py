@@ -55,6 +55,13 @@ def get_arabic_strings() -> LanguageStrings:
         close_tabs_to_right="إغلاق التبويبات إلى اليمين",
         close_other_tabs="إغلاق التبويبات الأخرى",
         close_column="إغلاق العمود",
+        move_tab_to_left_column="نقل علامة التبويب إلى العمود الأيسر",
+        move_tab_to_right_column="نقل علامة التبويب إلى العمود الأيمن",
+        move_tab_to_new_column="نقل علامة التبويب إلى عمود جديد",
+        move_tab_left="نقل علامة التبويب لليسار",
+        move_tab_right="نقل علامة التبويب لليمين",
+        move_tab_to_start="نقل علامة التبويب إلى البداية",
+        move_tab_to_end="نقل علامة التبويب إلى النهاية",
 
         # Edit menu items
         submit_message="إرسال الرسالة",
@@ -70,6 +77,8 @@ def get_arabic_strings() -> LanguageStrings:
         mindspace_search="بحث شامل",
         quick_switcher="التبديل السريع",
         quick_switcher_placeholder="ابحث في الملفات والمحادثات والعلامات المفتوحة...",
+        quick_switcher_prefix_hint="> الأوامر   @ المحادثات   :السطر   ملف:سطر",
+        quick_switcher_goto_line="الانتقال إلى السطر {0}",
         quick_switcher_limited="يقتصر على أول {0} ملف",
         mindspace_settings="إعدادات المساحة الذهنية",
         conversation_settings="إعدادات المحادثة",
@@ -183,6 +192,13 @@ def get_arabic_strings() -> LanguageStrings:
         allow_external_file_access="السماح للذكاء الاصطناعي بقراءة الملفات خارج المساحة الذهنية",
         external_file_allowlist="المسارات المسموح بها (أنماط glob، واحد لكل سطر):",
         external_file_denylist="المسارات المرفوضة دائماً (أنماط glob، واحد لكل سطر):",
+
+        # User Settings dialog - external HTTP access
+        settings_network_access="الوصول إلى الشبكة",
+        external_http_access="الوصول إلى الشبكة",
+        allow_external_http_access="السماح للذكاء الاصطناعي بجلب عناوين URL المسموح بها دون سؤال",
+        external_http_allowlist="عناوين URL المعتمدة تلقائياً (واحد لكل سطر، مثل api.example.com أو https://api.example.com:8443):",
+        external_http_denylist="عناوين URL المرفوضة دائماً (واحد لكل سطر، مثل localhost أو 10.0.0.0/8):",
 
         # Mindspace tree
         mindspace_label_none="لا توجد مساحة ذهنية نشطة",
@@ -489,6 +505,8 @@ def get_arabic_strings() -> LanguageStrings:
         approve_tool_call="موافقة",
         i_am_unsure_about_tool_call="لست متأكداً من هذا",
         reject_tool_call="رفض",
+        interruptible_wait_message="جارٍ الانتظار {duration} ثانية \u2014 تبقّى {remaining}...",
+        finish_waiting_now="إنهاء الانتظار الآن",
         retry_error="إعادة المحاولة",
 
         # Update checker

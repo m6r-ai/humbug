@@ -141,7 +141,7 @@ AI tool implementation for date/time operations.
 
 ### `src/context/`
 Registry infrastructure for tracking open contexts within a mindspace.
-The registry is the source of truth for workspace layout (which contexts are
+The registry is the source of truth for mindspace layout (which contexts are
 open, their column, position, and focus) and serialises session state.  Each
 context model supplies its own content state via `save_content_state`; the
 frontend supplies view state as an opaque blob.  See ADR-0008.
@@ -240,6 +240,11 @@ AI tool implementation for tool documentation.
 ### `src/http_ai_tool/`
 AI tool implementation for HTTP operations, wrapping the `http_client` library.
 Exposes GET, HEAD, POST, PUT, PATCH, DELETE, and download operations.
+GET and HEAD are auto-approved when their URL matches the user's allowlist and does
+not match the denylist; every other operation always prompts.  `HttpAccessSettings`
+holds the master switch and the two lists.  Every redirect target is re-checked before
+it is followed, so the client is used with `follow_redirects=False` for these methods.
+See ADR-0016.
 
 ### `src/html_/`
 HTML document processing. Includes a self-contained lexer and DOM-building parser
@@ -301,7 +306,7 @@ Language-specific syntax highlighting system.
 - `pascal/`, `python/`, `rust/`, `scheme/`, `solidity/`, `swift/`, `text/`, `toml/`, `typescript/`, `xml/`, `yaml/`
 
 ### `src/system_ai_tool/`
-AI tool implementation for system/workspace operations (tab lifecycle, layout,
+AI tool implementation for system/mindspace operations (tab lifecycle, layout,
 system info). Moved from `src/desktop/` to make it frontend-agnostic.
 
 ### `src/terminal/`
