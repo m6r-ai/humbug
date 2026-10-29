@@ -377,6 +377,14 @@ class LogTab(TabBase):
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_ERROR)};
             }}
 
+            #LogWidget #LogMessage #_context_label {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_INACTIVE)};
+                margin: 0;
+                padding: 0;
+                border: none;
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+
             #LogWidget #LogMessage #_text_area {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};

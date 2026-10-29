@@ -20,6 +20,10 @@ New features:
 - Added GPT 6.1 Terra.
 - Added MiniMax M3.1 Flash, and corrected the reasoning effort levels offered for MiniMax M3.
 - Removed Qwen 3.5 from Ollama cloud as it has been removed from the model catalogue.
+- The mindspace log now captures all events
+- The interaction log now records every prompt, AI reasoning and AI response, and every entry that belongs to a
+  conversation carries that conversation's identifier, so the audit trail can be read conversation by conversation
+  rather than as unconnected prose.
 
 Bug fixes:
 
@@ -31,9 +35,9 @@ Bug fixes:
 - Fixed a problem where MiniMax M3 tool calls did not work correctly with the Ollama backend.
 - Fixed a probelm where reasoning efforts were not correctly used in the Ollama backend.
 
-Other changes:
+Internal structure changes:
 
-- Updated the Menai language dependency to v0.8.0.
+- Updated the Menai language dependency to v0.9.0.
 
 ## v57 (2026-10-10)
 

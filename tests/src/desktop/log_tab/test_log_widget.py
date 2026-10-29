@@ -73,6 +73,58 @@ class TestTabStatus:
         tab.deleteLater()
 
 
+class TestContextDisplay:
+    """Tests for showing which conversation an entry belongs to."""
+
+    def test_context_is_shown_in_the_entry_header(self, mindspace_sandbox, log_widget) -> None:
+        """An attributed entry shows its context in the header."""
+        mindspace_sandbox.manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            "AI response: 'done'",
+            context={"conversation": ".humbug/conversations/one.conv"}
+        )
+
+        entry = log_widget._messages[-1]  # pylint: disable=protected-access
+        label = entry._context_label  # pylint: disable=protected-access
+
+        assert label.text() == "conversation: .humbug/conversations/one.conv"
+        assert not label.isHidden()
+
+    def test_entry_without_context_shows_no_context(self, mindspace_sandbox, log_widget) -> None:
+        """An entry that belongs to no conversation shows no context."""
+        _add_entries(mindspace_sandbox.manager, ["entry"])
+
+        entry = log_widget._messages[-1]  # pylint: disable=protected-access
+
+        assert entry._context_label.isHidden()  # pylint: disable=protected-access
+
+
+class TestContextDisplay:
+    """Tests for showing which conversation an entry belongs to."""
+
+    def test_context_is_shown_in_the_entry_header(self, mindspace_sandbox, log_widget) -> None:
+        """An attributed entry shows its context in the header."""
+        mindspace_sandbox.manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            "AI response: 'done'",
+            context={"conversation": ".humbug/conversations/one.conv"}
+        )
+
+        entry = log_widget._messages[-1]  # pylint: disable=protected-access
+        label = entry._context_label  # pylint: disable=protected-access
+
+        assert label.text() == "conversation: .humbug/conversations/one.conv"
+        assert not label.isHidden()
+
+    def test_entry_without_context_shows_no_context(self, mindspace_sandbox, log_widget) -> None:
+        """An entry that belongs to no conversation shows no context."""
+        _add_entries(mindspace_sandbox.manager, ["entry"])
+
+        entry = log_widget._messages[-1]  # pylint: disable=protected-access
+
+        assert entry._context_label.isHidden()  # pylint: disable=protected-access
+
+
 class TestFind:
     """Tests for searching the log rather than the loaded page."""
 

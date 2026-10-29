@@ -39,6 +39,32 @@ from desktop.markdown import MarkdownTextEdit
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
 
+LOG_PREVIEW_CHARS = 120
+
+
+def _summarize_for_log(text: str) -> str:
+    """
+    Return a single-line excerpt of text, for the interaction log.
+
+    Args:
+        text: Text to summarise.
+
+    Returns:
+        The text flattened onto one line, with a trailing ellipsis when shortened.
+    """
+    flat = " ".join(text.split())
+    if len(flat) <= LOG_PREVIEW_CHARS:
+        return flat
+
+    return f"{flat[:LOG_PREVIEW_CHARS]}..."
+
+
+def _tool_call_label(tool_call: AIToolCall) -> str:
+    """Return a human-readable label for a tool call, naming its operation if it has one."""
+    operation = tool_call.arguments.get("operation", "")
+    return f"{tool_call.name}.{operation}" if operation else tool_call.name
+
+
 class ConversationWidget(QWidget):
     """Widget for displaying conversation with message history and input."""
 
@@ -1067,6 +1093,11 @@ class ConversationWidget(QWidget):
             self._stop_message_border_animation()
             self.status_updated.emit()
 
+            self._log_conversation_interaction(
+                f"AI response failed: {_summarize_for_log(message.content)}",
+                MindspaceLogLevel.ERROR
+            )
+
             result = self._create_completion_result()
             self.submit_finished.emit(result)
             self.update_label.emit()
@@ -1141,11 +1172,7 @@ class ConversationWidget(QWidget):
 
     def _on_interruptible_wait_cancelled(self) -> None:
         """Handle the user cancelling an interruptible tool wait."""
-        if self._mindspace_manager.has_mindspace():
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                "Human interrupted tool wait"
-            )
+        self._log_conversation_interaction("Human interrupted tool wait")
 
         loop = asyncio.get_event_loop()
         loop.create_task(self._ai_conversation.interrupt_pending_wait())
@@ -1162,15 +1189,11 @@ class ConversationWidget(QWidget):
         # The user has resolved the approval, so move focus to the input box
         # where they can continue the conversation.
         self._focus_input()
-        if self._pending_tool_call_approval and self._mindspace_manager.has_mindspace():
+        if self._pending_tool_call_approval:
             info = self._pending_tool_call_approval.get_tool_approval_info()
             if info and info.get("tool_call"):
-                tc = info["tool_call"]
-                op = tc.arguments.get("operation", "")
-                label = f"{tc.name}.{op}" if op else tc.name
-                self._mindspace_manager.add_interaction(
-                    MindspaceLogLevel.INFO,
-                    f"Human approved tool call: {label}"
+                self._log_conversation_interaction(
+                    f"Human approved tool call: {_tool_call_label(info['tool_call'])}"
                 )
 
         self._pending_tool_call_approval = None
@@ -1184,16 +1207,12 @@ class ConversationWidget(QWidget):
         self._focus_input()
         # Clean up the tool approval UI
         if self._pending_tool_call_approval:
-            if self._mindspace_manager.has_mindspace():
-                info = self._pending_tool_call_approval.get_tool_approval_info()
-                if info and info.get("tool_call"):
-                    tc = info["tool_call"]
-                    op = tc.arguments.get("operation", "")
-                    label = f"{tc.name}.{op}" if op else tc.name
-                    self._mindspace_manager.add_interaction(
-                        MindspaceLogLevel.INFO,
-                        f"Human indicated uncertainty about tool call: {label}"
-                    )
+            info = self._pending_tool_call_approval.get_tool_approval_info()
+            if info and info.get("tool_call"):
+                self._log_conversation_interaction(
+                    f"Human indicated uncertainty about tool call: "
+                    f"{_tool_call_label(info['tool_call'])}"
+                )
 
             self._pending_tool_call_approval.remove_tool_approval_ui()
             self._pending_tool_call_approval = None
@@ -1213,15 +1232,12 @@ class ConversationWidget(QWidget):
         # The user has resolved the approval, so move focus to the input box
         # where they can continue the conversation.
         self._focus_input()
-        if self._pending_tool_call_approval and self._mindspace_manager.has_mindspace():
+        if self._pending_tool_call_approval:
             info = self._pending_tool_call_approval.get_tool_approval_info()
             if info and info.get("tool_call"):
-                tc = info["tool_call"]
-                op = tc.arguments.get("operation", "")
-                label = f"{tc.name}.{op}" if op else tc.name
-                self._mindspace_manager.add_interaction(
-                    MindspaceLogLevel.INFO,
-                    f"Human denied tool call: {label}\nreason: {reason}"
+                self._log_conversation_interaction(
+                    f"Human denied tool call: {_tool_call_label(info['tool_call'])}\n"
+                    f"reason: {reason}"
                 )
 
         self._pending_tool_call_approval = None
@@ -1599,9 +1615,68 @@ class ConversationWidget(QWidget):
         """
         self._current_unfinished_message = None
 
+        self._log_completed_message(message)
+
         # Update with the completed message immediately
         self._update_last_message(message)
         self.status_updated.emit()
+
+    def _log_completed_message(self, message: AIMessage) -> None:
+        """
+        Record a completed message in the mindspace interaction log.
+
+        A turn is only visible in the audit trail if its prompts, reasoning and
+        responses are recorded as they complete, so this is the single place the
+        log learns what was said in this conversation.
+
+        Args:
+            message: The message that was completed
+        """
+        content = _summarize_for_log(message.content)
+
+        if message.source == AIMessageSource.REASONING:
+            if content:
+                self._log_conversation_interaction(f"AI reasoning: '{content}'")
+
+        elif message.source == AIMessageSource.AI:
+            if content:
+                self._log_conversation_interaction(f"AI response: '{content}'")
+
+            elif message.tool_calls:
+                tools = ", ".join(_tool_call_label(tc) for tc in message.tool_calls)
+                self._log_conversation_interaction(f"AI requested tool calls: {tools}")
+
+        elif message.source == AIMessageSource.USER and not message.tool_results:
+            if message.user_name:
+                self._log_conversation_interaction(
+                    f"AI '{message.user_name}' submitted prompt: '{content}'"
+                )
+
+            else:
+                attachment_note = (
+                    f"\nattachments: {len(message.attachments)}" if message.attachments else ""
+                )
+                self._log_conversation_interaction(
+                    f"Human submitted prompt: '{content}'{attachment_note}"
+                )
+
+        elif message.source == AIMessageSource.USER_QUEUED:
+            self._log_conversation_interaction(f"Human queued prompt: '{content}'")
+
+    def _log_conversation_interaction(
+        self,
+        content: str,
+        level: MindspaceLogLevel = MindspaceLogLevel.INFO
+    ) -> None:
+        """Append an entry to the interaction log that is attributed to this conversation."""
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        self._mindspace_manager.add_interaction(
+            level,
+            content,
+            context=self._mindspace_manager.conversation_log_context(self._ai_conversation.inner_conversation())
+        )
 
     async def _on_message_added_and_completed(self, message: AIMessage) -> None:
         """
@@ -3008,15 +3083,6 @@ class ConversationWidget(QWidget):
         if not loop.is_running():
             return
 
-        if requester is None and self._mindspace_manager.has_mindspace():
-            preview = sanitized_content[:120].replace('\n', ' ')
-            attachment_note = f"\nattachments: {len(attachment_guids)}" if attachment_guids else ""
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"Human submitted prompt: '{preview}{'...' if len(sanitized_content) > 120 else ''}'"
-                f"{attachment_note}"
-            )
-
         loop.create_task(self._ai_conversation.submit_message(
             requester,
             sanitized_content,
@@ -3101,11 +3167,7 @@ class ConversationWidget(QWidget):
                 return
 
         self._input.add_attachment(filename, content)
-        if self._mindspace_manager.has_mindspace():
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"Human attached file to conversation: '{path}'"
-            )
+        self._log_conversation_interaction(f"Human attached file to conversation: '{path}'")
 
     def _extract_pdf_text(self, path: str) -> str | None:
         """

@@ -7,6 +7,7 @@ import pytest
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_interactions import MindspaceInteractions
 from mindspace.mindspace_log_level import MindspaceLogLevel
+from mindspace.mindspace_message import MindspaceMessage
 
 
 def _open_store(path: str) -> MindspaceInteractions:
@@ -30,6 +31,17 @@ def _fill(store: MindspaceInteractions, count: int) -> None:
     """Append count distinct records to a store."""
     for index in range(count):
         store.append(MindspaceLogLevel.INFO, f"entry {index}")
+
+
+class _Requester:
+    """A requester that identifies the conversation at a given transcript path."""
+
+    def __init__(self, conversation_path: str) -> None:
+        self._conversation_path = conversation_path
+
+    def conversation_id(self) -> str:
+        """Return the transcript path of the conversation making the request."""
+        return self._conversation_path
 
 
 class TestRetention:
@@ -260,6 +272,67 @@ class TestNewest:
         assert _open_store(str(tmp_path)).newest(10) == []
 
 
+class TestContext:
+    """Tests for the structured context that attributes a record."""
+
+    def test_context_survives_a_reopen(self, tmp_path) -> None:
+        """The context written with a record is read back with it."""
+        store = _open_store(str(tmp_path))
+        store.append(
+            MindspaceLogLevel.INFO,
+            "AI read file: 'a.py'",
+            context={MindspaceMessage.CONVERSATION_CONTEXT: ".humbug/conversations/one.conv"}
+        )
+
+        entry = _open_store(str(tmp_path)).read(1, 1)[0]
+
+        assert entry.context == {
+            MindspaceMessage.CONVERSATION_CONTEXT: ".humbug/conversations/one.conv"
+        }
+
+    def test_record_without_context_stores_no_context_key(self, tmp_path) -> None:
+        """An attributed-to-nothing record stays a plain record."""
+        store = _open_store(str(tmp_path))
+        store.append(MindspaceLogLevel.INFO, "User saved file: 'a.py'")
+
+        with open(_segment_paths(str(tmp_path))[0], encoding="utf-8") as f:
+            record = json.loads(f.readline())
+
+        assert "context" not in record
+        assert store.read(1, 1)[0].context == {}
+
+    def test_record_written_before_context_existed_reads_back(self, tmp_path) -> None:
+        """A record with no context key is still readable, with empty context."""
+        store = _open_store(str(tmp_path))
+        _fill(store, 1)
+        segment = _segment_paths(str(tmp_path))[0]
+        with open(segment, encoding="utf-8") as f:
+            record = json.loads(f.readline())
+
+        record.pop("context", None)
+        with open(segment, "w", encoding="utf-8") as f:
+            f.write(json.dumps(record) + "\n")
+
+        assert _open_store(str(tmp_path)).read(1, 1)[0].context == {}
+
+    def test_malformed_context_is_ignored(self, tmp_path) -> None:
+        """A context that is not an object does not make the record unreadable."""
+        store = _open_store(str(tmp_path))
+        _fill(store, 1)
+        segment = _segment_paths(str(tmp_path))[0]
+        with open(segment, encoding="utf-8") as f:
+            record = json.loads(f.readline())
+
+        record["context"] = "not an object"
+        with open(segment, "w", encoding="utf-8") as f:
+            f.write(json.dumps(record) + "\n")
+
+        messages = _open_store(str(tmp_path)).read(1, 1)
+
+        assert messages[0].content == "entry 0"
+        assert messages[0].context == {}
+
+
 class TestMindspaceIntegration:
     """Tests for the log as wired into the Mindspace model."""
 
@@ -303,6 +376,42 @@ class TestMindspaceIntegration:
 
         assert os.path.isdir(os.path.join(mindspace.mindspace_path(), ".humbug", "log"))
         assert os.listdir(os.path.join(mindspace.mindspace_path(), ".humbug", "log"))
+
+    def test_conversation_context_identifies_a_conversation(self, tmp_path) -> None:
+        """Log context names the conversation by its mindspace-relative transcript path."""
+        mindspace = self._create_mindspace(tmp_path)
+        conversation_path = os.path.join(
+            mindspace.mindspace_path(), ".humbug", "conversations", "planning.conv"
+        )
+
+        context = mindspace.conversation_log_context(_Requester(conversation_path))
+
+        assert context == {
+            MindspaceMessage.CONVERSATION_CONTEXT: os.path.join(
+                ".humbug", "conversations", "planning.conv"
+            )
+        }
+
+    def test_context_is_absent_for_a_requester_with_no_conversation(self, tmp_path) -> None:
+        """A requester that identifies no conversation yields no context to attribute."""
+        mindspace = self._create_mindspace(tmp_path)
+
+        assert mindspace.conversation_log_context(None) is None
+
+    def test_context_is_persisted_with_the_entry(self, tmp_path) -> None:
+        """The context given when logging is stored with the entry."""
+        mindspace = self._create_mindspace(tmp_path)
+        context = {
+            MindspaceMessage.CONVERSATION_CONTEXT: os.path.join(".humbug", "conversations", "x.conv")
+        }
+
+        mindspace.add_interaction(
+            MindspaceLogLevel.INFO, "AI response: 'done'", context=context
+        )
+        mindspace.close_mindspace()
+
+        entry = self._open_mindspace(tmp_path).interactions().read(1, 1)[0]
+        assert entry.context == context
 
     def test_closing_discards_in_memory_state_only(self, tmp_path) -> None:
         """Closing a mindspace leaves its log on disk."""

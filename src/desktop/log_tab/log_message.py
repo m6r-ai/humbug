@@ -33,6 +33,7 @@ class LogMessage(QFrame):
         level: MindspaceLogLevel,
         timestamp: datetime,
         sequence: int,
+        context: dict[str, str],
         parent: QWidget | None = None
     ) -> None:
         """
@@ -43,6 +44,7 @@ class LogMessage(QFrame):
             level: The log level of the message
             timestamp: datetime object for the message timestamp
             sequence: Sequence number that identifies the message in the log
+            context: Structured context attributing the message, shown in the header
             parent: Optional parent widget
         """
         super().__init__(parent)
@@ -79,6 +81,12 @@ class LogMessage(QFrame):
         self._header_layout.addWidget(self._level_label)
         self._header_layout.addStretch()
 
+        # Create the context label, showing which conversation the message belongs to
+        self._context_label = QLabel(self)
+        self._context_label.setObjectName("_context_label")
+        self._context_label.setIndent(0)
+        self._header_layout.addWidget(self._context_label)
+
         # Add header widget to main layout
         self._layout.addWidget(self._header)
 
@@ -103,6 +111,7 @@ class LogMessage(QFrame):
         self._message_level = level
         self._message_timestamp = timestamp
         self._message_content = text
+        self._message_context = context
 
         # Set log level property for QSS targeting
         level_name = {
@@ -121,6 +130,7 @@ class LogMessage(QFrame):
 
         self.apply_style()
         self._on_language_changed()
+        self._update_context_text()
 
     def sequence(self) -> int:
         """Get the message's sequence number."""
@@ -166,6 +176,16 @@ class LogMessage(QFrame):
 
         else:
             self._level_label.setText(level_text)
+
+    def _update_context_text(self) -> None:
+        """Update the context text, hiding the label when there is no context."""
+        if not self._message_context:
+            self._context_label.hide()
+            return
+
+        parts = [f"{key}: {value}" for key, value in self._message_context.items()]
+        self._context_label.setText(" \u00b7 ".join(parts))
+        self._context_label.show()
 
     def _on_mouse_pressed(self, event: QMouseEvent) -> None:
         """Handle mouse press from text area."""
@@ -227,6 +247,7 @@ class LogMessage(QFrame):
 
         # Apply font to components
         self._level_label.setFont(font)
+        self._context_label.setFont(font)
 
         self._text_area.apply_style()
 

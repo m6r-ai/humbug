@@ -384,7 +384,7 @@ class DocumentConverterAITool(AITool):
     async def _convert(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Handle the convert operation."""
@@ -477,6 +477,7 @@ class DocumentConverterAITool(AITool):
             MindspaceLogLevel.INFO,
             f"AI converted '{input_display}' ({from_format}) → '{output_display}' ({to_format}) "
             f"({byte_count:,} bytes written)",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
 
         return AIToolResult(

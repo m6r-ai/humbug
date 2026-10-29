@@ -328,7 +328,7 @@ class EditorAITool(AITool):
     async def _read_lines(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Read content from an editor tab."""
@@ -358,7 +358,11 @@ class EditorAITool(AITool):
             else:
                 log_msg = f"AI read editor content\ntab ID: {context_id}"
 
-            self._mindspace.add_interaction(MindspaceLogLevel.INFO, log_msg)
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.INFO,
+                log_msg,
+                context=self._mindspace.conversation_log_context(requester_ref)
+            )
 
             range_value = "all lines"
             if start_line is not None or end_line is not None:
@@ -385,7 +389,7 @@ class EditorAITool(AITool):
     async def _get_cursor_info(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get cursor position and selection information."""
@@ -398,7 +402,8 @@ class EditorAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI requested cursor info\ntab ID: {context_id}"
+                f"AI requested cursor info\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             return AIToolResult(
@@ -414,7 +419,7 @@ class EditorAITool(AITool):
     async def _get_info(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get editor metadata and document information."""
@@ -427,7 +432,8 @@ class EditorAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI requested editor info\ntab ID: {context_id}"
+                f"AI requested editor info\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             return AIToolResult(
@@ -443,7 +449,7 @@ class EditorAITool(AITool):
     async def _goto_line(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Move cursor to specific line and column."""
@@ -466,7 +472,8 @@ class EditorAITool(AITool):
             col_desc = f", column {column}" if column != 1 else ""
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI moved cursor to line {line}{col_desc}\ntab ID: {context_id}"
+                f"AI moved cursor to line {line}{col_desc}\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             return AIToolResult(
@@ -484,7 +491,7 @@ class EditorAITool(AITool):
     async def _search(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Find all occurrences of text."""
@@ -510,7 +517,8 @@ class EditorAITool(AITool):
             flag_desc = f" ({', '.join(flags)})" if flags else ""
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI searched for '{search_text}'{flag_desc}: {len(matches)} matches\ntab ID: {context_id}"
+                f"AI searched for '{search_text}'{flag_desc}: {len(matches)} matches\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             if not matches:
@@ -544,7 +552,7 @@ class EditorAITool(AITool):
     async def _get_selected_text(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get the currently selected text."""
@@ -557,7 +565,8 @@ class EditorAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI requested selected text\ntab ID: {context_id}"
+                f"AI requested selected text\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             if not selected_text:
@@ -580,7 +589,7 @@ class EditorAITool(AITool):
     async def _get_diff(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get unified diff between saved file and current buffer."""
@@ -597,7 +606,8 @@ class EditorAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI requested diff\ntab ID: {context_id}"
+                f"AI requested diff\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             if not diff:
@@ -627,7 +637,7 @@ class EditorAITool(AITool):
     async def _save_file(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Save the current editor content to file."""
@@ -656,7 +666,8 @@ class EditorAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI saved editor file: {file_path}\ntab ID: {context_id}"
+                f"AI saved editor file: {file_path}\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             return AIToolResult(
@@ -674,7 +685,7 @@ class EditorAITool(AITool):
     async def _apply_diff(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Apply a unified diff to editor content."""
@@ -690,7 +701,8 @@ class EditorAITool(AITool):
             if result['success']:
                 self._mindspace.add_interaction(
                     MindspaceLogLevel.INFO,
-                    f"AI applied diff to editor ({result.get('hunks_applied', 0)} hunks)\ntab ID: {context_id}"
+                    f"AI applied diff to editor ({result.get('hunks_applied', 0)} hunks)\ntab ID: {context_id}",
+                    context=self._mindspace.conversation_log_context(requester_ref)
                 )
 
                 return AIToolResult(
@@ -702,7 +714,8 @@ class EditorAITool(AITool):
             error_details = result.get('error_details', {})
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI diff application failed: {result['message']}\ntab ID: {context_id}"
+                f"AI diff application failed: {result['message']}\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             return AIToolResult(
@@ -876,7 +889,8 @@ class EditorAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI applied Menai transform to editor ({result.get('hunks_applied', 0)} hunks)\ntab ID: {context_id}"
+            f"AI applied Menai transform to editor ({result.get('hunks_applied', 0)} hunks)\ntab ID: {context_id}",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
 
         result_obj: dict[str, Any] = {

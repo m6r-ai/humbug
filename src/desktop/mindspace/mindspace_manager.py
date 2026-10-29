@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import IO
+from typing import Any, IO
 
 from PySide6.QtCore import QObject, Signal
 
@@ -276,9 +276,18 @@ class MindspaceManager(QObject):
         """Ensure a directory exists within the mindspace, creating it if needed."""
         return self._mindspace.ensure_mindspace_dir(dir_path)
 
-    def add_interaction(self, level: MindspaceLogLevel, content: str) -> MindspaceMessage:
+    def add_interaction(
+        self,
+        level: MindspaceLogLevel,
+        content: str,
+        context: dict[str, str] | None = None
+    ) -> MindspaceMessage:
         """Append a message to the interaction log and persist it."""
-        return self._mindspace.add_interaction(level, content)
+        return self._mindspace.add_interaction(level, content, context=context)
+
+    def conversation_log_context(self, requester: Any) -> dict[str, str] | None:
+        """Return log context that attributes an interaction to the requester's conversation."""
+        return self._mindspace.conversation_log_context(requester)
 
     def interactions(self) -> MindspaceInteractions:
         """Return the interaction log store for sequence-addressed reads."""

@@ -372,12 +372,13 @@ class DelegateAITool(AITool):
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
             f"AI delegated task ({session_info})\nsession ID: {relative_session_id}\n"
-            f"prompt: '{task_prompt[:50]}...'"
+            f"prompt: '{task_prompt[:50]}...'",
+            context=self._mindspace.conversation_log_context(parent_ai_conversation)
         )
 
         continuation_task = asyncio.create_task(
             self._wait_for_completion(
-                child_ai_conversation, ai_transcript_conversation,
+                child_ai_conversation, ai_transcript_conversation, parent_ai_conversation,
                 relative_session_id, tool_call
             )
         )
@@ -393,6 +394,7 @@ class DelegateAITool(AITool):
         self,
         child_ai_conversation: AIConversation,
         ai_transcript_conversation: AITranscriptConversation,
+        parent_ai_conversation: AIConversation,
         session_id: str,
         tool_call: AIToolCall
     ) -> AIToolResult:
@@ -402,6 +404,7 @@ class DelegateAITool(AITool):
         Args:
             child_ai_conversation: The child AIConversation
             ai_transcript_conversation: The transcript wrapper (kept alive for persistence)
+            parent_ai_conversation: The AIConversation that delegated the task
             session_id: Project-relative session path
             tool_call: The originating tool call
 
@@ -441,7 +444,8 @@ class DelegateAITool(AITool):
             self._logger.warning("Delegated AI task failed: %s", error_msg)
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"Delegated AI task failed\nsession ID: {session_id}\nerror: {error_msg}"
+                f"Delegated AI task failed\nsession ID: {session_id}\nerror: {error_msg}",
+                context=self._mindspace.conversation_log_context(parent_ai_conversation)
             )
             return AIToolResult(
                 id=tool_call.id,
@@ -456,7 +460,8 @@ class DelegateAITool(AITool):
             self._logger.warning("Delegated AI task failed: %s", error_msg)
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"Delegated AI task failed\nsession ID: {session_id}\nerror: {error_msg}"
+                f"Delegated AI task failed\nsession ID: {session_id}\nerror: {error_msg}",
+                context=self._mindspace.conversation_log_context(parent_ai_conversation)
             )
             return AIToolResult(
                 id=tool_call.id,
@@ -479,7 +484,8 @@ class DelegateAITool(AITool):
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
             f"Delegated AI task completed\nsession ID: {session_id}\n"
-            f"response: {response_content[:50]}..."
+            f"response: {response_content[:50]}...",
+            context=self._mindspace.conversation_log_context(parent_ai_conversation)
         )
 
         return AIToolResult(

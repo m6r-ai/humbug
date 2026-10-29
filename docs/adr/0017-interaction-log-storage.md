@@ -42,6 +42,17 @@ record carries a `sequence` number, a level, a timestamp, and content. `sequence
 UUID: it is assigned by the store, starts at 1, and is contiguous, so it identifies a record
 across sessions and is simultaneously the record count. Reads are addressed by sequence.
 
+**Context.** A record also carries an optional `context` object, a map of short string keys to
+string values, omitted when empty. Content is written for a human reader; context is what makes
+the record attributable, so that entries can be selected by the thing they relate to rather than
+by parsing prose. The field that matters today is `conversation`, holding a conversation's
+transcript path made mindspace-relative (the same identifier ADR-0011 calls a session
+identifier). An entry records the conversation whose activity it belongs to: a prompt or
+response belongs to the conversation that spoke, a tool call to the conversation that requested
+it. Entries that are not part of any conversation's activity — settings changes, human file
+management — carry no context. Unknown keys are preserved, so a reader that does not understand
+a key ignores it, and records written before `context` existed read back with an empty context.
+
 **Content bound.** Content longer than 4096 characters is truncated, and the omission is stated
 in the record itself (`... [N characters omitted]`). Typical entries are around 200 bytes, so
 this only affects the unbounded interpolations that exist at a handful of call sites — terminal
@@ -115,6 +126,8 @@ have preserved a fragment of a fragment.
 - Monotonic sequence numbers give records a stable identity across sessions and are the
   ordering a hash chain would later need, so the format does not have to change to support
   tamper evidence.
+- Entries are attributable to a conversation without parsing their text, so the log can be
+  read conversation by conversation and a future view can filter on that.
 - The view bound is now explicit and local, so it can be raised, paged, or replaced by a
   virtualised list without touching storage.
 

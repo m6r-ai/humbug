@@ -41,8 +41,11 @@ become expensive mistakes.
 ### Auditability
 Humbug maintains a persistent interaction log in every mindspace that records both AI
 and human actions: every file the AI reads or writes, every tool call made, every human
-approval or denial, every prompt submitted, every file saved, renamed, moved, or deleted
-by the human, and every settings change.
+approval or denial, every prompt submitted and the reasoning and response that followed
+it, every file saved, renamed, moved, or deleted by the human, and every settings change.
+Entries that belong to a conversation carry the conversation's identifier in a structured
+context, so the trail can be read conversation by conversation instead of as unconnected
+prose.
 
 This log is inaccessible to the AI itself, making it an independent witness to what
 occurred. It is the foundation for a tamper-evident audit trail — including future

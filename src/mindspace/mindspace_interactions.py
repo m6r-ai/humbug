@@ -81,6 +81,7 @@ class MindspaceInteractions:
         level: MindspaceLogLevel,
         content: str,
         timestamp: datetime | None = None,
+        context: dict[str, str] | None = None,
     ) -> MindspaceMessage:
         """
         Append a record to the log.
@@ -93,12 +94,14 @@ class MindspaceInteractions:
             level: Severity level of the message.
             content: Message text.  Overlong content is truncated with a notice.
             timestamp: Time of the interaction, defaulting to now.
+            context: Optional structured context that attributes the interaction,
+                such as the conversation it took place in.
 
         Returns:
             The record that was appended.
         """
         message = MindspaceMessage.create(
-            self._next_sequence, level, self._truncate_content(content), timestamp
+            self._next_sequence, level, self._truncate_content(content), timestamp, context
         )
 
         try:

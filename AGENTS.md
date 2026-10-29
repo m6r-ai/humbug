@@ -278,6 +278,13 @@ truncates, never rewrites and never deletes: segments rotate at a size threshold
 only limit on the log.  Individual records are bounded in size and reads are bounded by the
 caller.  See ADR-0017.
 
+An entry that is part of a conversation's activity carries that conversation in the record's
+structured context, keyed `conversation` and holding the conversation's mindspace-relative
+transcript path.  Anything writing an entry while acting for a conversation must attribute it
+with `Mindspace.add_interaction(..., context=Mindspace.conversation_log_context(requester))`,
+where `requester` is the conversation the entry belongs to, rather than embedding the identifier
+in the content text.
+
 `Mindspace.resolve_tool_path()` is the single mechanism every AI tool must use to
 resolve a path argument.  It enforces the mindspace boundary and rejects paths inside
 the `.humbug/` directory (via `Mindspace.is_humbug_path()`), resolving symlinks on both

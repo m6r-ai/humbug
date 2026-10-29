@@ -281,6 +281,7 @@ class LogWidget(QWidget):
             message.level,
             message.timestamp,
             message.sequence,
+            message.context,
             self
         )
         msg_widget.selection_changed.connect(

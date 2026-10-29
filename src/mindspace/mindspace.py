@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import shutil
+from typing import Any
 import uuid
 
 from ai import AIConversationSettings
@@ -1028,21 +1029,55 @@ class Mindspace:
         except OSError as e:
             raise MindspaceError(f"Failed to create directory '{dir_path}': {e}") from e
 
-    def add_interaction(self, level: MindspaceLogLevel, content: str) -> MindspaceMessage:
+    def add_interaction(
+        self,
+        level: MindspaceLogLevel,
+        content: str,
+        context: dict[str, str] | None = None
+    ) -> MindspaceMessage:
         """
         Append a message to the interaction log.
 
         Args:
             level: Severity level of the message.
             content: Message text.
+            context: Optional structured context that attributes the interaction,
+                typically the result of conversation_log_context().
 
         Returns:
             The created MindspaceMessage.
         """
         assert self.has_mindspace(), "No mindspace is currently open"
-        message = self._interactions.append(level, content)
+        message = self._interactions.append(level, content, context=context)
         self._on_interactions_updated()
         return message
+
+    def conversation_log_context(self, requester: Any) -> dict[str, str] | None:
+        """
+        Return log context that attributes an interaction to a conversation.
+
+        The conversation is identified by its transcript path made mindspace-relative,
+        so the log stays readable and portable across machines.
+
+        Args:
+            requester: The requester of the interaction.  Anything exposing a
+                conversation_id() method, such as an AIConversation, identifies a
+                conversation; anything else does not, and logging continues unattributed.
+
+        Returns:
+            Context mapping the conversation to its transcript path, or None when the
+            requester does not identify a conversation.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        conversation_id = getattr(requester, "conversation_id", None)
+        if not callable(conversation_id):
+            return None
+
+        path = conversation_id()
+        if not path:
+            return None
+
+        return {MindspaceMessage.CONVERSATION_CONTEXT: self.get_relative_path(path)}
 
     def interactions(self) -> MindspaceInteractions:
         """
