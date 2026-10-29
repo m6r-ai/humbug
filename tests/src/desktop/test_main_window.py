@@ -12,6 +12,7 @@ import os
 import tempfile
 
 import pytest
+from PySide6.QtWidgets import QWidget
 
 from desktop.language.en.en_strings import get_english_strings
 from desktop.language.language_strings import LanguageStrings
@@ -31,6 +32,7 @@ class FakeMindspaceManager:
         self.is_mindspace = True
         self.create_error: Exception | None = None
         self.created: list[tuple[str, list[str]]] = []
+        self.enclosing: str | None = None
 
     def get_last_mindspace(self) -> str | None:
         return self._last_mindspace
@@ -43,6 +45,9 @@ class FakeMindspaceManager:
 
     def check_mindspace(self, path: str) -> bool:
         return self.is_mindspace
+
+    def enclosing_mindspace(self, path: str) -> str | None:
+        return self.enclosing
 
     def create_mindspace(self, path: str, folders: list[str]) -> None:
         if self.create_error is not None:
@@ -78,6 +83,16 @@ class FakeSidebarManager:
         self.paths.append(path)
 
 
+class FakeTimer:
+    """Stands in for the menu timer, which the folder choosers pause around their dialogs."""
+
+    def stop(self) -> None:
+        pass
+
+    def start(self) -> None:
+        pass
+
+
 class FakeHost:
     """A minimal stand-in for MainWindow carrying just the collaborators used."""
 
@@ -96,12 +111,21 @@ class FakeHost:
         self._restore_state_error: Exception | None = None
         self.restored_state = False
         self.tabs_can_close = True
+        self.closed_tabs = False
+        self.saved_state = False
+        self._menu_timer = FakeTimer()
 
     def _confirm_mindspace_initialization(self, path: str) -> bool:
         return MainWindow._confirm_mindspace_initialization(self, path)  # pylint: disable=protected-access
 
-    def _create_mindspace_at(self, path: str) -> bool:
-        return MainWindow._create_mindspace_at(self, path)  # pylint: disable=protected-access
+    def _refuse_mindspace_inside_mindspace(self, path: str) -> bool:
+        return MainWindow._refuse_mindspace_inside_mindspace(self, path)  # pylint: disable=protected-access
+
+    def _create_mindspace_at(self, path: str, folders: list[str]) -> bool:
+        return MainWindow._create_mindspace_at(self, path, folders)  # pylint: disable=protected-access
+
+    def _spawn_mindspace_window(self, mindspace_path: str) -> None:
+        MainWindow._spawn_mindspace_window(self, mindspace_path)  # pylint: disable=protected-access
 
     def _update_instance_registry(self) -> None:
         MainWindow._update_instance_registry(self)  # pylint: disable=protected-access
@@ -116,9 +140,10 @@ class FakeHost:
         pass
 
     def _save_mindspace_state(self) -> None:
-        pass
+        self.saved_state = True
 
     def _close_all_tabs(self) -> bool:
+        self.closed_tabs = True
         return self.tabs_can_close
 
 
@@ -195,11 +220,19 @@ class TestOpenMindspacePathRegistersTheOpenMindspace:
 class FakeMessageBox:
     """Records the message boxes shown and answers them with a canned button."""
 
-    def __init__(self, answer: MessageBoxButton = MessageBoxButton.OK) -> None:
+    def __init__(self, answer: MessageBoxButton = MessageBoxButton.YES) -> None:
         self.answer = answer
         self.shown: list[tuple[MessageBoxType, str]] = []
 
-    def show_message(self, parent, msg_type, title, text, buttons=None, destructive=False):
+    def show_message(
+        self,
+        parent: QWidget | None,  # pylint: disable=unused-argument
+        msg_type: MessageBoxType,
+        title: str,  # pylint: disable=unused-argument
+        text: str,
+        buttons: list[MessageBoxButton] | None = None,  # pylint: disable=unused-argument
+        destructive: bool = False,  # pylint: disable=unused-argument
+    ) -> MessageBoxButton:
         """Match MessageBox.show_message, recording the call instead of showing a dialog."""
         self.shown.append((msg_type, text))
         return self.answer
@@ -207,7 +240,14 @@ class FakeMessageBox:
 
 @pytest.fixture
 def message_box(monkeypatch):
-    """Replace MessageBox.show_message so dialogs are recorded rather than shown."""
+    """
+    Replace MessageBox.show_message so dialogs are recorded rather than shown.
+
+    The class attribute is replaced with the fake's bound method, which takes the
+    place of the real classmethod: MainWindow's ``MessageBox.show_message(self, ...)`` then reaches
+    ``FakeMessageBox.show_message`` with the window as ``parent``, exactly as the real
+    call would.
+    """
     fake = FakeMessageBox()
     monkeypatch.setattr("desktop.main_window.MessageBox.show_message", fake.show_message)
     return fake
@@ -215,16 +255,53 @@ def message_box(monkeypatch):
 
 class TestInitializingAFolderThatIsNotAMindspace:
     def test_the_user_is_asked_before_anything_is_created(self, host, message_box):
-        message_box.answer = MessageBoxButton.CANCEL
+        message_box.answer = MessageBoxButton.NO
         host._mindspace_manager.is_mindspace = False  # pylint: disable=protected-access
 
         with tempfile.TemporaryDirectory() as path:
-            assert MainWindow._open_mindspace_path(host, path) is None  # pylint: disable=protected-access
+            MainWindow._open_mindspace_path(host, path)  # pylint: disable=protected-access
 
             assert host._mindspace_manager.created == []  # pylint: disable=protected-access
             assert registered_path(host._instance_registry) == ""  # pylint: disable=protected-access
+            assert host._sidebar_manager.paths == []  # pylint: disable=protected-access
 
         assert [msg_type for msg_type, _ in message_box.shown] == [MessageBoxType.QUESTION]
+
+    def test_closing_the_dialog_creates_nothing(self, host, message_box):
+        """A dialog closed from its title bar reports OK, which must not count as a yes."""
+        message_box.answer = MessageBoxButton.OK
+        host._mindspace_manager.is_mindspace = False  # pylint: disable=protected-access
+
+        with tempfile.TemporaryDirectory() as path:
+            MainWindow._open_mindspace_path(host, path)  # pylint: disable=protected-access
+
+            assert host._mindspace_manager.created == []  # pylint: disable=protected-access
+
+    def test_declining_leaves_the_open_mindspace_alone(self, host, message_box):
+        """The question comes before the switch-out, so saying no costs the user nothing."""
+        message_box.answer = MessageBoxButton.NO
+        host._mindspace_manager = FakeMindspaceManager("/existing/mindspace")  # pylint: disable=protected-access
+        host._mindspace_manager.is_mindspace = False  # pylint: disable=protected-access
+
+        with tempfile.TemporaryDirectory() as path:
+            MainWindow._open_mindspace_path(host, path)  # pylint: disable=protected-access
+
+        assert host._mindspace_manager.mindspace_path() == "/existing/mindspace"  # pylint: disable=protected-access
+        assert host.saved_state is False
+        assert host.closed_tabs is False
+
+    def test_a_folder_inside_another_mindspace_is_refused(self, host, message_box):
+        """The outer mindspace's AI tools would otherwise see the inner one's .humbug."""
+        host._mindspace_manager.is_mindspace = False  # pylint: disable=protected-access
+        host._mindspace_manager.enclosing = "/outer"  # pylint: disable=protected-access
+
+        with tempfile.TemporaryDirectory() as path:
+            MainWindow._open_mindspace_path(host, path)  # pylint: disable=protected-access
+
+            assert host._mindspace_manager.created == []  # pylint: disable=protected-access
+
+        assert [msg_type for msg_type, _ in message_box.shown] == [MessageBoxType.CRITICAL]
+        assert "/outer" in message_box.shown[0][1]
 
     def test_accepting_creates_the_mindspace_and_opens_it(self, host, message_box):
         host._mindspace_manager.is_mindspace = False  # pylint: disable=protected-access
@@ -267,7 +344,7 @@ class TestInitializingAFolderThatIsNotAMindspace:
         host._mindspace_manager.create_error = MindspaceExistsError("already there")  # pylint: disable=protected-access
 
         with tempfile.TemporaryDirectory() as path:
-            assert MainWindow._create_mindspace_at(host, path) is False  # pylint: disable=protected-access
+            assert MainWindow._create_mindspace_at(host, path, []) is False  # pylint: disable=protected-access
 
         assert [msg_type for msg_type, _ in message_box.shown] == [MessageBoxType.CRITICAL]
 
@@ -279,3 +356,96 @@ class TestInitializingAFolderThatIsNotAMindspace:
             assert registered_path(host._instance_registry) == path  # pylint: disable=protected-access
 
         assert message_box.shown == []
+
+
+class FakeLaunchContext:
+    """Stands in for LaunchContext, recording the windows it is asked to start."""
+
+    def __init__(self) -> None:
+        self.spawned: list[str] = []
+        self.spawn_error: OSError | None = None
+
+    def spawn(self, mindspace_path: str) -> None:
+        if self.spawn_error is not None:
+            raise self.spawn_error
+
+        self.spawned.append(mindspace_path)
+
+
+@pytest.fixture
+def launch_context(monkeypatch):
+    """Replace LaunchContext.current so no real process is started."""
+    fake = FakeLaunchContext()
+    monkeypatch.setattr("desktop.main_window.LaunchContext.current", lambda: fake)
+    return fake
+
+
+def choose_folder(monkeypatch, path: str) -> None:
+    """Make the folder chooser return path rather than showing a dialog."""
+    monkeypatch.setattr(
+        "desktop.main_window.QFileDialog.getExistingDirectory", lambda *args, **kwargs: path
+    )
+
+
+class TestInitializingAFolderForANewWindow:
+    def test_declining_creates_nothing_and_starts_no_window(self, host, message_box, launch_context, monkeypatch):
+        message_box.answer = MessageBoxButton.NO
+        host._mindspace_manager.is_mindspace = False  # pylint: disable=protected-access
+
+        with tempfile.TemporaryDirectory() as path:
+            choose_folder(monkeypatch, path)
+            MainWindow._on_choose_mindspace_folder_for_new_window(host)  # pylint: disable=protected-access
+
+        assert host._mindspace_manager.created == []  # pylint: disable=protected-access
+        assert launch_context.spawned == []
+
+    def test_accepting_creates_the_mindspace_and_opens_a_window_on_it(
+        self, host, message_box, launch_context, monkeypatch
+    ):
+        host._mindspace_manager.is_mindspace = False  # pylint: disable=protected-access
+
+        with tempfile.TemporaryDirectory() as path:
+            choose_folder(monkeypatch, path)
+            MainWindow._on_choose_mindspace_folder_for_new_window(host)  # pylint: disable=protected-access
+
+            assert host._mindspace_manager.created == [(path, [])]  # pylint: disable=protected-access
+            assert launch_context.spawned == [path]
+
+    def test_a_window_that_fails_to_start_is_reported(self, host, message_box, launch_context, monkeypatch):
+        """The mindspace stays created, so the user can still open it from here."""
+        host._mindspace_manager.is_mindspace = False  # pylint: disable=protected-access
+        launch_context.spawn_error = OSError("no such executable")
+
+        with tempfile.TemporaryDirectory() as path:
+            choose_folder(monkeypatch, path)
+            MainWindow._on_choose_mindspace_folder_for_new_window(host)  # pylint: disable=protected-access
+
+            assert host._mindspace_manager.created == [(path, [])]  # pylint: disable=protected-access
+
+        assert [msg_type for msg_type, _ in message_box.shown] == [
+            MessageBoxType.QUESTION, MessageBoxType.CRITICAL
+        ]
+        assert "no such executable" in message_box.shown[-1][1]
+
+    def test_a_creation_failure_starts_no_window(self, host, message_box, launch_context, monkeypatch):
+        host._mindspace_manager.is_mindspace = False  # pylint: disable=protected-access
+        host._mindspace_manager.create_error = MindspaceError("disk full")  # pylint: disable=protected-access
+
+        with tempfile.TemporaryDirectory() as path:
+            choose_folder(monkeypatch, path)
+            MainWindow._on_choose_mindspace_folder_for_new_window(host)  # pylint: disable=protected-access
+
+        assert launch_context.spawned == []
+        assert message_box.shown[-1][0] == MessageBoxType.CRITICAL
+
+    def test_a_folder_inside_another_mindspace_is_refused(self, host, message_box, launch_context, monkeypatch):
+        host._mindspace_manager.is_mindspace = False  # pylint: disable=protected-access
+        host._mindspace_manager.enclosing = "/outer"  # pylint: disable=protected-access
+
+        with tempfile.TemporaryDirectory() as path:
+            choose_folder(monkeypatch, path)
+            MainWindow._on_choose_mindspace_folder_for_new_window(host)  # pylint: disable=protected-access
+
+        assert host._mindspace_manager.created == []  # pylint: disable=protected-access
+        assert launch_context.spawned == []
+        assert [msg_type for msg_type, _ in message_box.shown] == [MessageBoxType.CRITICAL]

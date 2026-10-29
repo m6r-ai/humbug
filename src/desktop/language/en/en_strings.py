@@ -354,8 +354,13 @@ def get_english_strings() -> LanguageStrings:
 
         initialize_mindspace_title="Initialize Mindspace",
         initialize_mindspace_message=(
-            "No mindspace was found at:\n\n{}\n\n"
+            "No mindspace was found at:\n\n{0}\n\n"
             "Do you want to initialize this folder as a mindspace and open it?"
+        ),
+        mindspace_inside_mindspace_error=(
+            "{0} is inside the mindspace at {1}.\n\n"
+            "A mindspace cannot be created inside another one, because the outer mindspace's "
+            "AI tools would be able to read the inner one's conversations and history."
         ),
 
         open_in_new_window="Open Mindspace in New Window...",

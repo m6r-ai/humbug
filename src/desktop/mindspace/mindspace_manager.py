@@ -97,6 +97,10 @@ class MindspaceManager(QObject):
         """Return True if a mindspace exists at path."""
         return self._mindspace.check_mindspace(path)
 
+    def enclosing_mindspace(self, path: str) -> str | None:
+        """Return the mindspace that path sits inside, or None if there is none."""
+        return self._mindspace.enclosing_mindspace(path)
+
     def create_mindspace(self, path: str, folders: list) -> None:
         """Create a new mindspace at path with the given subdirectories."""
         self._mindspace.create_mindspace(path, folders)

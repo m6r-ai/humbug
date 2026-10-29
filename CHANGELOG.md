@@ -17,6 +17,9 @@ New features:
 - Support gzip compressing HTTP client requests to the Anthropic and xAI backends.
 - Added a Network Access settings page with allowlist and denylist for the HTTP tool.  Allowlisted GET and HEAD
   requests no longer prompt, and every redirect target is checked before it is followed.
+- Opening a folder that is not a mindspace, in this window or a new one, now offers to initialize it rather than
+  reporting an error.  A folder inside another mindspace is refused, and a new mindspace's `.humbug` directory is
+  ignored by git so its contents are never committed with the user's work.
 - Added GPT 6.1 Terra.
 - Added MiniMax M3.1 Flash, and corrected the reasoning effort levels offered for MiniMax M3.
 - Removed Qwen 3.5 from Ollama cloud as it has been removed from the model catalogue.

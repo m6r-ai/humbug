@@ -32,6 +32,7 @@ class Mindspace:
     SESSION_FILE = "session.json"
     INTERACTIONS_FILE = "system.json"
     USAGE_FILE = "usage.json"
+    GITIGNORE_FILE = ".gitignore"
     CONVERSATIONS_DIR = "conversations"
     TRASH_DIR = "trash"
 
@@ -89,6 +90,35 @@ class Mindspace:
         """Return True if a mindspace exists at path."""
         return os.path.exists(os.path.join(path, self.MINDSPACE_DIR))
 
+    def enclosing_mindspace(self, path: str) -> str | None:
+        """
+        Return the mindspace that a folder sits inside, if there is one.
+
+        A mindspace created inside another would have its .humbug/ directory exposed to
+        the outer mindspace's AI tools, which exclude only their own root's .humbug/.
+
+        The home directory is never treated as a mindspace here: ~/.humbug is Humbug's
+        user settings directory, not a mindspace, and counting it would put every
+        folder under home inside one.
+
+        Args:
+            path: Directory to look above.
+
+        Returns:
+            The path of the nearest enclosing mindspace, or None if there is none.
+        """
+        home = os.path.realpath(os.path.expanduser("~"))
+        current = os.path.realpath(path)
+        parent = os.path.dirname(current)
+        while parent != current:
+            if parent != home and self.check_mindspace(parent):
+                return parent
+
+            current = parent
+            parent = os.path.dirname(current)
+
+        return None
+
     def create_mindspace(self, path: str, folders: list[str]) -> None:
         """
         Create a new mindspace at path.
@@ -116,6 +146,13 @@ class Mindspace:
 
             with open(os.path.join(mindspace_dir, self.SESSION_FILE), 'w', encoding='utf-8') as f:
                 json.dump({"tabs": []}, f, indent=4)
+
+            # A mindspace is often created in a folder that is already a git repository.
+            # .humbug/ is Humbug's state, not the user's, so it must never be committed
+            # with their work.  Ignoring it from inside means the user's own .gitignore
+            # is left alone.
+            with open(os.path.join(mindspace_dir, self.GITIGNORE_FILE), 'w', encoding='utf-8') as f:
+                f.write("*\n")
 
         except OSError as e:
             self._logger.error("Failed to create mindspace at %s: %s", path, str(e))

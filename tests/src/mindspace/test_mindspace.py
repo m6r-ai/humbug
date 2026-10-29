@@ -292,3 +292,58 @@ class TestHumbugPathExclusion:
         relative_path = mindspace.get_mindspace_relative_path(target)
 
         assert relative_path == os.path.join(".humbug", "conversations", "c1.json")
+
+
+def _new_mindspace() -> Mindspace:
+    """Construct a Mindspace with nothing open."""
+    return Mindspace(
+        on_settings_changed=lambda: None,
+        on_interactions_updated=lambda: None,
+    )
+
+
+class TestEnclosingMindspace:
+    """Tests for Mindspace.enclosing_mindspace."""
+
+    def test_finds_a_mindspace_above_the_folder(self, tmp_path) -> None:
+        """A folder anywhere below a mindspace reports that mindspace."""
+        outer = os.path.realpath(str(tmp_path))
+        os.makedirs(os.path.join(outer, ".humbug"))
+        inner = os.path.join(outer, "a", "b")
+        os.makedirs(inner)
+
+        assert _new_mindspace().enclosing_mindspace(inner) == outer
+
+    def test_finds_none_when_no_folder_above_is_a_mindspace(self, tmp_path) -> None:
+        """A folder with no mindspace above it is free to become one."""
+        inner = os.path.join(str(tmp_path), "a")
+        os.makedirs(inner)
+
+        assert _new_mindspace().enclosing_mindspace(inner) is None
+
+    def test_the_folder_itself_does_not_count(self, tmp_path) -> None:
+        """Only folders above are enclosing; the folder's own .humbug is not."""
+        os.makedirs(os.path.join(str(tmp_path), ".humbug"))
+
+        assert _new_mindspace().enclosing_mindspace(str(tmp_path)) is None
+
+    def test_the_home_settings_directory_does_not_count(self, tmp_path, monkeypatch) -> None:
+        """~/.humbug holds user settings, so home is not a mindspace enclosing everything."""
+        home = os.path.realpath(str(tmp_path))
+        os.makedirs(os.path.join(home, ".humbug"))
+        inner = os.path.join(home, "projects")
+        os.makedirs(inner)
+        monkeypatch.setenv("HOME", home)
+
+        assert _new_mindspace().enclosing_mindspace(inner) is None
+
+
+class TestCreateMindspace:
+    """Tests for Mindspace.create_mindspace."""
+
+    def test_humbug_directory_is_kept_out_of_git(self, tmp_path) -> None:
+        """A mindspace created inside a git repository must not have its state committed."""
+        _new_mindspace().create_mindspace(str(tmp_path), [])
+
+        with open(os.path.join(str(tmp_path), ".humbug", ".gitignore"), encoding="utf-8") as f:
+            assert f.read() == "*\n"

@@ -1516,7 +1516,8 @@ class MainWindow(QMainWindow):
             if not self._confirm_mindspace_initialization(mindspace_path):
                 return
 
-            if not self._create_mindspace_at(mindspace_path):
+            # No subfolders, as when initializing a folder in this window.
+            if not self._create_mindspace_at(mindspace_path, []):
                 return
 
         current = self._mindspace_manager.mindspace_path()
@@ -1604,31 +1605,15 @@ class MainWindow(QMainWindow):
             )
             return
 
+        if self._refuse_mindspace_inside_mindspace(dir_path):
+            return
+
         # Show folder configuration dialog
         dialog = MindspaceFoldersDialog(dir_path, self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
 
-        try:
-            # Create mindspace with selected folders
-            self._mindspace_manager.create_mindspace(dir_path, dialog.get_selected_folders())
-
-        except MindspaceExistsError:
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.mindspace_error_title,
-                strings.mindspace_exists_error
-            )
-            return
-
-        except MindspaceError as e:
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.mindspace_error_title,
-                strings.error_creating_mindspace.format(str(e))
-            )
+        if not self._create_mindspace_at(dir_path, dialog.get_selected_folders()):
             return
 
         self._open_mindspace_path(dir_path)
@@ -1639,34 +1624,64 @@ class MainWindow(QMainWindow):
 
         This only asks - it has no side effects - so that callers can put the question
         to the user before they commit to any work that would be wasted if the answer
-        is no, and create the mindspace later via _create_mindspace_at.
+        is no, and create the mindspace later via ``_create_mindspace_at()``.
+
+        A folder inside another mindspace is refused rather than offered, and closing
+        the dialog without choosing counts as no: only an explicit Yes creates anything.
 
         Args:
             path: Directory the user chose
 
         Returns:
-            True if the user wants the folder initialized, False if they cancelled.
+            True if the user wants the folder initialized, False otherwise.
         """
+        if self._refuse_mindspace_inside_mindspace(path):
+            return False
+
         strings = self._language_manager.strings()
         result = MessageBox.show_message(
             self,
             MessageBoxType.QUESTION,
             strings.initialize_mindspace_title,
             strings.initialize_mindspace_message.format(path),
-            [MessageBoxButton.OK, MessageBoxButton.CANCEL]
+            [MessageBoxButton.YES, MessageBoxButton.NO]
         )
-        return result == MessageBoxButton.OK
+        return result == MessageBoxButton.YES
 
-    def _create_mindspace_at(self, path: str) -> bool:
+    def _refuse_mindspace_inside_mindspace(self, path: str) -> bool:
         """
-        Create a mindspace in a folder the user has agreed to initialize.
+        Tell the user, and return True, if a folder sits inside an existing mindspace.
 
-        No subfolders are requested: a folder being adopted as a mindspace already has
-        whatever structure the user wants, and an empty one matches the defaults of
-        MindspaceFoldersDialog, which offers only an optional "src" that starts off.
+        Each mindspace hides only its own ``.humbug/`` from its AI tools, so a mindspace
+        created inside another would have its conversations and interaction log
+        readable from the outer one.
+
+        Args:
+            path: Directory the user wants to make a mindspace
+
+        Returns:
+            True if the folder was refused, False if it is safe to use.
+        """
+        enclosing = self._mindspace_manager.enclosing_mindspace(path)
+        if enclosing is None:
+            return False
+
+        strings = self._language_manager.strings()
+        MessageBox.show_message(
+            self,
+            MessageBoxType.CRITICAL,
+            strings.mindspace_error_title,
+            strings.mindspace_inside_mindspace_error.format(path, enclosing)
+        )
+        return True
+
+    def _create_mindspace_at(self, path: str, folders: list[str]) -> bool:
+        """
+        Create a mindspace, telling the user if it could not be created.
 
         Args:
             path: Directory to create the mindspace in
+            folders: Subfolders to create inside it
 
         Returns:
             True if the mindspace was created, False if creation failed and the user
@@ -1675,7 +1690,7 @@ class MainWindow(QMainWindow):
         strings = self._language_manager.strings()
 
         try:
-            self._mindspace_manager.create_mindspace(path, [])
+            self._mindspace_manager.create_mindspace(path, folders)
 
         except MindspaceExistsError:
             MessageBox.show_message(
@@ -1738,7 +1753,10 @@ class MainWindow(QMainWindow):
 
         # Only now commit the new mindspace to disk.  Creating it before the switch-out
         # above would leave a stray mindspace behind whenever a tab refuses to close.
-        if needs_initialization and not self._create_mindspace_at(path):
+        # No subfolders are requested: a folder being adopted already has whatever
+        # structure the user wants, and none matches the defaults of
+        # ``MindspaceFoldersDialog``, which offers only an optional "src" that starts off.
+        if needs_initialization and not self._create_mindspace_at(path, []):
             return
 
         # Open the new mindspace

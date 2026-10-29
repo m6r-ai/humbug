@@ -334,6 +334,7 @@ class LanguageStrings:
     # Initializing a folder that is not yet a mindspace
     initialize_mindspace_title: str
     initialize_mindspace_message: str
+    mindspace_inside_mindspace_error: str
 
     # Opening a mindspace in a new window
     open_in_new_window: str
