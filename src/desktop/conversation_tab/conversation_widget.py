@@ -639,7 +639,12 @@ class ConversationWidget(QWidget):
 
     def _message_index(self, message_id: str) -> int:
         """
-        Return the position at which a message is displayed.
+        Return the position at which a message is displayed in this view.
+
+        This is not the message's position in the conversation transcript.  A prompt
+        queued mid-turn is displayed before it is written to the transcript, so the
+        two orders differ, and anything addressing the transcript itself must use
+        _history_index instead.
 
         Args:
             message_id: Id of the message to locate.
@@ -652,6 +657,28 @@ class ConversationWidget(QWidget):
 
         except ValueError:
             return -1
+
+    def _history_index(self, message_id: str) -> int | None:
+        """
+        Return the position of a message in the conversation transcript.
+
+        The transcript is the authoritative record that anything operating on the
+        conversation as a whole works from: forking, truncating, and the indices
+        reported by the conversation tool all use transcript positions.
+
+        Args:
+            message_id: Id of the message to locate.
+
+        Returns:
+            The message's position in the transcript, or None if the message is not
+            in the transcript.
+        """
+        history = self._ai_conversation.get_conversation_history()
+        for index, message in enumerate(history.get_messages()):
+            if message.id == message_id:
+                return index
+
+        return None
 
     def _widget_at(self, index: int) -> ConversationMessage | None:
         """
@@ -2910,14 +2937,15 @@ class ConversationWidget(QWidget):
 
     def _on_message_fork_requested(self) -> None:
         """Fork the conversation from the specified message."""
-        # Find the index of the message in our list
+        # Find the position of the message in the transcript.  The fork takes everything
+        # before that position, so a view position would fork at the wrong place.
         message = self.sender()
         if not isinstance(message, ConversationMessage):
             return
 
         message_id = message.message_id()
-        message_index = -1 if message_id is None else self._message_index(message_id)
-        if message_index < 0:
+        message_index = None if message_id is None else self._history_index(message_id)
+        if message_index is None:
             return
 
         # Emit signal with the end index (inclusive)
@@ -2940,19 +2968,19 @@ class ConversationWidget(QWidget):
         if message_id is None or message_id not in self._message_widgets:
             return
 
-        index = self._message_index(message_id)
         if sender.message_source() != AIMessageSource.USER:
             return
 
-        self._begin_pending_edit(message_id, index, sender.message_content())
+        self._begin_pending_edit(message_id, sender.message_content())
 
-    def _begin_pending_edit(self, message_id: str, index: int, content: str) -> None:
-        """Enter pending-edit mode targeting the message at the given index."""
+    def _begin_pending_edit(self, message_id: str, content: str) -> None:
+        """Enter pending-edit mode targeting the given message."""
         self._clear_pending_edit()
 
         self._pending_edit_message_id = message_id
         self._pending_edit_original_text = content
 
+        index = self._message_index(message_id)
         editing = self._widget_at(index)
         if editing is not None:
             editing.set_being_edited(True)
@@ -3404,10 +3432,6 @@ class ConversationWidget(QWidget):
         # This widget is about to be rebuilt in another column, so capture the
         # live conversation state and detach it from the old widget.
         if self._pending_tool_call_approval:
-            # Find the message index
-            approval_message_id = self._pending_tool_call_approval.message_id()
-            message_index = -1 if approval_message_id is None else self._message_index(approval_message_id)
-
             # Get the message ID for robust lookup
             message_id = self._pending_tool_call_approval.message_id()
 
@@ -3416,7 +3440,6 @@ class ConversationWidget(QWidget):
 
             if tool_approval_info and tool_approval_info["tool_call"]:
                 metadata["pending_tool_approval"] = {
-                    "message_index": message_index,
                     "message_id": message_id,
                     "tool_call": tool_approval_info["tool_call"].to_dict(),
                     "reason": tool_approval_info["reason"],
@@ -4223,13 +4246,15 @@ class ConversationWidget(QWidget):
 
         Args:
             message_id: Message UUID
-            message_index: Message index (0-based)
+            message_index: Position of the message in the conversation transcript (0-based),
+                matching the indices reported by the other conversation operations
 
         Returns:
             Dictionary containing:
                 - success (bool): Whether scroll succeeded
-                - target_index (int): Original requested index
-                - actual_index (int): Index actually scrolled to
+                - target_index (int): Requested transcript position
+                - actual_index (int): Transcript position actually scrolled to, or -1 if
+                  that message is displayed but has not been written to the transcript
                 - substituted (bool): Whether a visible message was substituted
                 - message_id (str): ID of message scrolled to
                 - error (str): Error message if success is False
@@ -4240,61 +4265,63 @@ class ConversationWidget(QWidget):
                 "error": "Must provide either message_id or message_index"
             }
 
-        # Store original message_id for result
-        original_message_id = message_id
-        target_index = message_index
+        messages = self.get_conversation_history().get_messages()
 
-        # Find message index if ID provided
         if message_id is not None:
-            history = self.get_conversation_history()
-            messages = history.get_messages()
-            message_index = None
-            for idx, msg in enumerate(messages):
-                if msg.id == message_id:
-                    message_index = idx
-                    target_index = idx
-                    break
-
-            if message_index is None:
+            found_index = self._history_index(message_id)
+            if found_index is None:
                 return {
                     "success": False,
-                    "error": f"Message not found with ID: {original_message_id}"
+                    "error": f"Message not found with ID: {message_id}"
                 }
 
-        # Validate index
-        if message_index is None or message_index < 0 or message_index >= len(self._message_ids):
+            target_index = found_index
+
+        elif message_index is not None:
+            if message_index < 0 or message_index >= len(messages):
+                return {
+                    "success": False,
+                    "error": f"Invalid message index: {message_index}"
+                }
+
+            target_index = message_index
+
+        else:
             return {
                 "success": False,
-                "error": f"Invalid message index: {message_index}"
+                "error": "Must provide either message_id or message_index"
             }
 
-        # Check if target message is visible
-        target_message = self._widget_at(message_index)
+        target_message_id = messages[target_index].id
+
+        # The widget is located by the view's own position, which is not the transcript's.
+        target_position = self._message_index(target_message_id)
+        target_message = self._widget_at(target_position)
         if target_message is None:
             return {
                 "success": False,
-                "error": f"Message at index {message_index} is not on show"
+                "error": f"Message at index {target_index} is not on show"
             }
 
-        actual_index = message_index
+        actual_position = target_position
         substituted = False
 
         if not target_message.is_rendered():
             # Target is hidden, find next visible message
-            next_visible = self._find_next_visible_message(message_index)
+            next_visible = self._find_next_visible_message(target_position)
 
             if next_visible != -1:
                 # Found visible message after target
-                actual_index = next_visible
+                actual_position = next_visible
                 substituted = True
 
             else:
                 # No visible message after, search backward
-                prev_visible = self._find_previous_visible_message(message_index)
+                prev_visible = self._find_previous_visible_message(target_position)
 
                 if prev_visible != -1:
                     # Found visible message before target
-                    actual_index = prev_visible
+                    actual_position = prev_visible
                     substituted = True
 
                 else:
@@ -4305,21 +4332,20 @@ class ConversationWidget(QWidget):
                     }
 
         # Get the message widget to scroll to
-        message_widget = self._widget_at(actual_index)
+        message_widget = self._widget_at(actual_position)
         if message_widget is None:
             return {
                 "success": False,
-                "error": f"Message at index {actual_index} is not on show"
+                "error": f"Message at index {target_index} is not on show"
             }
 
         # Scroll so message header is at top of viewport with spacing
         bubble_spacing = self._style_manager.message_bubble_spacing()
         self._perform_scroll_to_position(message_widget, int(bubble_spacing))
 
-        # Get the actual message ID
-        history = self.get_conversation_history()
-        messages = history.get_messages()
-        actual_message_id = messages[actual_index].id
+        actual_message_id = self._message_ids[actual_position]
+        found_actual_index = self._history_index(actual_message_id)
+        actual_index = -1 if found_actual_index is None else found_actual_index
 
         return {
             "success": True,
