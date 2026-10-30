@@ -148,8 +148,13 @@ class ConversationWidget(QWidget):
         self._response_reveal_widgets: dict[str, ConversationMessage] = {}
         self._response_reveal_completed: set[str] = set()
 
-        # Widget tracking
-        self._messages: list[ConversationMessage] = []
+        # Widget tracking.  Messages are identified by their message id; the ids hold
+        # the order they are shown in and the widgets hold those currently on show.
+        # A message that is not in the transcript (a prompt queued mid-turn) is shown
+        # but has no transcript entry, so the display order cannot be derived from
+        # the conversation history.
+        self._message_ids: list[str] = []
+        self._message_widgets: dict[str, ConversationMessage] = {}
         self._message_with_selection: ConversationMessage | None = None
         self._is_streaming = False
 
@@ -421,8 +426,11 @@ class ConversationWidget(QWidget):
                 current = current.parent()
 
             if self._spotlighted_message_index != -1:
-                self._messages[self._spotlighted_message_index].set_spotlighted(True)
-                self._messages[self._spotlighted_message_index].setFocus()
+                spotlighted = self._widget_at(self._spotlighted_message_index)
+                if spotlighted is not None:
+                    spotlighted.set_spotlighted(True)
+                    spotlighted.setFocus()
+
                 return
 
             # If our input box is hidden then spotlight the last user message.
@@ -432,8 +440,11 @@ class ConversationWidget(QWidget):
                     return
 
                 self._spotlighted_message_index = last_visible_index
-                self._messages[self._spotlighted_message_index].set_spotlighted(True)
-                self._messages[self._spotlighted_message_index].setFocus()
+                last_visible = self._widget_at(last_visible_index)
+                if last_visible is not None:
+                    last_visible.set_spotlighted(True)
+                    last_visible.setFocus()
+
                 return
 
             self._input.set_spotlighted(True)
@@ -445,17 +456,20 @@ class ConversationWidget(QWidget):
 
         # Remove focus from the currently spotlighted message
         if self._spotlighted_message_index != -1:
-            self._messages[self._spotlighted_message_index].set_spotlighted(False)
+            spotlighted = self._widget_at(self._spotlighted_message_index)
+            if spotlighted is not None:
+                spotlighted.set_spotlighted(False)
 
         else:
             self._input.set_spotlighted(False)
 
         # Only spotlight user and user_queued messages; clicking other message
         # types clears any existing spotlight but does not set a new one.
-        if message_widget in self._messages:
+        message_id = message_widget.message_id()
+        if message_id is not None and message_id in self._message_widgets:
             source = message_widget.message_source()
             if source in (AIMessageSource.USER, AIMessageSource.USER_QUEUED):
-                self._spotlighted_message_index = self._messages.index(message_widget)
+                self._spotlighted_message_index = self._message_index(message_id)
                 message_widget.set_spotlighted(True)
                 message_widget.setFocus(Qt.FocusReason.MouseFocusReason)
 
@@ -482,7 +496,9 @@ class ConversationWidget(QWidget):
 
         # Remove focus from the currently spotlighted message
         if self._spotlighted_message_index != -1:
-            self._messages[self._spotlighted_message_index].set_spotlighted(False)
+            spotlighted = self._widget_at(self._spotlighted_message_index)
+            if spotlighted is not None:
+                spotlighted.set_spotlighted(False)
 
         else:
             self._input.set_spotlighted(False)
@@ -608,6 +624,55 @@ class ConversationWidget(QWidget):
             "cache_read_total": cache["cache_read_total"],
         }
 
+    def _ordered_widgets(self) -> list[ConversationMessage]:
+        """
+        Return the message widgets on show, in the order they are displayed.
+
+        The widgets are looked up by message id so that the result does not depend
+        on the widgets being contiguous, or on every message being on show.
+        """
+        return [
+            widget
+            for message_id in self._message_ids
+            if (widget := self._message_widgets.get(message_id)) is not None
+        ]
+
+    def _message_index(self, message_id: str) -> int:
+        """
+        Return the position at which a message is displayed.
+
+        Args:
+            message_id: Id of the message to locate.
+
+        Returns:
+            The message's position in the display order, or -1 if it is not on show.
+        """
+        try:
+            return self._message_ids.index(message_id)
+
+        except ValueError:
+            return -1
+
+    def _widget_at(self, index: int) -> ConversationMessage | None:
+        """
+        Return the message widget at the given position in the display order.
+
+        Args:
+            index: Position in the display order.
+
+        Returns:
+            The widget at that position, or None if the position holds no widget.
+        """
+        if 0 <= index < len(self._message_ids):
+            return self._message_widgets.get(self._message_ids[index])
+
+        return None
+
+    def _last_message_widget(self) -> ConversationMessage | None:
+        """Return the message widget displayed last, or None when no messages are on show."""
+        widgets = self._ordered_widgets()
+        return widgets[-1] if widgets else None
+
     def _add_message_core(
         self,
         message: AIMessage,
@@ -620,7 +685,7 @@ class ConversationWidget(QWidget):
         Args:
             message: The message to add.
             layout_pos: If given, insert the widget at this layout position and at
-                the corresponding index in self._messages.  If None (default),
+                the corresponding position in the display order.  If None (default),
                 append before the input widget at the end of the layout.
             apply_style: If True, pass the current message style into the widget
                 so sections are styled correctly on first render.
@@ -671,14 +736,16 @@ class ConversationWidget(QWidget):
         msg_widget.retry_requested.connect(self._on_retry_requested)
 
         if layout_pos is None:
-            self._messages.append(msg_widget)
+            self._message_ids.append(message.id)
+            self._message_widgets[message.id] = msg_widget
 
             # Add widget before input and the stretch.
             self._messages_layout.insertWidget(self._messages_layout.count() - 2, msg_widget)
 
         else:
             # Insert at the requested position in both the list and the layout.
-            self._messages.insert(layout_pos, msg_widget)
+            self._message_ids.insert(layout_pos, message.id)
+            self._message_widgets[message.id] = msg_widget
             self._messages_layout.insertWidget(layout_pos, msg_widget)
 
         return msg_widget
@@ -713,10 +780,10 @@ class ConversationWidget(QWidget):
         This keeps the message in the transcript for analytics but removes it from
         the visual conversation flow.
         """
-        if not self._messages:
+        last_message_widget = self._last_message_widget()
+        if last_message_widget is None:
             return
 
-        last_message_widget = self._messages[-1]
         if last_message_widget.message_source() != AIMessageSource.AI_CONNECTED:
             return
 
@@ -738,13 +805,16 @@ class ConversationWidget(QWidget):
         These messages are temporary UI-only widgets and should be completely
         removed when no longer needed.
         """
-        for i in range(len(self._messages) - 1, -1, -1):
-            if self._messages[i].message_source() != AIMessageSource.USER_QUEUED:
-                continue
+        queued_ids = [
+            message_id
+            for message_id in self._message_ids
+            if (widget := self._message_widgets.get(message_id)) is not None
+            and widget.message_source() == AIMessageSource.USER_QUEUED
+        ]
 
+        for message_id in queued_ids:
+            message_widget = self._message_widgets[message_id]
             # Remove widgets
-            message_widget = self._messages[i]
-
             # Clear selection if this message was selected
             if self._message_with_selection == message_widget:
                 self._message_with_selection = None
@@ -756,8 +826,9 @@ class ConversationWidget(QWidget):
             # Delete the widget
             message_widget.deleteLater()
 
-            # Remove from list
-            del self._messages[i]
+            # Remove from the display order
+            del self._message_widgets[message_id]
+            self._message_ids.remove(message_id)
 
     def _change_message_expansion(self, message_index: int, expanded: bool) -> None:
         """
@@ -767,10 +838,11 @@ class ConversationWidget(QWidget):
             message_index: Index of the message to change
             expanded: Whether the message should be expanded
         """
-        if message_index >= len(self._messages):
+        widgets = self._ordered_widgets()
+        if message_index >= len(widgets):
             return
 
-        message_widget = self._messages[message_index]
+        message_widget = widgets[message_index]
         message_widget.set_expanded(expanded)
 
         # If we're animating and the animated message visibility changed, update animation
@@ -1047,7 +1119,7 @@ class ConversationWidget(QWidget):
 
     def _find_last_visible_message_widget(self) -> ConversationMessage | None:
         """Find the last visible message widget."""
-        for message in reversed(self._messages):
+        for message in reversed(self._ordered_widgets()):
             if message.is_rendered():
                 return message
 
@@ -1108,8 +1180,9 @@ class ConversationWidget(QWidget):
                 self._input.setFocus()
 
             # Show retry button on the error message widget
-            if self._messages:
-                self._last_error_message_widget = self._messages[-1]
+            last_message_widget = self._last_message_widget()
+            if last_message_widget is not None:
+                self._last_error_message_widget = last_message_widget
                 self._last_error_message_widget.show_retry_ui()
 
         # Scroll to bottom if in auto-scroll mode, otherwise mark tab as updated
@@ -1139,7 +1212,7 @@ class ConversationWidget(QWidget):
             destructive: Whether the tool calls are considered destructive
         """
         # Find the message widget that corresponds to this tool call message
-        for msg_widget in self._messages:
+        for msg_widget in self._ordered_widgets():
             if msg_widget.message_id() == message.id:
                 # Add approval UI to this message
                 self._pending_tool_call_approval = msg_widget
@@ -1162,7 +1235,7 @@ class ConversationWidget(QWidget):
         if message is None:
             return
 
-        for msg_widget in self._messages:
+        for msg_widget in self._ordered_widgets():
             if msg_widget.message_id() == message.id:
                 self._pending_interruptible_wait = msg_widget
                 msg_widget.wait_cancelled.connect(self._on_interruptible_wait_cancelled)
@@ -1263,8 +1336,14 @@ class ConversationWidget(QWidget):
         # Remove all widgets from the error message back to (but not including) the last
         # USER or TOOL_RESULT widget, mirroring what retry_last_request does to the history.
         retry_sources = {AIMessageSource.USER, AIMessageSource.TOOL_RESULT}
-        while self._messages and self._messages[-1].message_source() not in retry_sources:
-            widget = self._messages.pop()
+        while self._message_ids:
+            message_id = self._message_ids[-1]
+            widget = self._message_widgets.get(message_id)
+            if widget is None or widget.message_source() in retry_sources:
+                break
+
+            self._message_ids.pop()
+            del self._message_widgets[message_id]
             if self._message_with_selection == widget:
                 self._message_with_selection = None
 
@@ -1275,7 +1354,7 @@ class ConversationWidget(QWidget):
             widget.deleteLater()
 
         # If the spotlight index now points beyond the end of the list, reset it
-        if self._spotlighted_message_index >= len(self._messages):
+        if self._spotlighted_message_index >= len(self._message_ids):
             self._spotlighted_message_index = -1
 
         # Clear the input box - the text was restored there by _on_request_error so the
@@ -1361,8 +1440,10 @@ class ConversationWidget(QWidget):
         if should_reveal_from_empty:
             self._update_last_message(message)
 
-        elif is_placeholder and self._messages:
-            self._messages[-1].set_rendered(False)
+        elif is_placeholder:
+            last_message_widget = self._last_message_widget()
+            if last_message_widget is not None:
+                last_message_widget.set_rendered(False)
 
         # Start animation if not already animating, otherwise re-evaluate which
         # messages should be animated since the new message may have become the
@@ -1385,21 +1466,18 @@ class ConversationWidget(QWidget):
 
     def _update_last_message(self, message: AIMessage) -> None:
         """Update the last AI or reasoning message in the message list."""
-        # Update the last message
-        if not self._messages:
-            self._logger.warning("No messages to update with the last message.")
-            return
-
         if message.source not in (AIMessageSource.AI, AIMessageSource.REASONING):
             return
 
         if self._is_placeholder_ai_message(message):
             return
 
-        for i in range(len(self._messages) - 1, -1, -1):
-            if self._messages[i].message_id() == message.id:
-                self._queue_response_reveal(self._messages[i], message, completed=message.completed)
-                break
+        widget = self._message_widgets.get(message.id)
+        if widget is None:
+            self._logger.warning("No message widget to update with the last message.")
+            return
+
+        self._queue_response_reveal(widget, message, completed=message.completed)
 
         if self._auto_scroll:
             self._scroll_to_bottom()
@@ -1918,12 +1996,13 @@ class ConversationWidget(QWidget):
         message top is back within view, and rides off the top once the message has
         almost fully scrolled past.
         """
-        if not self._messages:
+        widgets = self._ordered_widgets()
+        if not widgets:
             return
 
         viewport = self._scroll_area.viewport()
         viewport_height = viewport.height()
-        for message in self._messages:
+        for message in widgets:
             if not message.is_rendered():
                 continue
 
@@ -1971,13 +2050,15 @@ class ConversationWidget(QWidget):
         Return True if the message at index has a user or user_queued source.
 
         Args:
-            index: Index into self._messages
+            index: Position in the display order
 
         Returns:
             True if the message is a user or user_queued message
         """
-        source = self._messages[index].message_source()
-        return source in (AIMessageSource.USER, AIMessageSource.USER_QUEUED)
+        widget = self._widget_at(index)
+        return widget is not None and widget.message_source() in (
+            AIMessageSource.USER, AIMessageSource.USER_QUEUED
+        )
 
     def _find_next_visible_user_message(self, start_index: int) -> int:
         """
@@ -1989,8 +2070,9 @@ class ConversationWidget(QWidget):
         Returns:
             Index of next visible user message, or -1 if none found
         """
-        for i in range(start_index + 1, len(self._messages)):
-            if self._messages[i].is_rendered() and self._is_user_message(i):
+        widgets = self._ordered_widgets()
+        for i in range(start_index + 1, len(widgets)):
+            if widgets[i].is_rendered() and self._is_user_message(i):
                 return i
 
         return -1
@@ -2005,8 +2087,9 @@ class ConversationWidget(QWidget):
         Returns:
             Index of previous visible user message, or -1 if none found
         """
+        widgets = self._ordered_widgets()
         for i in range(start_index - 1, -1, -1):
-            if self._messages[i].is_rendered() and self._is_user_message(i):
+            if widgets[i].is_rendered() and self._is_user_message(i):
                 return i
 
         return -1
@@ -2018,8 +2101,9 @@ class ConversationWidget(QWidget):
         Returns:
             Index of last visible user message, or -1 if none found
         """
-        for i in range(len(self._messages) - 1, -1, -1):
-            if self._messages[i].is_rendered() and self._is_user_message(i):
+        widgets = self._ordered_widgets()
+        for i in range(len(widgets) - 1, -1, -1):
+            if widgets[i].is_rendered() and self._is_user_message(i):
                 return i
 
         return -1
@@ -2034,8 +2118,9 @@ class ConversationWidget(QWidget):
         Returns:
             Index of next visible message, or -1 if none found
         """
-        for i in range(start_index + 1, len(self._messages)):
-            if self._messages[i].is_rendered():
+        widgets = self._ordered_widgets()
+        for i in range(start_index + 1, len(widgets)):
+            if widgets[i].is_rendered():
                 return i
 
         return -1
@@ -2050,8 +2135,9 @@ class ConversationWidget(QWidget):
         Returns:
             Index of previous visible message, or -1 if none found
         """
+        widgets = self._ordered_widgets()
         for i in range(start_index - 1, -1, -1):
-            if self._messages[i].is_rendered():
+            if widgets[i].is_rendered():
                 return i
 
         return -1
@@ -2063,8 +2149,9 @@ class ConversationWidget(QWidget):
         Returns:
             Index of last visible message, or -1 if none found
         """
-        for i in range(len(self._messages) - 1, -1, -1):
-            if self._messages[i].is_rendered():
+        widgets = self._ordered_widgets()
+        for i in range(len(widgets) - 1, -1, -1):
+            if widgets[i].is_rendered():
                 return i
 
         return -1
@@ -2076,7 +2163,8 @@ class ConversationWidget(QWidget):
         Returns:
             Index of first visible message, or -1 if none found
         """
-        for i, message in enumerate(self._messages):
+        widgets = self._ordered_widgets()
+        for i, message in enumerate(widgets):
             if message.is_rendered():
                 return i
 
@@ -2092,14 +2180,20 @@ class ConversationWidget(QWidget):
         next_visible_index = self._find_next_visible_user_message(self._spotlighted_message_index)
         if next_visible_index != -1:
             # Move to next visible message
-            self._messages[self._spotlighted_message_index].set_spotlighted(False)
+            current = self._widget_at(self._spotlighted_message_index)
+            if current is not None:
+                current.set_spotlighted(False)
+
             self._spotlighted_message_index = next_visible_index
             self._spotlight_message()
             return True
 
         # No more visible messages - try to move to input if it's visible
         if self._input.isVisible():
-            self._messages[self._spotlighted_message_index].set_spotlighted(False)
+            current = self._widget_at(self._spotlighted_message_index)
+            if current is not None:
+                current.set_spotlighted(False)
+
             self._spotlighted_message_index = -1
             self._spotlight_message()
             return True
@@ -2124,7 +2218,10 @@ class ConversationWidget(QWidget):
         prev_visible_index = self._find_previous_visible_user_message(self._spotlighted_message_index)
         if prev_visible_index != -1:
             # Move to previous visible message
-            self._messages[self._spotlighted_message_index].set_spotlighted(False)
+            current = self._widget_at(self._spotlighted_message_index)
+            if current is not None:
+                current.set_spotlighted(False)
+
             self._spotlighted_message_index = prev_visible_index
             self._spotlight_message()
             return True
@@ -2134,14 +2231,15 @@ class ConversationWidget(QWidget):
     def _spotlight_message(self) -> None:
         """Spotlight the specified message, or the input box if index is -1."""
         index = self._spotlighted_message_index
-        if 0 <= index < len(self._messages):
-            self._messages[index].set_spotlighted(True)
-            self._messages[index].setFocus()
+        widget = self._widget_at(index)
+        if widget is not None:
+            widget.set_spotlighted(True)
+            widget.setFocus()
 
             # Always position the spotlighted message at the top of the viewport
             # so it is never obscured by the floating input box.
             message_spacing = int(self._style_manager.message_bubble_spacing())
-            self._perform_scroll_to_position(self._messages[index], message_spacing)
+            self._perform_scroll_to_position(widget, message_spacing)
             return
 
         self._input.set_spotlighted(True)
@@ -2222,14 +2320,17 @@ class ConversationWidget(QWidget):
 
     def navigate_to_prompt(self, message_index: int) -> None:
         """Spotlight and scroll to a user prompt by its message index."""
-        if message_index < 0 or message_index >= len(self._messages):
+        widget = self._widget_at(message_index)
+        if widget is None:
             return
 
-        if self._messages[message_index].message_source() != AIMessageSource.USER:
+        if widget.message_source() != AIMessageSource.USER:
             return
 
         if self._spotlighted_message_index != -1:
-            self._messages[self._spotlighted_message_index].set_spotlighted(False)
+            current = self._widget_at(self._spotlighted_message_index)
+            if current is not None:
+                current.set_spotlighted(False)
 
         self._input.set_spotlighted(False)
         self._spotlighted_message_index = message_index
@@ -2248,7 +2349,7 @@ class ConversationWidget(QWidget):
 
         content_height = max(1, self._messages_container.height())
         markers: list[tuple[int, float, str]] = []
-        for index, message in enumerate(self._messages):
+        for index, message in enumerate(self._ordered_widgets()):
             if message.is_rendered() and message.message_source() == AIMessageSource.USER:
                 position = message.mapTo(self._messages_container, QPoint(0, 0)).y()
                 markers.append((index, position / content_height, message.message_content()))
@@ -2523,7 +2624,7 @@ class ConversationWidget(QWidget):
     def _on_load_complete(self) -> None:
         """Finalise a completed batch load."""
         # Run through all the messages and ensure any that should be visible are now visible.
-        for message in self._messages:
+        for message in self._ordered_widgets():
             source = message.message_source()
             if source in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
                 continue
@@ -2534,8 +2635,8 @@ class ConversationWidget(QWidget):
             message.set_rendered(True)
 
         # If the last visible message is a SYSTEM error, restore the retry button.
-        if self._messages:
-            last_widget = self._messages[-1]
+        last_widget = self._last_message_widget()
+        if last_widget is not None:
             last_msg_source = last_widget.message_source()
             if last_msg_source == AIMessageSource.SYSTEM:
                 history = self.get_conversation_history()
@@ -2739,7 +2840,7 @@ class ConversationWidget(QWidget):
         self.setFont(font)
 
         self._message_style = self._build_message_style()
-        for message in self._messages:
+        for message in self._ordered_widgets():
             if message.is_rendered():
                 message.apply_style(self._message_style)
 
@@ -2814,7 +2915,10 @@ class ConversationWidget(QWidget):
         if not isinstance(message, ConversationMessage):
             return
 
-        message_index = self._messages.index(message)
+        message_id = message.message_id()
+        message_index = -1 if message_id is None else self._message_index(message_id)
+        if message_index < 0:
+            return
 
         # Emit signal with the end index (inclusive)
         self.fork_from_index_requested.emit(message_index)
@@ -2832,15 +2936,12 @@ class ConversationWidget(QWidget):
             return
 
         # Guard: only handle widgets that belong to THIS conversation
-        if sender not in self._messages:
-            return
-
-        index = self._messages.index(sender)
-        if self._messages[index].message_source() != AIMessageSource.USER:
-            return
-
         message_id = sender.message_id()
-        if message_id is None:
+        if message_id is None or message_id not in self._message_widgets:
+            return
+
+        index = self._message_index(message_id)
+        if sender.message_source() != AIMessageSource.USER:
             return
 
         self._begin_pending_edit(message_id, index, sender.message_content())
@@ -2852,8 +2953,11 @@ class ConversationWidget(QWidget):
         self._pending_edit_message_id = message_id
         self._pending_edit_original_text = content
 
-        self._messages[index].set_being_edited(True)
-        for message_widget in self._messages[index + 1:]:
+        editing = self._widget_at(index)
+        if editing is not None:
+            editing.set_being_edited(True)
+
+        for message_widget in self._ordered_widgets()[index + 1:]:
             message_widget.set_pending_removal(True)
 
         self._input.set_plain_text(content)
@@ -2869,7 +2973,7 @@ class ConversationWidget(QWidget):
         self._pending_edit_message_id = None
         self._pending_edit_original_text = ""
 
-        for message_widget in self._messages:
+        for message_widget in self._ordered_widgets():
             message_widget.set_pending_removal(False)
             message_widget.set_being_edited(False)
 
@@ -2897,10 +3001,7 @@ class ConversationWidget(QWidget):
         if message_id is None:
             return
 
-        index = next(
-            (i for i, widget in enumerate(self._messages) if widget.message_id() == message_id),
-            -1,
-        )
+        index = self._message_index(message_id)
         if index < 0:
             self._logger.error("Pending edit target %s is no longer present", message_id)
             return
@@ -2919,11 +3020,12 @@ class ConversationWidget(QWidget):
         if not isinstance(sender, ConversationMessage):
             return
 
-        index = self._messages.index(sender)
-        if index < 0 or index >= len(self._messages):
+        message_id = sender.message_id()
+        if message_id is None or message_id not in self._message_widgets:
             return
 
-        assert self._messages[index].message_source() == AIMessageSource.USER, "Only user messages can be deleted."
+        index = self._message_index(message_id)
+        assert sender.message_source() == AIMessageSource.USER, "Only user messages can be deleted."
 
         # A delete supersedes any pending edit.
         self._clear_pending_edit()
@@ -2940,10 +3042,6 @@ class ConversationWidget(QWidget):
             self.status_updated.emit()
 
         # Truncate history via the wrapper — this also writes the transcript
-        message_id = sender.message_id()
-        if message_id is None:
-            return
-
         if self._ai_conversation.truncate_to_message(message_id) is None:
             self._logger.error("Failed to truncate conversation at message %s", message_id)
             return
@@ -2957,9 +3055,10 @@ class ConversationWidget(QWidget):
 
     def _remove_message_widgets_from(self, index: int) -> None:
         """Remove the message widgets at and after the given index from the layout."""
-        preserved_messages = self._messages[:index]
-        for i in range(len(self._messages) - 1, index - 1, -1):
-            message_widget = self._messages[i]
+        preserved_ids = self._message_ids[:index]
+        removed_ids = self._message_ids[index:]
+        for message_id in reversed(removed_ids):
+            message_widget = self._message_widgets.pop(message_id)
             if self._message_with_selection == message_widget:
                 self._message_with_selection = None
 
@@ -2970,12 +3069,14 @@ class ConversationWidget(QWidget):
             self._messages_layout.removeWidget(message_widget)
             message_widget.deleteLater()
 
-        self._messages = preserved_messages
+        self._message_ids = preserved_ids
 
         conversation_settings = self._ai_conversation.conversation_settings()
         self._input.set_model(AIConversationSettings.get_display_name(conversation_settings.model, conversation_settings.provider))
 
-        if self._animated_messages and not self._animated_messages.issubset(preserved_messages):
+        if self._animated_messages and any(
+            message.message_id() in removed_ids for message in self._animated_messages
+        ):
             self._stop_message_border_animation()
 
     def can_cut(self) -> bool:
@@ -3263,7 +3364,7 @@ class ConversationWidget(QWidget):
             scroll positions, and message expansion states.
         """
         expansion_states = []
-        for message_widget in self._messages:
+        for message_widget in self._ordered_widgets():
             expansion_states.append(message_widget.is_expanded())
 
         return {
@@ -3304,7 +3405,8 @@ class ConversationWidget(QWidget):
         # live conversation state and detach it from the old widget.
         if self._pending_tool_call_approval:
             # Find the message index
-            message_index = self._messages.index(self._pending_tool_call_approval)
+            approval_message_id = self._pending_tool_call_approval.message_id()
+            message_index = -1 if approval_message_id is None else self._message_index(approval_message_id)
 
             # Get the message ID for robust lookup
             message_id = self._pending_tool_call_approval.message_id()
@@ -3356,7 +3458,7 @@ class ConversationWidget(QWidget):
             self._set_cursor_position(state["cursor"])
 
         # If a batch load is still in progress, defer restoration until it
-        # completes so that self._messages is fully populated when we apply it.
+        # completes so that every message widget is in place when we apply it.
         if self._load_queue:
             self._load_pending_state = state
             self._load_pending_is_migration = False
@@ -3442,7 +3544,7 @@ class ConversationWidget(QWidget):
                 self.update_conversation_settings(settings)
 
         # If a batch load is still in progress, defer the remaining restoration
-        # until it completes so that self._messages is fully populated when we
+        # until it completes so that every message widget is in place when we
         # apply the tool approval UI and the layout-dependent view state.
         if self._load_queue:
             # Drop the fields already applied above so they are not applied a
@@ -3465,7 +3567,7 @@ class ConversationWidget(QWidget):
             message_id = approval_info["message_id"]
             message_widget = None
 
-            for msg_widget in self._messages:
+            for msg_widget in self._ordered_widgets():
                 if msg_widget.message_id() == message_id:
                     message_widget = msg_widget
                     break
@@ -3558,7 +3660,7 @@ class ConversationWidget(QWidget):
             Tuple of (current_match, total_matches)
         """
         # Get searchable widgets
-        widgets = self._messages + [self._input]
+        widgets = self._ordered_widgets() + [self._input]
 
         # Clear existing highlights if search text changed
         if (text, case_sensitive, regexp) != self._last_search:
@@ -3672,7 +3774,7 @@ class ConversationWidget(QWidget):
         If the search parameters have changed, clears existing state and re-scans.
         If they are unchanged and matches are already populated, does nothing.
         """
-        widgets = self._messages + [self._input]
+        widgets = self._ordered_widgets() + [self._input]
 
         if (text, case_sensitive, regexp) != self._last_search:
             self._clear_highlights()
@@ -4160,14 +4262,20 @@ class ConversationWidget(QWidget):
                 }
 
         # Validate index
-        if message_index is None or message_index < 0 or message_index >= len(self._messages):
+        if message_index is None or message_index < 0 or message_index >= len(self._message_ids):
             return {
                 "success": False,
                 "error": f"Invalid message index: {message_index}"
             }
 
         # Check if target message is visible
-        target_message = self._messages[message_index]
+        target_message = self._widget_at(message_index)
+        if target_message is None:
+            return {
+                "success": False,
+                "error": f"Message at index {message_index} is not on show"
+            }
+
         actual_index = message_index
         substituted = False
 
@@ -4197,7 +4305,12 @@ class ConversationWidget(QWidget):
                     }
 
         # Get the message widget to scroll to
-        message_widget = self._messages[actual_index]
+        message_widget = self._widget_at(actual_index)
+        if message_widget is None:
+            return {
+                "success": False,
+                "error": f"Message at index {actual_index} is not on show"
+            }
 
         # Scroll so message header is at top of viewport with spacing
         bubble_spacing = self._style_manager.message_bubble_spacing()

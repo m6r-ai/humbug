@@ -37,7 +37,10 @@ def _populate(widget: ConversationWidget) -> None:
 
 def _user_widgets(widget: ConversationWidget) -> list:
     """Return the user message widgets in the conversation."""
-    return [w for w in widget._messages if w.message_source() == AIMessageSource.USER]  # pylint: disable=protected-access
+    return [
+        w for w in widget._ordered_widgets()  # pylint: disable=protected-access
+        if w.message_source() == AIMessageSource.USER
+    ]
 
 
 class TestEditFromHere:
@@ -54,7 +57,8 @@ class TestEditFromHere:
 
         assert widget._input.to_plain_text() == "second prompt"  # pylint: disable=protected-access
 
-        later = widget._messages[widget._messages.index(target) + 1:]  # pylint: disable=protected-access
+        widgets = widget._ordered_widgets()  # pylint: disable=protected-access
+        later = widgets[widgets.index(target) + 1:]
         assert later
         assert all(w.is_pending_removal() for w in later)
 
@@ -64,10 +68,10 @@ class TestEditFromHere:
         widget = _make_widget(transcript_path)
         _populate(widget)
 
-        before = len(widget._messages)  # pylint: disable=protected-access
+        before = len(widget._ordered_widgets())  # pylint: disable=protected-access
         _user_widgets(widget)[1].edit_from_here_requested.emit()
 
-        assert len(widget._messages) == before  # pylint: disable=protected-access
+        assert len(widget._ordered_widgets()) == before  # pylint: disable=protected-access
         assert len(widget._ai_conversation.get_conversation_history().get_messages()) == 4  # pylint: disable=protected-access
 
     def test_cancel_restores_messages(self, conv_env) -> None:
@@ -80,7 +84,7 @@ class TestEditFromHere:
         target.edit_from_here_requested.emit()
         widget._on_cancel_edit_requested()  # pylint: disable=protected-access
 
-        assert not any(w.is_pending_removal() for w in widget._messages)  # pylint: disable=protected-access
+        assert not any(w.is_pending_removal() for w in widget._ordered_widgets())  # pylint: disable=protected-access
         assert widget._input.to_plain_text() == ""  # pylint: disable=protected-access
         assert len(widget._ai_conversation.get_conversation_history().get_messages()) == 4  # pylint: disable=protected-access
 
@@ -95,7 +99,7 @@ class TestEditFromHere:
         widget._input.set_plain_text("")  # pylint: disable=protected-access
 
         assert widget._pending_edit_message_id is not None  # pylint: disable=protected-access
-        assert any(w.is_pending_removal() for w in widget._messages)  # pylint: disable=protected-access
+        assert any(w.is_pending_removal() for w in widget._ordered_widgets())  # pylint: disable=protected-access
 
     def test_escape_cancels_edit(self, conv_env) -> None:
         """Pressing Esc while editing cancels the edit and restores the messages."""
@@ -110,7 +114,7 @@ class TestEditFromHere:
 
         assert handled
         assert widget._pending_edit_message_id is None  # pylint: disable=protected-access
-        assert not any(w.is_pending_removal() for w in widget._messages)  # pylint: disable=protected-access
+        assert not any(w.is_pending_removal() for w in widget._ordered_widgets())  # pylint: disable=protected-access
 
     def test_edited_message_is_marked(self, conv_env) -> None:
         """The message being edited is marked as such and unmarked when the edit ends."""
@@ -122,11 +126,11 @@ class TestEditFromHere:
         target.edit_from_here_requested.emit()
 
         assert target.is_being_edited()
-        assert not any(w.is_being_edited() for w in widget._messages if w is not target)  # pylint: disable=protected-access
+        assert not any(w.is_being_edited() for w in widget._ordered_widgets() if w is not target)  # pylint: disable=protected-access
 
         widget._on_cancel_edit_requested()  # pylint: disable=protected-access
 
-        assert not any(w.is_being_edited() for w in widget._messages)  # pylint: disable=protected-access
+        assert not any(w.is_being_edited() for w in widget._ordered_widgets())  # pylint: disable=protected-access
 
     def test_begin_edit_does_not_scroll(self, conv_env) -> None:
         """Beginning an edit leaves the scroll position untouched."""
@@ -158,7 +162,7 @@ class TestEditFromHere:
 
         messages = widget._ai_conversation.get_conversation_history().get_messages()  # pylint: disable=protected-access
         assert [m.content for m in messages] == ["first prompt", "first response"]
-        assert not any(w.is_pending_removal() for w in widget._messages)  # pylint: disable=protected-access
+        assert not any(w.is_pending_removal() for w in widget._ordered_widgets())  # pylint: disable=protected-access
 
     def test_retargeting_edit_moves_pending_removal(self, conv_env) -> None:
         """Editing from a different message moves the pending-removal marking."""
@@ -172,8 +176,9 @@ class TestEditFromHere:
         first_target.edit_from_here_requested.emit()
 
         assert widget._input.to_plain_text() == "first prompt"  # pylint: disable=protected-access
-        assert not any(w.is_pending_removal() for w in widget._messages[:1])  # pylint: disable=protected-access
-        assert all(w.is_pending_removal() for w in widget._messages[1:])  # pylint: disable=protected-access
+        widgets = widget._ordered_widgets()  # pylint: disable=protected-access
+        assert not any(w.is_pending_removal() for w in widgets[:1])
+        assert all(w.is_pending_removal() for w in widgets[1:])
 
 
 class TestDeleteFromHere:
@@ -212,4 +217,4 @@ class TestDeleteFromHere:
         users[1].delete_requested.emit()
 
         assert widget._pending_edit_message_id is None  # pylint: disable=protected-access
-        assert not any(w.is_pending_removal() for w in widget._messages)  # pylint: disable=protected-access
+        assert not any(w.is_pending_removal() for w in widget._ordered_widgets())  # pylint: disable=protected-access
