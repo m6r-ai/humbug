@@ -11,12 +11,17 @@ from mindspace.mindspace_error import MindspaceError, MindspaceHumbugPathError
 from mindspace.mindspace_settings import MindspaceSettings
 
 
-def _make_mindspace(tmp_path, monkeypatch) -> Mindspace:
-    """Construct a Mindspace with an open mindspace at a temp path."""
-    mindspace = Mindspace(
+def _new_mindspace() -> Mindspace:
+    """Construct a Mindspace with nothing open."""
+    return Mindspace(
         on_settings_changed=lambda: None,
         on_interactions_updated=lambda: None,
     )
+
+
+def _make_mindspace(tmp_path, monkeypatch) -> Mindspace:
+    """Construct a Mindspace with an open mindspace at a temp path."""
+    mindspace = _new_mindspace()
     path = os.path.join(str(tmp_path), "ms")
     os.makedirs(os.path.join(path, ".humbug"))
     monkeypatch.setattr(mindspace, "_path", path)
@@ -294,56 +299,90 @@ class TestHumbugPathExclusion:
         assert relative_path == os.path.join(".humbug", "conversations", "c1.json")
 
 
-def _new_mindspace() -> Mindspace:
-    """Construct a Mindspace with nothing open."""
-    return Mindspace(
-        on_settings_changed=lambda: None,
-        on_interactions_updated=lambda: None,
-    )
 
+class TestNestedHumbugExclusion:
+    """Tests that a mindspace inside or above another cannot reach the other's .humbug/."""
 
-class TestEnclosingMindspace:
-    """Tests for Mindspace.enclosing_mindspace."""
+    def test_a_nested_mindspace_humbug_dir_is_excluded(self, tmp_path, monkeypatch) -> None:
+        """A folder inside this mindspace may be a mindspace too; its state is not ours to read."""
+        mindspace = _make_mindspace(tmp_path, monkeypatch)
+        inner = os.path.join(mindspace.mindspace_path(), "projects", "inner", ".humbug", "system.json")
 
-    def test_finds_a_mindspace_above_the_folder(self, tmp_path) -> None:
-        """A folder anywhere below a mindspace reports that mindspace."""
-        outer = os.path.realpath(str(tmp_path))
-        os.makedirs(os.path.join(outer, ".humbug"))
-        inner = os.path.join(outer, "a", "b")
+        assert mindspace.is_humbug_path(inner) is True
+
+    def test_a_nested_humbug_dir_is_rejected_by_resolve_tool_path(self, tmp_path, monkeypatch) -> None:
+        """Every AI tool resolves paths here, so this is what keeps them out."""
+        mindspace = _make_mindspace(tmp_path, monkeypatch)
+        inner = os.path.join(mindspace.mindspace_path(), "inner", ".humbug")
         os.makedirs(inner)
 
-        assert _new_mindspace().enclosing_mindspace(inner) == outer
+        with pytest.raises(MindspaceHumbugPathError):
+            mindspace.resolve_tool_path(os.path.join(inner, "system.json"))
 
-    def test_finds_none_when_no_folder_above_is_a_mindspace(self, tmp_path) -> None:
-        """A folder with no mindspace above it is free to become one."""
-        inner = os.path.join(str(tmp_path), "a")
+    def test_a_symlink_into_a_nested_humbug_dir_is_rejected(self, tmp_path, monkeypatch) -> None:
+        """A link elsewhere in the mindspace cannot reach a nested .humbug/ either."""
+        mindspace = _make_mindspace(tmp_path, monkeypatch)
+        inner = os.path.join(mindspace.mindspace_path(), "inner", ".humbug")
         os.makedirs(inner)
+        secret = os.path.join(inner, "system.json")
+        with open(secret, "w", encoding="utf-8") as f:
+            f.write("{}")
 
-        assert _new_mindspace().enclosing_mindspace(inner) is None
+        link = os.path.join(mindspace.mindspace_path(), "link.json")
+        os.symlink(secret, link)
 
-    def test_the_folder_itself_does_not_count(self, tmp_path) -> None:
-        """Only folders above are enclosing; the folder's own .humbug is not."""
-        os.makedirs(os.path.join(str(tmp_path), ".humbug"))
+        with pytest.raises(MindspaceHumbugPathError):
+            mindspace.resolve_tool_path(link)
 
-        assert _new_mindspace().enclosing_mindspace(str(tmp_path)) is None
+    def test_a_name_merely_containing_humbug_is_not_excluded(self, tmp_path, monkeypatch) -> None:
+        """Only a path component that is exactly .humbug counts."""
+        mindspace = _make_mindspace(tmp_path, monkeypatch)
+        regular = os.path.join(mindspace.mindspace_path(), "my.humbug", "notes.md")
 
-    def test_the_home_settings_directory_does_not_count(self, tmp_path, monkeypatch) -> None:
-        """~/.humbug holds user settings, so home is not a mindspace enclosing everything."""
-        home = os.path.realpath(str(tmp_path))
-        os.makedirs(os.path.join(home, ".humbug"))
-        inner = os.path.join(home, "projects")
-        os.makedirs(inner)
-        monkeypatch.setenv("HOME", home)
+        assert mindspace.is_humbug_path(regular) is False
 
-        assert _new_mindspace().enclosing_mindspace(inner) is None
+    def test_a_mindspace_under_a_humbug_folder_is_not_wholly_excluded(self, tmp_path, monkeypatch) -> None:
+        """Only components below the mindspace root are checked."""
+        mindspace = _new_mindspace()
+        path = os.path.join(str(tmp_path), ".humbug", "ms")
+        os.makedirs(os.path.join(path, ".humbug"))
+        monkeypatch.setattr(mindspace, "_path", path)
+        monkeypatch.setattr(mindspace, "_settings", MindspaceSettings(enabled_tools={}))
+
+        assert mindspace.is_humbug_path(os.path.join(path, "src", "file.py")) is False
 
 
-class TestCreateMindspace:
-    """Tests for Mindspace.create_mindspace."""
+class TestKeepingHumbugOutOfGit:
+    """Tests that .humbug/ ignores itself in any git repository it sits in."""
 
-    def test_humbug_directory_is_kept_out_of_git(self, tmp_path) -> None:
+    def test_a_new_mindspace_ignores_its_humbug_dir(self, tmp_path) -> None:
         """A mindspace created inside a git repository must not have its state committed."""
         _new_mindspace().create_mindspace(str(tmp_path), [])
 
         with open(os.path.join(str(tmp_path), ".humbug", ".gitignore"), encoding="utf-8") as f:
             assert f.read() == "*\n"
+
+    def test_an_existing_mindspace_gets_the_file_when_opened(self, tmp_path) -> None:
+        """Mindspaces created before the file existed are brought up to date."""
+        mindspace = _new_mindspace()
+        mindspace.create_mindspace(str(tmp_path), [])
+        gitignore = os.path.join(str(tmp_path), ".humbug", ".gitignore")
+        os.remove(gitignore)
+
+        mindspace.open_mindspace(str(tmp_path))
+
+        with open(gitignore, encoding="utf-8") as f:
+            assert f.read() == "*\n"
+
+    def test_an_edited_file_is_left_alone(self, tmp_path) -> None:
+        """A user who has changed the file keeps their change."""
+        mindspace = _new_mindspace()
+        mindspace.create_mindspace(str(tmp_path), [])
+        gitignore = os.path.join(str(tmp_path), ".humbug", ".gitignore")
+        with open(gitignore, "w", encoding="utf-8") as f:
+            f.write("usage.json\n")
+
+        mindspace.open_mindspace(str(tmp_path))
+
+        with open(gitignore, encoding="utf-8") as f:
+            assert f.read() == "usage.json\n"

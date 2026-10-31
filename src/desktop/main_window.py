@@ -1512,14 +1512,9 @@ class MainWindow(QMainWindow):
         if not mindspace_path:
             return
 
-        if not self._mindspace_manager.check_mindspace(mindspace_path):
-            if not self._confirm_mindspace_initialization(mindspace_path):
-                return
-
-            # No subfolders, as when initializing a folder in this window.
-            if not self._create_mindspace_at(mindspace_path, []):
-                return
-
+        # Both of these checks are free and need nothing from the user, so they come
+        # before any offer to initialize the folder.  Asking first could recreate a
+        # deleted .humbug/ under a mindspace that is open, only to then say so.
         current = self._mindspace_manager.mindspace_path()
         if current and os.path.realpath(mindspace_path) == os.path.realpath(current):
             MessageBox.show_message(
@@ -1529,6 +1524,19 @@ class MainWindow(QMainWindow):
                 strings.open_in_new_window_already_here
             )
             return
+
+        existing = self._instance_registry.find_live_instance(mindspace_path)
+        if existing is not None:
+            self._show_already_open_message(existing)
+            return
+
+        if not self._mindspace_manager.check_mindspace(mindspace_path):
+            if not self._confirm_mindspace_initialization(mindspace_path):
+                return
+
+            # No subfolders, as when initializing a folder in this window.
+            if not self._create_mindspace_at(mindspace_path, []):
+                return
 
         self._spawn_mindspace_window(mindspace_path)
 
@@ -1596,16 +1604,13 @@ class MainWindow(QMainWindow):
         if not dir_path:
             return
 
-        if self._mindspace_manager.is_already_mindspace(dir_path):
+        if self._mindspace_manager.check_mindspace(dir_path):
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
                 strings.mindspace_error_title,
                 strings.mindspace_exists_error
             )
-            return
-
-        if self._refuse_mindspace_inside_mindspace(dir_path):
             return
 
         # Show folder configuration dialog
@@ -1626,8 +1631,8 @@ class MainWindow(QMainWindow):
         to the user before they commit to any work that would be wasted if the answer
         is no, and create the mindspace later via ``_create_mindspace_at()``.
 
-        A folder inside another mindspace is refused rather than offered, and closing
-        the dialog without choosing counts as no: only an explicit Yes creates anything.
+        Closing the dialog without choosing counts as no: only an explicit Yes creates
+        anything.
 
         Args:
             path: Directory the user chose
@@ -1635,9 +1640,6 @@ class MainWindow(QMainWindow):
         Returns:
             True if the user wants the folder initialized, False otherwise.
         """
-        if self._refuse_mindspace_inside_mindspace(path):
-            return False
-
         strings = self._language_manager.strings()
         result = MessageBox.show_message(
             self,
@@ -1647,33 +1649,6 @@ class MainWindow(QMainWindow):
             [MessageBoxButton.YES, MessageBoxButton.NO]
         )
         return result == MessageBoxButton.YES
-
-    def _refuse_mindspace_inside_mindspace(self, path: str) -> bool:
-        """
-        Tell the user, and return True, if a folder sits inside an existing mindspace.
-
-        Each mindspace hides only its own ``.humbug/`` from its AI tools, so a mindspace
-        created inside another would have its conversations and interaction log
-        readable from the outer one.
-
-        Args:
-            path: Directory the user wants to make a mindspace
-
-        Returns:
-            True if the folder was refused, False if it is safe to use.
-        """
-        enclosing = self._mindspace_manager.enclosing_mindspace(path)
-        if enclosing is None:
-            return False
-
-        strings = self._language_manager.strings()
-        MessageBox.show_message(
-            self,
-            MessageBoxType.CRITICAL,
-            strings.mindspace_error_title,
-            strings.mindspace_inside_mindspace_error.format(path, enclosing)
-        )
-        return True
 
     def _create_mindspace_at(self, path: str, folders: list[str]) -> bool:
         """

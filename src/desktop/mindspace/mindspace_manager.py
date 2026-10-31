@@ -89,17 +89,9 @@ class MindspaceManager(QObject):
         """Return current mindspace settings, or None if no mindspace is open."""
         return self._mindspace.settings()
 
-    def is_already_mindspace(self, path: str) -> bool:
-        """Return True if a mindspace already exists at path."""
-        return self._mindspace.is_already_mindspace(path)
-
     def check_mindspace(self, path: str) -> bool:
         """Return True if a mindspace exists at path."""
         return self._mindspace.check_mindspace(path)
-
-    def enclosing_mindspace(self, path: str) -> str | None:
-        """Return the mindspace that path sits inside, or None if there is none."""
-        return self._mindspace.enclosing_mindspace(path)
 
     def create_mindspace(self, path: str, folders: list) -> None:
         """Create a new mindspace at path with the given subdirectories."""

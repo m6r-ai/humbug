@@ -354,12 +354,7 @@ def get_french_strings() -> LanguageStrings:
         initialize_mindspace_title="Initialiser l'espace mental",
         initialize_mindspace_message=(
             "Aucun espace mental n'a été trouvé à :\n\n{0}\n\n"
-            "Voulez-vous initialiser ce dossier comme espace mental et l'ouvrir ?"
-        ),
-        mindspace_inside_mindspace_error=(
-            "{0} se trouve dans l'espace mental {1}.\n\n"
-            "Un espace mental ne peut pas être créé dans un autre, car les outils d'IA de l'espace "
-            "mental extérieur pourraient lire les conversations et l'historique de l'espace intérieur."
+            "Voulez-vous initialiser ce dossier comme espace mental ?"
         ),
 
         open_in_new_window="Ouvrir l'espace mental dans une nouvelle fenêtre...",
