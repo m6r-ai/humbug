@@ -78,13 +78,13 @@ class ConversationSidebar(SidebarBase):
         self._new_folder_button = self._header.add_action_button(
             "new-folder",
             self._language_manager.strings().new_folder,
-            lambda: self._start_new_folder_creation(self._conversations_path or "")
+            lambda: self._start_new_folder_creation(self._tree_view.folder_for_new_item(self._conversations_path or ""))
         )
         self._new_folder_button.setEnabled(False)
         self._new_conversation_button = self._header.add_action_button(
             "plus",
             self._language_manager.strings().new_conversation,
-            lambda: self.new_conversation_requested.emit(self._conversations_path or "")
+            lambda: self.new_conversation_requested.emit(self._tree_view.folder_for_new_item(self._conversations_path or ""))
         )
         self._new_conversation_button.setEnabled(False)
         layout.addWidget(self._header)
@@ -105,6 +105,10 @@ class ConversationSidebar(SidebarBase):
 
         self._bc_container = SidebarBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
         layout.addWidget(self._bc_container, 1)
+
+        # The root crumb is always shown, so it is a way back to creating at the root
+        # even when the tree is too full to leave empty space to click.
+        self._bc_container.set_dot_click_handler(self._tree_view.clear_current)
 
         # Zero-delay timer scheduling a viewport repaint after the index scan and
         # model reset settle. Parented to self so it is torn down with the sidebar.
