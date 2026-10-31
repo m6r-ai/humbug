@@ -48,6 +48,15 @@ mindspace:
 Humbug will restore the session — the same tabs that were open when you last closed that mindspace
 will reappear in the same columns and positions.
 
+If the folder you choose is not a mindspace yet, Humbug asks whether to initialise it as one. This
+works the same way when opening a mindspace in a new window. Nothing is created unless you choose
+**Yes**.
+
+The `.humbug` directory ignores itself in git, so if your mindspace is also a git repository,
+Humbug's settings, conversations and logs are never committed with your work. A mindspace can sit
+inside another one: each mindspace's AI tools are kept out of every `.humbug` directory within it,
+not just their own.
+
 ---
 
 ## The mindspace panel

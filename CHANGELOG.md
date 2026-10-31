@@ -17,6 +17,9 @@ New features:
 - Support gzip compressing HTTP client requests to the Anthropic and xAI backends.
 - Added a Network Access settings page with allowlist and denylist for the HTTP tool.  Allowlisted GET and HEAD
   requests no longer prompt, and every redirect target is checked before it is followed.
+- Opening a folder that is not a mindspace, in this window or a new one, now offers to initialize it rather than
+  reporting an error.  A mindspace's `.humbug` directory now ignores itself in git, so its contents are never committed
+  with the user's work.
 - Added GPT 6.1 Terra.
 - Added MiniMax M3.1 Flash, and corrected the reasoning effort levels offered for MiniMax M3.
 - Removed Qwen 3.5 from Ollama cloud as it has been removed from the model catalogue.
@@ -27,6 +30,8 @@ New features:
 
 Bug fixes:
 
+- A mindspace inside another mindspace had its `.humbug` directory exposed to the outer mindspace's AI tools, which
+  only excluded their own root's `.humbug`.  Every `.humbug` directory within a mindspace is now excluded.
 - Fixed an exception where opening an editor from a diff view's context menu triggered a line size change.
 - The `.humbug` directory had mistakenly been exposed in the sidebar views.
 - Reordering tabs by dragging them within a column was not recorded in the session, so the original order came back the

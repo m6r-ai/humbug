@@ -33,6 +33,7 @@ class Mindspace:
     SESSION_FILE = "session.json"
     INTERACTIONS_DIR = "log"
     USAGE_FILE = "usage.json"
+    GITIGNORE_FILE = ".gitignore"
     CONVERSATIONS_DIR = "conversations"
     TRASH_DIR = "trash"
 
@@ -82,10 +83,6 @@ class Mindspace:
         """
         return self._context_registry
 
-    def is_already_mindspace(self, path: str) -> bool:
-        """Return True if a mindspace already exists at path."""
-        return os.path.exists(os.path.join(path, self.MINDSPACE_DIR))
-
     def check_mindspace(self, path: str) -> bool:
         """Return True if a mindspace exists at path."""
         return os.path.exists(os.path.join(path, self.MINDSPACE_DIR))
@@ -118,6 +115,8 @@ class Mindspace:
             with open(os.path.join(mindspace_dir, self.SESSION_FILE), 'w', encoding='utf-8') as f:
                 json.dump({"tabs": []}, f, indent=4)
 
+            self._ensure_gitignore(mindspace_dir)
+
         except OSError as e:
             self._logger.error("Failed to create mindspace at %s: %s", path, str(e))
             if os.path.exists(mindspace_dir):
@@ -129,6 +128,31 @@ class Mindspace:
                     shutil.rmtree(folder_path, ignore_errors=True)
 
             raise MindspaceError(f"Failed to create mindspace: {str(e)}") from e
+
+    def _ensure_gitignore(self, mindspace_dir: str) -> None:
+        """
+        Make a .humbug/ directory ignore itself in any git repository it sits in.
+
+        A mindspace is often a folder that is already a git repository.  .humbug/ is
+        Humbug's state, not the user's, so it must never be committed with their work.
+        Ignoring it from inside leaves the user's own .gitignore alone.
+
+        If Humbug comes to version .humbug/ with a repository of its own, this file
+        would ignore everything in that repository too, and must be replaced by an
+        exclusion that does not live inside .humbug/.
+
+        Args:
+            mindspace_dir: The .humbug/ directory.
+
+        Raises:
+            OSError: The file could not be written.
+        """
+        gitignore_path = os.path.join(mindspace_dir, self.GITIGNORE_FILE)
+        if os.path.exists(gitignore_path):
+            return
+
+        with open(gitignore_path, 'w', encoding='utf-8') as f:
+            f.write("*\n")
 
     def open_mindspace(self, path: str) -> None:
         """
@@ -144,6 +168,14 @@ class Mindspace:
         mindspace_dir = os.path.join(path, self.MINDSPACE_DIR)
         if not os.path.exists(mindspace_dir):
             raise MindspaceNotFoundError(f"No mindspace found at {path}")
+
+        # Mindspaces created before .humbug/ ignored itself get the file now.  Not
+        # having it is no reason to refuse to open, so a failure is only logged.
+        try:
+            self._ensure_gitignore(mindspace_dir)
+
+        except OSError as e:
+            self._logger.warning("Failed to write %s in %s: %s", self.GITIGNORE_FILE, mindspace_dir, str(e))
 
         try:
             settings = MindspaceSettings.load(os.path.join(mindspace_dir, self.SETTINGS_FILE))
@@ -931,7 +963,7 @@ class Mindspace:
 
     def is_humbug_path(self, path: str) -> bool:
         """
-        Return True if the given path is inside the mindspace's .humbug/ directory.
+        Return True if the given path is inside any .humbug/ directory in the mindspace.
 
         The .humbug/ directory holds Humbug-internal state (conversations, settings,
         the interaction log, usage data, and shell history).  It is excluded from
@@ -939,24 +971,34 @@ class Mindspace:
         trail.  This is the single predicate that every tool-facing path check must
         use.
 
+        Every .humbug/ below the root is excluded too, not just the root's own: a
+        folder inside this mindspace may be a mindspace in its own right, and its
+        state is no more this mindspace's AI's to read than the root's is.
+
         Args:
             path: Absolute or relative path to test.
 
         Returns:
-            True if the path resolves inside .humbug/, False otherwise.
+            True if the path resolves inside a .humbug/ directory, False otherwise.
         """
         if not self.has_mindspace():
             return False
 
         # Resolve symlinks so a link inside the mindspace cannot point into .humbug/.
         abs_path = os.path.realpath(os.path.abspath(os.path.expanduser(path)))
-        humbug_abs = os.path.realpath(os.path.abspath(os.path.join(self._path, self.MINDSPACE_DIR)))
+        mindspace_abs = os.path.realpath(os.path.abspath(self._path))
 
         try:
-            return os.path.commonpath([abs_path, humbug_abs]) == humbug_abs
+            if os.path.commonpath([abs_path, mindspace_abs]) != mindspace_abs:
+                return False
 
         except ValueError:
             return False
+
+        # Only the part below the root is checked, so a mindspace that itself lives
+        # under a folder named .humbug does not have every path excluded.
+        relative_path = os.path.relpath(abs_path, mindspace_abs)
+        return self.MINDSPACE_DIR in relative_path.split(os.sep)
 
     def resolve_tool_path(self, path: str) -> tuple[str, str]:
         """
