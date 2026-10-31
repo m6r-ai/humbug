@@ -606,11 +606,46 @@ class SidebarTreeView(QTreeView):
             self._stop_auto_scroll()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
-        """Handle mouse press events for drag initiation."""
+        """Handle mouse press events for drag initiation and clearing the selection."""
         if event.button() & Qt.MouseButton.LeftButton:
             self._drag_start_pos = event.pos()
 
+            if not self.indexAt(event.pos()).isValid():
+                self.clear_current()
+
         super().mousePressEvent(event)
+
+    def clear_current(self) -> None:
+        """
+        Clear the current item as well as the highlight.
+
+        The header's create buttons act on the current item, so this is how the user
+        gets back to creating at the root.  Clicking empty space, pressing Escape and
+        clicking the root breadcrumb all come here, so a tree too full to have empty
+        space still has a way back.
+        """
+        self.clearSelection()
+        self.setCurrentIndex(QModelIndex())
+
+    def folder_for_new_item(self, root: str) -> str:
+        """
+        Return the folder a header's create buttons should create in.
+
+        This is the selected folder, or the folder holding the selected item, so the
+        buttons act where the user is working.  With nothing selected, the root row
+        selected, or a row with no path of its own, it is the root.
+
+        Args:
+            root: The folder the tree shows.
+
+        Returns:
+            Absolute path of the folder to create in.
+        """
+        path = self.get_path_from_index(self.currentIndex())
+        if not path or os.path.basename(path) == ".":
+            return root
+
+        return path if os.path.isdir(path) else os.path.dirname(path)
 
     def wheelEvent(self, event: QWheelEvent) -> None:
         """Ignore wheel events — the breadcrumb container intercepts them via event filter."""
@@ -672,6 +707,9 @@ class SidebarTreeView(QTreeView):
     def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.key() == Qt.Key.Key_Delete:
             self.delete_requested.emit()
+
+        elif event.key() == Qt.Key.Key_Escape:
+            self.clear_current()
 
         super().keyPressEvent(event)
 
