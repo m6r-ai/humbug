@@ -41,6 +41,8 @@ Bug fixes:
 - Fixed a problem where MiniMax M3 tool calls did not work correctly with the Ollama backend.
 - Fixed a probelm where reasoning efforts were not correctly used in the Ollama backend.
 - Inserting a new file or folder in the breadcrumb view now places it in the correct directory.
+- The inline editor for a new or renamed file or folder in the Files panel started at the left edge of the row and
+  covered the item's icon.
 
 Internal structure changes:
 
