@@ -6,6 +6,7 @@ QT_QPA_PLATFORM variable must be set before the QApplication is created.
 # pylint: disable=redefined-outer-name
 
 import os
+import sys
 import time
 
 import pytest
@@ -15,13 +16,28 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 # pylint: disable=wrong-import-position
 from dataclasses import dataclass
 
-from PySide6.QtCore import QEvent, QPoint, QPointF, Qt
+from PySide6.QtCore import QEvent, QPoint, QPointF, Qt, qInstallMessageHandler
 from PySide6.QtGui import QColor, QMouseEvent, QPixmap
 from PySide6.QtWidgets import QApplication, QWidget
 
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.tab_manager.tab_overview import TabOverviewEntry
 from desktop.user.user_manager import UserManager
+
+_IGNORED_QT_MESSAGES = frozenset({
+    "This plugin does not support propagateSizeHints()",
+})
+
+
+def _report_qt_message(_mode, _context, message: str) -> None:
+    """Report Qt messages to stderr, dropping the ones the offscreen platform cannot honour."""
+    if message in _IGNORED_QT_MESSAGES:
+        return
+
+    print(message, file=sys.stderr)
+
+
+qInstallMessageHandler(_report_qt_message)
 
 
 @dataclass

@@ -35,6 +35,27 @@ from desktop.style_manager import StyleManager
 from desktop.markdown.markdown_block_data import HeadingBlockData, MarkdownBlockData
 
 
+def renders_at_measured_width(node: MarkdownASTNode) -> bool:
+    """
+    Report whether rendering a node depends on the document's text width.
+
+    Tables have their column widths and frame width measured at render time, and
+    local images are pre-scaled to the document width, so both have to be rendered
+    again when that width changes.  Every other node type wraps to the width the
+    document is laid out at and needs no such re-render.
+
+    Args:
+        node: The node to inspect, along with its descendants.
+
+    Returns:
+        True if the node has to be rendered again when the text width changes.
+    """
+    if isinstance(node, (MarkdownASTTableNode, MarkdownASTImageNode)):
+        return True
+
+    return any(renders_at_measured_width(child) for child in node.children)
+
+
 class MarkdownRenderer(MarkdownASTVisitor):
     """Visitor that renders the AST directly to a QTextDocument."""
 

@@ -337,6 +337,7 @@ Development and debugging utilities:
 - `__init__.py` — makes `tools/` a package so mypy resolves all tool subpackages as `tools.*`
 - `convert_document/` - Document conversion between docx, html, and md formats
 - `code_checker/` - Runs all static analysis tools (dependency checker, mypy, pylint) in sequence
+- `conversation_profile/` - Offscreen benchmark that measures where a conversation view spends its time (construct, load, resize, scroll) and attributes it to Qt event types
 - `dependency_checker/` - Module dependency validation
 - `style_checker/` - Pylint plugin enforcing Humbug-specific code style conventions
 - `pdf/` - PDF-related tooling

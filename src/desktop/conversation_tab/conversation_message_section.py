@@ -19,7 +19,7 @@ from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxType
 from desktop.style_manager import StyleManager
-from desktop.markdown import MarkdownCodeBlockTextEdit, MarkdownRenderer, MarkdownTextEdit
+from desktop.markdown import MarkdownCodeBlockTextEdit, MarkdownRenderer, MarkdownTextEdit, renders_at_measured_width
 from desktop.conversation_tab.conversation_message_style import ConversationMessageStyle
 
 
@@ -130,6 +130,8 @@ class ConversationMessageSection(QFrame):
         self._content_node: MarkdownASTNode | None = None
 
         self._rendered_width: int = -1
+
+        self._width_dependent_render: bool = False
 
         # Connect signals
         self._text_area.selectionChanged.connect(self._on_selection_changed)
@@ -242,19 +244,27 @@ class ConversationMessageSection(QFrame):
         """
         Re-render content when the document text width changes.
 
-        Fixed-width table frames are sized at render time, so a width change
-        requires a full re-render to recompute the correct table dimensions.
+        Re-rendering is only needed for content whose rendering is measured
+        against the text width, which is tables and local images.  For anything
+        else the document re-wraps itself and the rendered content stays valid,
+        so a resize does not have to re-render every section of every message.
         """
-        if (self._renderer is not None and self._content_node is not None
-                and isinstance(self._text_area, MarkdownTextEdit)):
-            new_width = self._text_area.viewport().width()
-            if new_width == self._rendered_width:
-                return
+        if (self._renderer is None or self._content_node is None
+                or not isinstance(self._text_area, MarkdownTextEdit)):
+            return
 
-            self._rendered_width = new_width
-            self._text_area.clear_animated_gifs()
-            self._text_area.document().setTextWidth(new_width)
-            self._renderer.visit(self._content_node)
+        new_width = self._text_area.viewport().width()
+        if new_width == self._rendered_width:
+            return
+
+        self._rendered_width = new_width
+
+        if not self._width_dependent_render:
+            return
+
+        self._text_area.clear_animated_gifs()
+        self._text_area.document().setTextWidth(new_width)
+        self._renderer.visit(self._content_node)
 
     def _on_mouse_released(self, _event: QMouseEvent) -> None:
         """Handle mouse release from text area."""
@@ -362,6 +372,7 @@ class ConversationMessageSection(QFrame):
             return
 
         if self._renderer is not None:
+            self._width_dependent_render = renders_at_measured_width(content)
             self._text_area.clear_animated_gifs()
             self._rendered_width = self._text_area.viewport().width()
             self._text_area.document().setTextWidth(self._text_area.viewport().width())

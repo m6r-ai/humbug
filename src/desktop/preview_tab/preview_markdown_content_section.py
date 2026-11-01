@@ -13,7 +13,9 @@ from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.style_manager import StyleManager
-from desktop.markdown import MarkdownCodeBlockTextEdit, HeadingBlockData, MarkdownRenderer, MarkdownTextEdit
+from desktop.markdown import (
+    HeadingBlockData, MarkdownCodeBlockTextEdit, MarkdownRenderer, MarkdownTextEdit, renders_at_measured_width
+)
 
 
 class PreviewMarkdownContentSection(QFrame):
@@ -107,6 +109,8 @@ class PreviewMarkdownContentSection(QFrame):
 
         self._rendered_width: int = -1
 
+        self._content_is_width_dependent: bool = False
+
         # Connect signals
         self._text_area.selectionChanged.connect(self._on_selection_changed)
         self._text_area.mouse_pressed.connect(self._on_mouse_pressed)
@@ -167,19 +171,27 @@ class PreviewMarkdownContentSection(QFrame):
         """
         Re-render content when the document text width changes.
 
-        Fixed-width table frames are sized at render time, so a width change
-        requires a full re-render to recompute the correct table dimensions.
+        Re-rendering is only needed for content whose rendering is measured
+        against the text width, which is tables and local images.  For anything
+        else the document re-wraps itself and the rendered content stays valid,
+        so a resize does not have to re-render every section of a preview.
         """
-        if (self._renderer is not None and self._content_node is not None
-                and isinstance(self._text_area, MarkdownTextEdit)):
-            new_width = self._text_area.viewport().width()
-            if new_width == self._rendered_width:
-                return
+        if (self._renderer is None or self._content_node is None
+                or not isinstance(self._text_area, MarkdownTextEdit)):
+            return
 
-            self._rendered_width = new_width
-            self._text_area.clear_animated_gifs()
-            self._text_area.document().setTextWidth(new_width)
-            self._renderer.visit(self._content_node)
+        new_width = self._text_area.viewport().width()
+        if new_width == self._rendered_width:
+            return
+
+        self._rendered_width = new_width
+
+        if not self._content_is_width_dependent:
+            return
+
+        self._text_area.clear_animated_gifs()
+        self._text_area.document().setTextWidth(new_width)
+        self._renderer.visit(self._content_node)
 
     def _on_mouse_released(self, _event: QMouseEvent) -> None:
         """Handle mouse release from text area."""
@@ -251,6 +263,7 @@ class PreviewMarkdownContentSection(QFrame):
 
         # Render markdown content
         if self._renderer is not None:
+            self._content_is_width_dependent = renders_at_measured_width(content)
             self._text_area.clear_animated_gifs()
             self._rendered_width = self._text_area.viewport().width()
             self._text_area.document().setTextWidth(self._text_area.viewport().width())
