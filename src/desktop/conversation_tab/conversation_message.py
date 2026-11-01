@@ -71,7 +71,8 @@ class ConversationMessage(QFrame):
         parent: QWidget | None = None,
         is_input: bool = False,
         attachments: list[tuple[str, str]] | None = None,
-        message_style: ConversationMessageStyle | None = None
+        message_style: ConversationMessageStyle | None = None,
+        message_width: int | None = None
     ) -> None:
         """
         Initialize the message widget.
@@ -87,6 +88,9 @@ class ConversationMessage(QFrame):
             parent: Optional parent widget
             is_input: Whether this is an input widget (affects styling)
             message_style: Optional style to apply before initial content render
+            message_width: Optional width this message will be laid out at, used to
+                render content at its final width on the first pass.  When omitted,
+                content is rendered at whatever size the widget happens to have.
         """
         super().__init__(parent)
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
@@ -105,6 +109,7 @@ class ConversationMessage(QFrame):
         self._message_model = model
         self._message_id = message_id
         self._message_user_name = user_name
+        self._message_width = message_width
 
         style_manager = StyleManager()
         self._attachments: list[tuple[str, str]] = attachments if attachments is not None else []
@@ -706,6 +711,23 @@ class ConversationMessage(QFrame):
             tooltip = strings.tooltip_collapse_message if self._is_expanded else strings.tooltip_expand_message
             self._expand_button.setToolTip(tooltip)
 
+    def _sections_container_width(self) -> int:
+        """
+        Return the width the sections container will be laid out at.
+
+        The container fills this message's content area, so its width is the width
+        the message will be given less its own frame and layout margins.  Knowing
+        that up front lets sections render their content at the width they will
+        keep rather than at the width of a widget that has not been laid out yet.
+        Before the message has been given a width to aim at, fall back to the
+        container's current size.
+        """
+        if self._message_width is None:
+            return self._sections_container.width()
+
+        margins = self._layout.contentsMargins()
+        return self._message_width - 2 * self.frameWidth() - margins.left() - margins.right()
+
     def _create_section_widget(self, syntax: ProgrammingLanguage | None = None) -> ConversationMessageSection:
         """
         Create a new section widget.
@@ -1115,7 +1137,7 @@ class ConversationMessage(QFrame):
             if i >= len(self._sections):
                 section = self._create_section_widget(syntax)
                 section.apply_style(self._message_style)
-                section.prime_width(self._sections_container.width())
+                section.prime_width(self._sections_container_width())
                 section.set_content(node)
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)

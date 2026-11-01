@@ -45,9 +45,9 @@ class MinHeightTextEdit(QTextEdit):
         self._height_cap: int | None = None
 
     def resizeEvent(self, event: QResizeEvent) -> None:
-        old_width = self.document().textWidth()
-        self.document().setTextWidth(self.viewport().width())
-        if self.document().textWidth() != old_width:
+        width = self.viewport().width()
+        if self.document().textWidth() != width:
+            self.document().setTextWidth(width)
             self.text_width_changed.emit()
 
         self._on_content_resized()

@@ -264,6 +264,10 @@ class ConversationWidget(QWidget):
         self._messages_layout = QVBoxLayout(self._messages_container)
         self._messages_container.setLayout(self._messages_layout)
 
+        # Width available to a message widget, or None until the container has been
+        # laid out.  Messages use it to render their content at the width they keep.
+        self._message_width: int | None = None
+
         # Set up the input box as a floating overlay, parented to this widget
         self._input = ConversationInput(AIMessageSource.USER, self)
         self._input.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -745,7 +749,8 @@ class ConversationWidget(QWidget):
             display_content,
             message.tool_call_context,
             attachments=resolved_attachments,
-            message_style=self._message_style if apply_style else None
+            message_style=self._message_style if apply_style else None,
+            message_width=self._message_width
         )
         msg_widget.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(msg_widget, has_selection)
@@ -2477,6 +2482,12 @@ class ConversationWidget(QWidget):
         if event.type() == QEvent.Type.Resize and obj in (
             self._scroll_area.viewport(), self._messages_container
         ):
+            if obj is self._messages_container:
+                margins = self._messages_layout.contentsMargins()
+                self._message_width = (
+                    self._messages_container.width() - margins.left() - margins.right()
+                )
+
             self._on_input_size_hint_changed()
             self._update_prompt_minimap()
             # Defer so message relayouts settle before we read geometry; the per-message

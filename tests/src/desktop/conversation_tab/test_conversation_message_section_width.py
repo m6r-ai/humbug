@@ -94,3 +94,24 @@ class TestSectionWidthChange:
 
         assert text_area.document().textWidth() == pytest.approx(text_area.viewport().width())
         assert text_area.document().size().height() > wide_height
+
+
+class TestPrimedWidth:
+    def test_content_is_rendered_at_the_primed_width(self, qapp: QApplication) -> None:
+        """Content wraps at the width the section will keep, not at its unlaid-out size."""
+        section = ConversationMessageSection(is_input=False)
+        margins = section._layout.contentsMargins()  # pylint: disable=protected-access
+        expected = 942 - 2 * section.frameWidth() - margins.left() - margins.right()
+
+        section.prime_width(942)
+        section.set_content(MarkdownASTBuilder(no_underscores=False).build_ast(PROSE))
+
+        assert section.text_area().document().textWidth() == expected
+
+        section.resize(942, 400)
+        section.show()
+        qapp.processEvents()
+
+        assert section.text_area().document().textWidth() == pytest.approx(
+            section.text_area().viewport().width()
+        )
