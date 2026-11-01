@@ -1,10 +1,12 @@
 """Conversation widget implementation."""
 
 import asyncio
+from collections import deque
 from collections.abc import Callable
 import logging
 import os
 import re
+import time
 from typing import Any, cast
 
 from PySide6.QtWidgets import (
@@ -40,6 +42,19 @@ from mindspace.mindspace_log_level import MindspaceLogLevel
 
 
 LOG_PREVIEW_CHARS = 120
+
+
+# How long a reveal slice may run before yielding to the event loop, in seconds.
+# Each slice costs one extra layout of the message list, so short slices are not
+# free: at 3706 messages a 32 ms slice adds ~14 % to load for a 76 ms worst turn,
+# while this adds ~4 % for a 151 ms worst turn (against 1403 ms revealing all at once).
+_REVEAL_SLICE_SECONDS = 0.128
+
+# How often, in seconds, the head of the history is revealed while it is still being
+# built.  Each slice costs a layout of the message list plus the scroll bookkeeping
+# below it, so revealing on every batch would roughly double the load time; this
+# paces it so the view visibly fills in without paying that on every turn.
+_REVEAL_INTERVAL_SECONDS = 0.25
 
 
 def _summarize_for_log(text: str) -> str:
@@ -167,11 +182,22 @@ class ConversationWidget(QWidget):
         self._load_tail_size: int = 80  # Weirdly we might get 80 message in view!
         self._load_generation: int = 0
         self._load_head_insert_pos: int = 0
+        self._reveal_queue: deque[str] = deque()
+        self._reveal_complete_pending: bool = False
+        self._last_reveal_time: float = 0.0
 
         self._load_batch_timer = QTimer(self)
         self._load_batch_timer.setSingleShot(True)
         self._load_batch_timer.setInterval(0)
         self._load_batch_timer_slot: Callable[..., Any] | None = None
+
+        # Reveals the loaded messages a chunk per event-loop turn: showing thousands
+        # of widgets in one turn freezes the tab for seconds.  Parented to self so a
+        # pending reveal can never fire after the widget is torn down.
+        self._reveal_timer = QTimer(self)
+        self._reveal_timer.setSingleShot(True)
+        self._reveal_timer.setInterval(0)
+        self._reveal_timer.timeout.connect(self._reveal_next_chunk)
 
         self._deferred_scroll_timer = QTimer(self)
         self._deferred_scroll_timer.setSingleShot(True)
@@ -2568,6 +2594,9 @@ class ConversationWidget(QWidget):
         """
         # Cancel any in-progress batch load before starting a new one.
         self._load_queue.clear()
+        self._reveal_queue.clear()
+        self._reveal_complete_pending = False
+        self._reveal_timer.stop()
         self._load_generation += 1
 
         # Establish a baseline for conversation settings.
@@ -2645,6 +2674,9 @@ class ConversationWidget(QWidget):
             message_widget = self._add_message_core(message, self._load_head_insert_pos, apply_style=not skip_style)
             message_widget.set_rendered(False)
 
+            if self._should_reveal(message_widget):
+                self._reveal_queue.append(message_widget.message_id() or "")
+
             self._load_head_insert_pos += 1
 
         if self._load_batch_timer_slot is not None:
@@ -2655,23 +2687,66 @@ class ConversationWidget(QWidget):
             self._load_batch_timer.timeout.connect(self._load_batch_timer_slot)
             self._load_batch_timer.setInterval(0)
             self._load_batch_timer.start()
+            # Restarting an already-pending reveal would keep postponing it behind the
+            # next batch, so only start one that is not already waiting to fire.
+            overdue = time.perf_counter() - self._last_reveal_time >= _REVEAL_INTERVAL_SECONDS
+            if self._reveal_queue and overdue and not self._reveal_timer.isActive():
+                self._reveal_timer.start(0)
+
             return
 
         self._on_load_complete()
 
     def _on_load_complete(self) -> None:
-        """Finalise a completed batch load."""
-        # Run through all the messages and ensure any that should be visible are now visible.
-        for message in self._ordered_widgets():
-            source = message.message_source()
-            if source in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
-                continue
+        """Reveal what is left of the loaded messages, then finalise once they are all shown."""
+        self._reveal_complete_pending = True
+        self._reveal_queue.extend(
+            message_id
+            for message_id in self._message_ids
+            if self._should_reveal(self._message_widgets.get(message_id))
+            and not self._message_widgets[message_id].is_rendered()
+        )
+        self._reveal_next_chunk()
 
-            if self._is_placeholder_ai_content(source, message.message_content()):
-                continue
+    def _should_reveal(self, message: ConversationMessage | None) -> bool:
+        """
+        Return whether a loaded message becomes visible once loading finishes.
 
-            message.set_rendered(True)
+        Args:
+            message: The message widget, or None if it is no longer on show.
 
+        Returns:
+            True if the widget should be revealed.
+        """
+        if message is None:
+            return False
+
+        source = message.message_source()
+        if source in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
+            return False
+
+        return not self._is_placeholder_ai_content(source, message.message_content())
+
+    def _reveal_next_chunk(self) -> None:
+        """Reveal loaded messages for one time slice, continuing on the next turn."""
+        deadline = time.perf_counter() + _REVEAL_SLICE_SECONDS
+        while self._reveal_queue and time.perf_counter() < deadline:
+            message = self._message_widgets.get(self._reveal_queue.popleft())
+            if message is not None:
+                message.set_rendered(True)
+
+        self._last_reveal_time = time.perf_counter()
+
+        if self._reveal_queue:
+            self._reveal_timer.start(0)
+            return
+
+        if self._reveal_complete_pending:
+            self._reveal_complete_pending = False
+            self._finalise_load()
+
+    def _finalise_load(self) -> None:
+        """Complete a batch load once every message that should be visible has been shown."""
         # If the last visible message is a SYSTEM error, restore the retry button.
         last_widget = self._last_message_widget()
         if last_widget is not None:
@@ -2790,6 +2865,10 @@ class ConversationWidget(QWidget):
         self._load_generation += 1
         self._load_pending_state = None
         self._load_pending_is_migration = False
+        # A reveal in progress must not outlive the widget it is revealing.
+        self._reveal_queue.clear()
+        self._reveal_complete_pending = False
+        self._reveal_timer.stop()
 
         # If this is a delegated conversation, we need to ensure we notify the parent
         if self._is_delegated_conversation and self._is_streaming:

@@ -101,27 +101,45 @@ class ProfilingApplication(QApplication):
             self._event_seconds[name] = self._event_seconds.get(name, 0.0) + elapsed
 
 
+def _loading_state(view: ConversationWidget) -> tuple[int, int]:
+    """
+    Return the numbers that change while a conversation view is still loading.
+
+    A view is not settled until every message it is going to show has been shown, and
+    widgets are revealed over several turns, so the count of visible messages has to
+    be part of the settled test as well as the count of widgets.
+
+    Args:
+        view: The conversation view being watched.
+
+    Returns:
+        The number of message widgets, and how many of them are visible.
+    """
+    messages = view.findChildren(ConversationMessage)
+    return len(messages), sum(1 for message in messages if message.isVisible())
+
+
 def _pump_until_settled(app: QApplication, view: ConversationWidget, quiet_turns: int) -> int:
     """
-    Process events until the view stops creating message widgets.
+    Process events until the view stops creating and showing message widgets.
 
     Args:
         app: The application delivering events to the view.
         view: The conversation view to settle.
-        quiet_turns: How many turns without a new message widget to accept as settled.
+        quiet_turns: How many turns without a change to accept as settled.
 
     Returns:
         The number of event-loop turns processed.
     """
     turns = 0
     stable = 0
-    count = len(view.findChildren(ConversationMessage))
+    state = _loading_state(view)
     while stable < quiet_turns:
         app.processEvents()
         turns += 1
-        current = len(view.findChildren(ConversationMessage))
-        stable = stable + 1 if current == count else 0
-        count = current
+        current = _loading_state(view)
+        stable = stable + 1 if current == state else 0
+        state = current
 
     return turns
 
