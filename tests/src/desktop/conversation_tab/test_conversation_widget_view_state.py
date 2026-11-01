@@ -98,16 +98,18 @@ class TestMessageExpansionState:
         _mgr, transcript_path = conv_env
         widget = _make_two_turn_widget(transcript_path)
 
-        widget._change_message_expansion(1, False)  # pylint: disable=protected-access
+        message_id = widget._message_ids[1]  # pylint: disable=protected-access
+        widget._change_message_expansion(message_id, False)  # pylint: disable=protected-access
         state = widget.create_view_state()
 
         assert state["message_expansion"] == [True, False, True, True]
+        assert state["message_ids"] == widget._message_ids  # pylint: disable=protected-access
 
     def test_expansion_state_is_restored_to_the_same_messages(self, conv_env) -> None:
         """A collapsed message is still collapsed after the view is rebuilt."""
         _mgr, transcript_path = conv_env
         source = _make_two_turn_widget(transcript_path)
-        source._change_message_expansion(1, False)  # pylint: disable=protected-access
+        source._change_message_expansion(source._message_ids[1], False)  # pylint: disable=protected-access
         state = source.create_view_state()
 
         restored = _make_widget(transcript_path)
