@@ -24,6 +24,7 @@ New features:
 - The interaction log now records every prompt, AI reasoning and AI response, and every entry that belongs to a
   conversation carries that conversation's identifier, so the audit trail can be read conversation by conversation
   rather than as unconnected prose.
+- Improved rendering performance for long-lived conversations.
 
 Bug fixes:
 
