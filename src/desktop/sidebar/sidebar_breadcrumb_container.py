@@ -97,6 +97,7 @@ class SidebarBreadcrumbContainer(QWidget):
         self._scrollbar.valueChanged.connect(self._on_external_scroll)
 
         tree_view.verticalScrollBar().rangeChanged.connect(self._on_tree_range_changed)
+        tree_view.verticalScrollBar().valueChanged.connect(self._on_tree_scrolled)
         tree_view.viewport().installEventFilter(self)
         breadcrumb_bar.viewport().installEventFilter(self)
         tree_view.expanded.connect(self._on_tree_expanded)
@@ -223,10 +224,12 @@ class SidebarBreadcrumbContainer(QWidget):
         Mirror the tree's scroll range directly onto the external scrollbar.
 
         Also re-syncs the external scrollbar value to match the tree's actual
-        current scroll position.  This is necessary because a model reset
-        (beginResetModel/endResetModel) silently resets the tree's internal
-        scrollbar to 0 without emitting a value-changed signal, leaving the
-        external scrollbar stranded at its previous position.
+        current scroll position.  This is necessary because the tree can be
+        scrolled without going through the external scrollbar — by a model reset
+        (beginResetModel/endResetModel) silently resetting the tree's internal
+        scrollbar to 0, by a scrollTo() during a reveal or deferred edit, or by
+        Qt restoring the current item after rows have been inserted — and none of
+        those emit a range change of their own.
 
         Args:
             minimum: New minimum value from the tree's internal scrollbar.
@@ -242,13 +245,42 @@ class SidebarBreadcrumbContainer(QWidget):
         if page_step == 0 and maximum > minimum:
             self._page_step_timer.start()
 
-        bc_h = max(0, self._breadcrumb_rows - 1) * self._row_height
-        external_value = max(minimum, tree_sb.value() - bc_h)
-        if self._scrollbar.value() != external_value:
-            self._scrollbar.setValue(external_value)
+        external_value = self._external_value()
+        if self._scrollbar.value() == external_value:
+            self._breadcrumb_refresh_timer.start()
 
         else:
-            self._breadcrumb_refresh_timer.start()
+            self._scrollbar.setValue(external_value)
+
+    def _on_tree_scrolled(self, _value: int) -> None:
+        """
+        Follow a scroll the tree performed itself.
+
+        Anything other than the external scrollbar moving the tree is a scroll the
+        user did not ask for, so the external scrollbar is brought in step rather
+        than left holding a position the tree is no longer at.  Without this the
+        next wheel event drags the tree back to the stale position.
+        """
+        if self._scrolling:
+            return
+
+        self._scrollbar.setValue(self._external_value())
+
+    def _external_value(self) -> int:
+        """
+        Return the external scrollbar position that shows the tree's current position.
+
+        The tree is always held at the external position plus the height of the
+        breadcrumb rows above the viewport, so the inverse is the external position
+        for wherever the tree has ended up.
+
+        Returns:
+            The scrollbar value matching the tree's current scroll position.
+        """
+        tree_sb = self._tree_view.verticalScrollBar()
+        bc_h = max(0, self._breadcrumb_rows - 1) * self._row_height
+
+        return max(tree_sb.minimum(), tree_sb.value() - bc_h)
 
     def _on_breadcrumb_refresh(self) -> None:
         """Recalculate the breadcrumb after a tree expand/collapse has settled."""

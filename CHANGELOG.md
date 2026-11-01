@@ -43,6 +43,8 @@ Bug fixes:
 - Inserting a new file or folder in the breadcrumb view now places it in the correct directory.
 - The inline editor for a new or renamed file or folder in the Files panel started at the left edge of the row and
   covered the item's icon.
+- Scrolling the Files panel jumped the first time it was used after creating a file or folder, because the panel's
+  scrollbar could fall out of step with the tree it drives.
 
 Internal structure changes:
 
