@@ -350,6 +350,12 @@ def get_arabic_strings() -> LanguageStrings:
         cancel_conversation="هل أنت متأكد من أنك تريد إيقاف استجابة الذكاء الاصطناعي الحالية؟ سيؤدي هذا "
             "إلى إنهاء المحادثة الجارية وقد يؤدي إلى استجابات غير مكتملة.",
 
+        initialize_mindspace_title="تهيئة المساحة الذهنية",
+        initialize_mindspace_message=(
+            "لم يتم العثور على مساحة ذهنية في:\n\n{0}\n\n"
+            "هل تريد تهيئة هذا المجلد كمساحة ذهنية؟"
+        ),
+
         open_in_new_window="فتح مساحة ذهنية في نافذة جديدة...",
         open_in_new_window_title="فتح في نافذة جديدة",
         open_in_new_window_already_open=(
@@ -359,7 +365,6 @@ def get_arabic_strings() -> LanguageStrings:
         open_in_new_window_already_here="هذه المساحة الذهنية مفتوحة بالفعل في هذه النافذة.",
         open_in_new_window_failed="تعذّر بدء نافذة Humbug جديدة:\n\n{}",
         open_in_new_window_choose_folder="اختيار مجلد...",
-        mindspace_not_found_error="لم يتم العثور على مساحة ذهنية في الموقع المحدد.",
         mindspace_open_elsewhere_tooltip=(
             "{} مفتوحة بالفعل في نافذة Humbug أخرى، لذا لا يمكن فتحها هنا"
         ),

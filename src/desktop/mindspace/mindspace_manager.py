@@ -90,10 +90,6 @@ class MindspaceManager(QObject):
         """Return current mindspace settings, or None if no mindspace is open."""
         return self._mindspace.settings()
 
-    def is_already_mindspace(self, path: str) -> bool:
-        """Return True if a mindspace already exists at path."""
-        return self._mindspace.is_already_mindspace(path)
-
     def check_mindspace(self, path: str) -> bool:
         """Return True if a mindspace exists at path."""
         return self._mindspace.check_mindspace(path)
