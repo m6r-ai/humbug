@@ -5,6 +5,8 @@ import os
 import shutil
 
 import pytest
+from PySide6.QtCore import QPoint, Qt
+from PySide6.QtTest import QTest
 
 # pylint: disable=wrong-import-position
 import desktop.conversation_sidebar.conversation_sidebar as conversation_sidebar_module
@@ -276,3 +278,85 @@ class TestNewConversationAndFolderButtons:
         sidebar.new_conversation_button().click()
 
         assert requested == [conv_dir]
+
+
+class TestHeaderButtonsCreateInTheSelectedFolder:
+    """The header's create buttons act on the selection, as the context menu does."""
+
+    @pytest.fixture
+    def work_dir(self, sidebar_env, sidebar):
+        """A folder holding one conversation, indexed so the tree can select it."""
+        _mgr, _ms_path, conv_dir = sidebar_env
+        work = os.path.join(conv_dir, "work")
+        os.makedirs(work)
+        _write_conv_file(os.path.join(work, "chat.conv"))
+
+        # Force a synchronous rescan so the new folder and file are indexed.
+        sidebar._conversations_index.set_conversations_dir(conv_dir)  # pylint: disable=protected-access
+        return work
+
+    def _select(self, sidebar, path: str) -> None:
+        index = sidebar._dag_model.index_for_path(path)  # pylint: disable=protected-access
+        assert index.isValid()
+        sidebar._tree_view.setCurrentIndex(index)  # pylint: disable=protected-access
+
+    def test_new_conversation_goes_in_the_selected_folder(self, sidebar, work_dir):
+        requested: list[str] = []
+        sidebar.new_conversation_requested.connect(requested.append)
+        self._select(sidebar, work_dir)
+
+        sidebar.new_conversation_button().click()
+
+        assert requested == [work_dir]
+
+    def test_new_conversation_goes_beside_the_selected_conversation(self, sidebar, work_dir):
+        requested: list[str] = []
+        sidebar.new_conversation_requested.connect(requested.append)
+        self._select(sidebar, os.path.join(work_dir, "chat.conv"))
+
+        sidebar.new_conversation_button().click()
+
+        assert requested == [work_dir]
+
+    def test_new_folder_goes_in_the_selected_folder(self, sidebar, work_dir):
+        self._select(sidebar, work_dir)
+
+        sidebar._new_folder_button.click()  # pylint: disable=protected-access
+
+        assert os.path.isdir(os.path.join(work_dir, "New Folder"))
+
+    def test_clicking_empty_space_goes_back_to_the_root(self, sidebar, sidebar_env, work_dir):
+        """Clicking below the items deselects, as in other file trees."""
+        _mgr, _ms_path, conv_dir = sidebar_env
+        sidebar.resize(300, 600)
+        sidebar.show()
+        self._select(sidebar, work_dir)
+        assert sidebar._tree_view.folder_for_new_item(conv_dir) == work_dir  # pylint: disable=protected-access
+        viewport = sidebar._tree_view.viewport()  # pylint: disable=protected-access
+
+        QTest.mouseClick(viewport, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(5, viewport.height() - 5))
+        sidebar._new_folder_button.click()  # pylint: disable=protected-access
+
+        assert os.path.isdir(os.path.join(conv_dir, "New Folder"))
+
+    def test_escape_goes_back_to_the_root(self, sidebar, sidebar_env, work_dir):
+        """A tree too full to have empty space can still be deselected."""
+        _mgr, _ms_path, conv_dir = sidebar_env
+        self._select(sidebar, work_dir)
+        assert sidebar._tree_view.folder_for_new_item(conv_dir) == work_dir  # pylint: disable=protected-access
+
+        QTest.keyClick(sidebar._tree_view, Qt.Key.Key_Escape)  # pylint: disable=protected-access
+        sidebar._new_folder_button.click()  # pylint: disable=protected-access
+
+        assert os.path.isdir(os.path.join(conv_dir, "New Folder"))
+
+    def test_clicking_the_root_crumb_goes_back_to_the_root(self, sidebar, sidebar_env, work_dir):
+        """The root crumb is always shown, however full the tree is."""
+        _mgr, _ms_path, conv_dir = sidebar_env
+        self._select(sidebar, work_dir)
+        assert sidebar._tree_view.folder_for_new_item(conv_dir) == work_dir  # pylint: disable=protected-access
+
+        sidebar._bc_container.scroll_to_path(conv_dir)  # pylint: disable=protected-access
+        sidebar._new_folder_button.click()  # pylint: disable=protected-access
+
+        assert os.path.isdir(os.path.join(conv_dir, "New Folder"))

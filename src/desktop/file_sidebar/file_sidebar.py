@@ -67,13 +67,13 @@ class FileSidebar(SidebarBase):
         self._new_folder_button = self._header.add_action_button(
             "new-folder",
             self._language_manager.strings().new_folder,
-            lambda: self._start_new_folder_creation(self._mindspace_path or "")
+            lambda: self._start_new_folder_creation(self._tree_view.folder_for_new_item(self._mindspace_path or ""))
         )
         self._new_folder_button.setEnabled(False)
         self._new_file_button = self._header.add_action_button(
             "plus",
             self._language_manager.strings().new_file,
-            lambda: self._start_new_file_creation(self._mindspace_path or "")
+            lambda: self._start_new_file_creation(self._tree_view.folder_for_new_item(self._mindspace_path or ""))
         )
         self._new_file_button.setEnabled(False)
         layout.addWidget(self._header)
@@ -94,6 +94,10 @@ class FileSidebar(SidebarBase):
 
         self._bc_container = SidebarBreadcrumbContainer(self._breadcrumb_bar, self._tree_view, self)
         layout.addWidget(self._bc_container, 1)
+
+        # The root crumb is always shown, so it is a way back to creating at the root
+        # even when the tree is too full to leave empty space to click.
+        self._bc_container.set_dot_click_handler(self._tree_view.clear_current)
 
         # Create file system model
         self._icon_provider = SidebarTreeIconProvider()
