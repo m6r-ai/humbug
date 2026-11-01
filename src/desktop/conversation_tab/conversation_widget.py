@@ -56,6 +56,14 @@ _REVEAL_SLICE_SECONDS = 0.128
 # paces it so the view visibly fills in without paying that on every turn.
 _REVEAL_INTERVAL_SECONDS = 0.25
 
+# How many messages the cached visible range may be nudged by before it is treated as
+# stale and searched for again.  A scroll tick moves it by a handful; a jump does not.
+_VISIBLE_RANGE_STEPS = 32
+
+# How many raw indices the cached range's ends may be trimmed by.  Trimming crosses the
+# hidden messages interleaved with the visible ones, so it has a separate budget.
+_VISIBLE_RANGE_SCAN_STEPS = 256
+
 
 def _summarize_for_log(text: str) -> str:
     """
@@ -185,6 +193,10 @@ class ConversationWidget(QWidget):
         self._reveal_queue: deque[str] = deque()
         self._reveal_complete_pending: bool = False
         self._last_reveal_time: float = 0.0
+
+        self._visible_range: tuple[int, int] | None = None
+        self._minimap_markers: list[tuple[int, float, str]] = []
+        self._minimap_content_height: int = -1
 
         self._load_batch_timer = QTimer(self)
         self._load_batch_timer.setSingleShot(True)
@@ -2054,35 +2066,201 @@ class ConversationWidget(QWidget):
         message top is back within view, and rides off the top once the message has
         almost fully scrolled past.
         """
-        widgets = self._ordered_widgets()
-        if not widgets:
-            return
-
         viewport = self._scroll_area.viewport()
-        viewport_height = viewport.height()
-        for message in widgets:
-            if not message.is_rendered():
+        first, last = self._visible_message_range()
+        for index in range(first, last + 1):
+            message = self._message_widgets.get(self._message_ids[index])
+            if message is None:
                 continue
 
             # The viewport top edge, expressed in the message's local coordinates.
             top_in_viewport = message.mapTo(viewport, QPoint(0, 0)).y()
-
-            # Skip messages that lie entirely below the viewport: their banners are
-            # already at their natural position and nothing is scrolling past them yet.
-            if top_in_viewport >= viewport_height:
-                continue
-
-            # Messages entirely above the viewport keep their banner parked off-screen
-            # from the last update, so there's no need to reposition them either.
-            if top_in_viewport + message.height() <= 0:
-                continue
-
             message.update_sticky_banner(-top_in_viewport)
 
     def _scroll_to_bottom(self) -> None:
         """Scroll to the bottom of the content."""
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
+
+    def _rendered_message(self, index: int) -> ConversationMessage | None:
+        """
+        Return the message widget at an index if it is on show.
+
+        Messages that are not on show are never laid out, so their geometry is a stale
+        default rather than a real position.  Everything that reasons about where
+        messages sit has to step over them rather than read their coordinates.
+
+        Args:
+            index: Position in the display order.
+
+        Returns:
+            The widget, or None if it is missing or not on show.
+        """
+        message = self._message_widgets.get(self._message_ids[index])
+        if message is None or not message.is_rendered():
+            return None
+
+        return message
+
+    def _viewport_span(self) -> tuple[int, int]:
+        """Return the viewport's top and bottom edges in the messages container's coordinates."""
+        scrollbar = self._scroll_area.verticalScrollBar()
+        top = scrollbar.value()
+        return top, top + self._scroll_area.viewport().height()
+
+    def _visible_message_range(self) -> tuple[int, int]:
+        """
+        Return the inclusive range of message indices overlapping the viewport.
+
+        The range is cached between calls and moved a message at a time, because a
+        scroll tick usually moves by only a few messages even when the conversation
+        holds thousands.  It is searched for from scratch when the cached range cannot
+        be brought back onto the viewport within a small number of steps, which happens
+        after a jump or a layout change rather than during ordinary scrolling.
+
+        Returns:
+            The first and last index, or (0, -1) when the viewport shows no message.
+        """
+        count = len(self._message_ids)
+        if count == 0:
+            return 0, -1
+
+        top, bottom = self._viewport_span()
+
+        budget = _VISIBLE_RANGE_STEPS
+        cached = self._visible_range
+        if cached is not None:
+            repaired = self._repair_visible_range(cached, top, bottom, count, budget)
+            if repaired[0] <= repaired[1]:
+                self._visible_range = repaired
+                return repaired
+
+        found = self._scan_visible_range(top, bottom, count)
+        self._visible_range = found
+        return found
+
+    def _scan_visible_range(self, top: int, bottom: int, count: int) -> tuple[int, int]:
+        """
+        Find the visible range by walking every message.
+
+        Args:
+            top: Viewport top edge, in the messages container's coordinates.
+            bottom: Viewport bottom edge, in the messages container's coordinates.
+            count: Number of messages in the display order.
+
+        Returns:
+            The first and last index, or (0, -1) when the viewport shows no message.
+        """
+        first = -1
+        for index in range(count):
+            message = self._rendered_message(index)
+            if message is not None and message.y() + message.height() > top:
+                first = index
+                break
+
+        if first < 0:
+            return 0, -1
+
+        last = first
+        for index in range(count - 1, first - 1, -1):
+            message = self._rendered_message(index)
+            if message is not None and message.y() < bottom:
+                last = index
+                break
+
+        return first, last
+
+    def _repair_visible_range(
+        self, cached: tuple[int, int], top: int, bottom: int, count: int, budget: int
+    ) -> tuple[int, int]:
+        """
+        Move a cached visible range back onto the viewport.
+
+        Args:
+            cached: The range remembered from the previous update.
+            top: Viewport top edge, in the messages container's coordinates.
+            bottom: Viewport bottom edge, in the messages container's coordinates.
+            count: Number of messages in the display order.
+            budget: How many messages may be stepped over before giving up.
+
+        Returns:
+            The repaired range, or (0, -1) if it could not be repaired within the step
+            budget, which tells the caller to search from scratch.
+        """
+        first, last = cached
+        if not 0 <= first <= last < count:
+            return 0, -1
+
+        # Trimming walks raw indices, because a message that leaves the viewport takes
+        # its hidden neighbours with it, so it gets its own budget.
+        trim = _VISIBLE_RANGE_SCAN_STEPS
+        while trim and not self._reaches_down(first, top):
+            first += 1
+            trim -= 1
+
+        while trim and not self._reaches_up(last, bottom):
+            last -= 1
+            trim -= 1
+
+        if not trim or first > last:
+            return 0, -1
+
+        while budget:
+            above = self._previous_rendered(first - 1)
+            if above < 0 or not self._reaches_down(above, top):
+                break
+
+            first = above
+            budget -= 1
+
+        while budget:
+            below = self._next_rendered(last + 1, count)
+            if below < 0 or not self._reaches_up(below, bottom):
+                break
+
+            last = below
+            budget -= 1
+
+        if not budget or first > last:
+            return 0, -1
+
+        return first, last
+
+    def _previous_rendered(self, index: int) -> int:
+        """Return the index of the last message at or before an index that is on show."""
+        while index >= 0:
+            if self._rendered_message(index) is not None:
+                return index
+
+            index -= 1
+
+        return -1
+
+    def _next_rendered(self, index: int, count: int) -> int:
+        """Return the index of the first message at or after an index that is on show."""
+        while index < count:
+            if self._rendered_message(index) is not None:
+                return index
+
+            index += 1
+
+        return -1
+
+    def _reaches_down(self, index: int, top: int) -> bool:
+        """Return whether the message at an index is on show and reaches below the viewport top."""
+        if index < 0 or index >= len(self._message_ids):
+            return False
+
+        message = self._rendered_message(index)
+        return message is not None and message.y() + message.height() > top
+
+    def _reaches_up(self, index: int, bottom: int) -> bool:
+        """Return whether the message at an index is on show and reaches above the viewport bottom."""
+        if index < 0 or index >= len(self._message_ids):
+            return False
+
+        message = self._rendered_message(index)
+        return message is not None and message.y() < bottom
 
     def _find_conversation_message(self, widget: QWidget) -> ConversationMessage | None:
         """
@@ -2396,7 +2574,12 @@ class ConversationWidget(QWidget):
         self._update_prompt_minimap()
 
     def _update_prompt_minimap(self) -> None:
-        """Refresh the minimap's prompt positions and active marker."""
+        """Position the minimap gutter, rebuilding the markers if the content moved."""
+        content_height = max(1, self._messages_container.height())
+        if content_height != self._minimap_content_height:
+            self._minimap_content_height = content_height
+            self._minimap_markers = self._build_minimap_markers(content_height)
+
         viewport = self._scroll_area.viewport()
         self._prompt_minimap.setFixedHeight(viewport.height())
         self._prompt_minimap.move(
@@ -2404,18 +2587,32 @@ class ConversationWidget(QWidget):
             viewport.y(),
         )
         self._prompt_minimap.raise_()
+        self._prompt_minimap.set_markers(self._minimap_markers, self._spotlighted_message_index)
+        self._prompt_minimap.setVisible(
+            self._prompt_minimap_visible or self._prompt_minimap_margin > 0
+        )
 
-        content_height = max(1, self._messages_container.height())
+    def _build_minimap_markers(self, content_height: int) -> list[tuple[int, float, str]]:
+        """
+        Build the minimap's prompt markers.
+
+        Markers are fractions of the content height, so they only move when the content
+        changes.  Rebuilding them on every scroll tick would walk every message in the
+        conversation to no purpose, so this runs when the content changes instead.
+
+        Args:
+            content_height: The height of the message container in pixels.
+
+        Returns:
+            One (index, fraction, content) tuple per rendered user message.
+        """
         markers: list[tuple[int, float, str]] = []
         for index, message in enumerate(self._ordered_widgets()):
             if message.is_rendered() and message.message_source() == AIMessageSource.USER:
                 position = message.mapTo(self._messages_container, QPoint(0, 0)).y()
                 markers.append((index, position / content_height, message.message_content()))
 
-        self._prompt_minimap.set_markers(markers, self._spotlighted_message_index)
-        self._prompt_minimap.setVisible(
-            self._prompt_minimap_visible or self._prompt_minimap_margin > 0
-        )
+        return markers
 
     def set_prompt_minimap_visible(self, visible: bool) -> None:
         """Show or hide the prompt minimap."""
