@@ -559,6 +559,16 @@ class EditorTab(TabBase):
         """
         self._editor_widget.goto_line(line, column)
 
+    def goto_line_clamped(self, line: int) -> None:
+        """
+        Move the cursor to a line, clamping it to the length of the document.
+
+        Args:
+            line: The 1-based line asked for, which may be out of range.
+        """
+        line_count = self._editor_widget.get_editor_info().get('line_count', 1)
+        self._editor_widget.goto_line(max(1, min(line, line_count)))
+
     def find_all_occurrences(self, search_text: str, case_sensitive: bool = False, regexp: bool = False) -> list[dict[str, Any]]:
         """
         Find all occurrences of text in the document.

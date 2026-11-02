@@ -1,6 +1,8 @@
 """HTTP AI tool for fetching URLs and making POST requests."""
 
 import base64
+from collections.abc import Callable
+import ipaddress
 import re
 import json as json_module
 import logging
@@ -8,7 +10,7 @@ import os
 from pathlib import Path
 import tempfile
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 from ai_tool import (
     AITool,
@@ -21,6 +23,7 @@ from ai_tool import (
     AIToolParameter,
     AIToolResult,
 )
+from http_ai_tool.http_access_settings import HttpAccessSettings
 from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace import Mindspace
 from html_ import html_ast_to_document_ir, parse_html
@@ -29,12 +32,14 @@ from http_client import (
     ClientResponseError,
     HttpClient,
     HttpClientError,
+    HttpResponse,
     ServerTimeoutError,
 )
 from markdown_ import document_ir_to_markdown
 
 
 _MAX_INLINE_RESPONSE_BYTES = 64 * 1024
+_MAX_REDIRECTS = 5
 
 # Header names whose values are redacted in authorization UI (case-insensitive).
 _SENSITIVE_HEADER_NAMES = frozenset({
@@ -56,17 +61,25 @@ class HttpAITool(AITool):
     HTTP tool for fetching URLs, making requests with all standard HTTP methods,
     and downloading files.
 
-    All operations require user authorization. The user sees the method,
-    URL, headers, and body before approving. GET/POST/PUT/PATCH/DELETE return
-    response bodies inline only when the final body text is at most 64KB
-    (measured after HTML-to-markdown or JSON formatting when those apply).
-    Larger bodies fail the tool call with instructions to use download.
+    GET and HEAD are read-only and are auto-approved when their URL matches the
+    user's allowlist and does not match the denylist.  Every other operation,
+    and any GET or HEAD whose URL is not allowlisted, requires user
+    authorization.  The user sees the method, URL, headers, and body before
+    approving. GET/POST/PUT/PATCH/DELETE return response bodies inline only
+    when the final body text is at most 64KB (measured after HTML-to-markdown
+    or JSON formatting when those apply).  Larger bodies fail the tool call
+    with instructions to use download.
 
     """
 
-    def __init__(self, mindspace: Mindspace) -> None:
+    def __init__(
+        self,
+        mindspace: Mindspace,
+        get_access_settings: Callable[[], HttpAccessSettings] | None = None,
+    ) -> None:
         """Initialize the HTTP tool."""
         self._mindspace = mindspace
+        self._get_access_settings = get_access_settings
         self._logger = logging.getLogger("HttpAITool")
 
     def get_definition(self) -> AIToolDefinition:
@@ -77,9 +90,11 @@ class HttpAITool(AITool):
                 "The http tool lets you (the AI) fetch URLs, make requests with all standard HTTP "
                 "methods, and download files from external services. It supports GET, HEAD, POST, "
                 "PUT, PATCH, DELETE, and download operations.\n\n"
-                "All operations require user authorization — the user sees the method, URL, "
-                "headers, and body before approving. GET/POST/PUT/PATCH/DELETE return the response "
-                "body inline only when that final body text is at most 64KB (after JSON formatting "
+                "GET and HEAD are read-only and run without asking when the URL is on the user's "
+                "allowlist. Every other operation, and any GET or HEAD whose URL is not allowlisted, "
+                "requires user authorization — the user sees the method, URL, headers, and body "
+                "before approving. GET/POST/PUT/PATCH/DELETE return the response body inline only "
+                "when that final body text is at most 64KB (after JSON formatting "
                 "or HTML-to-markdown conversion when those apply); larger bodies fail the tool call and the "
                 "full response should be fetched with download. Download writes directly to a file "
                 "in the mindspace without an inline size limit."
@@ -295,6 +310,297 @@ class HttpAITool(AITool):
             ),
         }
 
+    def _get_http_access_settings(self) -> HttpAccessSettings:
+        """Get the current HTTP access settings, or permissive defaults if none are configured."""
+        if self._get_access_settings is None:
+            return HttpAccessSettings(
+                allow_external_http_access=False,
+                external_http_allowlist=[],
+                external_http_denylist=[]
+            )
+
+        return self._get_access_settings()
+
+    @staticmethod
+    def _parse_url_pattern(pattern: str) -> dict[str, Any] | None:
+        """
+        Parse an allowlist or denylist entry into its matching components.
+
+        An entry may constrain any combination of scheme, host and port, and may
+        name a single host, a subdomain wildcard, or an IP network:
+
+            example.com               any scheme, any port, exact host
+            example.com:8443          any scheme, that port, exact host
+            https://example.com       that scheme, any port, exact host
+            https://example.com:8443  that scheme, that port, exact host
+            *.example.com             any scheme, any port, any subdomain of example.com
+            10.0.0.0/8                any scheme, any port, any address in the network
+
+        A subdomain wildcard matches subdomains only.  ``*.example.com`` matches
+        ``api.example.com`` but not ``example.com`` itself, and never matches
+        ``evilexample.com``.
+
+        Args:
+            pattern: The raw entry as written by the user.
+
+        Returns:
+            A dict of matching components, or None if the entry is empty or malformed.
+        """
+        text = pattern.strip()
+        if not text:
+            return None
+
+        # A bare CIDR is matched against the resolved IP address of the host.
+        try:
+            network = ipaddress.ip_network(text, strict=False)
+            return {"network": network}
+
+        except ValueError:
+            pass
+
+        scheme: str | None = None
+        remainder = text
+
+        if "://" in remainder:
+            scheme_part, _, remainder = remainder.partition("://")
+            scheme = scheme_part.lower()
+            if not scheme:
+                return None
+
+        port: int | None = None
+        host = remainder
+
+        # Split a trailing :port, taking care not to mistake the colons of a bare
+        # IPv6 address for a port separator.
+        if remainder.startswith("["):
+            closing = remainder.find("]")
+            if closing == -1:
+                return None
+
+            host = remainder[1:closing]
+            tail = remainder[closing + 1:]
+            if tail.startswith(":"):
+                port_text = tail[1:]
+                if not port_text.isdigit():
+                    return None
+
+                port = int(port_text)
+
+            elif tail:
+                return None
+
+        elif remainder.count(":") == 1:
+            host_part, _, port_text = remainder.partition(":")
+            if not port_text.isdigit():
+                return None
+
+            host = host_part
+            port = int(port_text)
+
+        if not host:
+            return None
+
+        if port is not None and (port < 1 or port > 65535):
+            return None
+
+        wildcard = host.startswith("*.")
+        if wildcard:
+            host = host[2:]
+            if not host:
+                return None
+
+        return {
+            "scheme": scheme,
+            "host": host.lower(),
+            "port": port,
+            "wildcard": wildcard,
+        }
+
+    @staticmethod
+    def _host_matches_ip_network(host: str, network: ipaddress.IPv4Network | ipaddress.IPv6Network) -> bool:
+        """Check whether a host is a literal IP address inside the given network."""
+        try:
+            address = ipaddress.ip_address(host)
+
+        except ValueError:
+            return False
+
+        return address.version == network.version and address in network
+
+    def _url_matches_patterns(self, url: str, patterns: list[str]) -> bool:
+        """
+        Check whether a URL matches any of the given patterns.
+
+        Matching is performed against the parsed components of the URL, never
+        against the raw string, so a pattern cannot be tricked by a crafted
+        path or query string.
+
+        Args:
+            url: The full URL to check.
+            patterns: The list of patterns to match against.
+
+        Returns:
+            True if the URL matches any pattern, False otherwise.
+        """
+        if not patterns:
+            return False
+
+        try:
+            parsed = urlsplit(url)
+
+        except ValueError:
+            return False
+
+        scheme = parsed.scheme.lower()
+        host = (parsed.hostname or "").lower()
+        if not host:
+            return False
+
+        default_port = 443 if scheme == "https" else 80
+        try:
+            port = parsed.port or default_port
+
+        except ValueError:
+            return False
+
+        for pattern in patterns:
+            parsed_pattern = self._parse_url_pattern(pattern)
+            if parsed_pattern is None:
+                continue
+
+            network = parsed_pattern.get("network")
+            if network is not None:
+                if self._host_matches_ip_network(host, network):
+                    return True
+
+                continue
+
+            if parsed_pattern["scheme"] is not None and parsed_pattern["scheme"] != scheme:
+                continue
+
+            if parsed_pattern["port"] is not None and parsed_pattern["port"] != port:
+                continue
+
+            pattern_host = parsed_pattern["host"]
+            if parsed_pattern["wildcard"]:
+                if host.endswith("." + pattern_host):
+                    return True
+
+            elif host == pattern_host:
+                return True
+
+        return False
+
+    async def _check_url_access(
+        self,
+        url: str,
+        arguments: dict[str, Any],
+        auth_context: str | None,
+        request_authorization: AIToolAuthorizationCallback,
+        action: str,
+    ) -> bool:
+        """
+        Decide whether a read-only request to a URL may proceed.
+
+        The denylist is checked first and refuses outright, so a denied address
+        is never offered to the user for approval.  The allowlist then grants
+        automatic approval.  Anything else prompts, which is also what happens
+        when the master switch is off: the switch governs automatic approval
+        only, and disabling the tool is how network access is withdrawn.
+
+        Args:
+            url: The URL being requested.
+            arguments: The tool call arguments, passed through to the prompt.
+            auth_context: Context block shown to the user, or None.
+            request_authorization: Callback used to prompt the user.
+            action: Description of the action for the prompt, e.g. "GET".
+
+        Returns:
+            True if the request may proceed, False if the user denied it.
+
+        Raises:
+            AIToolAuthorizationDenied: If the URL matches the denylist.
+        """
+        settings = self._get_http_access_settings()
+
+        if self._url_matches_patterns(url, settings.external_http_denylist):
+            raise AIToolAuthorizationDenied(
+                f"Access denied: '{url}' matches a denied URL pattern."
+            )
+
+        if settings.allow_external_http_access and self._url_matches_patterns(
+            url, settings.external_http_allowlist
+        ):
+            return True
+
+        reason = f"The AI is requesting to {action} {url}"
+        return await request_authorization(
+            "http", arguments, reason, auth_context, False
+        )
+
+    async def _get_following_checked_redirects(
+        self,
+        client: HttpClient,
+        method: str,
+        url: str,
+        headers: dict[str, str] | None,
+        arguments: dict[str, Any],
+        request_authorization: AIToolAuthorizationCallback,
+    ) -> HttpResponse:
+        """
+        Perform a read-only request, checking every redirect target before following it.
+
+        The client is created with redirect following disabled so that each hop
+        is authorised in its own right.  Without this, an allowlisted host could
+        redirect to an internal address and the client would follow it without
+        the denylist ever being consulted.
+
+        Args:
+            client: The HTTP client, created with follow_redirects=False.
+            method: Either "GET" or "HEAD".
+            url: The initial URL.
+            headers: Request headers.
+            arguments: The tool call arguments, passed through to any prompt.
+            request_authorization: Callback used to prompt the user.
+
+        Returns:
+            The final, non-redirect response.
+
+        Raises:
+            AIToolAuthorizationDenied: If a redirect target is denied or refused by the user.
+            AIToolExecutionError: If too many redirects are encountered.
+        """
+        current_url = url
+        send = client.get if method == "GET" else client.head
+
+        for _ in range(_MAX_REDIRECTS):
+            response = await send(current_url, headers=headers)
+
+            if response.status() not in (301, 302, 303, 307, 308):
+                return response
+
+            location = response.headers().get("location")
+            if not location:
+                return response
+
+            # Consume the redirect body so the connection can close cleanly.
+            await response.text()
+
+            redirect_url = urljoin(current_url, location)
+            authorized = await self._check_url_access(
+                redirect_url, arguments, None, request_authorization, method
+            )
+            if not authorized:
+                raise AIToolAuthorizationDenied(
+                    f"User denied permission to follow redirect to: {redirect_url}"
+                )
+
+            current_url = redirect_url
+
+        raise AIToolExecutionError(
+            f"Too many redirects (max {_MAX_REDIRECTS})"
+        )
+
     async def _get(
         self,
         tool_call: AIToolCall,
@@ -313,19 +619,23 @@ class HttpAITool(AITool):
         headers = self._apply_cookies(headers, arguments)
         self._validate_url(url)
 
-        reason = f"The AI is requesting to GET {url}"
         auth_context = self._build_authorization_context_block(headers)
-        authorized = await request_authorization(
-            "http", arguments, reason, auth_context, False
+        authorized = await self._check_url_access(
+            url, arguments, auth_context, request_authorization, "GET"
         )
 
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to fetch URL: {url}")
 
         try:
-            async with HttpClient(read_timeout=timeout, proxy=proxy) as client:
-                response = await client.get(url, headers=headers)
+            async with HttpClient(read_timeout=timeout, proxy=proxy, follow_redirects=False) as client:
+                response = await self._get_following_checked_redirects(
+                    client, "GET", url, headers, arguments, request_authorization
+                )
                 return await self._build_result(tool_call, response, format_type)
+
+        except AIToolAuthorizationDenied:
+            raise
 
         except (ClientConnectorError, ServerTimeoutError, ClientResponseError, HttpClientError) as e:
             raise AIToolExecutionError(f"HTTP request failed: {e}") from e
@@ -351,19 +661,23 @@ class HttpAITool(AITool):
         headers = self._apply_cookies(headers, arguments)
         self._validate_url(url)
 
-        reason = f"The AI is requesting to HEAD {url}"
         auth_context = self._build_authorization_context_block(headers)
-        authorized = await request_authorization(
-            "http", arguments, reason, auth_context, False
+        authorized = await self._check_url_access(
+            url, arguments, auth_context, request_authorization, "HEAD"
         )
 
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to check URL: {url}")
 
         try:
-            async with HttpClient(read_timeout=timeout, proxy=proxy) as client:
-                response = await client.head(url, headers=headers)
+            async with HttpClient(read_timeout=timeout, proxy=proxy, follow_redirects=False) as client:
+                response = await self._get_following_checked_redirects(
+                    client, "HEAD", url, headers, arguments, request_authorization
+                )
                 return await self._build_head_result(tool_call, response)
+
+        except AIToolAuthorizationDenied:
+            raise
 
         except (ClientConnectorError, ServerTimeoutError, ClientResponseError, HttpClientError) as e:
             raise AIToolExecutionError(f"HTTP request failed: {e}") from e

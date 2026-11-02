@@ -175,7 +175,7 @@ class PreviewAITool(AITool):
     async def _get_info(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get preview content metadata."""
@@ -188,7 +188,8 @@ class PreviewAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI requested preview info\ntab ID: {context_id}"
+                f"AI requested preview info\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             return AIToolResult(
@@ -204,7 +205,7 @@ class PreviewAITool(AITool):
     async def _search(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Search for text in preview content."""
@@ -232,7 +233,8 @@ class PreviewAITool(AITool):
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI searched preview for '{search_text}'{flag_desc}: "
-                f"{result['total_matches']} matches\ntab ID: {context_id}"
+                f"{result['total_matches']} matches\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             return AIToolResult(
@@ -251,7 +253,7 @@ class PreviewAITool(AITool):
     async def _scroll_to(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Scroll preview to a specific content position."""
@@ -285,7 +287,8 @@ class PreviewAITool(AITool):
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI scrolled preview to block {block_index}, section {section_index}, "
-                f"position {text_position} ({position})\ntab ID: {context_id}"
+                f"position {text_position} ({position})\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             return AIToolResult(

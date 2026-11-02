@@ -821,7 +821,7 @@ class FileSystemAITool(AITool):
     async def _read_file(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Read file contents."""
@@ -863,7 +863,8 @@ class FileSystemAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI read file (PDF): '{display_path}'"
+                f"AI read file (PDF): '{display_path}'",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
             return AIToolResult(id=tool_call.id, name="filesystem", content=content, context="PDF")
 
@@ -885,7 +886,8 @@ class FileSystemAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI read file (DOCX): '{display_path}'"
+                f"AI read file (DOCX): '{display_path}'",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
             return AIToolResult(id=tool_call.id, name="filesystem", content=content, context="DOCX")
 
@@ -912,7 +914,8 @@ class FileSystemAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI read file: '{display_path}'"
+            f"AI read file: '{display_path}'",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -924,7 +927,7 @@ class FileSystemAITool(AITool):
     async def _read_file_lines(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Read file contents with line numbers."""
@@ -1007,7 +1010,8 @@ class FileSystemAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI read file lines: '{display_path}' ({range_value})"
+            f"AI read file lines: '{display_path}' ({range_value})",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -1070,7 +1074,7 @@ class FileSystemAITool(AITool):
     async def _write_file(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Write content to file (create or overwrite)."""
@@ -1152,7 +1156,8 @@ class FileSystemAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI wrote file: '{display_path}' ({content_size:,} bytes)"
+            f"AI wrote file: '{display_path}' ({content_size:,} bytes)",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -1174,7 +1179,7 @@ class FileSystemAITool(AITool):
     async def _append_to_file(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Append content to existing file."""
@@ -1244,7 +1249,8 @@ class FileSystemAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI appended to file: '{display_path}' (+{content_size:,} bytes)"
+            f"AI appended to file: '{display_path}' (+{content_size:,} bytes)",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -1331,7 +1337,7 @@ class FileSystemAITool(AITool):
     async def _create_directory(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Create directory (with parents if needed)."""
@@ -1372,7 +1378,8 @@ class FileSystemAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI created directory: '{display_path}'"
+            f"AI created directory: '{display_path}'",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -1383,7 +1390,7 @@ class FileSystemAITool(AITool):
     async def _remove_directory(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Remove empty directory."""
@@ -1425,7 +1432,8 @@ class FileSystemAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI removed directory: '{display_path}'"
+            f"AI removed directory: '{display_path}'",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -1436,7 +1444,7 @@ class FileSystemAITool(AITool):
     async def _delete_file(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Delete file."""
@@ -1470,7 +1478,8 @@ class FileSystemAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI deleted file: '{display_path}'"
+            f"AI deleted file: '{display_path}'",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -1481,7 +1490,7 @@ class FileSystemAITool(AITool):
     async def _copy_file(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Copy file to destination."""
@@ -1541,7 +1550,8 @@ class FileSystemAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI copied file: '{source_display_path}' -> '{dest_display_path}'"
+            f"AI copied file: '{source_display_path}' -> '{dest_display_path}'",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -1552,7 +1562,7 @@ class FileSystemAITool(AITool):
     async def _move(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Move/rename file or directory."""
@@ -1606,7 +1616,8 @@ class FileSystemAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI moved: '{source_display_path}' -> '{dest_display_path}'"
+            f"AI moved: '{source_display_path}' -> '{dest_display_path}'",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -1885,7 +1896,7 @@ class FileSystemAITool(AITool):
     async def _search_file(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Search for text within a single file."""
@@ -1993,7 +2004,8 @@ class FileSystemAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI searched file: '{display_path}' for '{search_text}' ({len(matches)} matches)"
+            f"AI searched file: '{display_path}' for '{search_text}' ({len(matches)} matches)",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -2005,7 +2017,7 @@ class FileSystemAITool(AITool):
     async def _search_files(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Recursively search for text across all files under a directory."""
@@ -2246,7 +2258,8 @@ class FileSystemAITool(AITool):
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
             f"AI searched files in: '{display_path}' for '{search_text}'"
-            f" ({total_matches} matches in {len(files_with_matches)} files)"
+            f" ({total_matches} matches in {len(files_with_matches)} files)",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -2258,7 +2271,7 @@ class FileSystemAITool(AITool):
     async def _find_files(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Recursively find files whose names match a glob pattern under a directory."""
@@ -2380,7 +2393,8 @@ class FileSystemAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI searched for files matching '{name}' in: '{display_path}' ({len(matches)} matches)"
+            f"AI searched for files matching '{name}' in: '{display_path}' ({len(matches)} matches)",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -2397,7 +2411,7 @@ class FileSystemAITool(AITool):
     async def _apply_diff_to_file(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Apply a unified diff to a file."""
@@ -2525,7 +2539,8 @@ class FileSystemAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI applied diff to file: '{display_path}' ({result.hunks_applied} hunk(s))"
+            f"AI applied diff to file: '{display_path}' ({result.hunks_applied} hunk(s))",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -2753,7 +2768,8 @@ class FileSystemAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI analysed file: '{display_path}' (form: {form})"
+            f"AI analysed file: '{display_path}' (form: {form})",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -2915,7 +2931,8 @@ class FileSystemAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI transformed file: '{display_path}' -> '{out_display_path}' ({summary})"
+            f"AI transformed file: '{display_path}' -> '{out_display_path}' ({summary})",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         result_obj: dict[str, Any] = {
             "message": f"Transform applied to '{out_display_path}' ({summary}).",

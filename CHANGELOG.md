@@ -1,6 +1,58 @@
 # Change log for Humbug
 
-## v57 (2026-10-03)
+## v58 (2026-11-xx)
+
+## v58 (2026-11-02)
+
+New features:
+
+- The clock tool's `sleep` and `alarm` operations now show a cancel control inside the executing tool-call message when
+  the wait is longer than five seconds.  Cancelling ends the wait immediately and the AI is told the user interrupted it.
+- Quick Switcher now supports Go to Anything prefixes: `@` searches conversations, `>` runs
+  commands, `:line` jumps in the current editor, and `file:line` opens a file at a line.  The
+  command palette covers the application menus, lists only commands that are valid right now, and
+  shows each command's keyboard shortcut.
+- Tabs can now be moved without dragging them.  A tab's context menu can send it to the column on either side, to a new
+  column, or to a different place in its own column, and the View menu offers the same for the current tab.  Ctrl+Alt+Left
+  and Ctrl+Alt+Right move the current tab between columns, creating an adjacent column at an edge when the source column
+  retains another tab.  Ctrl+Shift+PgUp and Ctrl+Shift+PgDown reorder the current tab within its column.
+- Support gzip compressing HTTP client requests to the Anthropic and xAI backends.
+- Added a Network Access settings page with allowlist and denylist for the HTTP tool.  Allowlisted GET and HEAD
+  requests no longer prompt, and every redirect target is checked before it is followed.
+- Opening a folder that is not a mindspace, in this window or a new one, now offers to initialize it rather than
+  reporting an error.  A mindspace's `.humbug` directory now ignores itself in git, so its contents are never committed
+  with the user's work.
+- Added GPT 6.1 Terra.
+- Added MiniMax M3.1 Flash, and corrected the reasoning effort levels offered for MiniMax M3.
+- Removed Qwen 3.5 from Ollama cloud as it has been removed from the model catalogue.
+- The mindspace log now captures all events.
+- The interaction log now records every prompt, AI reasoning and AI response, and every entry that belongs to a
+  conversation carries that conversation's identifier, so the audit trail can be read conversation by conversation
+  rather than as unconnected prose.
+- Improved rendering performance for long-lived conversations.
+
+Bug fixes:
+
+- A mindspace inside another mindspace had its `.humbug` directory exposed to the outer mindspace's AI tools, which
+  only excluded their own root's `.humbug`.  Every `.humbug` directory within a mindspace is now excluded.
+- Fixed an exception where opening an editor from a diff view's context menu triggered a line size change.
+- The `.humbug` directory had mistakenly been exposed in the sidebar views.
+- Reordering tabs by dragging them within a column was not recorded in the session, so the original order came back the
+  next time the mindspace was opened.
+- Support gzip-encoded SSE streams coming back from AI backends.
+- Fixed a problem where MiniMax M3 tool calls did not work correctly with the Ollama backend.
+- Fixed a probelm where reasoning efforts were not correctly used in the Ollama backend.
+- Inserting a new file or folder in the breadcrumb view now places it in the correct directory.
+- The inline editor for a new or renamed file or folder in the Files panel started at the left edge of the row and
+  covered the item's icon.
+- Scrolling the Files panel jumped the first time it was used after creating a file or folder, because the panel's
+  scrollbar could fall out of step with the tree it drives.
+
+Internal structure changes:
+
+- Updated the Menai language dependency to v0.9.0.
+
+## v57 (2026-10-10)
 
 New features:
 
@@ -11,6 +63,13 @@ New features:
   than duplicated.
 - Markdown tables now render with proportional spacing of columns to make things more readable.  If a markdown table is
   detected to be written with the first character in Arabic then the table is rendered from the right and not the left.
+- Added the `enum` special form to the Menai syntax highlighter.
+- Added a Pascal syntax highlighter.
+- Added Claude Haiku 5.5.
+- Remove Claude Haiku 4.5.
+- Added the ability to launch an app window per-mindspace.
+- A mindspace can now only be open in one Humbug instance at a time.  Opening the same mindspace twice previously let each
+  instance overwrite the other's session, usage, and interaction log without warning.
 
 Bug fixes:
 
@@ -36,7 +95,7 @@ New features:
 - Choosing "Open In Editor" from a preview's context menu now opens the editor scrolled to the line that was clicked.
   Source files map exactly; rendered markdown maps on a best-effort basis using the source line of the block under the
   cursor.
-- Added support for Claude Opus 5.5.
+- Added support for Claude 5.5 Opus and Sonnet.
 - Added support for GPT 6 Astra, Sol, and Luna.
 - Added support for GPT 6.1 Sol.
 - Added support for Grok 4.7.

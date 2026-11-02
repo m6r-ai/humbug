@@ -39,6 +39,32 @@ Matches are ranked so that:
 
 Clear the filter box to see the full, unranked list again.
 
+### Go to Anything prefixes
+
+The same input can also narrow the task before you type a search term:
+
+| Input | Result |
+|---|---|
+| `@plan` | Search conversations only, open or not |
+| `>new conversation` | Search and run application commands |
+| `:120` | Jump to line 120 in the current editor |
+| `main.py:120` | Go to line 120 of the matching file |
+
+Commands are the same actions as Humbug's menus. Only commands that are valid right now are
+listed, and each one shows its keyboard shortcut so you can learn the shortcut for anything you
+reach for often.
+
+`:120` is offered only when the current tab can go to a line. `main.py:120` matches files and
+open file tabs — not conversations or terminals, which have no lines to jump to. The text before
+the colon is matched against the whole path, so `src:120` finds everything under `src/`. The file
+opens in an editor at that line, whether or not it was already open — the one exception being an
+image, which opens in a preview where there is no line to go to.
+
+A line past the end of a file takes you to its last line rather than failing.
+
+Because `>`, `@`, and `:` start a prefix, a file whose name begins with one of those characters
+cannot be reached by typing its name directly. Search for a neighbouring part of its path instead.
+
 ---
 
 ## Choosing a result

@@ -55,6 +55,13 @@ def get_english_strings() -> LanguageStrings:
         close_tabs_to_right="Close Tabs to the Right",
         close_other_tabs="Close Other Tabs",
         close_column="Close Column",
+        move_tab_to_left_column="Move Tab to Left Column",
+        move_tab_to_right_column="Move Tab to Right Column",
+        move_tab_to_new_column="Move Tab to New Column",
+        move_tab_left="Move Tab Left",
+        move_tab_right="Move Tab Right",
+        move_tab_to_start="Move Tab to Start",
+        move_tab_to_end="Move Tab to End",
 
         # Edit menu items
         submit_message="Submit Message",
@@ -70,6 +77,8 @@ def get_english_strings() -> LanguageStrings:
         mindspace_search="Mindspace Search",
         quick_switcher="Quick Switcher",
         quick_switcher_placeholder="Search files, conversations, and open tabs...",
+        quick_switcher_prefix_hint="> commands   @ conversations   :line   file:line",
+        quick_switcher_goto_line="Go to line {0}",
         quick_switcher_limited="Limited to the first {0} files",
         mindspace_settings="Mindspace Settings",
         conversation_settings="Conversation Settings",
@@ -184,8 +193,16 @@ def get_english_strings() -> LanguageStrings:
         external_file_allowlist="Allowed paths (glob patterns, one per line):",
         external_file_denylist="Always denied paths (glob patterns, one per line):",
 
+        # User Settings dialog - external HTTP access
+        settings_network_access="Network Access",
+        external_http_access="Network Access",
+        allow_external_http_access="Allow AI to fetch allowlisted URLs without asking",
+        external_http_allowlist="Auto-approved URLs (one per line, e.g. api.example.com or https://api.example.com:8443):",
+        external_http_denylist="Always denied URLs (one per line, e.g. localhost or 10.0.0.0/8):",
+
         # Mindspace tree
         mindspace_label_none="No mindspace active",
+        window_title="Humbug: {}",
         mindspace_name_tooltip="Click to switch mindspace",
         mindspace_files="Files",
         mindspace_vcs="Changed Files",
@@ -316,6 +333,7 @@ def get_english_strings() -> LanguageStrings:
         error_rename_failed="Could not rename conversation: {0}",
         unsaved_changes="Do you want to save changes to {0}?",
         mindspace_exists_error="Mindspace already exists in selected directory.",
+        mindspace_already_open_error="This mindspace is already open in another window.",
         close_button="Close",
         confirm_close="Confirm Close",
         could_not_open="Could not open {}: {}",
@@ -330,8 +348,29 @@ def get_english_strings() -> LanguageStrings:
         error_opening_preview="Could not open preview: {}",
         error_saving_mindspace_settings="Failed to save mindspace settings: {}",
         error_saving_user_settings="Failed to save user settings: {}",
-        cancel_conversation="Are you sure you want to stop the current AI response? "
-            "This will terminate the ongoing conversation and may result in incomplete responses.",
+        cancel_conversation=(
+            "Are you sure you want to stop the current AI response? "
+            "This will terminate the ongoing conversation and may result in incomplete responses."
+        ),
+
+        initialize_mindspace_title="Initialize Mindspace",
+        initialize_mindspace_message=(
+            "No mindspace was found at:\n\n{0}\n\n"
+            "Do you want to initialize this folder as a mindspace?"
+        ),
+
+        open_in_new_window="Open Mindspace in New Window...",
+        open_in_new_window_title="Open in New Window",
+        open_in_new_window_already_open=(
+            "This mindspace is already open in another Humbug window (process {}).\n\n"
+            "Two windows cannot share one mindspace, so switch to the existing window instead."
+        ),
+        open_in_new_window_already_here="This mindspace is already open in this window.",
+        open_in_new_window_failed="Could not start a new Humbug window:\n\n{}",
+        open_in_new_window_choose_folder="Choose Folder...",
+        mindspace_open_elsewhere_tooltip=(
+            "{} is already open in another Humbug window, so it cannot be opened here"
+        ),
 
         # Status bar
         editor_status="Line {line}, Column {column} | {encoding} | {line_ending} | {type}",
@@ -350,6 +389,7 @@ def get_english_strings() -> LanguageStrings:
         terminal_status="Terminal: {name} ({columns}x{rows})",
         system_status="System",
         log_status="Log",
+        log_status_entries="Log: entries {first:,}-{last:,} of {total:,}",
         preview_status="Preview: {path}",
         diff_status="Diff: {path} | {rows} changed rows",
 
@@ -473,6 +513,8 @@ def get_english_strings() -> LanguageStrings:
         approve_tool_call="Approve",
         i_am_unsure_about_tool_call="I'm Unsure About This",
         reject_tool_call="Reject",
+        interruptible_wait_message="Waiting for {duration} seconds \u2014 {remaining} remaining...",
+        finish_waiting_now="Finish Waiting Now",
         retry_error="Retry",
 
         # Update checker

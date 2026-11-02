@@ -88,18 +88,29 @@ def setup_logging() -> None:
     logging.getLogger("qasync").setLevel(logging.INFO)
 
     # Clean up old logs if we have too many
-    cleanup_old_logs(log_dir, max_logs=50)
+    cleanup_old_logs(log_dir, max_logs=50, active_log=log_file)
 
 
-def cleanup_old_logs(log_dir: str, max_logs: int) -> None:
-    """Remove oldest log files if we exceed maximum count."""
+def cleanup_old_logs(log_dir: str, max_logs: int, active_log: str) -> None:
+    """
+    Remove oldest log files if we exceed maximum count.
+
+    Args:
+        log_dir: Directory holding the log files.
+        max_logs: Number of log files to retain.
+        active_log: Log file this process is writing, which is never removed.
+    """
     log_files = glob.glob(os.path.join(log_dir, "*.log*"))
     log_files.sort(key=os.path.getctime)  # Sort by creation time
 
     # Remove oldest files if we have too many
     while len(log_files) > max_logs:
+        oldest = log_files.pop(0)
+        if os.path.abspath(oldest) == os.path.abspath(active_log):
+            continue
+
         try:
-            os.remove(log_files.pop(0))  # Remove oldest file
+            os.remove(oldest)
 
         except OSError:
             pass  # Ignore errors removing old logs
@@ -195,6 +206,29 @@ def load_fonts() -> None:
             logger.warning("Failed to load font: %s", font_file)
 
 
+def parse_mindspace_argument(argv: list[str]) -> str | None:
+    """
+    Extract the mindspace path from the command line, if one was given.
+
+    A second Humbug instance is started with ``--mindspace <path>`` so it opens a
+    specific mindspace rather than restoring the last one used.
+
+    Args:
+        argv: The process arguments, including the program name
+
+    Returns:
+        The mindspace path, or None if the argument was not supplied
+    """
+    for index, arg in enumerate(argv):
+        if arg == "--mindspace" and index + 1 < len(argv):
+            return argv[index + 1]
+
+        if arg.startswith("--mindspace="):
+            return arg.split("=", 1)[1]
+
+    return None
+
+
 def setup_ai_system_prompt() -> None:
     """Configure the global AI system prompt."""
     system_prompt = (
@@ -260,7 +294,7 @@ def main() -> int:
         loop = QEventLoop(app)
         asyncio.set_event_loop(loop)
 
-        window = MainWindow()
+        window = MainWindow(initial_mindspace_path=parse_mindspace_argument(sys.argv))
         window.show()
 
         # Run the main function

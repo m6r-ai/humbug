@@ -5,7 +5,6 @@ This tab provides a read-only view of the mindspace message log for viewing syst
 """
 
 import logging
-from typing import Any
 
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget
 from PySide6.QtCore import QObject, Qt, QRegularExpression
@@ -40,6 +39,10 @@ class LogTab(TabBase):
         self._logger = logging.getLogger("LogTab")
         self._mindspace_manager = MindspaceManager()
 
+        # Created before any child widget, because a child can report a status
+        # update as soon as it is laid out, including while this tab is being built.
+        self._language_manager = LanguageManager()
+
         # Create layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -69,7 +72,6 @@ class LogTab(TabBase):
         log_container_layout.addWidget(self._log_widget)
         layout.addWidget(log_container)
 
-        self._language_manager = LanguageManager()
         self.apply_style()
 
         # Connect only once the widgets the handler depends on exist, so a
@@ -310,83 +312,16 @@ class LogTab(TabBase):
     def update_status(self) -> None:
         """Update status bar with log tab information."""
         strings = self._language_manager.strings()
-        message = StatusMessage(strings.log_status)
+        first, last, total = self._log_widget.page_status()
+        if total == 0:
+            message = StatusMessage(strings.log_status)
+
+        else:
+            message = StatusMessage(
+                strings.log_status_entries.format(first=first, last=last, total=total)
+            )
+
         self.status_message.emit(message)
-
-    # AI Tool Support Methods
-
-    def get_log_info(self) -> dict[str, Any]:
-        """
-        Get high-level metadata about the log.
-
-        Returns:
-            Dictionary containing log metadata
-        """
-        return self._log_widget.get_log_info()
-
-    def read_messages(
-        self,
-        start_index: int | None = None,
-        end_index: int | None = None,
-        levels: list[str] | None = None,
-        limit: int | None = None,
-        include_content: bool = True
-    ) -> dict[str, Any]:
-        """
-        Read log messages with filtering and pagination.
-
-        Args:
-            start_index: Starting message index (0-based, inclusive)
-            end_index: Ending message index (0-based, inclusive)
-            levels: List of log levels to include (trace, info, warn, error)
-            limit: Maximum number of messages to return
-            include_content: Include full message content
-
-        Returns:
-            Dictionary containing messages and metadata
-        """
-        return self._log_widget.read_messages(
-            start_index, end_index, levels, limit, include_content
-        )
-
-    def get_message_by_id_or_index(
-        self,
-        message_id: str | None = None,
-        message_index: int | None = None
-    ) -> dict[str, Any] | None:
-        """
-        Get a specific log message by ID or index.
-
-        Args:
-            message_id: Message UUID
-            message_index: Message index (0-based)
-
-        Returns:
-            Message dictionary or None if not found
-        """
-        return self._log_widget.get_message_by_id_or_index(message_id, message_index)
-
-    def search_messages(
-        self,
-        search_text: str,
-        case_sensitive: bool = False,
-        levels: list[str] | None = None,
-        max_results: int = 50
-    ) -> dict[str, Any]:
-        """Search for text across log messages."""
-        return self._log_widget.search_messages(
-            search_text, case_sensitive, levels, max_results
-        )
-
-    def scroll_to_message(
-        self,
-        message_id: str | None = None,
-        message_index: int | None = None
-    ) -> bool:
-        """Scroll to a specific log message."""
-        return self._log_widget.scroll_to_message_by_id_or_index(
-            message_id, message_index
-        )
 
     def apply_style(self) -> None:
         """Apply current style settings to the tab's content widgets."""
@@ -443,6 +378,14 @@ class LogTab(TabBase):
             }}
             #LogWidget #LogMessage #_level_label[log_level="error"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_ERROR)};
+            }}
+
+            #LogWidget #LogMessage #_context_label {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_INACTIVE)};
+                margin: 0;
+                padding: 0;
+                border: none;
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
 
             #LogWidget #LogMessage #_text_area {{

@@ -301,8 +301,8 @@ class DiffWidget(QWidget):
             block_number: Zero-based block index of the clicked row in the left pane.
             column: One-based column position of the click within the block.
         """
-        line = self._nearest_right_line_no(block_number)
-        self.open_in_editor_requested.emit(line, column)
+        line, target_row = self._nearest_right_line_no(block_number)
+        self.open_in_editor_requested.emit(line, self._column_for_target_row(block_number, target_row, column))
 
     def _on_right_pane_open_in_editor_requested(self, block_number: int, column: int) -> None:
         """
@@ -312,8 +312,8 @@ class DiffWidget(QWidget):
             block_number: Zero-based block index of the clicked row in the right pane.
             column: One-based column position of the click within the block.
         """
-        line = self._nearest_right_line_no(block_number)
-        self.open_in_editor_requested.emit(line, column)
+        line, target_row = self._nearest_right_line_no(block_number)
+        self.open_in_editor_requested.emit(line, self._column_for_target_row(block_number, target_row, column))
 
     def _on_inline_pane_open_in_editor_requested(self, block_number: int, column: int) -> None:
         """
@@ -323,12 +323,35 @@ class DiffWidget(QWidget):
             block_number: Zero-based block index of the clicked row in the inline pane.
             column: One-based column position of the click within the block.
         """
-        line = self._nearest_right_line_no(block_number)
-        self.open_in_editor_requested.emit(line, column)
+        line, target_row = self._nearest_right_line_no(block_number)
+        self.open_in_editor_requested.emit(line, self._column_for_target_row(block_number, target_row, column))
 
-    def _nearest_right_line_no(self, block_number: int) -> int:
+    @staticmethod
+    def _column_for_target_row(block_number: int, target_row: int, column: int) -> int:
         """
-        Return the working-tree (right-side) line number for the given row index.
+        Return the column to use for the working-tree line that will be opened.
+
+        The clicked column is only meaningful when the clicked row is itself the row
+        that supplied the working-tree line.  When the line was remapped to a different
+        row, the column refers to unrelated content and is discarded in favour of the
+        start of the line.
+
+        Args:
+            block_number: Zero-based row index that was clicked.
+            target_row: Zero-based row index that supplied the working-tree line.
+            column: One-based column position of the click within the clicked row.
+
+        Returns:
+            A 1-based column for the working-tree file.
+        """
+        if block_number == target_row:
+            return column
+
+        return 1
+
+    def _nearest_right_line_no(self, block_number: int) -> tuple[int, int]:
+        """
+        Return the working-tree (right-side) line number and its row index.
 
         If the row at *block_number* has no right_line_no (a pure removal), walk
         forward through subsequent rows until one is found.  Falls back to 1.
@@ -337,14 +360,15 @@ class DiffWidget(QWidget):
             block_number: Zero-based row index into self._rows.
 
         Returns:
-            A 1-based line number for the working-tree file.
+            A tuple of the 1-based line number for the working-tree file and the
+            zero-based row index that supplied it.
         """
         for i in range(block_number, len(self._rows)):
             line_no = self._rows[i].right_line_no
             if line_no is not None:
-                return line_no
+                return line_no, i
 
-        return 1
+        return 1, -1
 
     def scroll_to_line(self, line: int) -> bool:
         """

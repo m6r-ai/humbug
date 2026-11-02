@@ -1,5 +1,6 @@
 """Handles streaming response from Ollama API."""
 
+import uuid
 
 from ai.ai_stream_response import AIStreamResponse
 from ai_tool import AIToolCall
@@ -42,7 +43,14 @@ class OllamaStreamResponse(AIStreamResponse):
                 if tool_call_index not in self._current_tool_calls:
                     self._current_tool_calls[tool_call_index] = {
                         "index": tool_call_index,
-                        "id": f"call_{tool_call_index}",  # Generate ID since Ollama might not provide one
+                        # Ollama Cloud returns an id at the top level of each tool call
+                        # (e.g. "call_function_dd9oxrej1jfj_1"), and the model matches
+                        # results back to calls by that id.  The OpenAPI schema does not
+                        # document the field, so do not "correct" this to match the spec:
+                        # synthesising our own id leaves every tool result unattributable
+                        # and the model reports the results as empty.  The fallback only
+                        # covers local Ollama builds that omit the field.
+                        "id": tool_call.get("id") or f"call_{uuid.uuid4().hex}",
                         "name": "",
                         "arguments": ""
                     }

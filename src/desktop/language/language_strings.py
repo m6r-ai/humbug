@@ -46,6 +46,13 @@ class LanguageStrings:
     close_tabs_to_right: str
     close_other_tabs: str
     close_column: str
+    move_tab_to_left_column: str
+    move_tab_to_right_column: str
+    move_tab_to_new_column: str
+    move_tab_left: str
+    move_tab_right: str
+    move_tab_to_start: str
+    move_tab_to_end: str
 
     # Edit menu items
     submit_message: str
@@ -61,6 +68,8 @@ class LanguageStrings:
     mindspace_search: str
     quick_switcher: str
     quick_switcher_placeholder: str
+    quick_switcher_prefix_hint: str
+    quick_switcher_goto_line: str
     quick_switcher_limited: str  # Format: "Limited to the first {0} files"
     mindspace_settings: str
     conversation_settings: str
@@ -175,8 +184,16 @@ class LanguageStrings:
     external_file_allowlist: str
     external_file_denylist: str
 
+    # User Settings dialog - external HTTP access
+    settings_network_access: str
+    external_http_access: str
+    allow_external_http_access: str
+    external_http_allowlist: str
+    external_http_denylist: str
+
     # Mindspace tree
     mindspace_label_none: str
+    window_title: str
     mindspace_name_tooltip: str
     mindspace_files: str
     mindspace_vcs: str
@@ -298,6 +315,7 @@ class LanguageStrings:
     error_rename_failed: str
     unsaved_changes: str
     mindspace_exists_error: str
+    mindspace_already_open_error: str
     close_button: str
     confirm_close: str
     could_not_open: str
@@ -314,6 +332,19 @@ class LanguageStrings:
     error_saving_user_settings: str
     cancel_conversation: str
 
+    # Initializing a folder that is not yet a mindspace
+    initialize_mindspace_title: str
+    initialize_mindspace_message: str
+
+    # Opening a mindspace in a new window
+    open_in_new_window: str
+    open_in_new_window_title: str
+    open_in_new_window_already_open: str
+    open_in_new_window_already_here: str
+    open_in_new_window_failed: str
+    open_in_new_window_choose_folder: str
+    mindspace_open_elsewhere_tooltip: str
+
     # Status bar
     editor_status: str
     conversation_status: str
@@ -325,6 +356,7 @@ class LanguageStrings:
     terminal_status: str
     system_status: str
     log_status: str
+    log_status_entries: str
     preview_status: str
     diff_status: str
 
@@ -432,6 +464,8 @@ class LanguageStrings:
     approve_tool_call: str
     i_am_unsure_about_tool_call: str
     reject_tool_call: str
+    interruptible_wait_message: str  # Format: "Waiting {duration} seconds..."
+    finish_waiting_now: str
     retry_error: str
 
     # Update checker

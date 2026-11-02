@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QFileSystemModel, QWidget
 
 from desktop.user.user_file_sort_order import UserFileSortOrder
 from desktop.user.user_manager import UserManager
+from mindspace.mindspace import Mindspace
 
 
 class PreviewSidebarModel(QSortFilterProxyModel):
@@ -55,6 +56,10 @@ class PreviewSidebarModel(QSortFilterProxyModel):
         index = source_model.index(source_row, 0, source_parent)
         file_name = source_model.fileName(index)
         if file_name == ".":
+            return False
+
+        # The .humbug directory holds Humbug-internal state and is never shown.
+        if file_name == Mindspace.MINDSPACE_DIR:
             return False
 
         return True

@@ -1533,7 +1533,9 @@ class TestHttpAIToolTimeout:
 
             _execute_tool(tool, tool_call)
 
-        mock_client_class.assert_called_once_with(read_timeout=10.0, proxy=None)
+        mock_client_class.assert_called_once_with(
+            read_timeout=10.0, proxy=None, follow_redirects=False
+        )
 
     def test_timeout_passes_to_client_on_post(self) -> None:
         """POST with timeout should pass it to the HttpClient constructor."""
@@ -1591,7 +1593,9 @@ class TestHttpAIToolTimeout:
 
             _execute_tool(tool, tool_call)
 
-        mock_client_class.assert_called_once_with(read_timeout=15.0, proxy=None)
+        mock_client_class.assert_called_once_with(
+            read_timeout=15.0, proxy=None, follow_redirects=False
+        )
 
     def test_timeout_passes_to_client_on_download(self) -> None:
         """Download with timeout should pass it to the HttpClient constructor."""
@@ -1634,7 +1638,9 @@ class TestHttpAIToolTimeout:
 
             _execute_tool(tool, tool_call)
 
-        mock_client_class.assert_called_once_with(read_timeout=30.0, proxy=None)
+        mock_client_class.assert_called_once_with(
+            read_timeout=30.0, proxy=None, follow_redirects=False
+        )
 
     def test_timeout_float_value(self) -> None:
         """GET with a float timeout should pass it as a float."""
@@ -1650,7 +1656,9 @@ class TestHttpAIToolTimeout:
 
             _execute_tool(tool, tool_call)
 
-        mock_client_class.assert_called_once_with(read_timeout=0.5, proxy=None)
+        mock_client_class.assert_called_once_with(
+            read_timeout=0.5, proxy=None, follow_redirects=False
+        )
 
     def test_timeout_zero_raises(self) -> None:
         """GET with timeout=0 should raise AIToolExecutionError."""
@@ -2601,7 +2609,8 @@ class TestHttpAIToolProxy:
             _execute_tool(tool, tool_call)
 
         mock_client_class.assert_called_once_with(
-            read_timeout=30.0, proxy="http://proxy.corp:8080"
+            read_timeout=30.0, proxy="http://proxy.corp:8080",
+            follow_redirects=False
         )
 
     def test_proxy_passes_to_client_on_post(self) -> None:
@@ -2666,7 +2675,8 @@ class TestHttpAIToolProxy:
             _execute_tool(tool, tool_call)
 
         mock_client_class.assert_called_once_with(
-            read_timeout=30.0, proxy="socks5h://proxy:1080"
+            read_timeout=30.0, proxy="socks5h://proxy:1080",
+            follow_redirects=False
         )
 
     def test_proxy_passes_to_client_on_download(self) -> None:
@@ -2712,7 +2722,9 @@ class TestHttpAIToolProxy:
 
             _execute_tool(tool, tool_call)
 
-        mock_client_class.assert_called_once_with(read_timeout=30.0, proxy=None)
+        mock_client_class.assert_called_once_with(
+            read_timeout=30.0, proxy=None, follow_redirects=False
+        )
 
     def test_proxy_invalid_scheme_raises(self) -> None:
         """GET with an invalid proxy scheme should raise AIToolExecutionError."""
@@ -2774,7 +2786,8 @@ class TestHttpAIToolProxy:
             _execute_tool(tool, tool_call)
 
         mock_client_class.assert_called_once_with(
-            read_timeout=15.0, proxy="http://proxy:8080"
+            read_timeout=15.0, proxy="http://proxy:8080",
+            follow_redirects=False
         )
 
 

@@ -268,7 +268,8 @@ class MenaiAITool(AITool):
             if self._mindspace is not None:
                 self._mindspace.add_interaction(
                     MindspaceLogLevel.INFO,
-                    f"AI evaluated Menai expression: '{expression[:80]}{'...' if len(expression) > 80 else ''}'"
+                    f"AI evaluated Menai expression: '{expression[:80]}{'...' if len(expression) > 80 else ''}'",
+                    context=self._mindspace.conversation_log_context(requester_ref)
                 )
 
             result_object = {

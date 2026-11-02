@@ -114,11 +114,11 @@ class TourController(QObject):
             self._main_window.removeEventFilter(self)
             overlay.fade_out(lambda: self._cleanup_overlay(overlay))
 
-        settings = self._user_manager.settings()
-        settings.onboarding_tour_status = status
-        settings.onboarding_tour_version = CURRENT_TOUR_VERSION
         try:
-            self._user_manager.update_settings(settings)
+            self._user_manager.update_settings_fields(
+                onboarding_tour_status=status,
+                onboarding_tour_version=CURRENT_TOUR_VERSION
+            )
 
         except UserError as e:
             self._logger.warning("Failed to persist onboarding tour state: %s", str(e))

@@ -8,38 +8,39 @@ import pytest
 from ai import AIMessage, AIMessageSource
 from ai_transcript_conversation import AITranscriptConversation
 from desktop.conversation_tab.conversation_widget import ConversationWidget
-from desktop.mindspace.mindspace_manager import MindspaceManager
-from desktop.user.user_manager import UserManager
-
-
-@pytest.fixture
-def conv_env(qapp, tmp_path, monkeypatch):
-    """Open a real mindspace in a sandboxed HOME and return (mindspace_manager, transcript_path)."""
-    home_dir = tmp_path / "home"
-    home_dir.mkdir()
-    monkeypatch.setenv("HOME", str(home_dir))
-
-    MindspaceManager._instance = None
-    UserManager._instance = None
-
-    mgr = MindspaceManager()
-    mgr._home_config = str(tmp_path / "mindspace.json")  # pylint: disable=protected-access
-    ms_path = str(tmp_path / "mindspace")
-    mgr.create_mindspace(ms_path, [])
-    mgr.open_mindspace(ms_path)
-
-    transcript_path = os.path.join(mgr.mindspace().conversations_dir(), "test.conv")
-
-    yield mgr, transcript_path
-
-    MindspaceManager._instance = None
-    UserManager._instance = None
 
 
 def _make_widget(transcript_path: str) -> ConversationWidget:
     """Create a ConversationWidget backed by a fresh transcript."""
     transcript = AITranscriptConversation(transcript_path)
     return ConversationWidget(transcript_path, ai_transcript_conversation=transcript)
+
+
+def _make_two_turn_widget(transcript_path: str) -> ConversationWidget:
+    """Create a ConversationWidget holding two prompts and a response to each."""
+    history = AITranscriptConversation(transcript_path).read()
+    messages = [
+        AIMessage.create(AIMessageSource.USER, "first prompt"),
+        AIMessage.create(AIMessageSource.AI, "first response"),
+        AIMessage.create(AIMessageSource.USER, "second prompt"),
+        AIMessage.create(AIMessageSource.AI, "second response"),
+    ]
+
+    for message in messages:
+        history.add_message(message)
+
+    transcript = AITranscriptConversation(transcript_path)
+    transcript.set_conversation_history(history)
+
+    return ConversationWidget(transcript_path, ai_transcript_conversation=transcript)
+
+
+@pytest.fixture
+def conv_env(mindspace_sandbox):
+    """The sandboxed mindspace, as (mindspace_manager, transcript_path)."""
+    transcript_path = os.path.join(mindspace_sandbox.conversations_dir, "test.conv")
+
+    yield mindspace_sandbox.manager, transcript_path
 
 
 class TestConversationViewState:
@@ -87,3 +88,33 @@ class TestConversationViewState:
 
         assert widget._load_pending_state is not None  # pylint: disable=protected-access
         assert widget._load_pending_state["message_expansion"] == [True]  # pylint: disable=protected-access
+
+
+class TestMessageExpansionState:
+    """Tests that each message's expansion state survives a view-state round trip."""
+
+    def test_expansion_state_is_captured_for_each_message(self, conv_env) -> None:
+        """The captured state records the expansion of every message shown."""
+        _mgr, transcript_path = conv_env
+        widget = _make_two_turn_widget(transcript_path)
+
+        message_id = widget._message_ids[1]  # pylint: disable=protected-access
+        widget._change_message_expansion(message_id, False)  # pylint: disable=protected-access
+        state = widget.create_view_state()
+
+        assert state["message_expansion"] == [True, False, True, True]
+        assert state["message_ids"] == widget._message_ids  # pylint: disable=protected-access
+
+    def test_expansion_state_is_restored_to_the_same_messages(self, conv_env) -> None:
+        """A collapsed message is still collapsed after the view is rebuilt."""
+        _mgr, transcript_path = conv_env
+        source = _make_two_turn_widget(transcript_path)
+        source._change_message_expansion(source._message_ids[1], False)  # pylint: disable=protected-access
+        state = source.create_view_state()
+
+        restored = _make_widget(transcript_path)
+        restored.restore_view_state(state)  # pylint: disable=protected-access
+
+        widgets = restored._ordered_widgets()  # pylint: disable=protected-access
+
+        assert [w.is_expanded() for w in widgets] == [True, False, True, True]

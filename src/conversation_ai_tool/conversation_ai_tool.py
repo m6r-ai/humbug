@@ -237,7 +237,7 @@ class ConversationAITool(AITool):
     async def _get_info(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get conversation metadata."""
@@ -254,7 +254,8 @@ class ConversationAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI requested conversation info\ntab ID: {tab_id}"
+                f"AI requested conversation info\ntab ID: {tab_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             return AIToolResult(
@@ -270,7 +271,7 @@ class ConversationAITool(AITool):
     async def _read_messages(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Read messages from conversation."""
@@ -312,7 +313,8 @@ class ConversationAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                "\n".join(log_parts)
+                "\n".join(log_parts),
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             return AIToolResult(
@@ -328,7 +330,7 @@ class ConversationAITool(AITool):
     async def _get_message(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get a specific message by ID or index."""
@@ -357,7 +359,8 @@ class ConversationAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI requested message {message_id or message_index}\ntab ID: {tab_id}"
+                f"AI requested message {message_id or message_index}\ntab ID: {tab_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             return AIToolResult(
@@ -376,7 +379,7 @@ class ConversationAITool(AITool):
     async def _search(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Search for text in conversation."""
@@ -410,7 +413,8 @@ class ConversationAITool(AITool):
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI searched conversation for '{search_text}'{flag_desc}: "
-                f"{result['total_matches']} matches\ntab ID: {tab_id}"
+                f"{result['total_matches']} matches\ntab ID: {tab_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             return AIToolResult(
@@ -429,7 +433,7 @@ class ConversationAITool(AITool):
     async def _scroll_to(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Scroll conversation to a specific message."""
@@ -461,7 +465,8 @@ class ConversationAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI scrolled conversation to message {actual_identifier}\\ntab ID: {tab_id}"
+                f"AI scrolled conversation to message {actual_identifier}\\ntab ID: {tab_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             return AIToolResult(

@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication,
     QGraphicsOpacityEffect,
 )
-from PySide6.QtCore import Signal, QPoint, Qt, QEvent, QObject
+from PySide6.QtCore import Signal, QPoint, Qt, QEvent, QObject, QTimer
 from PySide6.QtGui import QGuiApplication, QPaintEvent, QColor, QPainter, QPen, QFont, QFontMetrics
 
 from ai import AIMessageSource
@@ -29,6 +29,9 @@ from desktop.widgets.elided_label import ElidedLabel
 
 _APPROVAL_BUTTON_BASE_WIDTH = 220
 _APPROVAL_BUTTON_BASE_HEIGHT = 40
+
+# How often the interruptible wait countdown refreshes.
+_WAIT_COUNTDOWN_INTERVAL_MS = 1000
 
 _BORDER_WIDTH = 1
 _BORDER_WIDTH_ACTIVE = 2  # animated or spotlighted
@@ -53,6 +56,7 @@ class ConversationMessage(QFrame):
     tool_call_approved = Signal(AIToolCall)
     tool_call_i_am_unsure = Signal()
     tool_call_rejected = Signal(str)
+    wait_cancelled = Signal()
     retry_requested = Signal()
 
     def __init__(
@@ -67,7 +71,8 @@ class ConversationMessage(QFrame):
         parent: QWidget | None = None,
         is_input: bool = False,
         attachments: list[tuple[str, str]] | None = None,
-        message_style: ConversationMessageStyle | None = None
+        message_style: ConversationMessageStyle | None = None,
+        message_width: int | None = None
     ) -> None:
         """
         Initialize the message widget.
@@ -83,6 +88,9 @@ class ConversationMessage(QFrame):
             parent: Optional parent widget
             is_input: Whether this is an input widget (affects styling)
             message_style: Optional style to apply before initial content render
+            message_width: Optional width this message will be laid out at, used to
+                render content at its final width on the first pass.  When omitted,
+                content is rendered at whatever size the widget happens to have.
         """
         super().__init__(parent)
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
@@ -101,6 +109,7 @@ class ConversationMessage(QFrame):
         self._message_model = model
         self._message_id = message_id
         self._message_user_name = user_name
+        self._message_width = message_width
 
         style_manager = StyleManager()
         self._attachments: list[tuple[str, str]] = attachments if attachments is not None else []
@@ -312,6 +321,16 @@ class ConversationMessage(QFrame):
         self._pending_tool_reason: str | None = None
         self._pending_tool_context: str | None = None
         self._pending_tool_destructive: bool | None = None
+
+        # Interruptible wait widgets (shown inside the executing tool-call message)
+        self._wait_widget: QWidget | None = None
+        self._wait_text_edit: MarkdownTextEdit | None = None
+        self._wait_finish_button: QPushButton | None = None
+        self._wait_duration: float | None = None
+        self._wait_elapsed_ms = 0
+        self._wait_timer = QTimer(self)
+        self._wait_timer.setInterval(_WAIT_COUNTDOWN_INTERVAL_MS)
+        self._wait_timer.timeout.connect(self._on_wait_tick)
 
         # Retry widget (shown on the last SYSTEM error message)
         self._retry_widget: QWidget | None = None
@@ -680,12 +699,34 @@ class ConversationMessage(QFrame):
         if self._approval_reject_button:
             self._approval_reject_button.setText(strings.reject_tool_call)
 
+        if self._wait_finish_button:
+            self._wait_finish_button.setText(strings.finish_waiting_now)
+
+        self._update_wait_text()
+
         if self._retry_button:
             self._retry_button.setText(strings.retry_error)
 
         if self._expand_button:
             tooltip = strings.tooltip_collapse_message if self._is_expanded else strings.tooltip_expand_message
             self._expand_button.setToolTip(tooltip)
+
+    def _sections_container_width(self) -> int:
+        """
+        Return the width the sections container will be laid out at.
+
+        The container fills this message's content area, so its width is the width
+        the message will be given less its own frame and layout margins.  Knowing
+        that up front lets sections render their content at the width they will
+        keep rather than at the width of a widget that has not been laid out yet.
+        Before the message has been given a width to aim at, fall back to the
+        container's current size.
+        """
+        if self._message_width is None:
+            return self._sections_container.width()
+
+        margins = self._layout.contentsMargins()
+        return self._message_width - 2 * self.frameWidth() - margins.left() - margins.right()
 
     def _create_section_widget(self, syntax: ProgrammingLanguage | None = None) -> ConversationMessageSection:
         """
@@ -892,6 +933,103 @@ class ConversationMessage(QFrame):
             "destructive": self._pending_tool_destructive
         }
 
+    def show_interruptible_wait_ui(self, duration: float) -> None:
+        """
+        Show a control for ending an interruptible tool wait early.
+
+        Args:
+            duration: The number of seconds the tool expects to wait.
+        """
+        assert self._wait_widget is None, "Interruptible wait widget already exists"
+
+        self._wait_duration = duration
+        self._wait_elapsed_ms = 0
+        style_manager = self._style_manager
+        spacing = int(style_manager.message_bubble_spacing())
+        font = self.font()
+        base_font_size = style_manager.base_font_size()
+        font.setPointSizeF(base_font_size * style_manager.zoom_factor())
+        strings = self._language_manager.strings()
+
+        self._wait_widget = QWidget()
+        self._wait_widget.setObjectName("_wait_widget")
+        layout = QVBoxLayout(self._wait_widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(spacing)
+
+        self._wait_text_edit = MarkdownTextEdit(False)
+        self._wait_text_edit.setObjectName("_wait_text_edit")
+        self._update_wait_text()
+        self._wait_text_edit.setReadOnly(True)
+        layout.addWidget(self._wait_text_edit)
+
+        button_layout = QHBoxLayout()
+        button_layout.setSpacing(spacing)
+        button_layout.addStretch()
+
+        zoom = style_manager.zoom_factor()
+        min_button_width = int(_APPROVAL_BUTTON_BASE_WIDTH * zoom)
+        min_button_height = int(_APPROVAL_BUTTON_BASE_HEIGHT * zoom)
+
+        self._wait_finish_button = QPushButton(strings.finish_waiting_now)
+        self._wait_finish_button.setObjectName("_wait_finish_button")
+        self._wait_finish_button.clicked.connect(self._finish_wait)
+        self._wait_finish_button.setMinimumWidth(min_button_width)
+        self._wait_finish_button.setMinimumHeight(min_button_height)
+        self._wait_finish_button.setContentsMargins(8, 8, 8, 8)
+        self._wait_finish_button.setFont(font)
+
+        button_layout.addWidget(self._wait_finish_button)
+        button_layout.addStretch()
+
+        layout.addSpacing(2)
+        layout.addLayout(button_layout)
+
+        self._layout.addWidget(self._wait_widget)
+
+        self.set_expanded(True)
+
+        self._wait_timer.start()
+
+    def _update_wait_text(self) -> None:
+        """Render the wait message with the time remaining."""
+        if self._wait_text_edit is None or self._wait_duration is None:
+            return
+
+        strings = self._language_manager.strings()
+        elapsed = self._wait_elapsed_ms / 1000.0
+        remaining = max(0, round(self._wait_duration - elapsed))
+        self._wait_text_edit.set_text(
+            strings.interruptible_wait_message.format(
+                duration=f"{round(self._wait_duration)}",
+                remaining=f"{remaining}"
+            )
+        )
+
+    def _on_wait_tick(self) -> None:
+        """Advance the wait countdown by one interval."""
+        self._wait_elapsed_ms += _WAIT_COUNTDOWN_INTERVAL_MS
+        self._update_wait_text()
+
+    def _finish_wait(self) -> None:
+        """Handle the user ending an interruptible tool wait early."""
+        self.wait_cancelled.emit()
+        self.remove_interruptible_wait_ui()
+
+    def remove_interruptible_wait_ui(self) -> None:
+        """Remove the interruptible wait UI."""
+        self._wait_timer.stop()
+        self._wait_elapsed_ms = 0
+
+        if self._wait_widget:
+            self.set_expanded(False)
+            self._layout.removeWidget(self._wait_widget)
+            self._wait_widget.deleteLater()
+            self._wait_widget = None
+            self._wait_text_edit = None
+            self._wait_finish_button = None
+            self._wait_duration = None
+
     def show_retry_ui(self) -> None:
         """Show a Retry button on this SYSTEM error message."""
         assert self._retry_widget is None, "Retry widget already exists"
@@ -999,7 +1137,7 @@ class ConversationMessage(QFrame):
             if i >= len(self._sections):
                 section = self._create_section_widget(syntax)
                 section.apply_style(self._message_style)
-                section.prime_width(self._sections_container.width())
+                section.prime_width(self._sections_container_width())
                 section.set_content(node)
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)

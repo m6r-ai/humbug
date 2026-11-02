@@ -22,6 +22,7 @@ class ProgrammingLanguage(IntEnum):
     MENAI = auto()
     METAPHOR = auto()
     MOVE = auto()
+    PASCAL = auto()
     PHP = auto()
     PYTHON = auto()
     RUBY = auto()

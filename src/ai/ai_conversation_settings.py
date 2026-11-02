@@ -52,6 +52,24 @@ class AIConversationSettings:
             ],
             adaptive_thinking_only=True,
         ),
+        ("claude-haiku-5-5", "anthropic"): AIModel(
+            name="claude-haiku-5-5",
+            provider="anthropic",
+            display_name="Claude Haiku 5.5",
+            context_window=1000000,
+            max_output_tokens=64000,  # This is actually 128k but that's too much
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
+            ],
+            adaptive_thinking_only=True,
+        ),
         ("claude-fable-5", "anthropic"): AIModel(
             name="claude-fable-5",
             provider="anthropic",
@@ -108,20 +126,6 @@ class AIConversationSettings:
                 AIReasoningEffort.MAX
             ],
             adaptive_thinking_only=True,
-        ),
-        ("claude-haiku-4-5", "anthropic"): AIModel(
-            name="claude-haiku-4-5",
-            provider="anthropic",
-            display_name="Claude Haiku 4.5",
-            context_window=200000,
-            max_output_tokens=32000,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
-                AIReasoningEffort.HIGH
-            ],
         ),
 
         # DeepSeek models
@@ -388,6 +392,23 @@ class AIConversationSettings:
                 AIReasoningEffort.MAX
             ],
         ),
+        ("minimax-m3.1-flash:cloud", "ollama-cloud"): AIModel(
+            name="minimax-m3.1-flash:cloud",
+            provider="ollama-cloud",
+            display_name="MiniMax M3.1 Flash",
+            context_window=999424,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
+            ],
+        ),
         ("minimax-m3:cloud", "ollama-cloud"): AIModel(
             name="minimax-m3:cloud",
             provider="ollama-cloud",
@@ -398,7 +419,11 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
-                AIReasoningEffort.HIGH
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
             ],
         ),
         ("mistral-large-3:675b-cloud", "ollama-cloud"): AIModel(
@@ -410,20 +435,6 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        ("qwen3.5:cloud", "ollama-cloud"): AIModel(
-            name="qwen3.5:cloud",
-            provider="ollama-cloud",
-            display_name="Qwen 3.5",
-            context_window=256000,
-            max_output_tokens=2048,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING,
-            supported_reasoning_efforts=[
-                AIReasoningEffort.NONE,
-                AIReasoningEffort.HIGH
-            ],
         ),
 
         # OpenAI models
@@ -437,6 +448,24 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING,
             supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
+            ],
+        ),
+        ("gpt-6.1-terra", "openai"): AIModel(
+            name="gpt-6.1-terra",
+            provider="openai",
+            display_name="GPT 6.1 Terra",
+            context_window=1050000,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.NONE,
                 AIReasoningEffort.LOW,
                 AIReasoningEffort.MEDIUM,
                 AIReasoningEffort.HIGH,

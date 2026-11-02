@@ -6,6 +6,7 @@ QT_QPA_PLATFORM variable must be set before the QApplication is created.
 # pylint: disable=redefined-outer-name
 
 import os
+import sys
 import time
 
 import pytest
@@ -13,11 +14,75 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 # pylint: disable=wrong-import-position
-from PySide6.QtCore import QEvent, QPoint, QPointF, Qt
+from dataclasses import dataclass
+
+from PySide6.QtCore import QEvent, QPoint, QPointF, Qt, qInstallMessageHandler
 from PySide6.QtGui import QColor, QMouseEvent, QPixmap
 from PySide6.QtWidgets import QApplication, QWidget
 
+from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.tab_manager.tab_overview import TabOverviewEntry
+from desktop.user.user_manager import UserManager
+
+_IGNORED_QT_MESSAGES = frozenset({
+    "This plugin does not support propagateSizeHints()",
+})
+
+
+def _report_qt_message(_mode, _context, message: str) -> None:
+    """Report Qt messages to stderr, dropping the ones the offscreen platform cannot honour."""
+    if message in _IGNORED_QT_MESSAGES:
+        return
+
+    print(message, file=sys.stderr)
+
+
+qInstallMessageHandler(_report_qt_message)
+
+
+@dataclass
+class MindspaceSandbox:
+    """A real mindspace opened in an isolated HOME, for widget tests."""
+
+    manager: MindspaceManager
+    path: str
+    conversations_dir: str
+
+
+@pytest.fixture
+def mindspace_sandbox(qapp, tmp_path, monkeypatch):
+    """
+    Open a real mindspace in a sandboxed HOME and yield it.
+
+    The mindspace is created and opened, which takes the exclusive claim that
+    marks it as in use.  Releasing that claim on teardown is the point of this
+    fixture: a claim left open leaks a file handle, which pytest reports as an
+    error because warnings are configured as errors.  Centralising the setup and
+    teardown here keeps every test that needs a mindspace from having to get it
+    right individually.
+    """
+    home_dir = tmp_path / "home"
+    home_dir.mkdir()
+    monkeypatch.setenv("HOME", str(home_dir))
+
+    MindspaceManager._instance = None  # pylint: disable=protected-access
+    UserManager._instance = None  # pylint: disable=protected-access
+
+    manager = MindspaceManager()
+    manager._home_config = str(tmp_path / "mindspace.json")  # pylint: disable=protected-access
+    path = str(tmp_path / "mindspace")
+    manager.create_mindspace(path, [])
+    manager.open_mindspace(path)
+
+    yield MindspaceSandbox(
+        manager=manager,
+        path=path,
+        conversations_dir=manager.mindspace().conversations_dir(),
+    )
+
+    manager._release_claim()  # pylint: disable=protected-access
+    MindspaceManager._instance = None  # pylint: disable=protected-access
+    UserManager._instance = None  # pylint: disable=protected-access
 
 
 @pytest.fixture(scope="session")

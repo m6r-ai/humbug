@@ -22,7 +22,7 @@ The editor automatically applies syntax highlighting based on the file extension
 languages include:
 
 C, C++, C#, CSS, Diff, Go, HTML, Java, JavaScript, JSON, Kotlin, Lua, Markdown, Menai,
-Move (Sui), Python, Rust, Scheme, Solidity, Swift, TypeScript, XML, and plain text.
+Move (Sui), Pascal, Python, Rust, Scheme, Solidity, Swift, TypeScript, XML, and plain text.
 
 ---
 

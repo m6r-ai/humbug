@@ -55,6 +55,13 @@ def get_french_strings() -> LanguageStrings:
         close_tabs_to_right="Fermer les onglets à droite",
         close_other_tabs="Fermer les autres onglets",
         close_column="Fermer la colonne",
+        move_tab_to_left_column="Déplacer l'onglet vers la colonne de gauche",
+        move_tab_to_right_column="Déplacer l'onglet vers la colonne de droite",
+        move_tab_to_new_column="Déplacer l'onglet vers une nouvelle colonne",
+        move_tab_left="Déplacer l'onglet à gauche",
+        move_tab_right="Déplacer l'onglet à droite",
+        move_tab_to_start="Déplacer l'onglet au début",
+        move_tab_to_end="Déplacer l'onglet à la fin",
 
         # Edit menu items
         submit_message="Envoyer le message",
@@ -70,6 +77,8 @@ def get_french_strings() -> LanguageStrings:
         mindspace_search="Recherche globale",
         quick_switcher="Sélecteur rapide",
         quick_switcher_placeholder="Rechercher fichiers, conversations et onglets ouverts...",
+        quick_switcher_prefix_hint="> commandes   @ conversations   :ligne   fichier:ligne",
+        quick_switcher_goto_line="Aller à la ligne {0}",
         quick_switcher_limited="Limité aux {0} premiers fichiers",
         mindspace_settings="Paramètres de l'espace mental",
         conversation_settings="Paramètres de conversation",
@@ -184,8 +193,17 @@ def get_french_strings() -> LanguageStrings:
         external_file_allowlist="Chemins autorisés (motifs glob, un par ligne) :",
         external_file_denylist="Chemins toujours refusés (motifs glob, un par ligne) :",
 
+        # User Settings dialog - external HTTP access
+        settings_network_access="Accès réseau",
+        external_http_access="Accès réseau",
+        allow_external_http_access="Autoriser l'IA à récupérer les URL autorisées sans demander",
+        external_http_allowlist="URL approuvées automatiquement "
+                                "(une par ligne, ex. api.example.com ou https://api.example.com:8443) :",
+        external_http_denylist="URL toujours refusées (une par ligne, ex. localhost ou 10.0.0.0/8) :",
+
         # Mindspace tree
         mindspace_label_none="Aucun espace mental actif",
+        window_title="Humbug : {}",
         mindspace_name_tooltip="Cliquer pour changer d'espace mental",
         mindspace_files="Fichiers",
         mindspace_vcs="Fichiers modifiés",
@@ -316,6 +334,7 @@ def get_french_strings() -> LanguageStrings:
         error_rename_failed="Impossible de renommer la conversation : {0}",
         unsaved_changes="Voulez-vous enregistrer les modifications de {0} ?",
         mindspace_exists_error="L'espace mental existe déjà dans le répertoire sélectionné.",
+        mindspace_already_open_error="Cet espace mental est déjà ouvert dans une autre fenêtre.",
         close_button="Fermer",
         confirm_close="Confirmer la fermeture",
         could_not_open="Impossible d'ouvrir {} : {}",
@@ -332,6 +351,25 @@ def get_french_strings() -> LanguageStrings:
         error_saving_user_settings="Échec de l'enregistrement des paramètres utilisateur : {}",
         cancel_conversation="Êtes-vous sûr de vouloir arrêter la réponse actuelle de l'IA ? "
             "Cela mettra fin à la conversation en cours et peut entraîner des réponses incomplètes.",
+
+        initialize_mindspace_title="Initialiser l'espace mental",
+        initialize_mindspace_message=(
+            "Aucun espace mental n'a été trouvé à :\n\n{0}\n\n"
+            "Voulez-vous initialiser ce dossier comme espace mental ?"
+        ),
+
+        open_in_new_window="Ouvrir l'espace mental dans une nouvelle fenêtre...",
+        open_in_new_window_title="Ouvrir dans une nouvelle fenêtre",
+        open_in_new_window_already_open=(
+            "Cet espace mental est déjà ouvert dans une autre fenêtre Humbug (processus {}).\n\n"
+            "Deux fenêtres ne peuvent pas partager un même espace mental ; basculez plutôt vers la fenêtre existante."
+        ),
+        open_in_new_window_already_here="Cet espace mental est déjà ouvert dans cette fenêtre.",
+        open_in_new_window_failed="Impossible de démarrer une nouvelle fenêtre Humbug :\n\n{}",
+        open_in_new_window_choose_folder="Choisir un dossier...",
+        mindspace_open_elsewhere_tooltip=(
+            "{} est déjà ouvert dans une autre fenêtre Humbug et ne peut donc pas être ouvert ici"
+        ),
 
         # Status bar
         editor_status="Ligne {line}, Colonne {column} | {encoding} | {line_ending} | {type}",
@@ -350,6 +388,7 @@ def get_french_strings() -> LanguageStrings:
         terminal_status="Terminal : {name} ({columns}x{rows})",
         system_status="Statut du système",
         log_status="Journal",
+        log_status_entries="Journal : entrées {first:,}-{last:,} sur {total:,}",
         preview_status="Aperçu : {path}",
         diff_status="Diff : {path} | {rows} lignes modifiées",
 
@@ -476,6 +515,8 @@ def get_french_strings() -> LanguageStrings:
         approve_tool_call="Approuver",
         i_am_unsure_about_tool_call="Je ne suis pas sûr à propos",
         reject_tool_call="Rejeter",
+        interruptible_wait_message="Attente de {duration} secondes \u2014 {remaining} restantes...",
+        finish_waiting_now="Terminer l'attente maintenant",
         retry_error="Réessayer",
 
         # Update checker

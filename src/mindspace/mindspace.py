@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import shutil
+from typing import Any
 import uuid
 
 from ai import AIConversationSettings
@@ -30,8 +31,9 @@ class Mindspace:
     MINDSPACE_DIR = ".humbug"
     SETTINGS_FILE = "settings.json"
     SESSION_FILE = "session.json"
-    INTERACTIONS_FILE = "system.json"
+    INTERACTIONS_DIR = "log"
     USAGE_FILE = "usage.json"
+    GITIGNORE_FILE = ".gitignore"
     CONVERSATIONS_DIR = "conversations"
     TRASH_DIR = "trash"
 
@@ -81,10 +83,6 @@ class Mindspace:
         """
         return self._context_registry
 
-    def is_already_mindspace(self, path: str) -> bool:
-        """Return True if a mindspace already exists at path."""
-        return os.path.exists(os.path.join(path, self.MINDSPACE_DIR))
-
     def check_mindspace(self, path: str) -> bool:
         """Return True if a mindspace exists at path."""
         return os.path.exists(os.path.join(path, self.MINDSPACE_DIR))
@@ -117,6 +115,8 @@ class Mindspace:
             with open(os.path.join(mindspace_dir, self.SESSION_FILE), 'w', encoding='utf-8') as f:
                 json.dump({"tabs": []}, f, indent=4)
 
+            self._ensure_gitignore(mindspace_dir)
+
         except OSError as e:
             self._logger.error("Failed to create mindspace at %s: %s", path, str(e))
             if os.path.exists(mindspace_dir):
@@ -128,6 +128,31 @@ class Mindspace:
                     shutil.rmtree(folder_path, ignore_errors=True)
 
             raise MindspaceError(f"Failed to create mindspace: {str(e)}") from e
+
+    def _ensure_gitignore(self, mindspace_dir: str) -> None:
+        """
+        Make a .humbug/ directory ignore itself in any git repository it sits in.
+
+        A mindspace is often a folder that is already a git repository.  .humbug/ is
+        Humbug's state, not the user's, so it must never be committed with their work.
+        Ignoring it from inside leaves the user's own .gitignore alone.
+
+        If Humbug comes to version .humbug/ with a repository of its own, this file
+        would ignore everything in that repository too, and must be replaced by an
+        exclusion that does not live inside .humbug/.
+
+        Args:
+            mindspace_dir: The .humbug/ directory.
+
+        Raises:
+            OSError: The file could not be written.
+        """
+        gitignore_path = os.path.join(mindspace_dir, self.GITIGNORE_FILE)
+        if os.path.exists(gitignore_path):
+            return
+
+        with open(gitignore_path, 'w', encoding='utf-8') as f:
+            f.write("*\n")
 
     def open_mindspace(self, path: str) -> None:
         """
@@ -144,12 +169,20 @@ class Mindspace:
         if not os.path.exists(mindspace_dir):
             raise MindspaceNotFoundError(f"No mindspace found at {path}")
 
+        # Mindspaces created before .humbug/ ignored itself get the file now.  Not
+        # having it is no reason to refuse to open, so a failure is only logged.
+        try:
+            self._ensure_gitignore(mindspace_dir)
+
+        except OSError as e:
+            self._logger.warning("Failed to write %s in %s: %s", self.GITIGNORE_FILE, mindspace_dir, str(e))
+
         try:
             settings = MindspaceSettings.load(os.path.join(mindspace_dir, self.SETTINGS_FILE))
             self._path = path
             self._migrate_conversations()
             self._settings = settings
-            self._load_interactions()
+            self._open_interactions()
             self._load_usage()
             self._apply_tool_settings(settings)
             self._on_settings_changed()
@@ -163,7 +196,7 @@ class Mindspace:
         if self.has_mindspace():
             self._path = ""
             self._settings = None
-            self._interactions.clear()
+            self._interactions.close()
             self._usage = MindspaceUsage()
             self._context_registry.clear()
             self._reset_tool_manager()
@@ -930,7 +963,7 @@ class Mindspace:
 
     def is_humbug_path(self, path: str) -> bool:
         """
-        Return True if the given path is inside the mindspace's .humbug/ directory.
+        Return True if the given path is inside any .humbug/ directory in the mindspace.
 
         The .humbug/ directory holds Humbug-internal state (conversations, settings,
         the interaction log, usage data, and shell history).  It is excluded from
@@ -938,24 +971,34 @@ class Mindspace:
         trail.  This is the single predicate that every tool-facing path check must
         use.
 
+        Every .humbug/ below the root is excluded too, not just the root's own: a
+        folder inside this mindspace may be a mindspace in its own right, and its
+        state is no more this mindspace's AI's to read than the root's is.
+
         Args:
             path: Absolute or relative path to test.
 
         Returns:
-            True if the path resolves inside .humbug/, False otherwise.
+            True if the path resolves inside a .humbug/ directory, False otherwise.
         """
         if not self.has_mindspace():
             return False
 
         # Resolve symlinks so a link inside the mindspace cannot point into .humbug/.
         abs_path = os.path.realpath(os.path.abspath(os.path.expanduser(path)))
-        humbug_abs = os.path.realpath(os.path.abspath(os.path.join(self._path, self.MINDSPACE_DIR)))
+        mindspace_abs = os.path.realpath(os.path.abspath(self._path))
 
         try:
-            return os.path.commonpath([abs_path, humbug_abs]) == humbug_abs
+            if os.path.commonpath([abs_path, mindspace_abs]) != mindspace_abs:
+                return False
 
         except ValueError:
             return False
+
+        # Only the part below the root is checked, so a mindspace that itself lives
+        # under a folder named .humbug does not have every path excluded.
+        relative_path = os.path.relpath(abs_path, mindspace_abs)
+        return self.MINDSPACE_DIR in relative_path.split(os.sep)
 
     def resolve_tool_path(self, path: str) -> tuple[str, str]:
         """
@@ -1028,33 +1071,66 @@ class Mindspace:
         except OSError as e:
             raise MindspaceError(f"Failed to create directory '{dir_path}': {e}") from e
 
-    def add_interaction(self, level: MindspaceLogLevel, content: str) -> MindspaceMessage:
+    def add_interaction(
+        self,
+        level: MindspaceLogLevel,
+        content: str,
+        context: dict[str, str] | None = None
+    ) -> MindspaceMessage:
         """
-        Append a message to the interaction log and persist it.
+        Append a message to the interaction log.
 
         Args:
             level: Severity level of the message.
             content: Message text.
+            context: Optional structured context that attributes the interaction,
+                typically the result of conversation_log_context().
 
         Returns:
             The created MindspaceMessage.
         """
         assert self.has_mindspace(), "No mindspace is currently open"
-        message = MindspaceMessage.create(level, content)
-        self._interactions.add_message(message)
-        self._save_interactions()
+        message = self._interactions.append(level, content, context=context)
         self._on_interactions_updated()
         return message
 
-    def get_interactions(self) -> list[MindspaceMessage]:
+    def conversation_log_context(self, requester: Any) -> dict[str, str] | None:
         """
-        Return all interaction log messages.
+        Return log context that attributes an interaction to a conversation.
+
+        The conversation is identified by its transcript path made mindspace-relative,
+        so the log stays readable and portable across machines.
+
+        Args:
+            requester: The requester of the interaction.  Anything exposing a
+                conversation_id() method, such as an AIConversation, identifies a
+                conversation; anything else does not, and logging continues unattributed.
 
         Returns:
-            List of MindspaceMessage objects.
+            Context mapping the conversation to its transcript path, or None when the
+            requester does not identify a conversation.
         """
         assert self.has_mindspace(), "No mindspace is currently open"
-        return self._interactions.get_messages()
+        conversation_id = getattr(requester, "conversation_id", None)
+        if not callable(conversation_id):
+            return None
+
+        path = conversation_id()
+        if not path:
+            return None
+
+        return {MindspaceMessage.CONVERSATION_CONTEXT: self.get_relative_path(path)}
+
+    def interactions(self) -> MindspaceInteractions:
+        """
+        Return the interaction log store.
+
+        Returns:
+            The store, which answers sequence-addressed reads and reports whether
+            appends are succeeding.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        return self._interactions
 
     def save_mindspace_state(self, state: dict) -> None:
         """
@@ -1286,23 +1362,12 @@ class Mindspace:
             self._logger.info("Failed to load usage stats: %s", e)
             self._usage = MindspaceUsage()
 
-    def _save_interactions(self) -> None:
-        """Persist the interaction log to disk."""
+    def _open_interactions(self) -> None:
+        """Attach the interaction log store to this mindspace's log directory."""
         try:
-            mindspace_dir = os.path.join(self._path, self.MINDSPACE_DIR)
-            os.makedirs(mindspace_dir, exist_ok=True)
-            self._interactions.save(os.path.join(mindspace_dir, self.INTERACTIONS_FILE))
-
-        except OSError as e:
-            self._logger.error("Failed to save interactions: %s", e)
-
-    def _load_interactions(self) -> None:
-        """Load the interaction log from disk."""
-        try:
-            interactions_path = os.path.join(
-                self._path, self.MINDSPACE_DIR, self.INTERACTIONS_FILE
+            self._interactions.open(
+                os.path.join(self._path, self.MINDSPACE_DIR, self.INTERACTIONS_DIR)
             )
-            self._interactions.load(interactions_path)
 
         except Exception as e:
-            self._logger.info("Failed to load interactions: %s", e)
+            self._logger.info("Failed to open interactions: %s", e)

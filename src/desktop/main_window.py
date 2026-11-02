@@ -29,9 +29,12 @@ from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
 from git_ai_tool.git_ai_tool import GitAITool
 from help_ai_tool.help_ai_tool import HelpAITool
+from http_ai_tool.http_access_settings import HttpAccessSettings
 from http_ai_tool.http_ai_tool import HttpAITool
 from menai_ai_tool.menai_ai_tool import MenaiAITool
-from mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceHumbugPathError
+from mindspace.mindspace_error import (
+    MindspaceAlreadyOpenError, MindspaceError, MindspaceExistsError, MindspaceHumbugPathError
+)
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_settings import MindspaceSettings
 from preview_ai_tool.preview_ai_tool import PreviewAITool
@@ -49,7 +52,7 @@ from desktop.file_sidebar.file_sidebar import FileSidebar
 from desktop.file_utils import is_binary_image_file
 from desktop.language.language_manager import LanguageManager
 from desktop.log_tab.log_tab import LogTab
-from desktop.message_box import MessageBox, MessageBoxType
+from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_folders_dialog import MindspaceFoldersDialog
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.main_window_splitter import MainWindowSplitter
@@ -74,6 +77,7 @@ from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar_manager import SidebarManager
 from desktop.usage_tab.usage_tab import UsageTab
 from desktop.style_manager import StyleManager
+from desktop.tab.tab_base import TabBase
 from desktop.color_theme import ColorTheme
 from desktop.status_message import StatusMessage
 from desktop.tab_manager import TabManager
@@ -84,6 +88,8 @@ from desktop.trash_sidebar.trash_sidebar import TrashSidebar
 from desktop.update_checker import UpdateChecker
 from desktop.update_dialog import UpdateDialog
 from desktop.user.user_manager import UserManager, UserError
+from desktop.user.instance_registry import InstanceRecord, InstanceRegistry
+from desktop.user.launch_context import LaunchContext
 from desktop.user.user_settings import UserSettings
 from desktop.vcs_sidebar.vcs_sidebar import VCSSidebar
 
@@ -281,11 +287,19 @@ class MainWindow(QMainWindow):
     # beyond it is unreachable - the user is told when the limit is hit.
     _MAX_QUICK_SWITCHER_FILES = 2000
 
-    def __init__(self) -> None:
-        """Initialize the main window."""
+    def __init__(self, initial_mindspace_path: str | None = None) -> None:
+        """
+        Initialize the main window.
+
+        Args:
+            initial_mindspace_path: A mindspace to open on startup, overriding the
+                last-used mindspace.  Supplied when this instance was started to open
+                a specific mindspace in a new window.
+        """
         super().__init__()
 
         self._logger = logging.getLogger("MainWindow")
+        self._initial_mindspace_path = initial_mindspace_path
 
         self._use_custom_title_bar = sys.platform != "darwin"
         self._window_controls: WindowControlsWidget | None = None
@@ -500,6 +514,24 @@ class MainWindow(QMainWindow):
         self._swap_column_right_action = QAction(strings.swap_column_right, self)
         self._swap_column_right_action.setShortcut(QKeySequence("Ctrl+Alt+]"))
 
+        self._move_tab_to_left_column_action = QAction(strings.move_tab_to_left_column, self)
+        self._move_tab_to_left_column_action.setShortcut(QKeySequence("Ctrl+Alt+Left"))
+
+        self._move_tab_to_right_column_action = QAction(strings.move_tab_to_right_column, self)
+        self._move_tab_to_right_column_action.setShortcut(QKeySequence("Ctrl+Alt+Right"))
+
+        self._move_tab_left_action = QAction(strings.move_tab_left, self)
+        self._move_tab_left_action.setShortcut(QKeySequence("Ctrl+Shift+PgUp"))
+
+        self._move_tab_right_action = QAction(strings.move_tab_right, self)
+        self._move_tab_right_action.setShortcut(QKeySequence("Ctrl+Shift+PgDown"))
+
+        self._move_tab_to_start_action = QAction(strings.move_tab_to_start, self)
+        self._move_tab_to_start_action.triggered.connect(lambda: self._on_move_tab_to_column_end(True))
+
+        self._move_tab_to_end_action = QAction(strings.move_tab_to_end, self)
+        self._move_tab_to_end_action.triggered.connect(lambda: self._on_move_tab_to_column_end(False))
+
         self._next_message_action = QAction(strings.next_message, self)
         self._next_message_action.setShortcut(QKeySequence("Alt+Down"))
         self._next_message_action.triggered.connect(self._on_navigate_next_message)
@@ -531,7 +563,10 @@ class MainWindow(QMainWindow):
         self._mindspace_menu.addAction(self._open_mindspace_action)
         self._recent_mindspaces_menu = self._mindspace_menu.addMenu(strings.recent_mindspaces)
         self._recent_mindspaces_menu.setObjectName("_recent_mindspaces_menu")
-        self._last_recent_mindspaces: list[str] | None = None
+        self._last_recent_mindspaces: tuple[list[str], set[str]] | None = None
+        self._open_in_new_window_menu = self._mindspace_menu.addMenu(strings.open_in_new_window)
+        self._open_in_new_window_menu.setObjectName("_open_in_new_window_menu")
+        self._last_open_in_new_window: tuple[list[str], set[str]] | None = None
         self._mindspace_menu.addAction(self._close_mindspace_action)
         self._mindspace_menu.addSeparator()
         self._mindspace_menu.addAction(self._global_search_action)
@@ -594,6 +629,13 @@ class MainWindow(QMainWindow):
         self._view_menu.addAction(self._merge_column_right_action)
         self._view_menu.addAction(self._swap_column_left_action)
         self._view_menu.addAction(self._swap_column_right_action)
+        self._view_menu.addSeparator()
+        self._view_menu.addAction(self._move_tab_to_left_column_action)
+        self._view_menu.addAction(self._move_tab_to_right_column_action)
+        self._view_menu.addAction(self._move_tab_left_action)
+        self._view_menu.addAction(self._move_tab_right_action)
+        self._view_menu.addAction(self._move_tab_to_start_action)
+        self._view_menu.addAction(self._move_tab_to_end_action)
         self._view_menu.addSeparator()
         self._view_menu.addAction(self._next_message_action)
         self._view_menu.addAction(self._previous_message_action)
@@ -703,6 +745,10 @@ class MainWindow(QMainWindow):
 
         self._user_manager = UserManager()
         user_settings = self._user_manager.settings()
+        self._user_manager.settings_changed.connect(self._on_user_settings_changed)
+        self._user_manager.start_watching()
+        self._instance_registry = InstanceRegistry()
+        self._instance_registry.register("")
         self._style_manager.set_user_font_size(user_settings.font_size)
         self._build_zoom_levels()
         self._style_manager.set_font_ligatures(user_settings.font_ligatures)
@@ -777,7 +823,8 @@ class MainWindow(QMainWindow):
             HelpAITool(self._ai_tool_manager), "Help: provides detailed documentation for AI tools and operations"
         )
         self._ai_tool_manager.register_tool(
-            HttpAITool(mindspace), "HTTP: fetch URLs, make POST requests, and download files"
+            HttpAITool(mindspace, self._get_http_access_settings),
+            "HTTP: fetch URLs, make POST requests, and download files"
         )
         self._ai_tool_manager.register_tool(
             self._menai_tool, "Menai: evaluates expressions using Menai Language syntax"
@@ -847,12 +894,22 @@ class MainWindow(QMainWindow):
         self._on_style_changed()  # Refresh styles to apply canary background
 
     def _rebuild_recent_mindspaces_menu(self) -> None:
-        """Repopulate the Recent Mindspaces submenu from the manager's recent list."""
+        """
+        Repopulate the Recent Mindspaces submenu from the manager's recent list.
+
+        A mindspace that another instance has open is shown but disabled: switching to
+        it here would give two windows the same mindspace, and therefore two writers to
+        the same ``.humbug/`` state.  The disabled state depends on the instance
+        registry, which changes independently of the recent list, so both form the
+        cache key.
+        """
         recent = self._mindspace_manager.recent_mindspaces()
-        if recent == self._last_recent_mindspaces:
+        open_elsewhere = self._mindspaces_open_elsewhere(recent)
+        cache_key = (recent, open_elsewhere)
+        if cache_key == self._last_recent_mindspaces:
             return
 
-        self._last_recent_mindspaces = recent
+        self._last_recent_mindspaces = cache_key
 
         menu = self._recent_mindspaces_menu
         menu.clear()
@@ -865,10 +922,28 @@ class MainWindow(QMainWindow):
             name = os.path.basename(path.rstrip("\\/"))
             action = QAction(name, menu)
             action.setToolTip(path)
-            action.triggered.connect(
-                lambda checked=False, p=path: self._open_mindspace_path(p)
-            )
+
+            if path in open_elsewhere:
+                action.setEnabled(False)
+                action.setToolTip(
+                    self._language_manager.strings().mindspace_open_elsewhere_tooltip.format(path)
+                )
+
+            else:
+                action.triggered.connect(
+                    lambda checked=False, p=path: self._open_mindspace_path(p)
+                )
+
             menu.addAction(action)
+
+    def _mindspaces_open_elsewhere(self, paths: list[str]) -> set[str]:
+        """
+        Return the subset of paths that another live Humbug instance has open.
+
+        Args:
+            paths: Absolute mindspace paths to check
+        """
+        return {path for path in paths if self._instance_registry.is_open_elsewhere(path)}
 
     def _update_menu_state(self) -> None:
         """Update enabled/disabled state of menu items."""
@@ -916,6 +991,7 @@ class MainWindow(QMainWindow):
         self._open_humbug_shell_action.setEnabled(has_mindspace)
         self._open_token_usage_action.setEnabled(has_mindspace)
         self._rebuild_recent_mindspaces_menu()
+        self._rebuild_open_in_new_window_menu()
 
         # Update view actions
         current_zoom = self._style_manager.zoom_factor()
@@ -932,6 +1008,12 @@ class MainWindow(QMainWindow):
         self._merge_column_right_action.setEnabled(tab_manager.can_merge_column(not left_to_right))
         self._swap_column_left_action.setEnabled(tab_manager.can_swap_column(left_to_right))
         self._swap_column_right_action.setEnabled(tab_manager.can_swap_column(not left_to_right))
+        self._move_tab_to_left_column_action.setEnabled(tab_manager.can_move_tab_to_column(left_to_right))
+        self._move_tab_to_right_column_action.setEnabled(tab_manager.can_move_tab_to_column(not left_to_right))
+        self._move_tab_left_action.setEnabled(tab_manager.can_move_tab_within_column(left_to_right))
+        self._move_tab_right_action.setEnabled(tab_manager.can_move_tab_within_column(not left_to_right))
+        self._move_tab_to_start_action.setEnabled(tab_manager.can_move_tab_within_column(True))
+        self._move_tab_to_end_action.setEnabled(tab_manager.can_move_tab_within_column(False))
         self._next_message_action.setEnabled(tab is not None and tab.can_navigate_next_message())
         self._previous_message_action.setEnabled(tab is not None and tab.can_navigate_previous_message())
         self._prompt_navigator_action.setEnabled(isinstance(tab, ConversationTab))
@@ -1009,6 +1091,12 @@ class MainWindow(QMainWindow):
         self._merge_column_right_action.setText(strings.merge_column_right)
         self._swap_column_left_action.setText(strings.swap_column_left)
         self._swap_column_right_action.setText(strings.swap_column_right)
+        self._move_tab_to_left_column_action.setText(strings.move_tab_to_left_column)
+        self._move_tab_to_right_column_action.setText(strings.move_tab_to_right_column)
+        self._move_tab_left_action.setText(strings.move_tab_left)
+        self._move_tab_right_action.setText(strings.move_tab_right)
+        self._move_tab_to_start_action.setText(strings.move_tab_to_start)
+        self._move_tab_to_end_action.setText(strings.move_tab_to_end)
         self._prompt_navigator_action.setText(strings.prompt_markers)
 
         # Our logic for left and right reverses for right-to-left languages
@@ -1025,6 +1113,14 @@ class MainWindow(QMainWindow):
         self._swap_column_left_action.triggered.connect(lambda: self._on_swap_column(left_to_right))
         self._swap_column_right_action.triggered.disconnect()
         self._swap_column_right_action.triggered.connect(lambda: self._on_swap_column(not left_to_right))
+        self._move_tab_to_left_column_action.triggered.disconnect()
+        self._move_tab_to_left_column_action.triggered.connect(lambda: self._on_move_tab_to_column(left_to_right))
+        self._move_tab_to_right_column_action.triggered.disconnect()
+        self._move_tab_to_right_column_action.triggered.connect(lambda: self._on_move_tab_to_column(not left_to_right))
+        self._move_tab_left_action.triggered.disconnect()
+        self._move_tab_left_action.triggered.connect(lambda: self._on_move_tab_within_column(left_to_right))
+        self._move_tab_right_action.triggered.disconnect()
+        self._move_tab_right_action.triggered.connect(lambda: self._on_move_tab_within_column(not left_to_right))
 
         self._on_style_changed()
 
@@ -1203,15 +1299,16 @@ class MainWindow(QMainWindow):
 
         try:
             settings = self._user_manager.settings()
-            settings.theme = ColorTheme.CUSTOM
-            settings.active_custom_theme_name = name
             if name is not None and name in settings.saved_color_themes:
                 self._style_manager.apply_custom_colors(settings.saved_color_themes[name])
 
             else:
                 self._style_manager.apply_custom_colors(settings.custom_colors)
 
-            self._user_manager.update_settings(settings)
+            self._user_manager.update_settings_fields(
+                theme=ColorTheme.CUSTOM,
+                active_custom_theme_name=name
+            )
 
             if self._mindspace_manager.has_mindspace():
                 label = name if name is not None else "Manually"
@@ -1224,6 +1321,43 @@ class MainWindow(QMainWindow):
             self._logger.error("Failed to persist custom theme change: %s", str(e))
 
         self._update_theme_menu()
+
+    def _on_user_settings_changed(self) -> None:
+        """
+        Apply user settings after they change, whether locally or in another instance.
+
+        The settings dialog applies its own changes directly, so this handler is what
+        makes a change made in another Humbug instance take effect here.  It is also
+        what applies a local change made outside the dialog (a theme menu click).
+        """
+        self._apply_user_settings(self._user_manager.settings())
+
+    def _apply_user_settings(self, user_settings: UserSettings) -> None:
+        """
+        Apply a set of user settings to the running application.
+
+        Args:
+            user_settings: The settings to apply
+        """
+        try:
+            self._style_manager.set_user_font_size(user_settings.font_size)
+            self._build_zoom_levels()
+            self._style_manager.set_font_ligatures(user_settings.font_ligatures)
+            self._language_manager.set_language(user_settings.language)
+
+            new_theme = user_settings.theme
+            if new_theme != self._style_manager.user_color_theme():
+                self._style_manager.set_color_theme(new_theme)
+
+            self._style_manager.set_saved_color_themes(user_settings.saved_color_themes)
+            self._style_manager.set_active_custom_theme_name(user_settings.active_custom_theme_name)
+            self._apply_custom_colors_for_settings(user_settings)
+            self._rebuild_theme_menu()
+
+            self._tab_manager.update_welcome_widget(user_settings)
+
+        except Exception:  # pylint: disable=broad-except
+            self._logger.exception("Failed to apply user settings")
 
     def _set_color_theme(self, theme: ColorTheme) -> None:
         """
@@ -1238,9 +1372,7 @@ class MainWindow(QMainWindow):
         self._style_manager.set_color_theme(theme)
 
         try:
-            settings = self._user_manager.settings()
-            settings.theme = theme
-            self._user_manager.update_settings(settings)
+            self._user_manager.update_settings_fields(theme=theme)
 
             if self._mindspace_manager.has_mindspace():
                 self._mindspace_manager.add_interaction(
@@ -1271,19 +1403,184 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(message.timeout, self._status_message_label.clear)
 
     def _restore_last_mindspace(self) -> None:
-        """Restore last mindspace on startup if available."""
-        mindspace_path = self._mindspace_manager.get_last_mindspace()
+        """
+        Open a mindspace on startup.
+
+        An explicitly requested mindspace takes precedence over the last one used: this
+        instance was started specifically to open it, so restoring the last-used
+        mindspace instead would defeat the point.
+        """
+        mindspace_path = self._initial_mindspace_path or self._mindspace_manager.get_last_mindspace()
         if mindspace_path is None:
             return
 
         try:
             self._mindspace_manager.open_mindspace(mindspace_path)
+
+            # The mindspace is open from this point, so record it before any of the
+            # fallible UI restoration steps below.  Otherwise a failure in one of those
+            # would leave this instance registered with no mindspace while it in fact
+            # has one open, making it invisible to other instances' deduplication checks.
+            self._update_instance_registry()
             self._sidebar_manager.set_mindspace(mindspace_path)
             self._restore_mindspace_state()
             self._restore_prompt_marker_setting()
 
+        except MindspaceAlreadyOpenError:
+            # Only reachable when this instance was started for a specific mindspace
+            # that another instance claimed in the meantime.  Without this the user is
+            # left looking at an empty window with no indication of why.
+            self._logger.info("Mindspace %s is already open in another instance", mindspace_path)
+            if self._initial_mindspace_path:
+                strings = self._language_manager.strings()
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.CRITICAL,
+                    strings.mindspace_error_title,
+                    strings.mindspace_already_open_error
+                )
+
         except MindspaceError as e:
             self._logger.error("Failed to restore mindspace: %s", str(e))
+
+    def _update_instance_registry(self) -> None:
+        """Record which mindspace this instance has open, for other instances to see."""
+        self._instance_registry.register(self._mindspace_manager.mindspace_path())
+
+    def _rebuild_open_in_new_window_menu(self) -> None:
+        """
+        Open a mindspace in a new Humbug window.
+
+        The submenu offers the recent mindspaces, excluding the one already open here,
+        plus a folder chooser for anything else.  A mindspace that another instance has
+        open is shown but disabled, because two instances sharing one mindspace would
+        mean two writers to the same ``.humbug/`` state, including the audit log.
+
+        Both the recent list and the set of mindspaces open elsewhere form the cache
+        key, since the disabled state changes independently of the list itself.
+        """
+        # recent_mindspaces() already excludes the mindspace open here, so no further
+        # filtering is needed.  Filtering again against the current path would make the
+        # result depend on whether a mindspace is open yet, which is transient during
+        # startup: the menu timer starts before the mindspace is restored, so an early
+        # rebuild would cache a list built with no mindspace open and then suppress the
+        # rebuild that should follow.
+        recent = self._mindspace_manager.recent_mindspaces()
+        open_elsewhere = self._mindspaces_open_elsewhere(recent)
+        cache_key = (recent, open_elsewhere)
+        if cache_key == self._last_open_in_new_window:
+            return
+
+        self._last_open_in_new_window = cache_key
+
+        strings = self._language_manager.strings()
+        menu = self._open_in_new_window_menu
+        menu.clear()
+
+        for path in recent:
+            name = os.path.basename(path.rstrip("\\/"))
+            action = QAction(name, menu)
+            action.setToolTip(path)
+
+            if path in open_elsewhere:
+                action.setEnabled(False)
+                action.setToolTip(strings.mindspace_open_elsewhere_tooltip.format(path))
+
+            else:
+                action.triggered.connect(
+                    lambda checked=False, p=path: self._spawn_mindspace_window(p)
+                )
+
+            menu.addAction(action)
+
+        if recent:
+            menu.addSeparator()
+
+        choose_action = QAction(strings.open_in_new_window_choose_folder, menu)
+        choose_action.triggered.connect(self._on_choose_mindspace_folder_for_new_window)
+        menu.addAction(choose_action)
+
+    def _on_choose_mindspace_folder_for_new_window(self) -> None:
+        """Prompt for a mindspace folder and open it in a new window."""
+        strings = self._language_manager.strings()
+
+        self._menu_timer.stop()
+        mindspace_path = QFileDialog.getExistingDirectory(
+            self, strings.file_dialog_open_mindspace, os.path.expanduser("~")
+        )
+        self._menu_timer.start()
+        if not mindspace_path:
+            return
+
+        # Both of these checks are free and need nothing from the user, so they come
+        # before any offer to initialize the folder.  Asking first could recreate a
+        # deleted .humbug/ under a mindspace that is open, only to then say so.
+        current = self._mindspace_manager.mindspace_path()
+        if current and os.path.realpath(mindspace_path) == os.path.realpath(current):
+            MessageBox.show_message(
+                self,
+                MessageBoxType.INFORMATION,
+                strings.open_in_new_window_title,
+                strings.open_in_new_window_already_here
+            )
+            return
+
+        existing = self._instance_registry.find_live_instance(mindspace_path)
+        if existing is not None:
+            self._show_already_open_message(existing)
+            return
+
+        if not self._mindspace_manager.check_mindspace(mindspace_path):
+            if not self._confirm_mindspace_initialization(mindspace_path):
+                return
+
+            # No subfolders, as when initializing a folder in this window.
+            if not self._create_mindspace_at(mindspace_path, []):
+                return
+
+        self._spawn_mindspace_window(mindspace_path)
+
+    def _spawn_mindspace_window(self, mindspace_path: str) -> None:
+        """
+        Start a new Humbug instance for the given mindspace.
+
+        Args:
+            mindspace_path: Absolute path to the mindspace the new instance should open
+        """
+        strings = self._language_manager.strings()
+
+        existing = self._instance_registry.find_live_instance(mindspace_path)
+        if existing is not None:
+            self._show_already_open_message(existing)
+            return
+
+        try:
+            LaunchContext.current().spawn(mindspace_path)
+
+        except OSError as e:
+            self._logger.error("Failed to start new Humbug instance: %s", str(e))
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.open_in_new_window_title,
+                strings.open_in_new_window_failed.format(str(e))
+            )
+
+    def _show_already_open_message(self, existing: InstanceRecord) -> None:
+        """
+        Tell the user that another instance already has the requested mindspace open.
+
+        The other instance's window cannot be raised: activating another process's
+        window is not possible from Qt, and there is no portable mechanism across
+        Linux, macOS, and Windows.  The user is told which process to look for instead.
+        """
+        strings = self._language_manager.strings()
+        MessageBox.show_message(
+            self,
+            MessageBoxType.INFORMATION,
+            strings.open_in_new_window_title,
+            strings.open_in_new_window_already_open.format(existing.pid)
+        )
 
     def _load_user_ai_config(self) -> None:
         """Load user-defined AI model config from ~/.humbug/user-ai-config.json."""
@@ -1307,7 +1604,7 @@ class MainWindow(QMainWindow):
         if not dir_path:
             return
 
-        if self._mindspace_manager.is_already_mindspace(dir_path):
+        if self._mindspace_manager.check_mindspace(dir_path):
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
@@ -1321,9 +1618,54 @@ class MainWindow(QMainWindow):
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
 
+        if not self._create_mindspace_at(dir_path, dialog.get_selected_folders()):
+            return
+
+        self._open_mindspace_path(dir_path)
+
+    def _confirm_mindspace_initialization(self, path: str) -> bool:
+        """
+        Ask whether a folder that is not a mindspace should be turned into one.
+
+        This only asks - it has no side effects - so that callers can put the question
+        to the user before they commit to any work that would be wasted if the answer
+        is no, and create the mindspace later via ``_create_mindspace_at()``.
+
+        Closing the dialog without choosing counts as no: only an explicit Yes creates
+        anything.
+
+        Args:
+            path: Directory the user chose
+
+        Returns:
+            True if the user wants the folder initialized, False otherwise.
+        """
+        strings = self._language_manager.strings()
+        result = MessageBox.show_message(
+            self,
+            MessageBoxType.QUESTION,
+            strings.initialize_mindspace_title,
+            strings.initialize_mindspace_message.format(path),
+            [MessageBoxButton.YES, MessageBoxButton.NO]
+        )
+        return result == MessageBoxButton.YES
+
+    def _create_mindspace_at(self, path: str, folders: list[str]) -> bool:
+        """
+        Create a mindspace, telling the user if it could not be created.
+
+        Args:
+            path: Directory to create the mindspace in
+            folders: Subfolders to create inside it
+
+        Returns:
+            True if the mindspace was created, False if creation failed and the user
+            has been told why.
+        """
+        strings = self._language_manager.strings()
+
         try:
-            # Create mindspace with selected folders
-            self._mindspace_manager.create_mindspace(dir_path, dialog.get_selected_folders())
+            self._mindspace_manager.create_mindspace(path, folders)
 
         except MindspaceExistsError:
             MessageBox.show_message(
@@ -1332,7 +1674,7 @@ class MainWindow(QMainWindow):
                 strings.mindspace_error_title,
                 strings.mindspace_exists_error
             )
-            return
+            return False
 
         except MindspaceError as e:
             MessageBox.show_message(
@@ -1341,9 +1683,9 @@ class MainWindow(QMainWindow):
                 strings.mindspace_error_title,
                 strings.error_creating_mindspace.format(str(e))
             )
-            return
+            return False
 
-        self._open_mindspace_path(dir_path)
+        return True
 
     def _on_open_mindspace(self) -> None:
         """Open a new mindspace."""
@@ -1357,16 +1699,23 @@ class MainWindow(QMainWindow):
         self._open_mindspace_path(dir_path)
 
     def _open_mindspace_path(self, path: str) -> None:
-        """Open a mindspace at the given path, validating and restoring state."""
-        # Before we do anything, check if the new location is a mindspace
-        if not self._mindspace_manager.check_mindspace(path):
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.mindspace_error_title,
-                strings.error_opening_mindspace.format(path)
-            )
+        """
+        Open a mindspace at the given path, validating and restoring state.
+
+        This is the single gate for every path that switches mindspace — the Recent
+        Mindspaces menu, the sidebar header menu, and any future caller.  The check
+        that another instance does not already have the mindspace open lives here
+        rather than in each caller, so that a stale menu cannot defeat it.
+        """
+        existing = self._instance_registry.find_live_instance(path)
+        if existing is not None:
+            self._show_already_open_message(existing)
+            return
+
+        # Before we do anything, check if the new location is a mindspace.  If it is not,
+        # offer to make it one rather than leaving the user at a dead end.
+        needs_initialization = not self._mindspace_manager.check_mindspace(path)
+        if needs_initialization and not self._confirm_mindspace_initialization(path):
             return
 
         # If we're switching mindspaces, save the current one first
@@ -1377,10 +1726,34 @@ class MainWindow(QMainWindow):
 
             self._mindspace_manager.close_mindspace()
 
+        # Only now commit the new mindspace to disk.  Creating it before the switch-out
+        # above would leave a stray mindspace behind whenever a tab refuses to close.
+        # No subfolders are requested: a folder being adopted already has whatever
+        # structure the user wants, and none matches the defaults of
+        # ``MindspaceFoldersDialog``, which offers only an optional "src" that starts off.
+        if needs_initialization and not self._create_mindspace_at(path, []):
+            return
+
         # Open the new mindspace
         try:
             self._mindspace_manager.open_mindspace(path)
+
+            # The mindspace is open from this point, so record it before any of the
+            # fallible UI restoration steps below.  Otherwise a failure in one of those
+            # would leave this instance registered with no mindspace while it in fact
+            # has one open, making it invisible to other instances' deduplication checks.
+            self._update_instance_registry()
             self._sidebar_manager.set_mindspace(path)
+
+        except MindspaceAlreadyOpenError:
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.mindspace_error_title,
+                strings.mindspace_already_open_error
+            )
+            return
 
         except MindspaceError as e:
             strings = self._language_manager.strings()
@@ -1409,6 +1782,7 @@ class MainWindow(QMainWindow):
         self._sidebar_manager.set_mindspace("")
 
         self._mindspace_manager.close_mindspace()
+        self._update_instance_registry()
 
     def _capture_frontend_state(self, contexts: ContextRegistry) -> None:
         """
@@ -1556,10 +1930,21 @@ class MainWindow(QMainWindow):
             self._quick_switcher.dismissed.connect(self._hide_quick_switcher)
 
         entries, truncated = self._build_quick_switcher_entries()
-        notice = strings.quick_switcher_limited.format(self._MAX_QUICK_SWITCHER_FILES) if truncated else ""
+        # The prefix hint lives in the footer rather than the placeholder so the
+        # placeholder can keep saying what the box searches, and so the hint stays
+        # visible once the user has typed something.
+        notice = strings.quick_switcher_prefix_hint
+        if truncated:
+            notice = f"{strings.quick_switcher_limited.format(self._MAX_QUICK_SWITCHER_FILES)}   {notice}"
 
         self._quick_switcher.set_placeholder(strings.quick_switcher_placeholder)
         self._quick_switcher.set_notice(notice)
+        self._quick_switcher.set_command_entries(self._quick_switcher_command_entries())
+        current_tab = self._tab_manager.get_current_tab()
+        self._quick_switcher.set_goto_line(
+            strings.quick_switcher_goto_line,
+            current_tab is not None and current_tab.can_show_goto_line()
+        )
         self._quick_switcher.set_entries(entries)
         self._quick_switcher.setGeometry(self._main_widget.rect())
         self._quick_switcher.show()
@@ -1574,6 +1959,32 @@ class MainWindow(QMainWindow):
     def _on_quick_switcher_entry_activated(self, entry_id: str) -> None:
         """Open or focus whatever the chosen Quick Switcher entry refers to."""
         self._hide_quick_switcher()
+
+        if entry_id.startswith("command:"):
+            self._run_quick_switcher_command(entry_id.removeprefix("command:"))
+            return
+
+        if entry_id.startswith("goto:"):
+            line = self._line_from_entry_id(entry_id.removeprefix("goto:"))
+            if line is not None:
+                self._goto_line_in_tab(self._tab_manager.get_current_tab(), line)
+
+            return
+
+        if entry_id.startswith("file-line:"):
+            # The entry carries a file path, never a context id: _open_by_panel_id
+            # focuses the editor already showing that path, or opens one.  Routing
+            # every case through it keeps a path the only thing this branch handles.
+            _prefix, line_text, path = entry_id.split(":", 2)
+            line = self._line_from_entry_id(line_text)
+            if line is None:
+                return
+
+            context_id = self._open_by_panel_id("files", path, ephemeral=False)
+            if context_id is not None:
+                self._goto_line_in_tab(self._tab_manager.get_tab_by_id(context_id), line)
+
+            return
 
         kind, _, value = entry_id.partition(":")
         if kind == "tab":
@@ -1596,6 +2007,132 @@ class MainWindow(QMainWindow):
             conversations_dir=mindspace.conversations_dir(),
             max_files=self._MAX_QUICK_SWITCHER_FILES,
         )
+
+    def _line_from_entry_id(self, line_text: str) -> int | None:
+        """
+        Read the line number out of a Quick Switcher entry ID.
+
+        The widget only ever builds these from digits, so a bad value means the
+        signal did not come from where it should have.  Logging and ignoring it
+        keeps a malformed ID from reaching int() and raising.
+
+        Args:
+            line_text: The line portion of the entry ID.
+
+        Returns:
+            The line number, or None if it was not a number.
+        """
+        try:
+            return int(line_text)
+
+        except ValueError:
+            self._logger.warning("Ignoring Quick Switcher entry with a bad line number: %s", line_text)
+            return None
+
+    def _goto_line_in_tab(self, tab: TabBase | None, line: int) -> None:
+        """
+        Scroll a tab to a line, where the tab supports going to one.
+
+        The Quick Switcher offers a line number without knowing how long the file
+        is, so asking for a line past its end is an ordinary thing to type.  The
+        tab clamps it to its own content.
+
+        Args:
+            tab: The tab to scroll, which may be None or may not support lines.
+            line: The 1-based line asked for, which may be out of range.
+        """
+        if tab is None or not tab.can_show_goto_line():
+            return
+
+        tab.goto_line_clamped(line)
+
+    def _quick_switcher_commands(self) -> dict[str, tuple[QAction, str]]:
+        """
+        Return the application commands reachable through the Go to Anything ``>`` prefix.
+
+        This is the single source of truth for the palette: both the entries that are
+        listed and the action run on activation are derived from it, so the two cannot
+        drift apart.  Each command maps to its action and the icon to show beside it.
+
+        Returns:
+            Command id mapped to the QAction it runs and its icon name.
+        """
+        return {
+            "new-conversation": (self._new_conv_action, "plus"),
+            "new-file": (self._new_file_action, "plus"),
+            "new-terminal": (self._new_terminal_action, "terminal"),
+            "open-file": (self._open_file_action, "files"),
+            "open-conversation": (self._open_conv_action, "conversation"),
+            "open-preview": (self._open_preview_action, "preview"),
+            "open-diff": (self._open_diff_action, "diff"),
+            "save": (self._save_action, "floppy"),
+            "save-as": (self._save_as_action, "floppy"),
+            "close-tab": (self._close_tab_action, "close"),
+            "goto-line": (self._goto_line_action, "arrow-right"),
+            "find": (self._find_action, "search"),
+            "find-replace": (self._find_replace_action, "search"),
+            "mindspace-search": (self._global_search_action, "search"),
+            "mindspace-settings": (self._mindspace_settings_action, "cog"),
+            "conversation-settings": (self._conv_settings_action, "cog"),
+            "settings": (self._settings_action, "cog"),
+            "mindspace-log": (self._open_mindspace_log_action, "log"),
+            "humbug-shell": (self._open_humbug_shell_action, "shell"),
+            "token-usage": (self._open_token_usage_action, "usage"),
+            "tab-overview": (self._show_tab_overview_action, "tab-overview"),
+            "tab-carousel": (self._show_tab_carousel_action, "tab-carousel"),
+            "show-all-columns": (self._show_all_columns_action, "tab-overview"),
+            "split-column-left": (self._split_column_left_action, "arrow-left"),
+            "split-column-right": (self._split_column_right_action, "arrow-right"),
+            "merge-column-left": (self._merge_column_left_action, "arrow-left"),
+            "merge-column-right": (self._merge_column_right_action, "arrow-right"),
+            "swap-column-left": (self._swap_column_left_action, "arrow-left"),
+            "swap-column-right": (self._swap_column_right_action, "arrow-right"),
+            "move-tab-to-left-column": (self._move_tab_to_left_column_action, "arrow-left"),
+            "move-tab-to-right-column": (self._move_tab_to_right_column_action, "arrow-right"),
+            "move-tab-left": (self._move_tab_left_action, "arrow-left"),
+            "move-tab-right": (self._move_tab_right_action, "arrow-right"),
+            "zoom-in": (self._zoom_in_action, "plus"),
+            "zoom-out": (self._zoom_out_action, "minimize"),
+            "reset-zoom": (self._reset_zoom_action, "restore"),
+            "new-mindspace": (self._new_mindspace_action, "files"),
+            "open-mindspace": (self._open_mindspace_action, "files"),
+            "close-mindspace": (self._close_mindspace_action, "close"),
+            "take-tour": (self._take_tour_action, "question"),
+        }
+
+    def _quick_switcher_command_entries(self) -> list[QuickSwitcherEntry]:
+        """
+        Return palette entries for the commands that can be run right now.
+
+        Commands that are not currently valid are left out rather than listed and
+        silently ignored, and each entry carries its keyboard shortcut so the palette
+        teaches the shortcut rather than replacing it.
+        """
+        entries = []
+        for command_id, (action, icon_name) in self._quick_switcher_commands().items():
+            if not action.isEnabled():
+                continue
+
+            shortcut = action.shortcut().toString(QKeySequence.SequenceFormat.NativeText)
+            entries.append(QuickSwitcherEntry(
+                entry_id=f"command:{command_id}",
+                kind="command",
+                title=action.text(),
+                subtitle=shortcut,
+                icon_name=icon_name,
+            ))
+
+        return entries
+
+    def _run_quick_switcher_command(self, command_id: str) -> None:
+        """Trigger a command selected through the Go to Anything overlay."""
+        command = self._quick_switcher_commands().get(command_id)
+        if command is None:
+            return
+
+        action, _icon_name = command
+        if action.isEnabled():
+            action.trigger()
 
     def _on_show_about_dialog(self) -> None:
         """Show the About dialog."""
@@ -2113,6 +2650,30 @@ class MainWindow(QMainWindow):
 
         contexts.swap_column(info.column, swap_left)
 
+    def _on_move_tab_to_column(self, move_left: bool) -> None:
+        """Move the current tab into the column beside it."""
+        current_tab = self._tab_manager.get_current_tab()
+        if current_tab is None:
+            return
+
+        self._tab_manager.move_tab_to_adjacent_column(current_tab.tab_id(), move_left)
+
+    def _on_move_tab_within_column(self, towards_start: bool) -> None:
+        """Move the current tab one place along its own column."""
+        current_tab = self._tab_manager.get_current_tab()
+        if current_tab is None:
+            return
+
+        self._tab_manager.move_tab_within_column(current_tab.tab_id(), towards_start)
+
+    def _on_move_tab_to_column_end(self, towards_start: bool) -> None:
+        """Move the current tab to the first or last place in its own column."""
+        current_tab = self._tab_manager.get_current_tab()
+        if current_tab is None:
+            return
+
+        self._tab_manager.move_tab_to_column_end(current_tab.tab_id(), towards_start)
+
     def _on_style_changed(self) -> None:
         """Handle style changes by updating all styled widgets."""
         # Apply styles to individual top-level widgets
@@ -2388,6 +2949,16 @@ class MainWindow(QMainWindow):
             external_denylist=denylist
         )
 
+    def _get_http_access_settings(self) -> HttpAccessSettings:
+        """Get HTTP access settings from user settings."""
+        user_settings = self._user_manager.settings()
+
+        return HttpAccessSettings(
+            allow_external_http_access=user_settings.allow_external_http_access,
+            external_http_allowlist=user_settings.external_http_allowlist,
+            external_http_denylist=user_settings.external_http_denylist
+        )
+
     def _on_open_conversation(self) -> None:
         """Show open conversation dialog and create conversation tab."""
         self._menu_timer.stop()
@@ -2514,21 +3085,6 @@ class MainWindow(QMainWindow):
         def _on_user_settings_changed(new_settings: UserSettings) -> None:
             try:
                 self._user_manager.update_settings(new_settings)
-                self._style_manager.set_user_font_size(new_settings.font_size)
-                self._build_zoom_levels()
-                self._style_manager.set_font_ligatures(new_settings.font_ligatures)
-                self._language_manager.set_language(new_settings.language)
-
-                new_theme = new_settings.theme
-                if new_theme != self._style_manager.user_color_theme():
-                    self._style_manager.set_color_theme(new_theme)
-
-                self._style_manager.set_saved_color_themes(new_settings.saved_color_themes)
-                self._style_manager.set_active_custom_theme_name(new_settings.active_custom_theme_name)
-                self._apply_custom_colors_for_settings(new_settings)
-                self._rebuild_theme_menu()
-
-                self._tab_manager.update_welcome_widget(new_settings)
                 self._logger.info("User settings saved successfully")
 
                 if self._mindspace_manager.has_mindspace():
@@ -2810,4 +3366,5 @@ class MainWindow(QMainWindow):
             event.ignore()
             return
 
+        self._instance_registry.unregister()
         event.accept()

@@ -2,13 +2,14 @@
 
 from dataclasses import dataclass, field
 import json
-import os
 import logging
 from typing import Any
 
 from ai import AIBackendSettings
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
+from http_ai_tool.http_access_settings import HttpAccessSettings
 
+from desktop import json_store
 from desktop.language.language_code import LanguageCode
 from desktop.color_theme import ColorTheme
 from desktop.user.onboarding_tour_status import OnboardingTourStatus
@@ -37,8 +38,15 @@ class UserSettings:
     check_for_updates: bool = True
     external_file_allowlist: list[str] = field(default_factory=list)
     external_file_denylist: list[str] = field(default_factory=list)
+    allow_external_http_access: bool = True
+    external_http_allowlist: list[str] = field(default_factory=list)
+    external_http_denylist: list[str] = field(default_factory=list)
     onboarding_tour_status: OnboardingTourStatus = OnboardingTourStatus.NOT_STARTED
     onboarding_tour_version: int = 0
+    # Monotonically increasing revision counter.  Every save increments it so that
+    # other Humbug instances watching this file can tell a genuine change from their
+    # own write.  See docs/adr/0014-multiple-instances-and-mindspaces.md.
+    revision: int = 0
 
     @classmethod
     def create_default(cls) -> "UserSettings":
@@ -65,6 +73,9 @@ class UserSettings:
             check_for_updates=True,
             external_file_allowlist=FilesystemAccessSettings.get_default_allowlist(),
             external_file_denylist=FilesystemAccessSettings.get_default_denylist(),
+            allow_external_http_access=True,
+            external_http_allowlist=HttpAccessSettings.get_default_allowlist(),
+            external_http_denylist=HttpAccessSettings.get_default_denylist(),
             onboarding_tour_status=OnboardingTourStatus.NOT_STARTED,
             onboarding_tour_version=0
         )
@@ -344,6 +355,41 @@ class UserSettings:
         else:
             settings.external_file_denylist = denylist if denylist else FilesystemAccessSettings.get_default_denylist()
 
+        # Load external HTTP access settings with validation
+        allow_external_http = data.get("allowExternalHttpAccess", True)
+        if not isinstance(allow_external_http, bool):
+            cls._logger.warning(
+                "Invalid allowExternalHttpAccess type in %s: expected bool, got %s. Using default.",
+                path, type(allow_external_http).__name__
+            )
+
+        else:
+            settings.allow_external_http_access = allow_external_http
+
+        # Load HTTP allowlist with validation
+        http_allowlist = data.get("externalHttpAllowlist", [])
+        if not cls._validate_list_of_strings(http_allowlist):
+            cls._logger.warning(
+                "Invalid externalHttpAllowlist in %s: expected list of strings. Using defaults.",
+                path
+            )
+            settings.external_http_allowlist = HttpAccessSettings.get_default_allowlist()
+
+        else:
+            settings.external_http_allowlist = http_allowlist
+
+        # Load HTTP denylist with validation
+        http_denylist = data.get("externalHttpDenylist", [])
+        if not cls._validate_list_of_strings(http_denylist):
+            cls._logger.warning(
+                "Invalid externalHttpDenylist in %s: expected list of strings. Using defaults.",
+                path
+            )
+            settings.external_http_denylist = HttpAccessSettings.get_default_denylist()
+
+        else:
+            settings.external_http_denylist = http_denylist if http_denylist else HttpAccessSettings.get_default_denylist()
+
         # Load custom color overrides
         custom_colors_raw = data.get("customColors", {})
         if isinstance(custom_colors_raw, dict):
@@ -443,6 +489,19 @@ class UserSettings:
                 path
             )
             settings.active_custom_theme_name = None
+
+        # Load the revision counter.  A file written before this field existed has no
+        # revision, so it starts at 0 and the next save promotes it to 1.
+        revision = data.get("revision", 0)
+        if not isinstance(revision, int) or isinstance(revision, bool) or revision < 0:
+            cls._logger.warning(
+                "Invalid revision in %s: expected non-negative int, got %s. Using 0.",
+                path, type(revision).__name__
+            )
+            settings.revision = 0
+
+        else:
+            settings.revision = revision
 
         return settings
 
@@ -547,9 +606,6 @@ class UserSettings:
         Raises:
             OSError: If there's an issue creating the directory or writing the file
         """
-        # Ensure directory exists
-        os.makedirs(os.path.dirname(path), mode=0o700, exist_ok=True)
-
         # Convert backend settings to serializable format
         ai_backends_data = {}
         for backend_id, backend_settings in self.ai_backends.items():
@@ -560,6 +616,9 @@ class UserSettings:
             }
 
         # Save settings in a structured format for future extensibility
+        # Increment the revision so other instances watching this file can distinguish
+        # this write from one they made themselves.
+        self.revision += 1
         data = {
             "ai_backends": ai_backends_data,
             "language": self.language.name,
@@ -574,12 +633,13 @@ class UserSettings:
             "allowExternalFileAccess": self.allow_external_file_access,
             "externalFileAllowlist": self.external_file_allowlist,
             "externalFileDenylist": self.external_file_denylist,
+            "allowExternalHttpAccess": self.allow_external_http_access,
+            "externalHttpAllowlist": self.external_http_allowlist,
+            "externalHttpDenylist": self.external_http_denylist,
             "onboardingTourStatus": self.onboarding_tour_status.name,
-            "onboardingTourVersion": self.onboarding_tour_version
+            "onboardingTourVersion": self.onboarding_tour_version,
+            "revision": self.revision
         }
 
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4)
-
-        # Set secure permissions for settings file (contains API keys)
-        os.chmod(path, 0o600)
+        # Written atomically, and with secure permissions as it holds API keys
+        json_store.write_json(path, data)

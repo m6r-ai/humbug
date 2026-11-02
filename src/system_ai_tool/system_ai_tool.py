@@ -354,7 +354,8 @@ class SystemAITool(AITool):
             relative_path = self._mindspace.get_relative_path(file_path)
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened editor for file: '{relative_path}'\ntab ID: {context_id}"
+                f"AI opened editor for file: '{relative_path}'\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
             return AIToolResult(
                 id=tool_call.id,
@@ -385,7 +386,8 @@ class SystemAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI created new terminal\ntab ID: {context_id}"
+                f"AI created new terminal\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
             return AIToolResult(
                 id=tool_call.id,
@@ -431,7 +433,8 @@ class SystemAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened conversation for: '{conversation_path}'\ntab ID: {context_id}"
+                f"AI opened conversation for: '{conversation_path}'\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
             return AIToolResult(
                 id=tool_call.id,
@@ -548,7 +551,8 @@ class SystemAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI created new conversation\ntab ID: {context_id}"
+                f"AI created new conversation\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
             result_parts = [f"Created new conversation, tab ID: {context_id}"]
             if model:
@@ -618,7 +622,8 @@ class SystemAITool(AITool):
             location = relative_path if relative_path else "."
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened preview tab for: '{location}'\ntab ID: {context_id}"
+                f"AI opened preview tab for: '{location}'\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
             return AIToolResult(
                 id=tool_call.id,
@@ -669,7 +674,8 @@ class SystemAITool(AITool):
             relative_path = self._mindspace.get_relative_path(file_path)
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened diff for file: '{relative_path}'\ntab ID: {context_id}"
+                f"AI opened diff for file: '{relative_path}'\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
             return AIToolResult(
                 id=tool_call.id,
@@ -683,7 +689,7 @@ class SystemAITool(AITool):
     async def _get_tab_info(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Get information about a specific tab by ID or the current tab."""
@@ -704,7 +710,8 @@ class SystemAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI requested info for tab ID: {tab_id}"
+            f"AI requested info for tab ID: {tab_id}",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
 
         return AIToolResult(
@@ -717,7 +724,7 @@ class SystemAITool(AITool):
     async def _close_tab(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Close an existing tab by ID."""
@@ -749,7 +756,8 @@ class SystemAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI closed tab\ntab ID: {tab_id}"
+                f"AI closed tab\ntab ID: {tab_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
             return AIToolResult(
                 id=tool_call.id,
@@ -769,7 +777,7 @@ class SystemAITool(AITool):
     async def _list_tabs(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """List all currently open tabs across all columns."""
@@ -779,7 +787,8 @@ class SystemAITool(AITool):
             if not contexts:
                 self._mindspace.add_interaction(
                     MindspaceLogLevel.INFO,
-                    "AI requested tab list: no tabs currently open"
+                    "AI requested tab list: no tabs currently open",
+                    context=self._mindspace.conversation_log_context(requester_ref)
                 )
                 return AIToolResult(
                     id=tool_call.id,
@@ -797,7 +806,8 @@ class SystemAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI requested tab list: {len(tab_info)} tabs across {result['total_columns']} columns"
+                f"AI requested tab list: {len(tab_info)} tabs across {result['total_columns']} columns",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
             return AIToolResult(
                 id=tool_call.id,
@@ -812,7 +822,7 @@ class SystemAITool(AITool):
     async def _move_tab(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Move a tab to a specific column."""
@@ -843,7 +853,8 @@ class SystemAITool(AITool):
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI moved tab {tab_id} to column {target_column}"
+            f"AI moved tab {tab_id} to column {target_column}",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -894,7 +905,7 @@ class SystemAITool(AITool):
     async def _split_column(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Split the column containing a tab into two columns."""
@@ -911,7 +922,8 @@ class SystemAITool(AITool):
         side = "left" if split_left else "right"
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI split column containing tab {tab_id} to the {side}"
+            f"AI split column containing tab {tab_id} to the {side}",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -922,7 +934,7 @@ class SystemAITool(AITool):
     async def _merge_column(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Merge the column containing a tab into the adjacent column."""
@@ -940,7 +952,8 @@ class SystemAITool(AITool):
         side = "left" if merge_left else "right"
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI merged column {column} (containing tab {tab_id}) into the {side}"
+            f"AI merged column {column} (containing tab {tab_id}) into the {side}",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -951,7 +964,7 @@ class SystemAITool(AITool):
     async def _swap_column(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Swap the column containing a tab with the adjacent column."""
@@ -969,7 +982,8 @@ class SystemAITool(AITool):
         side = "left" if swap_left else "right"
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI swapped column {column} (containing tab {tab_id}) with the {side}"
+            f"AI swapped column {column} (containing tab {tab_id}) with the {side}",
+            context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
             id=tool_call.id,
@@ -980,7 +994,7 @@ class SystemAITool(AITool):
     async def _get_system_info(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """Get system and mindspace information."""
@@ -1039,7 +1053,8 @@ class SystemAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                "AI requested system information"
+                "AI requested system information",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             return AIToolResult(

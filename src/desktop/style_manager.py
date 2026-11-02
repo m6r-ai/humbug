@@ -14,7 +14,7 @@ import sys
 
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion, Qt
 from PySide6.QtGui import QTextCharFormat, QFontDatabase, QColor, QFontMetricsF, QFont, QPixmap, QGuiApplication
-from PySide6.QtGui import QPainter
+from PySide6.QtGui import QPainter, QRegion
 from PySide6.QtWidgets import QMenu, QWidget
 from PySide6.QtSvg import QSvgRenderer
 
@@ -57,6 +57,10 @@ class StyleManager(QObject):
     style_changed = Signal()
     _instance = None
 
+    # The share of its box an icon's artwork fills once normalised by
+    # scale_icon_uniform, chosen to match what most of the icon set already does.
+    _UNIFORM_ICON_FILL = 0.85
+
     def __new__(cls) -> 'StyleManager':
         """Create or return singleton instance."""
         if cls._instance is None:
@@ -89,6 +93,7 @@ class StyleManager(QObject):
 
             # Cache SVG-rendered icons by (name, scaled_size)
             self._scaled_icon_cache: dict[tuple[str, int], QPixmap] = {}
+            self._uniform_icon_cache: dict[tuple[str, int], QPixmap] = {}
 
             self._code_font_families = ["JetBrains Mono", "Noto Sans Arabic"]
             self._proportional_font_families = ["Noto Sans", "Noto Sans Arabic"]
@@ -393,6 +398,61 @@ class StyleManager(QObject):
         self._scaled_icon_cache[cache_key] = pixmap
         return pixmap
 
+    def scale_icon_uniform(self, icon_name: str, target_size: int) -> QPixmap:
+        """
+        Load an icon scaled so its artwork fills the same share of the box as any other.
+
+        The icon set does not pad its artwork consistently: some glyphs reach the edge
+        of their viewBox while others sit inside wide margins.  Rendering them all at
+        the same pixel size therefore still makes them look like different sizes when
+        they are listed one above another.  Trimming each icon to its visible bounds
+        before rescaling makes a mixed column read as a single size.
+
+        Use this for lists of mixed icons.  Icons placed on their own, or in a row of
+        one kind, should use scale_icon so they keep the proportions they were drawn
+        with.
+
+        Args:
+            icon_name: Name of the icon we want
+            target_size: Desired size in pixels
+
+        Returns:
+            Scaled QPixmap whose artwork fills the box
+        """
+        scaled_size = int(target_size * self._zoom_factor)
+        cache_key = (icon_name, scaled_size)
+
+        if cache_key in self._uniform_icon_cache:
+            return self._uniform_icon_cache[cache_key]
+
+        source = self.scale_icon(icon_name, target_size)
+        bounds = QRegion(source.mask()).boundingRect()
+        if bounds.isEmpty():
+            return source
+
+        # Most of the icon set already draws its artwork to about this share of the
+        # box.  Normalising to it leaves the common icons looking as they always have
+        # and brings only the outliers into line.
+        artwork_size = int(scaled_size * self._UNIFORM_ICON_FILL)
+        trimmed = source.copy(bounds).scaled(
+            artwork_size,
+            artwork_size,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        )
+        pixmap = QPixmap(scaled_size, scaled_size)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.drawPixmap(
+            (scaled_size - trimmed.width()) // 2,
+            (scaled_size - trimmed.height()) // 2,
+            trimmed
+        )
+        painter.end()
+
+        self._uniform_icon_cache[cache_key] = pixmap
+        return pixmap
+
     def get_color(self, role: ColorRole) -> QColor:
         """
         Get a color for a specific role.
@@ -596,6 +656,7 @@ class StyleManager(QObject):
             self._initialize_highlights()
             self._initialize_proportional_highlights()
             self._scaled_icon_cache.clear()
+            self._uniform_icon_cache.clear()
             self.style_changed.emit()
 
     def user_color_theme(self) -> ColorTheme:
@@ -619,6 +680,7 @@ class StyleManager(QObject):
             self._initialize_highlights()
             self._initialize_proportional_highlights()
             self._scaled_icon_cache.clear()
+            self._uniform_icon_cache.clear()
             self.style_changed.emit()
 
     def _palette_for_mode(self, mode: ColorTheme) -> Palette:
@@ -773,6 +835,7 @@ class StyleManager(QObject):
         # wrong theme and must be discarded before style_changed fires.
         if self._custom_color_mode != previous_custom_color_mode:
             self._scaled_icon_cache.clear()
+            self._uniform_icon_cache.clear()
 
         if self._theme_mode == ColorTheme.CUSTOM:
             self._active_palette = self._palette_for_mode(ColorTheme.CUSTOM)
@@ -806,6 +869,7 @@ class StyleManager(QObject):
         if factor != self._zoom_factor:
             self._zoom_factor = factor
             self._scaled_icon_cache.clear()  # Invalidate scaled icons
+            self._uniform_icon_cache.clear()
             self.style_changed.emit()
 
     def get_space_width(self) -> float:

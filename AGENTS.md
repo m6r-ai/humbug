@@ -141,7 +141,7 @@ AI tool implementation for date/time operations.
 
 ### `src/context/`
 Registry infrastructure for tracking open contexts within a mindspace.
-The registry is the source of truth for workspace layout (which contexts are
+The registry is the source of truth for mindspace layout (which contexts are
 open, their column, position, and focus) and serialises session state.  Each
 context model supplies its own content state via `save_content_state`; the
 frontend supplies view state as an opaque blob.  See ADR-0008.
@@ -193,7 +193,9 @@ modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 - `tab/` - Abstract tab contract, including the view-state and migration-state contracts
 - `tab_manager/` - Tab manager: generic tab container with context factory registration and session restore
 - `terminal_tab/` - Terminal tab implementation
-- `user/` - User management
+- `user/` - User management: global settings (`UserManager`, `UserSettings`), the
+  registry of running instances (`InstanceRegistry`), and launching a second instance
+  with the same configuration (`LaunchContext`)
 - `vcs_sidebar/` - VCS/diff panel implementation
 - `widgets/` - Reusable Qt widgets
 
@@ -238,6 +240,11 @@ AI tool implementation for tool documentation.
 ### `src/http_ai_tool/`
 AI tool implementation for HTTP operations, wrapping the `http_client` library.
 Exposes GET, HEAD, POST, PUT, PATCH, DELETE, and download operations.
+GET and HEAD are auto-approved when their URL matches the user's allowlist and does
+not match the denylist; every other operation always prompts.  `HttpAccessSettings`
+holds the master switch and the two lists.  Every redirect target is re-checked before
+it is followed, so the client is used with `follow_redirects=False` for these methods.
+See ADR-0016.
 
 ### `src/html_/`
 HTML document processing. Includes a self-contained lexer and DOM-building parser
@@ -264,6 +271,19 @@ Front-end-agnostic mindspace model. Manages the mindspace path, settings, search
 interactions log, the context registry, and the conversations directory (`.humbug/conversations/`).
 Conversations are migrated from the legacy `conversations/` root directory on open.
 No Qt or GUI dependencies.
+
+The interaction log (`MindspaceInteractions`) is an append-only store of segmented JSON Lines
+files under `.humbug/log/`, addressed by contiguous sequence numbers that start at 1.  It never
+truncates, never rewrites and never deletes: segments rotate at a size threshold and that is the
+only limit on the log.  Individual records are bounded in size and reads are bounded by the
+caller.  See ADR-0017.
+
+An entry that is part of a conversation's activity carries that conversation in the record's
+structured context, keyed `conversation` and holding the conversation's mindspace-relative
+transcript path.  Anything writing an entry while acting for a conversation must attribute it
+with `Mindspace.add_interaction(..., context=Mindspace.conversation_log_context(requester))`,
+where `requester` is the conversation the entry belongs to, rather than embedding the identifier
+in the content text.
 
 `Mindspace.resolve_tool_path()` is the single mechanism every AI tool must use to
 resolve a path argument.  It enforces the mindspace boundary and rejects paths inside
@@ -296,10 +316,10 @@ Language-specific syntax highlighting system.
 **Language subdirectories:**
 - `bash/`, `batch/`, `c/`, `cpp/`, `csharp/`, `css/`, `diff/`, `go/`, `html/`, `java/`
 - `javascript/`, `json/`, `kotlin/`, `lua/`, `markdown/`, `menai/`, `metaphor/`, `move/`
-- `python/`, `rust/`, `scheme/`, `solidity/`, `swift/`, `text/`, `toml/`, `typescript/`, `xml/`, `yaml/`
+- `pascal/`, `python/`, `rust/`, `scheme/`, `solidity/`, `swift/`, `text/`, `toml/`, `typescript/`, `xml/`, `yaml/`
 
 ### `src/system_ai_tool/`
-AI tool implementation for system/workspace operations (tab lifecycle, layout,
+AI tool implementation for system/mindspace operations (tab lifecycle, layout,
 system info). Moved from `src/desktop/` to make it frontend-agnostic.
 
 ### `src/terminal/`
@@ -317,6 +337,7 @@ Development and debugging utilities:
 - `__init__.py` — makes `tools/` a package so mypy resolves all tool subpackages as `tools.*`
 - `convert_document/` - Document conversion between docx, html, and md formats
 - `code_checker/` - Runs all static analysis tools (dependency checker, mypy, pylint) in sequence
+- `conversation_profile/` - Offscreen benchmark that measures where a conversation view spends its time (construct, load, resize, scroll) and attributes it to Qt event types
 - `dependency_checker/` - Module dependency validation
 - `style_checker/` - Pylint plugin enforcing Humbug-specific code style conventions
 - `pdf/` - PDF-related tooling

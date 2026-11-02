@@ -326,3 +326,88 @@ class TestMenaiKeywords:
             assert tokens[0].type == TokenType.IDENTIFIER, \
                 f"'{ident}' should be IDENTIFIER, not KEYWORD"
             assert tokens[0].value == ident
+
+    def test_enum_keyword(self):
+        """Test enum keyword."""
+        lexer = MenaiLexer()
+        lexer.lex(None, 'enum')
+
+        tokens = list(lexer._tokens)
+        assert len(tokens) == 1
+        assert tokens[0].type == TokenType.KEYWORD
+        assert tokens[0].value == 'enum'
+
+    def test_enum_keyword_case_insensitive(self):
+        """Test that the enum keyword is case-insensitive."""
+        for keyword in ('enum', 'ENUM', 'Enum', 'EnUm'):
+            lexer = MenaiLexer()
+            lexer.lex(None, keyword)
+
+            tokens = list(lexer._tokens)
+            assert len(tokens) == 1
+            assert tokens[0].type == TokenType.KEYWORD, \
+                f"'{keyword}' should be recognized as KEYWORD"
+
+    def test_enum_declaration(self):
+        """Test enum in a declaration."""
+        lexer = MenaiLexer()
+        lexer.lex(None, '(enum (idle running stopped))')
+
+        tokens = list(lexer._tokens)
+        keyword_tokens = [t for t in tokens if t.type == TokenType.KEYWORD]
+        assert len(keyword_tokens) == 1
+        assert keyword_tokens[0].value == 'enum'
+
+    def test_enum_variant_names_are_identifiers(self):
+        """Test that enum variant names are identifiers."""
+        lexer = MenaiLexer()
+        lexer.lex(None, '(enum (idle running stopped))')
+
+        tokens = list(lexer._tokens)
+        ident_tokens = [t for t in tokens if t.type == TokenType.IDENTIFIER]
+        assert [t.value for t in ident_tokens] == ['idle', 'running', 'stopped']
+
+    def test_enum_declaration_as_binding_value(self):
+        """Test an enum declaration used as a letrec binding value."""
+        lexer = MenaiLexer()
+        lexer.lex(None, '(letrec ((state (enum (idle running)))) state)')
+
+        tokens = list(lexer._tokens)
+        keyword_tokens = [t for t in tokens if t.type == TokenType.KEYWORD]
+        assert [t.value for t in keyword_tokens] == ['letrec', 'enum']
+
+    def test_enum_keyword_position(self):
+        """Test that the enum keyword position is correctly tracked."""
+        lexer = MenaiLexer()
+        lexer.lex(None, '(enum (idle running))')
+
+        tokens = list(lexer._tokens)
+        keyword_tokens = [t for t in tokens if t.type == TokenType.KEYWORD]
+        assert len(keyword_tokens) == 1
+        assert keyword_tokens[0].start == 1
+
+    def test_enum_construction_variant_is_quoted(self):
+        """Test that an enum construction quotes its variant name."""
+        lexer = MenaiLexer()
+        lexer.lex(None, "(state 'idle)")
+
+        tokens = list(lexer._tokens)
+        quote_tokens = [t for t in tokens if t.type == TokenType.QUOTE]
+        assert len(quote_tokens) == 1
+        assert quote_tokens[0].value == "'"
+
+        ident_tokens = [t for t in tokens if t.type == TokenType.IDENTIFIER]
+        assert [t.value for t in ident_tokens] == ['state', 'idle']
+
+    def test_enum_like_identifiers_are_not_keywords(self):
+        """Test that similar-looking identifiers are not the enum keyword."""
+        non_keywords = ['enumerate', 'enum-x', 'enumtype', 'my-enum']
+        for ident in non_keywords:
+            lexer = MenaiLexer()
+            lexer.lex(None, ident)
+
+            tokens = list(lexer._tokens)
+            assert len(tokens) == 1
+            assert tokens[0].type == TokenType.IDENTIFIER, \
+                f"'{ident}' should be IDENTIFIER, not KEYWORD"
+            assert tokens[0].value == ident

@@ -41,8 +41,11 @@ become expensive mistakes.
 ### Auditability
 Humbug maintains a persistent interaction log in every mindspace that records both AI
 and human actions: every file the AI reads or writes, every tool call made, every human
-approval or denial, every prompt submitted, every file saved, renamed, moved, or deleted
-by the human, and every settings change.
+approval or denial, every prompt submitted and the reasoning and response that followed
+it, every file saved, renamed, moved, or deleted by the human, and every settings change.
+Entries that belong to a conversation carry the conversation's identifier in a structured
+context, so the trail can be read conversation by conversation instead of as unconnected
+prose.
 
 This log is inaccessible to the AI itself, making it an independent witness to what
 occurred. It is the foundation for a tamper-evident audit trail — including future
@@ -81,8 +84,8 @@ It also prevents the kind of gradual coupling that is especially risky when LLMs
 contributing code, since an AI might otherwise introduce a convenience import that silently
 creates a circular dependency between modules.
 
-### Frontend-agnostic workspace state
-All workspace layout state — which tabs are open, which column each tab is in,
+### Frontend-agnostic mindspace state
+All mindspace layout state — which tabs are open, which column each tab is in,
 its position within that column, which tab is focused, and whether a tab is
 ephemeral — lives in the frontend-agnostic `ContextRegistry` within the
 `Mindspace` model.  The desktop frontend (`TabManager`) is a projection: it
@@ -92,7 +95,7 @@ between columns) call back into the registry, which emits events that the
 frontend reacts to.  This separation is the foundation for a future remote
 frontend that visualises activities on a headless backend.
 
-Workspace state is divided into three layers, each with a single owner.
+Mindspace state is divided into three layers, each with a single owner.
 Layout belongs to the registry; content (a file path, a terminal command, a
 conversation transcript) belongs to the frontend-agnostic context models; and
 view state (cursor positions, scroll offsets, find-widget state) belongs to the

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from datetime import datetime, timezone
+import time
 from typing import Any
 import zoneinfo
 
@@ -186,6 +187,27 @@ class ClockAITool(AITool):
             f"Unable to parse time '{time_str}'. Supported formats: ISO format (2024-01-15T14:30:00), timestamp (1705339800)"
         )
 
+    async def _wait(self, duration: float, requester_ref: Any) -> tuple[bool, float]:
+        """
+        Wait for a duration, using the requester's interruptible wait when available.
+
+        Args:
+            duration: Number of seconds to wait.
+            requester_ref: The requester, which may expose ``interruptible_sleep``.
+
+        Returns:
+            A tuple of (interrupted, elapsed_seconds), where interrupted is True if
+            the user interrupted the wait.
+        """
+        start = time.monotonic()
+        interruptible_sleep = getattr(requester_ref, "interruptible_sleep", None)
+        if interruptible_sleep is not None:
+            interrupted = bool(await interruptible_sleep(duration))
+            return interrupted, time.monotonic() - start
+
+        await asyncio.sleep(duration)
+        return False, time.monotonic() - start
+
     async def _get_time(
         self,
         tool_call: AIToolCall,
@@ -213,7 +235,7 @@ class ClockAITool(AITool):
     async def _sleep(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Sleep operation."""
@@ -235,14 +257,24 @@ class ClockAITool(AITool):
         try:
             self._logger.info("Sleeping for %s seconds", duration)
 
-            # Perform the sleep
-            await asyncio.sleep(duration)
+            # Perform the sleep, allowing the user to interrupt a long wait
+            interrupted, elapsed = await self._wait(duration, requester_ref)
 
             # Return current time after sleep
             now = self._get_current_time(timezone_str)
             result = self._format_time(now, format_type)
 
-            self._logger.info("Sleep completed, current time: %s", result)
+            if interrupted:
+                self._logger.info("Sleep interrupted by user, current time: %s", result)
+                result = (
+                    f"The user ended this wait after {elapsed:.1f} seconds instead of letting it "
+                    f"run for the full {duration} seconds. This is not an error and the user did "
+                    f"not report a problem: they simply chose not to wait any longer. Continue with "
+                    f"the current time: {result}"
+                )
+
+            else:
+                self._logger.info("Sleep completed, current time: %s", result)
 
             return AIToolResult(
                 id=tool_call.id,
@@ -261,7 +293,7 @@ class ClockAITool(AITool):
     async def _alarm(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Alarm operation - sleep until specified time."""
@@ -299,13 +331,25 @@ class ClockAITool(AITool):
 
             self._logger.info("Alarm set for %s (sleeping %s seconds)", target_time, sleep_duration)
 
-            # Perform the sleep
-            await asyncio.sleep(sleep_duration)
+            # Perform the sleep, allowing the user to interrupt a long wait
+            interrupted, elapsed = await self._wait(sleep_duration, requester_ref)
 
             # Return current time after alarm
             now = self._get_current_time(timezone_str)
             result = self._format_time(now, format_type)
-            self._logger.info("Alarm completed, current time: %s", result)
+
+            if interrupted:
+                self._logger.info("Alarm interrupted by user, current time: %s", result)
+                result = (
+                    f"The user ended this wait after {elapsed:.1f} seconds instead of letting it "
+                    f"run for the full {sleep_duration} seconds. This is not an error and the user "
+                    f"did not report a problem: they simply chose not to wait any longer. Continue "
+                    f"with the current time: {result}"
+                )
+
+            else:
+                self._logger.info("Alarm completed, current time: %s", result)
+
             return AIToolResult(
                 id=tool_call.id,
                 name="clock",

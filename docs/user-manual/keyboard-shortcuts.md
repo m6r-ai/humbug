@@ -66,8 +66,15 @@ differences and are noted in their rows.
 | Merge Column Right | Cmd+] | Ctrl+] |
 | Swap Column Left | Cmd+Alt+[ | Ctrl+Alt+[ |
 | Swap Column Right | Cmd+Alt+] | Ctrl+Alt+] |
+| Move Tab to Left Column | Cmd+Alt+Left | Ctrl+Alt+Left |
+| Move Tab to Right Column | Cmd+Alt+Right | Ctrl+Alt+Right |
+| Move Tab Left | Cmd+Shift+Page Up | Ctrl+Shift+Page Up |
+| Move Tab Right | Cmd+Shift+Page Down | Ctrl+Shift+Page Down |
 | Next Message | Alt+Down | Alt+Down |
 | Previous Message | Alt+Up | Alt+Up |
+
+**Move Tab to New Column**, **Move Tab to Start**, and **Move Tab to End** are available from the
+tab context menu and the View menu.
 
 ## Settings
 

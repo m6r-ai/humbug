@@ -19,6 +19,10 @@ from ai_tool import AIToolManager, AIToolCall, AIToolResult, AIToolAuthorization
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 
 
+# Waits longer than this many seconds show a user-cancellable control.
+INTERRUPTIBLE_WAIT_THRESHOLD_SECONDS = 5.0
+
+
 class ConversationState(Enum):
     """State of the conversation processing."""
     IDLE = auto()
@@ -38,6 +42,10 @@ class AIConversationEvent(Enum):
                                 # When a new message is added and completed immediately
     TOOL_APPROVAL_REQUIRED = auto()
                                 # When tool calls need user approval
+    TOOL_INTERRUPTIBLE_WAIT_STARTED = auto()
+                                # When a tool begins a wait the user can interrupt
+    TOOL_INTERRUPTIBLE_WAIT_ENDED = auto()
+                                # When an interruptible tool wait finishes or is interrupted
     STREAMING_UPDATE = auto()   # When a streaming response is updated
     AI_CONNECTED = auto()       # When AI connection is established
     RATE_LIMITED = auto()       # When a rate limit retry is in progress (not exhausted)
@@ -69,6 +77,9 @@ class AIConversation:
         self._pending_tool_calls: list[AIToolCall] = []
         self._pending_tool_call_message: AIMessage | None = None
         self._pending_authorization_future: asyncio.Future[bool] | None = None
+
+        # Interruptible tool wait state
+        self._pending_interrupt_future: asyncio.Future[None] | None = None
 
         # Conversation state and interruption handling
         self._state = ConversationState.IDLE
@@ -797,6 +808,75 @@ class AIConversation:
         # Signal denial
         self._pending_authorization_future.set_result(False)
 
+    async def interruptible_sleep(self, duration: float) -> bool:
+        """
+        Sleep for a duration, allowing the user to interrupt the wait.
+
+        Waits longer than the interrupt threshold show a cancel control in the
+        executing tool-call message.  Shorter waits complete without any UI so
+        the user does not see a control flash by.
+
+        Args:
+            duration: Number of seconds to wait.
+
+        Returns:
+            True if the user interrupted the wait, False if it completed.
+        """
+        if duration <= INTERRUPTIBLE_WAIT_THRESHOLD_SECONDS:
+            await asyncio.sleep(duration)
+            return False
+
+        self._logger.info(
+            "[conv=%s] Starting interruptible wait of %s seconds",
+            self._conversation_id,
+            duration
+        )
+
+        self._pending_interrupt_future = asyncio.Future()
+        sleep_task: asyncio.Task[None] | None = None
+
+        try:
+            await self._trigger_event(
+                AIConversationEvent.TOOL_INTERRUPTIBLE_WAIT_STARTED,
+                self._pending_tool_call_message,
+                duration
+            )
+
+            sleep_task = asyncio.ensure_future(asyncio.sleep(duration))
+            done, _ = await asyncio.wait(
+                {sleep_task, self._pending_interrupt_future},
+                return_when=asyncio.FIRST_COMPLETED
+            )
+
+            interrupted = self._pending_interrupt_future in done
+
+            if not sleep_task.done():
+                sleep_task.cancel()
+
+            if interrupted:
+                self._logger.info(
+                    "[conv=%s] Interruptible wait of %s seconds interrupted by user",
+                    self._conversation_id,
+                    duration
+                )
+
+            return interrupted
+
+        finally:
+            if sleep_task is not None and not sleep_task.done():
+                sleep_task.cancel()
+
+            await self._trigger_event(AIConversationEvent.TOOL_INTERRUPTIBLE_WAIT_ENDED)
+            self._pending_interrupt_future = None
+
+    async def interrupt_pending_wait(self) -> None:
+        """Interrupt the current pending interruptible tool wait, if any."""
+        if not self._pending_interrupt_future or self._pending_interrupt_future.done():
+            return
+
+        self._logger.info("[conv=%s] User interrupted tool wait", self._conversation_id)
+        self._pending_interrupt_future.set_result(None)
+
     async def _handle_error(self, error: AIError) -> None:
         """
         Handle errors that occur during AI response processing.
@@ -1129,6 +1209,11 @@ class AIConversation:
             loop = asyncio.get_event_loop()
             if loop.is_running():
                 loop.create_task(self.reject_pending_tool_calls("Operation cancelled by user"))
+
+        # Cancel any pending interruptible tool wait if present
+        if self._pending_interrupt_future and not self._pending_interrupt_future.done():
+            self._logger.debug("Cancelling pending interruptible tool wait due to task cancellation")
+            self._pending_interrupt_future.set_result(None)
 
         for task in self._current_tasks:
             if not task.done():

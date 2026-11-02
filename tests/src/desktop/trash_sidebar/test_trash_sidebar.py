@@ -13,7 +13,6 @@ from desktop.message_box import MessageBox, MessageBoxButton
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.style_manager import StyleManager
 from desktop.trash_sidebar.trash_sidebar import TrashSidebar, TrashTreeDelegate, _TRASH_NAME_ROLE
-from desktop.user.user_manager import UserManager
 
 
 def _write_conv_file(path: str) -> None:
@@ -23,28 +22,15 @@ def _write_conv_file(path: str) -> None:
 
 
 @pytest.fixture
-def sidebar_env(qapp, tmp_path, monkeypatch):
-    """Open a real mindspace in a sandboxed HOME and return (mindspace_manager, mindspace_path, conv_dir)."""
-    home_dir = tmp_path / "home"
-    home_dir.mkdir()
-    monkeypatch.setenv("HOME", str(home_dir))
-
-    MindspaceManager._instance = None  # pylint: disable=protected-access
-    UserManager._instance = None  # pylint: disable=protected-access
-
-    mgr = MindspaceManager()
-    mgr._home_config = str(tmp_path / "mindspace.json")  # pylint: disable=protected-access
-    ms_path = str(tmp_path / "mindspace")
-    mgr.create_mindspace(ms_path, [])
-    mgr.open_mindspace(ms_path)
-    conv_dir = mgr.mindspace().conversations_dir()
-
+def sidebar_env(mindspace_sandbox, monkeypatch):
+    """The sandboxed mindspace, as (mindspace_manager, mindspace_path, conv_dir)."""
     monkeypatch.setattr(MessageBox, "show_message", lambda *_a, **_k: MessageBoxButton.YES)
 
-    yield mgr, ms_path, conv_dir
-
-    MindspaceManager._instance = None  # pylint: disable=protected-access
-    UserManager._instance = None  # pylint: disable=protected-access
+    yield (
+        mindspace_sandbox.manager,
+        mindspace_sandbox.path,
+        mindspace_sandbox.conversations_dir,
+    )
 
 
 @pytest.fixture

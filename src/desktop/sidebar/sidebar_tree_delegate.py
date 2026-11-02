@@ -138,11 +138,19 @@ class SidebarTreeDelegate(QStyledItemDelegate):
         self,
         editor: QWidget,
         option: QStyleOptionViewItem,
-        _index: QModelIndex | QPersistentModelIndex
+        index: QModelIndex | QPersistentModelIndex
     ) -> None:
-        """Update the editor geometry."""
+        """
+        Update the editor geometry.
+
+        Qt supplies an option whose index is invalid and whose text and icon are
+        empty, so the text-only rectangle has to be worked out from a fresh option
+        built from the index being edited.  Using the supplied option as it stands
+        makes SE_ItemViewItemText fall back to the whole row, which leaves the
+        editor covering the item's icon.
+        """
         if isinstance(editor, SidebarTreeInlineEditor):
-            text_rect = self._calculate_text_rect_from_option(option)
+            text_rect = self._calculate_text_rect(option, index)
             editor.setGeometry(text_rect)
 
     def setModelData(self, editor: QWidget, _model: QAbstractItemModel, index: QModelIndex | QPersistentModelIndex) -> None:
@@ -153,12 +161,32 @@ class SidebarTreeDelegate(QStyledItemDelegate):
                 model_index = self._to_model_index(index)
                 self.edit_finished.emit(model_index, new_name)
 
-    def _calculate_text_rect_from_option(self, option: QStyleOptionViewItem) -> QRect:
-        """Calculate the rectangle that contains only the text portion of the item."""
-        self.initStyleOption(option, option.index)
+    def _calculate_text_rect(
+        self,
+        option: QStyleOptionViewItem,
+        index: QModelIndex | QPersistentModelIndex
+    ) -> QRect:
+        """
+        Calculate the rectangle that contains only the text portion of the item.
+
+        Args:
+            option: The style option Qt supplied, whose rect and widget are the ones
+                the view is using for this item.
+            index: The index of the item being edited.
+
+        Returns:
+            The rectangle the inline editor should occupy.
+        """
+        model_index = self._to_model_index(index)
+        if not model_index.isValid() or option.widget is None:
+            return QRect(option.rect)
+
+        text_option = QStyleOptionViewItem(option)
+        self.initStyleOption(text_option, model_index)
+
         text_rect = option.widget.style().subElementRect(
             QStyle.SubElement.SE_ItemViewItemText,
-            option,
+            text_option,
             option.widget
         )
 

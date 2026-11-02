@@ -501,6 +501,18 @@ class TabBase(QFrame):
     def show_goto_line(self) -> None:
         """Show the go-to-line dialog."""
 
+    def goto_line_clamped(self, line: int) -> None:  # pylint: disable=unused-argument
+        """
+        Move to a line, clamping it to the tab's content, where supported.
+
+        For callers that have a line number but no way to know how long the content
+        is, such as a line typed into the Quick Switcher.  Tabs that cannot go to a
+        line ignore this, as they do show_goto_line.
+
+        Args:
+            line: The 1-based line asked for, which may be out of range.
+        """
+
     def apply_find_search(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> None:  # pylint: disable=unused-argument
         """Apply a programmatic find/highlight request when supported."""
         return None

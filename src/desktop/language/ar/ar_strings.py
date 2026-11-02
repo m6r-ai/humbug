@@ -56,6 +56,13 @@ def get_arabic_strings() -> LanguageStrings:
         close_tabs_to_right="إغلاق التبويبات إلى اليمين",
         close_other_tabs="إغلاق التبويبات الأخرى",
         close_column="إغلاق العمود",
+        move_tab_to_left_column="نقل علامة التبويب إلى العمود الأيسر",
+        move_tab_to_right_column="نقل علامة التبويب إلى العمود الأيمن",
+        move_tab_to_new_column="نقل علامة التبويب إلى عمود جديد",
+        move_tab_left="نقل علامة التبويب لليسار",
+        move_tab_right="نقل علامة التبويب لليمين",
+        move_tab_to_start="نقل علامة التبويب إلى البداية",
+        move_tab_to_end="نقل علامة التبويب إلى النهاية",
 
         # Edit menu items
         submit_message="إرسال الرسالة",
@@ -71,6 +78,8 @@ def get_arabic_strings() -> LanguageStrings:
         mindspace_search="بحث شامل",
         quick_switcher="التبديل السريع",
         quick_switcher_placeholder="ابحث في الملفات والمحادثات والعلامات المفتوحة...",
+        quick_switcher_prefix_hint="> الأوامر   @ المحادثات   :السطر   ملف:سطر",
+        quick_switcher_goto_line="الانتقال إلى السطر {0}",
         quick_switcher_limited="يقتصر على أول {0} ملف",
         mindspace_settings="إعدادات المساحة الذهنية",
         conversation_settings="إعدادات المحادثة",
@@ -185,8 +194,16 @@ def get_arabic_strings() -> LanguageStrings:
         external_file_allowlist="المسارات المسموح بها (أنماط glob، واحد لكل سطر):",
         external_file_denylist="المسارات المرفوضة دائماً (أنماط glob، واحد لكل سطر):",
 
+        # User Settings dialog - external HTTP access
+        settings_network_access="الوصول إلى الشبكة",
+        external_http_access="الوصول إلى الشبكة",
+        allow_external_http_access="السماح للذكاء الاصطناعي بجلب عناوين URL المسموح بها دون سؤال",
+        external_http_allowlist="عناوين URL المعتمدة تلقائياً (واحد لكل سطر، مثل api.example.com أو https://api.example.com:8443):",
+        external_http_denylist="عناوين URL المرفوضة دائماً (واحد لكل سطر، مثل localhost أو 10.0.0.0/8):",
+
         # Mindspace tree
         mindspace_label_none="لا توجد مساحة ذهنية نشطة",
+        window_title="Humbug: {}",
         mindspace_name_tooltip="انقر لتبديل المساحة الذهنية",
         mindspace_files="ملفات",
         mindspace_vcs="الملفات المتغيرة",
@@ -316,6 +333,7 @@ def get_arabic_strings() -> LanguageStrings:
         error_rename_failed="تعذر إعادة تسمية المحادثة: {0}",
         unsaved_changes="هل تريد حفظ التغييرات في {0}؟",
         mindspace_exists_error="المساحة الذهنية موجودة بالفعل في المجلد المحدد.",
+        mindspace_already_open_error="هذه المساحة الذهنية مفتوحة بالفعل في نافذة أخرى.",
         close_button="إغلاق",
         confirm_close="تأكيد الإغلاق",
         could_not_open="لا يمكن فتح {}: {}",
@@ -332,6 +350,25 @@ def get_arabic_strings() -> LanguageStrings:
         error_saving_user_settings="فشل في حفظ إعدادات المستخدم: {}",
         cancel_conversation="هل أنت متأكد من أنك تريد إيقاف استجابة الذكاء الاصطناعي الحالية؟ سيؤدي هذا "
             "إلى إنهاء المحادثة الجارية وقد يؤدي إلى استجابات غير مكتملة.",
+
+        initialize_mindspace_title="تهيئة المساحة الذهنية",
+        initialize_mindspace_message=(
+            "لم يتم العثور على مساحة ذهنية في:\n\n{0}\n\n"
+            "هل تريد تهيئة هذا المجلد كمساحة ذهنية؟"
+        ),
+
+        open_in_new_window="فتح مساحة ذهنية في نافذة جديدة...",
+        open_in_new_window_title="فتح في نافذة جديدة",
+        open_in_new_window_already_open=(
+            "هذه المساحة الذهنية مفتوحة بالفعل في نافذة Humbug أخرى (العملية {}).\n\n"
+            "لا يمكن لنافذتين مشاركة مساحة ذهنية واحدة، لذا انتقل إلى النافذة الموجودة بدلاً من ذلك."
+        ),
+        open_in_new_window_already_here="هذه المساحة الذهنية مفتوحة بالفعل في هذه النافذة.",
+        open_in_new_window_failed="تعذّر بدء نافذة Humbug جديدة:\n\n{}",
+        open_in_new_window_choose_folder="اختيار مجلد...",
+        mindspace_open_elsewhere_tooltip=(
+            "{} مفتوحة بالفعل في نافذة Humbug أخرى، لذا لا يمكن فتحها هنا"
+        ),
 
         # Status bar
         editor_status="سطر {line}، عمود {column} | {encoding} | {line_ending} | {type}",
@@ -350,6 +387,7 @@ def get_arabic_strings() -> LanguageStrings:
         terminal_status="طرفية: {name} ({columns}x{rows})",
         system_status="نظام",
         log_status="سجل",
+        log_status_entries="السجل: المدخلات {first:,}-{last:,} من {total:,}",
         preview_status="معاينة: {path}",
         diff_status="فرق: {path} | {rows} صفوف متغيرة",
 
@@ -469,6 +507,8 @@ def get_arabic_strings() -> LanguageStrings:
         approve_tool_call="موافقة",
         i_am_unsure_about_tool_call="لست متأكداً من هذا",
         reject_tool_call="رفض",
+        interruptible_wait_message="جارٍ الانتظار {duration} ثانية \u2014 تبقّى {remaining}...",
+        finish_waiting_now="إنهاء الانتظار الآن",
         retry_error="إعادة المحاولة",
 
         # Update checker

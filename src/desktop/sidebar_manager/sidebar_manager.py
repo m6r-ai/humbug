@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
+from desktop.user.instance_registry import InstanceRegistry
 from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.style_manager import StyleManager
 from desktop.url_opener import open_url
@@ -61,6 +62,7 @@ class SidebarManager(QWidget):
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
         self._mindspace_manager = MindspaceManager()
+        self._instance_registry = InstanceRegistry()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
         self._active_panel_id: str = ""
@@ -436,6 +438,8 @@ class SidebarManager(QWidget):
         Args:
             path: Absolute path to the new mindspace root, or empty string to clear.
         """
+        self._update_window_title(path)
+
         if not path:
             self._header_widget.setText(self._language_manager.strings().mindspace_label_none)
 
@@ -445,8 +449,28 @@ class SidebarManager(QWidget):
         for panel in self._panel_widgets.values():
             panel.set_mindspace(path)
 
+    def _update_window_title(self, path: str) -> None:
+        """
+        Show the open mindspace in the window title.
+
+        Args:
+            path: Absolute path to the new mindspace root, or empty string for none.
+        """
+        if not path:
+            self.window().setWindowTitle("Humbug")
+
+        else:
+            name = os.path.basename(path.rstrip("\\/")).upper()
+            strings = self._language_manager.strings()
+            self.window().setWindowTitle(strings.window_title.format(name))
+
     def _show_mindspace_menu(self) -> None:
-        """Show a popup menu for switching between recent mindspaces."""
+        """
+        Show a popup menu for switching between recent mindspaces.
+
+        A mindspace that another instance has open is shown but disabled, so that
+        switching to it cannot give two windows the same mindspace.
+        """
         strings = self._language_manager.strings()
         menu = QMenu(self._header_widget)
         menu.setObjectName("_mindspace_menu")
@@ -458,9 +482,16 @@ class SidebarManager(QWidget):
                 name = os.path.basename(path.rstrip("\\/"))
                 action = QAction(name, menu)
                 action.setToolTip(path)
-                action.triggered.connect(
-                    lambda checked=False, p=path: self.open_mindspace_path_requested.emit(p)
-                )
+
+                if self._instance_registry.is_open_elsewhere(path):
+                    action.setEnabled(False)
+                    action.setToolTip(strings.mindspace_open_elsewhere_tooltip.format(path))
+
+                else:
+                    action.triggered.connect(
+                        lambda checked=False, p=path: self.open_mindspace_path_requested.emit(p)
+                    )
+
                 menu.addAction(action)
 
             menu.addSeparator()

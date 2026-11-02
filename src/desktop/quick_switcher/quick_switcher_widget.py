@@ -12,7 +12,7 @@ the activated signal.
 from dataclasses import dataclass
 from typing import cast
 
-from PySide6.QtCore import QEvent, QModelIndex, QObject, QPersistentModelIndex, QSize, Qt, Signal
+from PySide6.QtCore import QEvent, QFileInfo, QModelIndex, QObject, QPersistentModelIndex, QSize, Qt, Signal
 from PySide6.QtGui import QIcon, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QResizeEvent
 from PySide6.QtWidgets import (
     QLabel, QLineEdit, QListWidget, QListWidgetItem, QStyle, QStyledItemDelegate, QStyleOptionViewItem, QVBoxLayout,
@@ -21,11 +21,15 @@ from PySide6.QtWidgets import (
 
 from desktop.color_role import ColorRole
 from desktop.quick_switcher.quick_switcher_match import fuzzy_match_score
+from desktop.sidebar.sidebar_tree_icon_provider import SidebarTreeIconProvider
 from desktop.style_manager import StyleManager
 
 _MAX_VISIBLE_RESULTS = 50
 _TITLE_MATCH_BONUS = 1000
 _SUBTITLE_ROLE = Qt.ItemDataRole.UserRole + 1
+# Unscaled: scale_icon applies the zoom factor itself, so passing an already
+# scaled size (such as tab_icon_size()) would apply the zoom twice.
+_ICON_BASE_SIZE = 16
 
 
 @dataclass(slots=True)
@@ -33,11 +37,14 @@ class QuickSwitcherEntry:
     """One candidate the Quick Switcher can filter to and activate."""
 
     entry_id: str
-    kind: str  # "file", "conversation", or "tab"
+    # Used only to group entries for the @ filter; entry_id is what activation
+    # dispatches on.  One of "file", "conversation", "tab", "command", "goto", "file-line".
+    kind: str
     title: str
     # The mindspace-relative directory the entry lives in, or "." at the root; shown muted beside the title.
     subtitle: str
     icon_name: str
+    file_path: str = ""
 
 
 class _QuickSwitcherItemDelegate(QStyledItemDelegate):
@@ -112,7 +119,11 @@ class QuickSwitcherWidget(QWidget):
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)
         self._style_manager = StyleManager()
+        self._file_icon_provider = SidebarTreeIconProvider()
         self._entries: list[QuickSwitcherEntry] = []
+        self._command_entries: list[QuickSwitcherEntry] = []
+        self._goto_line_template = ""
+        self._goto_line_available = False
 
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -165,6 +176,22 @@ class QuickSwitcherWidget(QWidget):
         self._input.clear()
         self._input.blockSignals(False)
         self._populate([(entry, 0) for entry in entries])
+
+    def set_command_entries(self, entries: list[QuickSwitcherEntry]) -> None:
+        """Set the commands shown when the filter begins with ``>``."""
+        self._command_entries = entries
+
+    def set_goto_line(self, label_template: str, available: bool) -> None:
+        """
+        Configure the ``:<line>`` result.
+
+        Args:
+            label_template: Localized label with a ``{0}`` placeholder for the line.
+            available: Whether jumping to a line makes sense for the current tab.
+                When False no result is offered, rather than one that does nothing.
+        """
+        self._goto_line_template = label_template
+        self._goto_line_available = available
 
     def focus_input(self) -> None:
         """Give keyboard focus to the filter box, selecting any prior text."""
@@ -221,17 +248,97 @@ class QuickSwitcherWidget(QWidget):
 
     def _on_style_changed(self) -> None:
         """Restyle and relayout when the theme or zoom factor changes."""
+        # The file icon provider caches icons tinted for the current theme and sized
+        # for the current zoom, so it has to be told to drop them.  This overlay is
+        # built once and reused, so a stale cache would outlive every theme change.
+        self._file_icon_provider.update_icons()
         self.refresh_style()
+
+        # Re-filtering rebuilds the rows so they are painted with the new icons, but
+        # it also resets the highlight to the first result.  The user may be part way
+        # through choosing one, so put their selection back.
+        selected = self.selected_entry_id()
+        self._refilter(self._input.text())
+        self._select_entry(selected)
         self._layout_panel()
+
+    def _select_entry(self, entry_id: str | None) -> None:
+        """
+        Highlight the row carrying an entry ID, if it is still listed.
+
+        Args:
+            entry_id: The entry to highlight, or None to leave the highlight alone.
+        """
+        if entry_id is None:
+            return
+
+        for row in range(self._list.count()):
+            if self._list.item(row).data(Qt.ItemDataRole.UserRole) == entry_id:
+                self._list.setCurrentRow(row)
+                return
 
     def _refilter(self, query: str) -> None:
         """Re-rank and redisplay entries against the current filter text."""
+        if query.startswith(">"):
+            self._filter_entries(self._command_entries, query[1:].lstrip())
+            return
+
+        if query.startswith("@"):
+            # A conversation that is already open is listed as its tab, so matching
+            # on kind alone would hide the conversation the user is working in.
+            conversations = [
+                entry for entry in self._entries
+                if entry.kind == "conversation"
+                or (entry.kind == "tab" and entry.icon_name == "conversation")
+            ]
+            self._filter_entries(conversations, query[1:].lstrip())
+            return
+
+        if query.startswith(":") and query[1:].isdigit():
+            if not self._goto_line_available:
+                self._populate([])
+                return
+
+            line = int(query[1:])
+            self._populate([(
+                QuickSwitcherEntry(
+                    entry_id=f"goto:{line}", kind="goto",
+                    title=self._goto_line_template.format(line),
+                    subtitle="", icon_name="editor",
+                ), 0
+            )])
+            return
+
+        path_query, separator, line_text = query.rpartition(":")
+        if separator and path_query and line_text.isdigit():
+            # Only entries backed by a file can take a line number.  A conversation,
+            # terminal or log tab has no path, and offering to jump to a line in one
+            # would produce a result that does nothing.
+            matches = [entry for entry in self._entries if entry.file_path]
+            scored: list[tuple[QuickSwitcherEntry, int]] = []
+            for entry in matches:
+                score = fuzzy_match_score(path_query, f"{entry.subtitle}/{entry.title}")
+                if score is not None:
+                    scored.append((QuickSwitcherEntry(
+                        entry_id=f"file-line:{line_text}:{entry.file_path}", kind="file-line",
+                        title=entry.title, subtitle=f"{entry.subtitle}:{line_text}", icon_name=entry.icon_name,
+                        file_path=entry.file_path,
+                    ), score))
+
+            scored.sort(key=lambda pair: pair[1], reverse=True)
+            self._populate(scored)
+            return
+
+        self._filter_entries(self._entries, query)
+
+    def _filter_entries(self, entries: list[QuickSwitcherEntry], query: str) -> None:
+        """Rank a supplied entry collection by a plain fuzzy query."""
         if not query:
-            self._populate([(entry, 0) for entry in self._entries])
+            self._populate([(entry, 0) for entry in entries])
             return
 
         scored: list[tuple[QuickSwitcherEntry, int]] = []
-        for entry in self._entries:
+        for entry in entries:
             title_score = fuzzy_match_score(query, entry.title)
             if title_score is not None:
                 scored.append((entry, title_score + _TITLE_MATCH_BONUS))
@@ -247,9 +354,14 @@ class QuickSwitcherWidget(QWidget):
     def _populate(self, scored_entries: list[tuple[QuickSwitcherEntry, int]]) -> None:
         """Rebuild the list widget from a ranked list of (entry, score) pairs."""
         self._list.clear()
-        icon_size = self._style_manager.tab_icon_size()
+        icon_size = _ICON_BASE_SIZE
         for entry, _score in scored_entries[:_MAX_VISIBLE_RESULTS]:
-            icon = QIcon(self._style_manager.scale_icon(entry.icon_name, icon_size))
+            if entry.file_path:
+                icon = self._file_icon_provider.icon(QFileInfo(entry.file_path))
+
+            else:
+                icon = QIcon(self._style_manager.scale_icon_uniform(entry.icon_name, icon_size))
+
             item = QListWidgetItem(icon, entry.title)
             item.setData(Qt.ItemDataRole.UserRole, entry.entry_id)
             item.setData(_SUBTITLE_ROLE, entry.subtitle)

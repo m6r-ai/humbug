@@ -238,6 +238,7 @@ class TerminalAITool(AITool):
     async def _send_keystrokes(
         self,
         tool_call: AIToolCall,
+        requester_ref: Any,
         arguments: dict[str, Any],
         raw_input: str,
         request_authorization: AIToolAuthorizationCallback
@@ -247,6 +248,7 @@ class TerminalAITool(AITool):
 
         Args:
             tool_call: The tool call being executed
+            requester_ref: Reference to the requesting conversation
             arguments: Tool call arguments containing tab_id
             raw_input: The raw input string as provided by the AI, for logging
                 and authorization denial messages
@@ -274,7 +276,8 @@ class TerminalAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI sent keystrokes to terminal: '{raw_input}'\ntab ID: {context_id}"
+                f"AI sent keystrokes to terminal: '{raw_input}'\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             return AIToolResult(
@@ -289,31 +292,35 @@ class TerminalAITool(AITool):
     async def _send_command(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Send a command to a terminal, submitting it for execution."""
         arguments = tool_call.arguments
         command = self._get_required_str_value("command", arguments)
 
-        return await self._send_keystrokes(tool_call, arguments, command + "\\u000d", request_authorization)
+        return await self._send_keystrokes(
+            tool_call, requester_ref, arguments, command + "\\u000d", request_authorization
+        )
 
     async def _write(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Write keystrokes to a terminal."""
         arguments = tool_call.arguments
         raw_keystrokes = self._get_required_str_value("keystrokes", arguments)
 
-        return await self._send_keystrokes(tool_call, arguments, raw_keystrokes, request_authorization)
+        return await self._send_keystrokes(
+            tool_call, requester_ref, arguments, raw_keystrokes, request_authorization
+        )
 
     async def _read(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Read terminal buffer content."""
@@ -327,7 +334,8 @@ class TerminalAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI read terminal buffer\ntab ID: {context_id}"
+                f"AI read terminal buffer\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             return AIToolResult(
@@ -343,7 +351,7 @@ class TerminalAITool(AITool):
     async def _get_status(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get terminal status information."""
@@ -356,7 +364,8 @@ class TerminalAITool(AITool):
 
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI requested terminal status\ntab ID: {context_id}"
+                f"AI requested terminal status\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
             )
 
             status_dict = {
