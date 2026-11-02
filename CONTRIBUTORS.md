@@ -34,6 +34,8 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Added the product tour feature.
 * Added the quick switcher.
 * Designed the concept for mult-window views.
+* Improved mindspace setup.
+* Many bug fixes and small improvements!
 
 Cameron McFarlane [Camium02](https://github.com/Camium02)
 
