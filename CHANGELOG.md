@@ -17,9 +17,11 @@ New features:
   and Ctrl+Alt+Right move the current tab between columns, creating an adjacent column at an edge when the source column
   retains another tab.  Ctrl+Shift+PgUp and Ctrl+Shift+PgDown reorder the current tab within its column.
 - Added "Reopen Closed Tab" to the File menu, on Ctrl+Shift+K, and to the tab context menu.  It reopens the tabs you
-  closed, most recent first, and works when no tabs are left open.  A reopened terminal is given the command it was
-  started with (its scrollback and working directory are not restored), and a tab that has since been reopened by other
-  means is focused rather than duplicated.  Tabs the AI closed are reopened too, and preview tabs are not recorded.
+  closed, most recent first, in the column and position it was closed from, with the cursor, scroll position and other
+  view state it had, and works when no tabs are left open.  A reopened terminal is given the command it was started
+  with and its scrollback, terminal modes and working directory; only the running process itself is not restored.  A
+  tab that has since been reopened by other means is focused rather than duplicated.  Tabs the AI closed are reopened
+  too, and preview tabs are not recorded.
 - Support gzip compressing HTTP client requests to the Anthropic and xAI backends.
 - Added a Network Access settings page with allowlist and denylist for the HTTP tool.  Allowlisted GET and HEAD
   requests no longer prompt, and every redirect target is checked before it is followed.

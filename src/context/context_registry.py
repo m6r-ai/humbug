@@ -29,11 +29,13 @@ class ClosedContext:
     Everything needed to reopen a context that has been closed.
 
     ContextInfo alone is not enough for every context type, so the content
-    state is captured alongside it while the context is still open.
+    state and the opaque frontend state are captured alongside it while the
+    context is still open.
     """
 
     info: ContextInfo
     content_state: dict[str, Any]
+    frontend_state: dict[str, Any]
 
 
 class ContextRegistry:
@@ -198,7 +200,11 @@ class ContextRegistry:
         if context_id in self._contexts:
             if info is not None and not info.is_ephemeral:
                 self._closed_contexts.append(
-                    ClosedContext(info=info, content_state=self._content_state_for(context_id))
+                    ClosedContext(
+                        info=info,
+                        content_state=self._content_state_for(context_id),
+                        frontend_state=self._frontend_state.get(context_id, {}),
+                    )
                 )
 
             del self._contexts[context_id]
@@ -587,9 +593,12 @@ class ContextRegistry:
         Reopen the most recently closed context and return its new ID.
 
         The context is reopened with the content state captured when it closed,
-        so a frontend can reconstruct it before OPENED is emitted.  Column and
-        position are deliberately not restored: the original column may no
-        longer exist, so the context opens wherever the caller places it.
+        so a frontend can reconstruct it before OPENED is emitted, and with the
+        view state it had, so a frontend can put the cursor and scroll position
+        back.  It is also reopened in the column and at the position it closed
+        in, so it returns where the user last saw it rather than at the end of
+        the current column.  A frontend is free to ignore those hints when the
+        column no longer exists.
 
         Returns:
             The new context ID, or None if no closed context is available.
@@ -598,12 +607,21 @@ class ContextRegistry:
             return None
 
         closed = self._closed_contexts.pop()
-        return self.open(
+        context_id = self.open(
             context_type=closed.info.context_type,
             path=closed.info.path,
             title=closed.info.title,
+            column=closed.info.column,
+            position=closed.info.position,
             initial_content_state=closed.content_state,
         )
+
+        # Frontend state is opaque to the registry, so it is stored rather than
+        # passed through open(), which has no argument for it.
+        if closed.frontend_state:
+            self._frontend_state[context_id] = closed.frontend_state
+
+        return context_id
 
     def clear(self) -> None:
         """

@@ -689,15 +689,49 @@ class TabManager(QWidget):
 
         new_tab.set_ephemeral(is_ephemeral)
         title = new_tab.tab_title_from_path() or info.title
-        column = None
-        if self._restoring and 0 <= info.column < len(self._tab_columns):
-            column = self._tab_columns[info.column]
+        column = self._column_for_opened_context(info)
 
-        self._add_tab(new_tab, title, requester_id, column=column)
+        # A context opened with an explicit position is being put back where it
+        # was, so it is inserted there rather than appended.  Session restore and
+        # reopen both supply one; a fresh open does not and lands at the end.
+        position = None
+        if column is not None and info.position is not None:
+            position = info.position
+
+        self._add_tab(new_tab, title, requester_id, column=column, position=position)
         self._apply_context_models(new_tab)
 
-        if self._restoring:
-            self._apply_frontend_state(new_tab, registry)
+        # View state is applied whenever the registry holds some, which covers
+        # both a restored session and a reopened tab.
+        self._apply_frontend_state(new_tab, registry)
+
+    def _column_for_opened_context(self, info: ContextInfo) -> ColumnWidget | None:
+        """
+        Return the column a context should open in, creating it if it is gone.
+
+        A context carries a column only when it is being put back where it was,
+        by session restore or by reopen.  If that column has since been removed,
+        because its last tab was closed, it is re-created at its original index
+        so the layout comes back as it was rather than collapsing to one column.
+
+        Args:
+            info: The context being opened.
+
+        Returns:
+            The column to open into, or None to use the normal placement rules.
+        """
+        if not 0 <= info.column < ContextRegistry.MAX_COLUMNS:
+            return None
+
+        if info.column < len(self._tab_columns):
+            return self._tab_columns[info.column]
+
+        # The column was removed, so re-create it at its old index.  Columns
+        # cannot be sparse, so this only applies to the next free index.
+        if info.column != len(self._tab_columns):
+            return None
+
+        return self._create_column(info.column)
 
     def _apply_frontend_state(self, tab: TabBase, registry: ContextRegistry) -> None:
         """
@@ -911,6 +945,7 @@ class TabManager(QWidget):
 
     def _add_tab_to_column(
         self, tab: TabBase, title: str, column: ColumnWidget, restore_focus: bool,
+        position: int | None = None,
     ) -> None:
         """
         Add a tab to a column and set up associated data.
@@ -922,6 +957,9 @@ class TabManager(QWidget):
             restore_focus: Whether focus should be restored to the widget that had
                 focus before the tab was added.  This is True for non-user-initiated
                 opens (AI or another context) so the user's focus is not stolen.
+            position: Index to insert the tab at.  When None the tab is appended to
+                the end of the column.  A position past the end is clamped, so a
+                column that has shrunk since the tab closed still accepts it.
         """
         tool_tip = tab.path()
         if tool_tip:
@@ -939,6 +977,10 @@ class TabManager(QWidget):
         self._tabs[tab_id] = tab
 
         index = column.addTab(tab, "")
+        if position is not None:
+            index = min(position, column.count() - 1)
+            column.tabBar().moveTab(column.count() - 1, index)
+
         tab_bar = column.tabBar()
         assert isinstance(tab_bar, TabBar)
         tab_bar.add_tab_data(
@@ -1678,6 +1720,7 @@ class TabManager(QWidget):
     def _add_tab(
         self, tab: TabBase, title: str, requester_id: str = "",
         column: ColumnWidget | None = None,
+        position: int | None = None,
     ) -> None:
         """
         Add a new tab to the manager.
@@ -1694,6 +1737,10 @@ class TabManager(QWidget):
             column: Explicit target column.  When provided it overrides the
                     placement heuristic, which is used when restoring a saved
                     layout.
+            position: Explicit index within the target column.  When provided
+                      the tab is inserted there instead of being appended,
+                      which is how a restored or reopened tab returns to the
+                      place it was closed in.
         """
         if len(self._tabs) == 0:
             # If no tabs exist, we need to switch to the columns widget
@@ -1702,7 +1749,9 @@ class TabManager(QWidget):
         prior_active_column = self._active_column
         target_column = column if column is not None else self._get_target_column_for_new_tab(requester_id)
 
-        self._add_tab_to_column(tab, title, target_column, restore_focus=bool(requester_id))
+        self._add_tab_to_column(
+            tab, title, target_column, restore_focus=bool(requester_id), position=position
+        )
 
         # If the new tab landed in a column that wasn't already active, restore the previously
         # active column so that opening a tab doesn't implicitly steal column activation
@@ -1738,6 +1787,13 @@ class TabManager(QWidget):
 
         if not force_close and not tab.can_close_tab():
             return
+
+        # Capture view state while the widgets still exist: close_tab() tears
+        # them down, and the registry snapshots frontend state on close.
+        if self._mindspace_manager.has_mindspace():
+            self._mindspace_manager.mindspace().contexts().set_frontend_state(
+                tab_id, tab.capture_view_state()
+            )
 
         tab.close_tab()
 

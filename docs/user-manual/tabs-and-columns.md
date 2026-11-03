@@ -80,13 +80,17 @@ When a tab closes, the tab that was most recently active in that column becomes 
 **Menu:** File → Reopen Closed Tab
 
 Humbug remembers the last 20 tabs you closed. Reopening brings back the most recently closed one, and
-invoking it again brings back the one before that. It works even when no tabs are open at all, which
-is exactly when you are most likely to want the tab you just closed back.
+invoking it again brings back the one before that. The tab returns to the column and position it was
+closed from, with your cursor and scroll position where you left them, so the layout you had is the
+layout you get back. If you had closed the last tab in a column, the column comes back too. It works
+even when no tabs are open at all, which is exactly when you are most likely to want the tab you just
+closed back.
 
-A reopened terminal is started with the command it was originally started with; its scrollback and
-working directory are not restored. Tabs the AI closed are remembered too. Preview tabs are not, since
-they are replaced by the next preview anyway. If the tab has since been reopened by other means,
-reopening focuses it rather than opening a second copy.
+A reopened terminal is started with the command it was originally started with and shows the
+scrollback it had, in the directory it was in. The running process itself is not brought back, so
+anything that was executing at the time will not still be running. Tabs the AI closed are remembered
+too. Preview tabs are not, since they are replaced by the next preview anyway. If the tab has since
+been reopened by other means, reopening focuses it rather than opening a second copy.
 
 ### Moving tabs
 

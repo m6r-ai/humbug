@@ -82,6 +82,12 @@ def _registry(tab_manager, manager, tmp_path):
     return manager.mindspace().contexts()
 
 
+def _column_tabs(tab_manager, column_index: int = 0):
+    """Return the tabs of a column in the order they are shown."""
+    column = tab_manager._tab_columns[column_index]
+    return [column.widget(index) for index in range(column.count())]
+
+
 class TestReopenClosedTab:
     def test_reopen_recreates_the_closed_tab(self, tab_manager, manager, tmp_path):
         """Reopening a closed tab creates a new tab for the same path."""
@@ -135,6 +141,41 @@ class TestReopenClosedTab:
         tab_manager.reopen_last_closed_tab()
 
         assert [tab.path() for tab in tab_manager._tabs.values()] == [transcript]
+
+    def test_reopen_returns_the_tab_to_the_position_it_closed_in(
+        self, tab_manager, manager, tmp_path
+    ):
+        """A reopened tab goes back to the place in the column it was closed from."""
+        registry = _registry(tab_manager, manager, tmp_path)
+        paths = [str(tmp_path / f"conv{index}.json") for index in range(3)]
+        ids = [
+            registry.open(context_type="conversation", path=path, title=str(index))
+            for index, path in enumerate(paths)
+        ]
+
+        tab_manager.close_tab_by_id(ids[1])
+        tab_manager.reopen_last_closed_tab()
+
+        order = [tab.path() for tab in _column_tabs(tab_manager)]
+        assert order == [paths[0], paths[1], paths[2]]
+
+    def test_reopen_returns_the_tab_to_the_column_it_closed_in(
+        self, tab_manager, manager, tmp_path
+    ):
+        """A reopened tab goes back to its own column rather than the active one."""
+        registry = _registry(tab_manager, manager, tmp_path)
+        first_path = str(tmp_path / "first.json")
+        second_path = str(tmp_path / "second.json")
+        first = registry.open(context_type="conversation", path=first_path, title="first")
+        registry.open(context_type="conversation", path=second_path, title="second", column=1)
+        tab_manager._create_column(1)
+        tab_manager._sync_registry_layout()
+
+        tab_manager.close_tab_by_id(first)
+        tab_manager.reopen_last_closed_tab()
+
+        reopened = next(tab for tab in tab_manager._tabs.values() if tab.path() == first_path)
+        assert tab_manager._tab_columns.index(tab_manager._find_column_for_tab(reopened)) == 0
 
     def test_a_close_that_is_cancelled_is_not_recorded(self, tab_manager, manager, tmp_path):
         """A tab that refuses to close stays open and is not offered for reopening."""

@@ -897,3 +897,42 @@ class TestClosedContextHistory:
         registry.restore_state(state)
 
         assert not registry.has_closed_contexts()
+
+    def test_reopening_restores_the_view_state_it_closed_with(self) -> None:
+        """A reopened context carries the opaque view state it had when it closed."""
+        registry = ContextRegistry()
+        cid = registry.open(context_type="editor", path="/tmp/a/file.py")
+        registry.set_frontend_state(cid, {"cursor": {"line": 12, "column": 4}})
+
+        registry.close(cid)
+        reopened = registry.reopen_last_closed_context()
+
+        assert reopened is not None
+        assert registry.get_frontend_state(reopened) == {"cursor": {"line": 12, "column": 4}}
+
+    def test_reopening_restores_the_column_and_position(self) -> None:
+        """A reopened context is put back in the column and position it closed in."""
+        registry = ContextRegistry()
+        first = registry.open(context_type="editor", path="/tmp/a/first.py", column=1)
+        second = registry.open(context_type="editor", path="/tmp/a/second.py", column=1)
+        third = registry.open(context_type="editor", path="/tmp/a/third.py", column=1)
+
+        registry.close(second)
+        reopened = registry.reopen_last_closed_context()
+
+        assert reopened is not None
+        info = registry.get(reopened)
+        assert info is not None
+        assert info.column == 1
+        assert info.position == 1
+
+    def test_reopening_without_view_state_restores_none(self) -> None:
+        """A context closed with no view state reopens with none, not stale state."""
+        registry = ContextRegistry()
+        cid = registry.open(context_type="editor", path="/tmp/a/file.py")
+
+        registry.close(cid)
+        reopened = registry.reopen_last_closed_context()
+
+        assert reopened is not None
+        assert registry.get_frontend_state(reopened) == {}

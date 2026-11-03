@@ -382,13 +382,38 @@ class TerminalTab(TabBase):
         """
         Capture this terminal tab's view state for session persistence.
 
-        A terminal's state is its running process and scrollback, neither of
-        which is persisted across sessions, so there is no view state to save.
+        The scrollback, cursor, terminal modes and working directory are all
+        captured, so a reopened terminal shows what it showed before.  The
+        running process is not captured: a new shell is started from the saved
+        command instead.
+
+        Returns:
+            JSON-safe dictionary of terminal state.
         """
-        return {}
+        return self._terminal_state.create_state_metadata()
 
     def restore_view_state(self, state: dict) -> None:
-        """Restore this terminal tab's view state after session restore."""
+        """
+        Restore this terminal tab's view state after session restore.
+
+        Args:
+            state: Dictionary produced by capture_view_state.
+        """
+        if not state:
+            return
+
+        # The process was created in the mindspace root.  If the terminal was in
+        # a different directory when it closed, replace the process so the new
+        # shell starts there, which is closer to where the user left it than
+        # starting in the root and asking them to cd again.
+        directory = state.get("current_directory")
+        if directory and os.path.isdir(directory) and directory != self._mindspace_manager.mindspace_path():
+            self._terminal_process = create_terminal(directory)
+
+        self._terminal_state.restore_from_metadata(state)
+        # The widget paints from the shared state, so restoring the state is
+        # enough; this only repaints and resizes the scrollbar to match.
+        self._terminal_widget.refresh_from_state()
 
     def capture_migration_state(self) -> dict:
         """

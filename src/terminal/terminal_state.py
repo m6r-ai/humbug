@@ -1,11 +1,11 @@
 """Terminal state management."""
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 import logging
 from typing import Any
 
-from terminal.terminal_buffer import TerminalBuffer, TerminalCharacterAttributes
+from terminal.terminal_buffer import BufferState, TerminalBuffer, TerminalCharacterAttributes
 
 
 @dataclass
@@ -709,17 +709,20 @@ class TerminalState:
         """
         Create metadata dictionary capturing current state.
 
+        The result is JSON-safe so it can be persisted in a saved session, not
+        just handed to a replacement widget in the same process.
+
         Returns:
             Dictionary containing terminal state metadata
         """
         metadata: dict[str, Any] = {}
 
         # Get state from main buffer
-        metadata['main_buffer'] = self._main_buffer.get_state()
+        metadata['main_buffer'] = asdict(self._main_buffer.get_state())
 
         # Get alternate buffer state if it exists
         if self._alternate_buffer:
-            metadata['alternate_buffer'] = self._alternate_buffer.get_state()
+            metadata['alternate_buffer'] = asdict(self._alternate_buffer.get_state())
 
         # Additional terminal state
         metadata['terminal_title'] = self._terminal_title
@@ -741,22 +744,24 @@ class TerminalState:
         Restore terminal state from metadata.
 
         Args:
-            metadata: Dictionary containing state metadata
+            metadata: Dictionary containing state metadata, as produced by
+                create_state_metadata.
         """
         # Restore buffer states
-        self._main_buffer.restore_state(metadata['main_buffer'])
+        self._main_buffer.restore_state(self._buffer_state(metadata['main_buffer']))
         self._current_buffer = self._main_buffer
 
         if 'alternate_buffer' in metadata:
+            alternate = self._buffer_state(metadata['alternate_buffer'])
             if not self._alternate_buffer:
                 self._alternate_buffer = TerminalBuffer(
-                    metadata['alternate_buffer'].dimensions['rows'],
-                    metadata['alternate_buffer'].dimensions['cols'],
+                    alternate.dimensions['rows'],
+                    alternate.dimensions['cols'],
                     False,
                     None
                 )
 
-            self._alternate_buffer.restore_state(metadata['alternate_buffer'])
+            self._alternate_buffer.restore_state(alternate)
 
         # Restore terminal settings
         self._terminal_title = metadata['terminal_title']
@@ -771,6 +776,26 @@ class TerminalState:
 
         if 'current_directory' in metadata:
             self._current_directory = metadata['current_directory']
+
+    @staticmethod
+    def _buffer_state(state: BufferState | dict[str, Any]) -> BufferState:
+        """
+        Return a BufferState from either a BufferState or its plain-dict form.
+
+        Metadata produced in this process holds BufferState objects, while
+        metadata loaded from a saved session holds the JSON-safe dicts that
+        create_state_metadata writes.  Accepting both keeps one restore path.
+
+        Args:
+            state: A BufferState, or the dict form produced by asdict.
+
+        Returns:
+            The equivalent BufferState.
+        """
+        if isinstance(state, BufferState):
+            return state
+
+        return BufferState(**state)
 
     def current_directory(self) -> str:
         """Get current working directory."""
