@@ -27,18 +27,26 @@ class EditorContextDocument:
     and ``get_diff`` work without a frontend.
     """
 
-    def __init__(self, path: str = "") -> None:
+    def __init__(self, path: str = "", content: str = "", read_only: bool = False) -> None:
         """
         Initialise an empty document.
 
         Args:
             path: File path associated with the document, or empty string.
+            content: Initial content.  Text that is not on disk, such as an earlier
+                version of a file, arrives this way.
+            read_only: True when the content must not be written back to the path.
         """
-        self._lines: list[str] = []
+        self._lines: list[str] = content.split('\n') if content else []
         self._path: str = path
-        self._saved_content: str = ""
+        self._saved_content: str = content
+        self._read_only: bool = read_only
         self._listeners: list[Callable[[], None]] = []
         self._logger = logging.getLogger("EditorContextDocument")
+
+    def read_only(self) -> bool:
+        """Return True when the document must not be written back to its path."""
+        return self._read_only
 
     def to_plain_text(self) -> str:
         """Return the full document content as a single string."""
@@ -306,6 +314,9 @@ class EditorContextDocument:
         Raises:
             OSError: If the file cannot be written.
         """
+        if self._read_only:
+            raise OSError("the document is a read-only view and cannot be written back")
+
         content = self.to_plain_text()
 
         with open(self._path, 'w', encoding='utf-8') as f:

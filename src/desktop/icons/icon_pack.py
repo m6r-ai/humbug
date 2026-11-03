@@ -56,6 +56,8 @@ ACTIVE_INACTIVE_THEME_ICONS: Final[tuple[str, ...]] = (
     "tab-overview",
     "tab-carousel",
     "trash",
+    "changes",
+    "read-only",
 )
 
 
@@ -300,6 +302,21 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
             <path stroke="{color}" stroke-width="2" fill="none"
                 d="M4.69,7.5 L4.69,19.5 Q4.69,21 6.19,21 L17.81,21 Q19.31,21 19.31,19.5 L19.31,7.5 M1.5,7.5 L22.5,7.5 M6.75,7.5 L9,3 L15,3 L17.25,7.5"/>
             <path stroke="{color}" stroke-width="1" stroke-linecap="round" fill="none" d="M9.56,11.25 L9.56,17.25 M14.44,11.25 L14.44,17.25"/>
+        </svg>
+    ''',
+    "changes": '''
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="9" stroke="{color}" stroke-width="2" fill="none"/>
+            <path stroke="{color}" stroke-width="2" fill="none" stroke-linecap="round"
+                stroke-linejoin="round" d="M12,6.75 L12,12.75 L16.5,15.75"/>
+        </svg>
+    ''',
+    "read-only": '''
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke="{color}" stroke-width="2" fill="none" stroke-linejoin="round"
+                d="M5.25,10.5 L18.75,10.5 L18.75,20.25 L5.25,20.25 Z"/>
+            <path stroke="{color}" stroke-width="2" fill="none" stroke-linecap="round"
+                d="M8.25,10.5 L8.25,7.5 A3.75,3.75 0 0 1 15.75,7.5 L15.75,10.5"/>
         </svg>
     ''',
     "edit": '''

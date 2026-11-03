@@ -8,6 +8,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QApplication, QTabBar, QToolButton, QWidget
 
 from desktop.color_role import ColorRole
+from desktop.icons.icon_pack import active_inactive_icon_names
 from desktop.style_manager import StyleManager
 
 
@@ -422,7 +423,7 @@ class TabBar(QTabBar):
         self._resources.icon_pixmaps.clear()
         self._resources.inactive_icon_pixmaps.clear()
 
-        for icon_name in ("conversation", "editor", "log", "shell", "terminal", "preview", "diff", "usage"):
+        for icon_name in active_inactive_icon_names():
             self._resources.icon_pixmaps[icon_name] = sm.scale_icon(icon_name, 16)
             self._resources.inactive_icon_pixmaps[icon_name] = sm.scale_icon(f"inactive-{icon_name}", 16)
 

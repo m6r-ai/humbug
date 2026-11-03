@@ -26,7 +26,13 @@ from desktop.widgets import FindWidget
 class DiffTab(TabBase):
     """Tab showing a diff between the working tree and HEAD for one file."""
 
-    def __init__(self, tab_id: str, path: str, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        tab_id: str,
+        path: str,
+        parent: QWidget | None = None,
+        journal_sequence: int | None = None,
+    ) -> None:
         """
         Initialise the diff tab.
 
@@ -34,10 +40,13 @@ class DiffTab(TabBase):
             tab_id: Unique identifier for this tab.  A UUID is generated if empty.
             path: Absolute path to the file to diff.
             parent: Optional parent widget.
+            journal_sequence: When set, the old side is the version the change
+                journal recorded for that entry rather than the file at HEAD.
         """
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("DiffTab")
         self._path = path
+        self._journal_sequence = journal_sequence
 
         self._view_mode = self._read_view_mode()
 
@@ -56,7 +65,9 @@ class DiffTab(TabBase):
         self._find_widget.find_previous.connect(lambda: self._find_next(False))
         layout.addWidget(self._find_widget)
 
-        self._diff_widget = DiffWidget(path, self, mode=self._view_mode)
+        self._diff_widget = DiffWidget(
+            path, self, mode=self._view_mode, journal_sequence=journal_sequence
+        )
         self._diff_widget.status_updated.connect(self.update_status)
         self._diff_widget.open_in_editor_requested.connect(self._open_in_editor)
         self._diff_widget.open_in_preview_requested.connect(self._open_in_preview)
@@ -83,6 +94,7 @@ class DiffTab(TabBase):
             context_id=self._tab_id,
             path=self._path,
             on_scroll_to_line=self.scroll_to_line,
+            journal_sequence=self._journal_sequence,
         )
         registry.register_model(self._tab_id, diff_context)
 

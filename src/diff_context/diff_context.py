@@ -1,8 +1,22 @@
 """Diff context model."""
 
 from collections.abc import Callable
+from dataclasses import dataclass
 import os
 from typing import Any
+
+
+@dataclass(frozen=True)
+class JournalDiffTarget:
+    """
+    Marks a diff whose old side comes from the change journal.
+
+    Passed as a context's initial model when opening the tab, and retained in the
+    context so a restored tab still compares against the recorded version rather
+    than against HEAD.
+    """
+
+    sequence: int
 
 
 class DiffContext:
@@ -25,6 +39,7 @@ class DiffContext:
         context_id: str,
         path: str,
         on_scroll_to_line: Callable | None = None,
+        journal_sequence: int | None = None,
     ) -> None:
         """
         Initialise the diff context.
@@ -35,10 +50,13 @@ class DiffContext:
             on_scroll_to_line: Optional callable(line) invoked when a working-tree
                 line should be scrolled into view (e.g. when opened from the
                 editor).
+            journal_sequence: When set, the old side of the diff is the version
+                the change journal recorded for that entry.
         """
         self._context_id = context_id
         self._path = path
         self._on_scroll_to_line = on_scroll_to_line
+        self._journal_sequence = journal_sequence
 
     def context_id(self) -> str:
         """Return the stable context identifier."""
@@ -52,9 +70,14 @@ class DiffContext:
         is restored, so only the path is persisted.
 
         Returns:
-            Dictionary with a path key.
+            Dictionary with a path key, plus the journal entry the diff compares
+            against when it compares against one.
         """
-        return {"path": self._path}
+        state: dict[str, Any] = {"path": self._path}
+        if self._journal_sequence is not None:
+            state["journal_sequence"] = self._journal_sequence
+
+        return state
 
     def get_info(self) -> dict[str, Any]:
         """

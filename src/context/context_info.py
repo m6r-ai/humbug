@@ -15,5 +15,6 @@ class ContextInfo:
     title: str
     is_modified: bool
     is_ephemeral: bool = False
+    read_only: bool = False
     column: int = 0
     position: int = 0

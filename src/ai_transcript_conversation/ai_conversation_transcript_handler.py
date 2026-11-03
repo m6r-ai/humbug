@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import time
+import uuid
 from typing import Any
 
 from ai import AIConversationHistory, AIConversationParent
@@ -112,6 +113,7 @@ class AIConversationTranscriptHandler:
         metadata = {
             "metadata": {
                 "version": "0.1",
+                "id": str(uuid.uuid4()),
                 "parent": None
             },
             "conversation": []
@@ -218,6 +220,8 @@ class AIConversationTranscriptHandler:
                 raise AIConversationTranscriptFormatError(f"Invalid message format: {str(e)}") from e
 
         parent = self._parse_parent(data["metadata"].get("parent"))
+        conversation_uuid = self._resolve_conversation_uuid(data["metadata"])
+        forked_from = self._parse_forked_from(data["metadata"].get("forked_from"))
 
         # Load attachments — absent in old transcripts, treat as empty
         attachments = {}
@@ -245,7 +249,90 @@ class AIConversationTranscriptHandler:
             version=data["metadata"]["version"],
             parent=parent,
             attachments=attachments,
+            conversation_uuid=conversation_uuid,
+            forked_from=forked_from,
         )
+
+    def _resolve_conversation_uuid(self, metadata: dict) -> str:
+        """
+        Return the transcript's identifier, assigning one when it has none.
+
+        A transcript written before identifiers existed is given one the first
+        time it is opened, and the assignment is written back immediately so that
+        activity attributed to the conversation from then on refers to a value
+        the file actually carries.
+
+        Args:
+            metadata: The transcript's metadata, updated in place.
+
+        Returns:
+            The conversation's identifier.
+        """
+        conversation_uuid = metadata.get("id")
+        if isinstance(conversation_uuid, str) and conversation_uuid:
+            return conversation_uuid
+
+        conversation_uuid = str(uuid.uuid4())
+        metadata["id"] = conversation_uuid
+        self._logger.info("Assigned identifier %s to transcript '%s'", conversation_uuid, self._filename)
+        return conversation_uuid
+
+    @staticmethod
+    def _parse_forked_from(raw_forked_from: Any) -> dict | None:
+        """
+        Parse the provenance recorded when a transcript was forked.
+
+        Args:
+            raw_forked_from: Raw provenance value from transcript metadata.
+
+        Returns:
+            Provenance describing the conversation the transcript came from, or
+            None when it was not forked or the record is unreadable.
+        """
+        if not isinstance(raw_forked_from, dict):
+            return None
+
+        source_id = raw_forked_from.get("id")
+        if not isinstance(source_id, str) or not source_id:
+            return None
+
+        message_id = raw_forked_from.get("message_id")
+        return {
+            "id": source_id,
+            "message_id": message_id if isinstance(message_id, str) else "",
+        }
+
+    def duplicate(self, destination_path: str) -> None:
+        """
+        Copy this transcript to a new one with a new identity and recorded provenance.
+
+        A duplicate is a new line of work, so it must not inherit the source's
+        identifier: two transcripts claiming one identity would make every later
+        attribution ambiguous.  The source becomes the fork's recorded origin.
+
+        Args:
+            destination_path: Path the duplicate is written to.
+
+        Raises:
+            AIConversationTranscriptError: The source could not be read or the
+                duplicate could not be written.
+        """
+        history = self.read()
+        messages = history.get_messages()
+        forked_from = {
+            "id": history.conversation_uuid(),
+            "message_id": messages[-1].id if messages else "",
+        }
+
+        duplicate = AIConversationHistory(
+            messages=messages,
+            version=history.version(),
+            parent=None,
+            attachments=history.attachments(),
+            conversation_uuid=str(uuid.uuid4()),
+            forked_from=forked_from,
+        )
+        AIConversationTranscriptHandler(destination_path).write(duplicate)
 
     def write(self, history: AIConversationHistory) -> None:
         """
@@ -275,7 +362,9 @@ class AIConversationTranscriptHandler:
             data = {
                 "metadata": {
                     "version": history.version(),
-                    "parent": parent_data
+                    "id": history.conversation_uuid(),
+                    "parent": parent_data,
+                    "forked_from": history.forked_from()
                 },
                 "attachments": history.attachments(),
                 "conversation": transcript_messages

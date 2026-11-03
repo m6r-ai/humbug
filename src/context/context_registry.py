@@ -100,6 +100,7 @@ class ContextRegistry:
         requester_id: str = "",
         column: int = 0,
         position: int | None = None,
+        read_only: bool = False,
     ) -> str:
         """
         Register a new open context and emit OPENED.
@@ -125,6 +126,8 @@ class ContextRegistry:
             column:        Column index (0-based) for layout.  Defaults to 0.
             position:      Index within the column.  When None the context is
                            appended to the end of the column.
+            read_only:     True when the context shows state that must not be
+                           written back, such as an earlier version of a file.
 
         Returns:
             The context_id for the newly registered context.
@@ -142,6 +145,7 @@ class ContextRegistry:
             title=title,
             is_modified=False,
             is_ephemeral=is_ephemeral,
+            read_only=read_only,
             column=column,
             position=position,
         )
@@ -206,6 +210,7 @@ class ContextRegistry:
             title=updates.get("title", info.title),
             is_modified=updates.get("is_modified", info.is_modified),
             is_ephemeral=updates.get("is_ephemeral", info.is_ephemeral),
+            read_only=updates.get("read_only", info.read_only),
             column=updates.get("column", info.column),
             position=updates.get("position", info.position),
         )
@@ -256,6 +261,7 @@ class ContextRegistry:
             title=info.title,
             is_modified=info.is_modified,
             is_ephemeral=info.is_ephemeral,
+            read_only=info.read_only,
             column=column,
             position=self._next_position(column),
         )
@@ -564,6 +570,7 @@ class ContextRegistry:
                     "path": info.path,
                     "title": info.title,
                     "is_ephemeral": info.is_ephemeral,
+                    "read_only": info.read_only,
                     "column": info.column,
                     "position": info.position,
                 },
@@ -649,6 +656,7 @@ class ContextRegistry:
                 path=layout.get("path", ""),
                 title=layout.get("title", ""),
                 is_ephemeral=layout.get("is_ephemeral", False),
+                read_only=layout.get("read_only", False),
                 context_id=context_id,
                 column=layout.get("column", 0),
                 position=layout.get("position", 0),

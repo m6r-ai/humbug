@@ -23,13 +23,17 @@ class AIConversationHistory:
         messages: list[AIMessage] | None = None,
         version: str = "0.1",
         parent: AIConversationParent | None = None,
-        attachments: dict[str, dict] | None = None
+        attachments: dict[str, dict] | None = None,
+        conversation_uuid: str = "",
+        forked_from: dict | None = None,
     ) -> None:
         """Initialize conversation history with optional metadata."""
         self._messages: list[AIMessage] = messages if messages is not None else []
         self._version = version
         self._parent = parent
         self._attachments: dict[str, dict] = attachments if attachments is not None else {}
+        self._conversation_uuid = conversation_uuid
+        self._forked_from = forked_from
         self._last_response_tokens = {"input": 0, "output": 0, "input_total": 0, "output_total": 0}
         self._cache_totals = {"cache_write_total": 0, "cache_read_total": 0}
         self._on_usage_changed: Callable[[], None] | None = None
@@ -42,6 +46,36 @@ class AIConversationHistory:
     def parent(self) -> AIConversationParent | None:
         """Get the parent delegation reference."""
         return self._parent
+
+    def conversation_uuid(self) -> str:
+        """
+        Get the identifier that names this conversation independently of its file.
+
+        The value is stored in the transcript and survives renaming and moving,
+        so it is what activity should be attributed to.  It is empty when the
+        transcript has not supplied one.
+        """
+        return self._conversation_uuid
+
+    def set_conversation_uuid(self, conversation_uuid: str) -> None:
+        """
+        Set the identifier that names this conversation independently of its file.
+
+        Args:
+            conversation_uuid: The identifier read from, or assigned to, the
+                transcript.
+        """
+        self._conversation_uuid = conversation_uuid
+
+    def forked_from(self) -> dict | None:
+        """
+        Get the conversation this one was forked from, if it was.
+
+        Provenance is recorded so that a fork's origin is a fact rather than an
+        inference from shared message history.  It grants no rights over the
+        conversation it names; delegation is the relationship that does.
+        """
+        return self._forked_from
 
     def add_attachment(self, content: str, filename: str, attachment_type: str) -> str:
         """

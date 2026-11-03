@@ -1,5 +1,7 @@
 from context.context_info import ContextInfo
 from context.context_registry import ContextRegistry, ContextEvent
+from mindspace.file_journal import FileJournal
+from mindspace.journal_entry import JournalActor, JournalEntry, JournalOperation
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_content_type import MindspaceContentType
 from mindspace.mindspace_error import (

@@ -12,7 +12,8 @@ import pytest
 from desktop.message_box import MessageBox, MessageBoxButton
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.style_manager import StyleManager
-from desktop.trash_sidebar.trash_sidebar import TrashSidebar, TrashTreeDelegate, _TRASH_NAME_ROLE
+from desktop.sidebar.sidebar_row_spacing_delegate import SidebarRowSpacingDelegate
+from desktop.trash_sidebar.trash_sidebar import TrashSidebar, _TRASH_NAME_ROLE
 
 
 def _write_conv_file(path: str) -> None:
@@ -169,13 +170,13 @@ class TestTrashSidebarClickToOpen:
         assert emitted[0][2] is False  # non-ephemeral on double click
 
 
-class TestTrashTreeDelegateSpacing:
-    """The delegate provides consistent, zoom-scaled row height matching the conversation sidebar."""
+class TestSidebarRowSpacingDelegate:
+    """The shared delegate provides consistent, zoom-scaled row heights for tree panels."""
 
     def test_size_hint_matches_conversation_sidebar_formula(self, qapp):  # pylint: disable=unused-argument
         style_manager = StyleManager()
         zoom = style_manager.zoom_factor()
-        delegate = TrashTreeDelegate(None, style_manager)  # type: ignore[arg-type]
+        delegate = SidebarRowSpacingDelegate(None, style_manager)  # type: ignore[arg-type]
 
         option = QStyleOptionViewItem()
         font = QFont()

@@ -22,6 +22,7 @@ from clock_ai_tool.clock_ai_tool import ClockAITool
 from context.context_info import ContextInfo
 from context.context_registry import ContextRegistry
 from conversation_ai_tool.conversation_ai_tool import ConversationAITool
+from diff_context.diff_context import JournalDiffTarget
 from delegate_ai_tool import DelegateAITool
 from document_converter_ai_tool.document_converter_ai_tool import DocumentConverterAITool
 from editor_ai_tool.editor_ai_tool import EditorAITool
@@ -85,6 +86,7 @@ from desktop.terminal_tab.terminal_tab import TerminalTab
 from desktop.title_bar import MenuBarDragFilter, WindowControlsWidget
 from desktop.tour.tour_controller import TourController
 from desktop.trash_sidebar.trash_sidebar import TrashSidebar
+from desktop.changes_sidebar.changes_sidebar import ChangesSidebar
 from desktop.update_checker import UpdateChecker
 from desktop.update_dialog import UpdateDialog
 from desktop.user.user_manager import UserManager, UserError
@@ -115,7 +117,13 @@ def _create_editor_tab(
     info: ContextInfo, registry: ContextRegistry, parent: QWidget
 ) -> EditorTab:
     """Context factory for EditorTab."""
-    tab = EditorTab(info.context_id, info.path, None, parent)
+    historical_content = registry.get_model(info.context_id, str)
+    tab = EditorTab(
+        info.context_id, info.path, None, parent, read_only=historical_content is not None
+    )
+    if historical_content is not None:
+        tab.set_content(historical_content)
+
     goto = registry.get_model(info.context_id, tuple)
     if goto is not None:
         # Zero-delay timer deferring the jump until the tab is laid out. Parented to
@@ -157,7 +165,11 @@ def _create_diff_tab(
     info: ContextInfo, _registry: ContextRegistry, parent: QWidget
 ) -> DiffTab:
     """Context factory for DiffTab."""
-    tab = DiffTab(info.context_id, info.path, parent)
+    target = _registry.get_model(info.context_id, JournalDiffTarget)
+    tab = DiffTab(
+        info.context_id, info.path, parent,
+        journal_sequence=target.sequence if target is not None else None,
+    )
     line = _registry.get_model(info.context_id, int)
     if line is not None:
         # Zero-delay timer deferring the jump until the tab is laid out. Parented to
@@ -265,6 +277,18 @@ def _wire_trash_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
 def _activate_trash_sidebar(panel: SidebarBase) -> None:
     """Refresh the trash listing each time the panel is activated."""
     assert isinstance(panel, TrashSidebar)
+    panel.refresh()
+
+
+def _wire_changes_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
+    """Wire ChangesSidebar signals to SidebarManager."""
+    assert isinstance(panel, ChangesSidebar)
+    panel.file_opened_in_preview.connect(mgr.file_opened_in_preview)
+
+
+def _activate_changes_sidebar(panel: SidebarBase) -> None:
+    """Refresh the change listing each time the panel is activated."""
+    assert isinstance(panel, ChangesSidebar)
     panel.refresh()
 
 
@@ -672,6 +696,10 @@ class MainWindow(QMainWindow):
         self._sidebar_manager.register_panel(
             "trash", "trash", TrashSidebar, _wire_trash_sidebar,
             on_activated=_activate_trash_sidebar, place_at_bottom=True
+        )
+        self._sidebar_manager.register_panel(
+            "changes", "changes", ChangesSidebar, _wire_changes_sidebar,
+            on_activated=_activate_changes_sidebar
         )
         self._sidebar_manager.file_clicked.connect(self._on_sidebar_file_clicked)
         self._sidebar_manager.file_deleted.connect(self._on_sidebar_file_deleted)

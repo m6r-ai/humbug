@@ -441,6 +441,26 @@ def get_english_strings() -> LanguageStrings:
         trash_time_hours_ago="{0}h ago",
         trash_time_days_ago="{0}d ago",
 
+        changes="Changes",
+        changes_no_mindspace_message="Open a mindspace to see its recent changes.",
+        changes_empty_message="No changes have been recorded yet.",
+        changes_horizon="Changes since {0}",
+        changes_revert_file_action="Revert this change",
+        changes_revert_window_action="Revert changes from the last 30 minutes",
+        changes_view_current_action="View the file as it is now",
+        changes_view_replaced_action="View the version this change replaced",
+        changes_compare_action="Compare the replaced version with the file now",
+        changes_version_unavailable=(
+            "This version cannot be shown: its content is no longer stored, or it "
+            "is not text and the file has changed since."
+        ),
+        changes_revert_title="Revert changes",
+        changes_revert_confirm="Revert {0} change(s)? Every affected file returns to the state it held before.",
+        changes_revert_result="{0} path(s) reverted, {1} could not be.",
+        changes_bucket_today="Today",
+        changes_bucket_earlier="Earlier",
+        editor_read_only_marker=" (earlier version)",
+
         # Tool tips
         tooltip_copy_contents="Copy all contents",
         tooltip_save_contents="Save contents to a file",

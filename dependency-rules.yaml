@@ -147,6 +147,7 @@ modules:
   editor_context:
     internal_dependencies:
       - diff
+      - mindspace
     external_dependencies:
       - "standard_library"
 

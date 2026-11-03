@@ -198,6 +198,20 @@ class AIConversation:
         """
         return self._conversation_id
 
+    def conversation_uuid(self) -> str:
+        """
+        Get the identifier that names this conversation independently of its file.
+
+        The value lives in the transcript and survives renaming, so it is what
+        activity should be attributed to.  The transcript path remains the
+        conversation's location and is still what opens it.
+
+        Returns:
+            The conversation identifier, or an empty string when the transcript
+            has not supplied one.
+        """
+        return self._conversation.conversation_uuid()
+
     def get_conversation_history(self) -> AIConversationHistory:
         """
         Get the conversation history object.

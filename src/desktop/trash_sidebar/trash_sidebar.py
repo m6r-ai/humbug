@@ -3,10 +3,10 @@
 from datetime import datetime, timezone
 import os
 
-from PySide6.QtCore import QFileInfo, QMimeData, QModelIndex, QPersistentModelIndex, QPoint, QSize, Qt, Signal
+from PySide6.QtCore import QFileInfo, QMimeData, QPoint, QSize, Qt, Signal
 from PySide6.QtGui import QDrag, QMouseEvent
 from PySide6.QtWidgets import (
-    QApplication, QFrame, QLabel, QSizePolicy, QSpacerItem, QStyledItemDelegate, QStyleOptionViewItem,
+    QApplication, QFrame, QLabel, QSizePolicy, QSpacerItem,
     QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
 )
 
@@ -20,6 +20,7 @@ from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar.sidebar_pane_style import build_tree_pane_stylesheet
+from desktop.sidebar.sidebar_row_spacing_delegate import SidebarRowSpacingDelegate
 from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 from desktop.sidebar.sidebar_tree_icon_provider import SidebarTreeIconProvider
 from desktop.sidebar.sidebar_tree_style import SidebarTreeStyle
@@ -74,7 +75,7 @@ class TrashSidebar(SidebarBase):
         self._tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._tree.customContextMenuRequested.connect(self._show_context_menu)
 
-        self._delegate = TrashTreeDelegate(self._tree, self._style_manager)
+        self._delegate = SidebarRowSpacingDelegate(self._tree, self._style_manager)
         self._tree.setItemDelegate(self._delegate)
 
         self._tree.itemClicked.connect(self._on_item_clicked)
@@ -340,22 +341,6 @@ class TrashTreeWidget(QTreeWidget):
         drag.exec_(Qt.DropAction.MoveAction | Qt.DropAction.CopyAction)
 
         self._drag_start_pos = None
-
-
-class TrashTreeDelegate(QStyledItemDelegate):
-    """Item delegate for the trash tree widget, providing consistent row spacing."""
-
-    def __init__(self, tree: QTreeWidget, style_manager: StyleManager) -> None:
-        super().__init__(tree)
-        self._style_manager = style_manager
-
-    def sizeHint(self, option: QStyleOptionViewItem, _index: QModelIndex | QPersistentModelIndex) -> QSize:
-        """Return a consistent, zoom-scaled row height matching the conversation sidebar."""
-        zoom = self._style_manager.zoom_factor()
-        fm = option.fontMetrics  # type: ignore
-        line_height = fm.height()
-        row_height = max(line_height + round(10 * zoom), round(24 * zoom))
-        return QSize(super().sizeHint(option, _index).width(), row_height)
 
 
 def _display_name(trash_name: str) -> str:

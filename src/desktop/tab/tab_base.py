@@ -126,6 +126,15 @@ class TabBase(QFrame):
         """Set the ephemeral state of this tab."""
         self._is_ephemeral = ephemeral
 
+    def is_read_only(self) -> bool:
+        """
+        Check whether this tab shows content that cannot be written back.
+
+        The tab bar renders such a tab differently, so the user can see at a
+        glance that saving is not available.
+        """
+        return False
+
     def path(self) -> str:
         """
         Get the path associated with this tab, if any.

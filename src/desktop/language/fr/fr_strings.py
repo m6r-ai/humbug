@@ -443,6 +443,26 @@ def get_french_strings() -> LanguageStrings:
         trash_time_hours_ago="il y a {0} h",
         trash_time_days_ago="il y a {0} j",
 
+        changes="Modifications",
+        changes_no_mindspace_message="Ouvrez un mindspace pour voir ses modifications r\u00e9centes.",
+        changes_empty_message="Aucune modification n'a encore \u00e9t\u00e9 enregistr\u00e9e.",
+        changes_horizon="Modifications depuis {0}",
+        changes_revert_file_action="Annuler cette modification",
+        changes_revert_window_action="Annuler les modifications des 30 derni\u00e8res minutes",
+        changes_view_current_action="Voir le fichier tel qu'il est maintenant",
+        changes_view_replaced_action="Voir la version remplac\u00e9e par cette modification",
+        changes_compare_action="Comparer la version remplac\u00e9e avec le fichier actuel",
+        changes_version_unavailable=(
+            "Cette version ne peut pas \u00eatre affich\u00e9e : son contenu n'est plus "
+            "conserv\u00e9, ou il ne s'agit pas de texte et le fichier a chang\u00e9 depuis."
+        ),
+        changes_revert_title="Annuler des modifications",
+        changes_revert_confirm="Annuler {0} modification(s) ? Retour \u00e0 l'\u00e9tat pr\u00e9c\u00e9dent.",
+        changes_revert_result="{0} chemin(s) annul\u00e9(s), {1} impossible(s).",
+        changes_bucket_today="Aujourd'hui",
+        changes_bucket_earlier="Plus t\u00f4t",
+        editor_read_only_marker=" (version ant\u00e9rieure)",
+
         # Tool tips
         tooltip_copy_contents="Copier tout le contenu",
         tooltip_save_contents="Enregistrer le contenu dans un fichier",

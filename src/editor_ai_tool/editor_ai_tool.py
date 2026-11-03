@@ -21,8 +21,9 @@ from ai_tool import (
     AIToolTimeoutError,
 )
 from editor_context.editor_context import EditorContext
-from mindspace.mindspace_log_level import MindspaceLogLevel
+from mindspace.journal_entry import JournalActor
 from mindspace.mindspace import Mindspace
+from mindspace.mindspace_log_level import MindspaceLogLevel
 
 
 class EditorAITool(AITool):
@@ -651,6 +652,11 @@ class EditorAITool(AITool):
         if not file_path:
             raise AIToolExecutionError("Cannot save: editor has no file path (untitled file)")
 
+        if editor_info.get('read_only', False):
+            raise AIToolExecutionError(
+                "Cannot save: the editor shows a read-only view of an earlier version"
+            )
+
         context_str = f"Save editor content to file: {file_path} (tab {context_id})"
         diff = context.get_diff(3)
 
@@ -659,7 +665,7 @@ class EditorAITool(AITool):
             raise AIToolAuthorizationDenied("User denied permission to save file")
 
         try:
-            success = context.save()
+            success = context.save(JournalActor.AI)
 
             if not success:
                 raise AIToolExecutionError("Save operation failed")

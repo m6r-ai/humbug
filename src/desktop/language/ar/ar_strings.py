@@ -437,6 +437,26 @@ def get_arabic_strings() -> LanguageStrings:
         trash_time_hours_ago="منذ {0} س",
         trash_time_days_ago="منذ {0} ي",
 
+        changes="التغييرات",
+        changes_no_mindspace_message="افتح مساحة عمل لعرض تغييراتها الأخيرة.",
+        changes_empty_message="لم يتم تسجيل أي تغيير بعد.",
+        changes_horizon="التغييرات منذ {0}",
+        changes_revert_file_action="تراجع عن هذا التغيير",
+        changes_revert_window_action="تراجع عن تغييرات آخر 30 دقيقة",
+        changes_revert_title="التراجع عن التغييرات",
+        changes_view_current_action="عرض الملف كما هو الآن",
+        changes_view_replaced_action="عرض النسخة التي استبدلها هذا التغيير",
+        changes_compare_action="مقارنة النسخة المستبدلة بالملف الحالي",
+        changes_version_unavailable=(
+            "لا يمكن عرض هذه النسخة: محتواها لم يعد محفوظًا، أو أنها ليست نصًا وقد "
+            "تغير الملف منذ ذلك الحين."
+        ),
+        changes_revert_confirm="هل تريد التراجع عن {0} تغيير؟ سيعود كل ملف متأثر إلى الحالة التي كان عليها.",
+        changes_revert_result="تم التراجع عن {0} مسار، وتعذر التراجع عن {1}.",
+        changes_bucket_today="اليوم",
+        changes_bucket_earlier="في وقت سابق",
+        editor_read_only_marker=" (نسخة سابقة)",
+
         # Tool tips
         tooltip_copy_contents="نسخ جميع المحتويات",
         tooltip_save_contents="حفظ المحتويات إلى ملف",

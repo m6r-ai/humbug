@@ -11,6 +11,7 @@ import re
 import shutil
 import tempfile
 import threading
+import uuid
 from typing import Any, cast
 
 from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, MenaiDict, MenaiBytes, MenaiValue
@@ -23,6 +24,7 @@ from ai_tool import (
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
 from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
 from mindspace.mindspace import Mindspace
+from mindspace.journal_entry import JournalActor
 from mindspace.mindspace_error import MindspaceHumbugPathError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from pdf import PDFError, PDFUnsupportedError, extract_text, parse as parse_pdf
@@ -1071,6 +1073,20 @@ class FileSystemAITool(AITool):
         line_ending = FileSystemAITool._detect_line_ending(content)
         return content + line_ending
 
+    def _requester_conversation_id(self, requester_ref: Any) -> str:
+        """
+        Return the identifier of the conversation making a request.
+
+        Args:
+            requester_ref: The requester passed to execute(), which identifies a
+                conversation when the request comes from one.
+
+        Returns:
+            The conversation identifier, or an empty string when the requester is
+            not a conversation.
+        """
+        return self._mindspace.conversation_identifier(requester_ref)
+
     async def _write_file(
         self,
         tool_call: AIToolCall,
@@ -1121,6 +1137,23 @@ class FileSystemAITool(AITool):
         authorized = await request_authorization("filesystem", arguments, context, None, destructive)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to write file: {arguments['path']}")
+
+        # The journal captures the pre-image from disk before the write, so the
+        # record describes what was actually there rather than what the call
+        # intended.  A recording failure does not abort the write; it is logged
+        # so the file can be shown as not revertable.
+        journal_entry = self._mindspace.file_journal().record_write(
+            str(path),
+            display_path,
+            content.encode(encoding),
+            JournalActor.AI,
+            self._requester_conversation_id(requester_ref),
+        )
+        if journal_entry is None:
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.WARN,
+                f"Failed to record the write to '{display_path}' for reversal",
+            )
 
         # Write file content
         try:
@@ -1235,6 +1268,19 @@ class FileSystemAITool(AITool):
         authorized = await request_authorization("filesystem", arguments, context, None, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to append to file: {arguments['path']}")
+
+        journal_entry = self._mindspace.file_journal().record_append(
+            str(path),
+            display_path,
+            content.encode(encoding),
+            JournalActor.AI,
+            self._requester_conversation_id(requester_ref),
+        )
+        if journal_entry is None:
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.WARN,
+                f"Failed to record the append to '{display_path}' for reversal",
+            )
 
         # Append to file
         try:
@@ -1459,12 +1505,27 @@ class FileSystemAITool(AITool):
             raise AIToolExecutionError(f"Path is not a file: {arguments['path']}")
 
         # Build authorization context
-        context = f"Delete the file '{display_path}'. This file will be permanently removed and cannot be recovered."
+        context = f"Delete the file '{display_path}'. Its content is recorded so the deletion can be reversed."
 
         # Request authorization
         authorized = await request_authorization("filesystem", arguments, context, None, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to delete file: {arguments['path']}")
+
+        # The journal captures the file's content before it is removed, so the
+        # deletion can be reversed.  A recording failure does not abort the
+        # deletion; it is logged so the file can be shown as not revertable.
+        journal_entry = self._mindspace.file_journal().record_removal(
+            str(path),
+            display_path,
+            JournalActor.AI,
+            self._requester_conversation_id(requester_ref),
+        )
+        if journal_entry is None:
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.WARN,
+                f"Failed to record the removal of '{display_path}' for reversal",
+            )
 
         # Delete file
         try:
@@ -1521,7 +1582,7 @@ class FileSystemAITool(AITool):
         # Build authorization context
         if destination_path.exists():
             context = f"Copy '{source_display_path}' to '{dest_display_path}'. " \
-                "This will overwrite the existing destination file and its contents will be lost."
+                "This will overwrite the existing destination file; its content is recorded so the copy can be reversed."
 
             destructive = True
 
@@ -1533,6 +1594,22 @@ class FileSystemAITool(AITool):
         authorized = await request_authorization("filesystem", arguments, context, None, destructive)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to copy file: {arguments['path']} -> {destination_arg}")
+
+        # The destination is what this operation changes; the source is untouched.
+        # A recording failure does not abort the copy; it is logged so the
+        # destination can be shown as not revertable.
+        journal_entry = self._mindspace.file_journal().record_write_from_path(
+            str(destination_path),
+            dest_display_path,
+            str(source_path),
+            JournalActor.AI,
+            self._requester_conversation_id(requester_ref),
+        )
+        if journal_entry is None:
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.WARN,
+                f"Failed to record the copy to '{dest_display_path}' for reversal",
+            )
 
         # Copy file
         try:
@@ -1589,8 +1666,12 @@ class FileSystemAITool(AITool):
             item_type = "item"
 
         if destination_path.exists():
-            context = f"Move the {item_type} '{source_display_path}' to '{dest_display_path}'. " \
-                "This will overwrite the existing destination and its contents will be lost."
+            context = f"Move the {item_type} '{source_display_path}' to '{dest_display_path}'. "
+            if item_type == "file":
+                context += "This will overwrite the existing destination file; its content is recorded so the move can be reversed."
+
+            else:
+                context += "This will overwrite the existing destination and its contents will be lost."
 
         else:
             context = f"Move the {item_type} '{source_display_path}' to '{dest_display_path}'."
@@ -1599,6 +1680,25 @@ class FileSystemAITool(AITool):
         authorized = await request_authorization("filesystem", arguments, context, None, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to move: {arguments['path']} -> {destination_arg}")
+
+        # A move is two mutations of a file: the destination gains the content
+        # and the source loses it.  Directories are not journalled, so their
+        # move is not reversible and the authorization text says so.
+        if source_path.is_file():
+            conversation = self._requester_conversation_id(requester_ref)
+            journal = self._mindspace.file_journal()
+            group = uuid.uuid4().hex
+            destination_entry = journal.record_write_from_path(
+                str(destination_path), dest_display_path, str(source_path), JournalActor.AI, conversation, group
+            )
+            source_entry = journal.record_removal(
+                str(source_path), source_display_path, JournalActor.AI, conversation, group
+            )
+            if destination_entry is None or source_entry is None:
+                self._mindspace.add_interaction(
+                    MindspaceLogLevel.WARN,
+                    f"Failed to record the move of '{source_display_path}' for reversal",
+                )
 
         # Move file or directory
         try:
@@ -2509,6 +2609,19 @@ class FileSystemAITool(AITool):
         # Ensure trailing newline
         modified_content = self._ensure_trailing_newline(cast(str, modified_content))
 
+        journal_entry = self._mindspace.file_journal().record_write(
+            str(path),
+            display_path,
+            modified_content.encode(cast(str, encoding)),
+            JournalActor.AI,
+            self._requester_conversation_id(requester_ref),
+        )
+        if journal_entry is None:
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.WARN,
+                f"Failed to record the diff applied to '{display_path}' for reversal",
+            )
+
         # Write modified content to file
         try:
             # Write to temporary file first, then rename for atomicity
@@ -2903,6 +3016,19 @@ class FileSystemAITool(AITool):
         authorized = await request_authorization("filesystem", arguments, context_str, diff_str, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to transform file: {path_arg}")
+
+        journal_entry = self._mindspace.file_journal().record_write(
+            str(out_path),
+            out_display_path,
+            new_bytes,
+            JournalActor.AI,
+            self._requester_conversation_id(requester_ref),
+        )
+        if journal_entry is None:
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.WARN,
+                f"Failed to record the transform of '{out_display_path}' for reversal",
+            )
 
         try:
             out_path.parent.mkdir(parents=True, exist_ok=True)

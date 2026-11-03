@@ -141,8 +141,8 @@ class TestFileSystemAIToolAuthorizationContext:
 
             assert "Copy 'source.txt' to 'dest.txt'. This will create a new file at the destination." in context
 
-    def test_authorization_context_existing_file_includes_size(self, filesystem_tool, mock_authorization, make_tool_call):
-        """Test authorization context includes existing file size."""
+    def test_authorization_context_for_delete_states_it_is_reversible(self, filesystem_tool, mock_authorization, make_tool_call):
+        """Authorization for a deletion tells the user the deletion can be reversed."""
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.unlink') as mock_unlink:
@@ -158,7 +158,7 @@ class TestFileSystemAIToolAuthorizationContext:
             args = mock_authorization.call_args[0]
             context = args[2]  # Third argument is context
 
-            assert "Delete the file 'file.txt'. This file will be permanently removed and cannot be recovered." in context
+            assert "Delete the file 'file.txt'. Its content is recorded so the deletion can be reversed." in context
 
 
 class TestFileSystemAIToolParametrized:

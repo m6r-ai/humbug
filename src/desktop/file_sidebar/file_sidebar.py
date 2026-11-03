@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 from typing import cast
+import uuid
 
 from PySide6.QtCore import Signal, QModelIndex, Qt, QPoint, QDir, QTimer
 from PySide6.QtWidgets import (
@@ -11,6 +12,8 @@ from PySide6.QtWidgets import (
 )
 
 from mindspace.mindspace_log_level import MindspaceLogLevel
+from mindspace.file_journal import FileJournal
+from mindspace.journal_entry import JournalActor
 
 from desktop.file_sidebar.file_sidebar_model import FileSidebarModel
 from desktop.file_sidebar.file_sidebar_tree_view import FileSidebarTreeView
@@ -225,6 +228,81 @@ class FileSidebar(SidebarBase):
                 strings.move_error_failed.format(str(e))
             )
 
+    def _journal_target(self, path: str) -> tuple[FileJournal, str] | None:
+        """
+        Return the change journal and the path relative to the mindspace.
+
+        Args:
+            path: Absolute path about to be mutated.
+
+        Returns:
+            The journal and the relative path, or None when the path is outside
+            the mindspace and so outside the journal's scope.
+        """
+        mindspace = self._mindspace_manager.mindspace()
+        if not mindspace.has_mindspace():
+            return None
+
+        relative_path = mindspace.get_mindspace_relative_path(path)
+        if relative_path is None or mindspace.is_humbug_path(path):
+            return None
+
+        return mindspace.file_journal(), relative_path
+
+    def _record_replacement(self, path: str, content_path: str) -> None:
+        """
+        Record that a path is about to be replaced by a copy of another file.
+
+        Args:
+            path: Path about to be written.
+            content_path: File the written content comes from.
+        """
+        target = self._journal_target(path)
+        if target is None:
+            return
+
+        journal, relative_path = target
+        journal.record_write_from_path(
+            path, relative_path, content_path, JournalActor.HUMAN, ""
+        )
+
+    def _record_rename(self, source_path: str, destination_path: str) -> None:
+        """
+        Record a rename as a write of the destination and a removal of the source.
+
+        The two entries share a group so that a reversal cannot apply one without
+        the other, which would leave the content in neither place or in both.
+        When only one of the paths is inside the mindspace the surviving entry is
+        recorded ungrouped, because a group whose second half can never be
+        recorded would be permanently incomplete.
+
+        Args:
+            source_path: Path the content is moving from.
+            destination_path: Path the content is moving to.
+        """
+        destination_target = self._journal_target(destination_path)
+        source_target = self._journal_target(source_path)
+
+        if destination_target is not None and source_target is not None:
+            journal, relative_destination = destination_target
+            group = uuid.uuid4().hex
+            journal.record_write_from_path(
+                destination_path, relative_destination, source_path, JournalActor.HUMAN, "", group
+            )
+            journal.record_removal(
+                source_path, source_target[1], JournalActor.HUMAN, "", group
+            )
+
+        elif destination_target is not None:
+            journal, relative_destination = destination_target
+            journal.record_write_from_path(
+                destination_path, relative_destination, source_path, JournalActor.HUMAN, ""
+            )
+
+        elif source_target is not None:
+            journal, relative_source = source_target
+            journal.record_removal(source_path, relative_source, JournalActor.HUMAN, "")
+
     def _perform_move_operation(self, source_path: str, destination_path: str) -> None:
         """
         Perform the actual file/folder move operation.
@@ -238,6 +316,9 @@ class FileSidebar(SidebarBase):
         """
         try:
             # Perform the actual move first, then notify on success
+            if os.path.isfile(source_path):
+                self._record_rename(source_path, destination_path)
+
             shutil.move(source_path, destination_path)
 
             self.file_moved.emit(source_path, destination_path)
@@ -393,6 +474,9 @@ class FileSidebar(SidebarBase):
 
         try:
             # Perform the rename
+            if os.path.isfile(current_path):
+                self._record_rename(current_path, new_path)
+
             os.rename(current_path, new_path)
             self.file_renamed.emit(current_path, new_path)
 
@@ -421,6 +505,9 @@ class FileSidebar(SidebarBase):
 
         try:
             # Copy the source file to the duplicate location
+            if os.path.isfile(source_path):
+                self._record_replacement(duplicate_path, source_path)
+
             shutil.copy2(source_path, duplicate_path)
             self._logger.info("Created duplicate file: '%s'", duplicate_path)
 

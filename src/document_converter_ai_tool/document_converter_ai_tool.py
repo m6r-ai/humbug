@@ -24,6 +24,7 @@ from docx import (
 )
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_error import MindspaceHumbugPathError
+from mindspace.journal_entry import JournalActor
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
 # Map each supported format name to its canonical file extension.
@@ -470,6 +471,20 @@ class DocumentConverterAITool(AITool):
 
         except OSError as e:
             raise AIToolExecutionError(f"Failed to create output directory: {e}") from e
+
+        content_bytes = content.encode("utf-8") if isinstance(content, str) else content
+        journal_entry = self._mindspace.file_journal().record_write(
+            str(output_path),
+            output_display,
+            content_bytes,
+            JournalActor.AI,
+            self._mindspace.conversation_identifier(requester_ref),
+        )
+        if journal_entry is None:
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.WARN,
+                f"Failed to record the conversion to '{output_display}' for reversal",
+            )
 
         byte_count = self._write_output(output_path, content)
 

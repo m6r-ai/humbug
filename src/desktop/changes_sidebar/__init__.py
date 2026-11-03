@@ -1,0 +1,1 @@
+"""Recent changes panel."""

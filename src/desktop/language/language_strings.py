@@ -406,6 +406,24 @@ class LanguageStrings:
     trash_time_hours_ago: str
     trash_time_days_ago: str
 
+    # Recent changes panel
+    changes: str
+    changes_no_mindspace_message: str
+    changes_empty_message: str
+    changes_horizon: str
+    changes_revert_file_action: str
+    changes_revert_window_action: str
+    changes_view_current_action: str
+    changes_view_replaced_action: str
+    changes_compare_action: str
+    changes_version_unavailable: str
+    changes_revert_title: str
+    changes_revert_confirm: str
+    changes_revert_result: str
+    changes_bucket_today: str
+    changes_bucket_earlier: str
+    editor_read_only_marker: str
+
     # Tool tips
     tooltip_copy_contents: str
     tooltip_save_contents: str

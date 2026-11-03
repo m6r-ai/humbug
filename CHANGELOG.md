@@ -2,6 +2,10 @@
 
 ## v58 (2026-11-xx)
 
+New features:
+
+- Added history capture for file changes as the AI or user makes edits.
+
 ## v58 (2026-11-02)
 
 New features:
