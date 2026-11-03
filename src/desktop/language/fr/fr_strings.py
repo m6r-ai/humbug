@@ -45,12 +45,12 @@ def get_french_strings() -> LanguageStrings:
         save_as="Enregistrer sous...",
         close_mindspace="Fermer l'espace mental",
         close_tab="Fermer l'onglet",
+        reopen_closed_tab="Rouvrir l'onglet fermé",
         settings="Paramètres",
         recent_mindspaces="Ouvrir un espace mental récent",
         take_tour="Faire une visite guidée",
 
         # Tab bar context menu items
-        reopen_closed_tab="Rouvrir l'onglet fermé",
         close_tabs_to_left="Fermer les onglets à gauche",
         close_tabs_to_right="Fermer les onglets à droite",
         close_other_tabs="Fermer les autres onglets",

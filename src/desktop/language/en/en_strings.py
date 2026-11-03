@@ -45,12 +45,12 @@ def get_english_strings() -> LanguageStrings:
         save_as="Save As...",
         close_mindspace="Close Mindspace",
         close_tab="Close Tab",
+        reopen_closed_tab="Reopen Closed Tab",
         settings="Settings",
         recent_mindspaces="Open Recent Mindspace",
         take_tour="Take a Tour",
 
         # Tab bar context menu items
-        reopen_closed_tab="Reopen Closed Tab",
         close_tabs_to_left="Close Tabs to the Left",
         close_tabs_to_right="Close Tabs to the Right",
         close_other_tabs="Close Other Tabs",

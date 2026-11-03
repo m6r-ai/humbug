@@ -1,5 +1,6 @@
 from collections.abc import Callable
-from dataclasses import replace
+from collections import deque
+from dataclasses import dataclass, replace
 from enum import Enum, auto
 import logging
 import os.path
@@ -22,6 +23,19 @@ class ContextEvent(Enum):
     COLUMN_SWAP = auto()   # args: (column: int, swap_left: bool)
 
 
+@dataclass(frozen=True)
+class ClosedContext:
+    """
+    Everything needed to reopen a context that has been closed.
+
+    ContextInfo alone is not enough for every context type, so the content
+    state is captured alongside it while the context is still open.
+    """
+
+    info: ContextInfo
+    content_state: dict[str, Any]
+
+
 class ContextRegistry:
     """
     Tracks all open contexts.
@@ -35,6 +49,9 @@ class ContextRegistry:
 
     MAX_COLUMNS = 6
 
+    # Maximum number of closed-context snapshots retained for reopening.
+    MAX_CLOSED_CONTEXTS = 20
+
     def __init__(self) -> None:
         """Initialise an empty registry."""
         self._contexts: dict[str, ContextInfo] = {}
@@ -46,6 +63,7 @@ class ContextRegistry:
             event: set() for event in ContextEvent
         }
         self._current_context_id: str | None = None
+        self._closed_contexts: deque[ClosedContext] = deque(maxlen=self.MAX_CLOSED_CONTEXTS)
         self._logger = logging.getLogger("ContextRegistry")
 
     def register_callback(self, event: ContextEvent, callback: Callable) -> None:
@@ -156,7 +174,7 @@ class ContextRegistry:
         if initial_model is not None:
             self._models[context_id] = initial_model
 
-        if initial_content_state:
+        if initial_content_state is not None:
             self._content_state[context_id] = initial_content_state
 
         self._emit(ContextEvent.OPENED, info, is_ephemeral, requester_id)
@@ -166,11 +184,23 @@ class ContextRegistry:
         """
         Deregister a context and emit CLOSED.
 
+        A context that a user could reopen is snapshotted first, while its model
+        is still live, so the snapshot does not depend on which caller closed it
+        or on the order in which a frontend tears its view down.  Ephemeral
+        contexts are not recorded: they are opened by a single click and
+        auto-replaced by the next one, so recording them would bury the contexts
+        that were deliberately closed.
+
         Args:
             context_id: ID of the context to close.
         """
         info = self._contexts.get(context_id)
         if context_id in self._contexts:
+            if info is not None and not info.is_ephemeral:
+                self._closed_contexts.append(
+                    ClosedContext(info=info, content_state=self._content_state_for(context_id))
+                )
+
             del self._contexts[context_id]
             self._emit(ContextEvent.CLOSED, context_id)
 
@@ -533,6 +563,48 @@ class ContextRegistry:
         """
         return self._current_context_id
 
+    def has_closed_contexts(self) -> bool:
+        """
+        Return whether any closed context is available to reopen.
+
+        Returns:
+            True if the closed-context history is not empty.
+        """
+        return bool(self._closed_contexts)
+
+    def peek_last_closed_context(self) -> ContextInfo | None:
+        """
+        Return the context that the next reopen would recreate, without reopening it.
+
+        Returns:
+            Immutable ContextInfo snapshot of the most recently closed context,
+            or None if the history is empty.
+        """
+        return self._closed_contexts[-1].info if self._closed_contexts else None
+
+    def reopen_last_closed_context(self) -> str | None:
+        """
+        Reopen the most recently closed context and return its new ID.
+
+        The context is reopened with the content state captured when it closed,
+        so a frontend can reconstruct it before OPENED is emitted.  Column and
+        position are deliberately not restored: the original column may no
+        longer exist, so the context opens wherever the caller places it.
+
+        Returns:
+            The new context ID, or None if no closed context is available.
+        """
+        if not self._closed_contexts:
+            return None
+
+        closed = self._closed_contexts.pop()
+        return self.open(
+            context_type=closed.info.context_type,
+            path=closed.info.path,
+            title=closed.info.title,
+            initial_content_state=closed.content_state,
+        )
+
     def clear(self) -> None:
         """
         Remove all contexts without emitting events.
@@ -543,15 +615,17 @@ class ContextRegistry:
         self._frontend_state.clear()
         self._current_by_column.clear()
         self._current_context_id = None
+        self._closed_contexts.clear()
 
     def save_state(self, current_by_column: dict[int, str] | None = None) -> dict[str, Any]:
         """
         Serialise the full workspace state to a JSON-safe dictionary.
 
         Each context contributes three parts: its layout (from ContextInfo),
-        its content state (from the model's save_content_state), and its opaque
-        frontend state.  Contexts without a registered model contribute empty
-        content state.
+        its content state, and its opaque frontend state.  Content state comes
+        from the model's save_content_state, falling back to any state the
+        context was opened with, so a context whose model cannot serialise
+        itself is not saved empty.
 
         Args:
             current_by_column: Maps a column index to the context id that is
@@ -577,7 +651,7 @@ class ContextRegistry:
                     "column": info.column,
                     "position": info.position,
                 },
-                "content": self.capture_content_state(info.context_id),
+                "content": self._content_state_for(info.context_id),
                 "frontend": self._frontend_state.get(info.context_id, {}),
             })
 
@@ -591,17 +665,16 @@ class ContextRegistry:
             },
         }
 
-    def capture_content_state(self, context_id: str) -> dict[str, Any]:
+    def _content_state_for(self, context_id: str) -> dict[str, Any]:
         """
         Serialise a context's live content state from its model.
 
-        Unlike get_content_state, which returns only what restore_state
-        retained, this asks the model for its current state.  Callers that need
-        to recreate a context after it closes must capture this while the
-        context is still open, because close() discards the model.
+        Unlike get_content_state, which returns only the state retained for a
+        context, this asks the model for its current state.  It is called while
+        the context is still open, because close() discards the model.
 
         Falls back to any retained content state when the context has no model
-        able to serialise itself, so state survives repeated capture and reopen.
+        able to serialise itself, so state survives a close and a reopen.
 
         Args:
             context_id: ID of the context to serialise.
@@ -631,10 +704,11 @@ class ContextRegistry:
         """
         Rebuild the workspace from a dictionary produced by save_state.
 
-        Existing state is cleared first.  Each context's content state and
-        opaque frontend state are retained and made available via
-        get_content_state and get_frontend_state before OPENED is emitted, so
-        that subscribers handling OPENED can reconstruct the context.
+        Existing state, including the closed-context history, is cleared first.
+        Each context's opaque frontend state is retained and made available via
+        get_frontend_state before OPENED is emitted, and its content state is
+        passed to open() so get_content_state can serve it just as early.  Both
+        are therefore readable by subscribers handling OPENED.
 
         Args:
             state: Dictionary with contexts, focused_id, num_columns, and
@@ -661,7 +735,6 @@ class ContextRegistry:
             if not context_type or not context_id:
                 continue
 
-            self._content_state[context_id] = entry.get("content", {})
             self._frontend_state[context_id] = entry.get("frontend", {})
             self.open(
                 context_type=context_type,
@@ -669,6 +742,7 @@ class ContextRegistry:
                 title=layout.get("title", ""),
                 is_ephemeral=layout.get("is_ephemeral", False),
                 context_id=context_id,
+                initial_content_state=entry.get("content", {}),
                 column=layout.get("column", 0),
                 position=layout.get("position", 0),
             )
@@ -679,12 +753,13 @@ class ContextRegistry:
 
     def get_content_state(self, context_id: str) -> dict[str, Any]:
         """
-        Return the content state retained for a context during restore.
+        Return the content state retained for a context.
 
-        Content state is populated by restore_state and holds the information
-        a frontend needs to reconstruct a context that is not already present
-        in its ContextInfo (for example a terminal's command).  It is empty for
-        contexts opened normally rather than restored.
+        Content state holds the information a frontend needs to reconstruct a
+        context that is not already present in its ContextInfo (for example a
+        terminal's command).  It is retained when the context is opened with
+        initial_content_state, which restore_state and reopen both use, and is
+        empty for a context opened without it.
 
         Args:
             context_id: ID of the context to retrieve content state for.

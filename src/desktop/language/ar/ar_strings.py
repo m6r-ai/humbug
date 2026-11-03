@@ -46,12 +46,12 @@ def get_arabic_strings() -> LanguageStrings:
         save_as="حفظ باسم...",
         close_mindspace="إغلاق المساحة الذهنية",
         close_tab="إغلاق التبويب",
+        reopen_closed_tab="إعادة فتح التبويب المغلق",
         settings="الإعدادات",
         recent_mindspaces="فتح مساحة ذهنية حديثة",
         take_tour="أخذ جولة",
 
         # Tab bar context menu items
-        reopen_closed_tab="إعادة فتح التبويب المغلق",
         close_tabs_to_left="إغلاق التبويبات إلى اليسار",
         close_tabs_to_right="إغلاق التبويبات إلى اليمين",
         close_other_tabs="إغلاق التبويبات الأخرى",

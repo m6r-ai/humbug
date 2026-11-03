@@ -392,6 +392,10 @@ class MainWindow(QMainWindow):
         self._close_tab_action.setShortcut(QKeySequence("Ctrl+W"))
         self._close_tab_action.triggered.connect(self._on_close_tab)
 
+        self._reopen_closed_tab_action = QAction(strings.reopen_closed_tab, self)
+        self._reopen_closed_tab_action.setShortcut(QKeySequence("Ctrl+Shift+K"))
+        self._reopen_closed_tab_action.triggered.connect(self._on_reopen_closed_tab)
+
         self._close_mindspace_action = QAction(strings.close_mindspace, self)
         self._close_mindspace_action.setShortcut(QKeySequence("Ctrl+Alt+W"))
         self._close_mindspace_action.triggered.connect(self._on_close_mindspace)
@@ -592,6 +596,7 @@ class MainWindow(QMainWindow):
         self._file_menu.addAction(self._save_as_action)
         self._file_menu.addSeparator()
         self._file_menu.addAction(self._close_tab_action)
+        self._file_menu.addAction(self._reopen_closed_tab_action)
 
         # Edit menu
         self._edit_menu = self._menu_bar.addMenu(strings.edit_menu)
@@ -964,6 +969,7 @@ class MainWindow(QMainWindow):
         self._save_action.setEnabled(tab is not None and tab.can_save())
         self._save_as_action.setEnabled(tab is not None and tab.can_save_as())
         self._close_tab_action.setEnabled(tab is not None)
+        self._reopen_closed_tab_action.setEnabled(self._has_closed_tabs())
 
         conversation_sidebar = self._focused_conversation_sidebar()
         if conversation_sidebar is not None:
@@ -1058,6 +1064,7 @@ class MainWindow(QMainWindow):
         self._save_action.setText(strings.save)
         self._save_as_action.setText(strings.save_as)
         self._close_tab_action.setText(strings.close_tab)
+        self._reopen_closed_tab_action.setText(strings.reopen_closed_tab)
         self._close_mindspace_action.setText(strings.close_mindspace)
         self._submit_message_action.setText(strings.submit_message)
         self._undo_action.setText(strings.undo)
@@ -2068,6 +2075,7 @@ class MainWindow(QMainWindow):
             "save": (self._save_action, "floppy"),
             "save-as": (self._save_as_action, "floppy"),
             "close-tab": (self._close_tab_action, "close"),
+            "reopen-closed-tab": (self._reopen_closed_tab_action, "restore"),
             "goto-line": (self._goto_line_action, "arrow-right"),
             "find": (self._find_action, "search"),
             "find-replace": (self._find_replace_action, "search"),
@@ -3013,6 +3021,26 @@ class MainWindow(QMainWindow):
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
             f"User closed tab\nTab ID: {tab.tab_id()}"
+        )
+
+    def _has_closed_tabs(self) -> bool:
+        """
+        Return whether there is a closed tab that can be reopened.
+
+        The history lives in the mindspace's registry, so it is only meaningful
+        while a mindspace is open.
+        """
+        if not self._mindspace_manager.has_mindspace():
+            return False
+
+        return self._mindspace_manager.mindspace().contexts().has_closed_contexts()
+
+    def _on_reopen_closed_tab(self) -> None:
+        """Reopen the most recently closed tab."""
+        self._tab_manager.reopen_last_closed_tab()
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            "User reopened a closed tab"
         )
 
     def _on_submit_message(self) -> None:

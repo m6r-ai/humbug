@@ -1,4 +1,4 @@
-"""Tests for the Reopen Closed Tab history tracked by TabManager."""
+"""Tests for reopening closed tabs through the TabManager."""
 # pylint: disable=protected-access
 
 import os
@@ -6,6 +6,7 @@ import os
 import pytest
 
 # pylint: disable=wrong-import-position
+from context.context_registry import ContextRegistry
 from desktop.conversation_tab.conversation_tab import ConversationTab
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.tab_manager.tab_manager import TabManager
@@ -97,9 +98,12 @@ class TestReopenClosedTab:
         assert len(reopened) == 1
         assert reopened[0].tab_id() != cid
 
-    def test_reopen_with_empty_history_does_nothing(self, tab_manager):
+    def test_reopen_with_empty_history_does_nothing(self, tab_manager, manager, tmp_path):
         """Reopening with nothing in the history leaves the workspace untouched."""
+        _registry(tab_manager, manager, tmp_path)
+
         tab_manager.reopen_last_closed_tab()
+
         assert not tab_manager._tabs
 
     def test_reopen_pops_most_recently_closed_first(self, tab_manager, manager, tmp_path):
@@ -118,18 +122,31 @@ class TestReopenClosedTab:
         paths = {tab.path() for tab in tab_manager._tabs.values()}
         assert second_path in paths
         assert first_path not in paths
-        assert len(tab_manager._closed_tab_history) == 1
+        assert registry.peek_last_closed_context().path == first_path
 
-    def test_closed_tab_history_is_capped(self, tab_manager, manager, tmp_path):
-        """The history retains only the most recent closures, up to its limit."""
+    def test_reopen_works_when_no_tabs_are_open(self, tab_manager, manager, tmp_path):
+        """The last tab closed is the one most likely to be reopened."""
         registry = _registry(tab_manager, manager, tmp_path)
+        transcript = str(tmp_path / "conv.json")
+        cid = registry.open(context_type="conversation", path=transcript, title="conv")
+        tab_manager.close_tab_by_id(cid)
+        assert not tab_manager._tabs
 
-        for i in range(TabManager._MAX_CLOSED_TAB_HISTORY + 5):
-            path = str(tmp_path / f"conv{i}.json")
-            cid = registry.open(context_type="conversation", path=path, title=str(i))
-            tab_manager.close_tab_by_id(cid)
+        tab_manager.reopen_last_closed_tab()
 
-        assert len(tab_manager._closed_tab_history) == TabManager._MAX_CLOSED_TAB_HISTORY
+        assert [tab.path() for tab in tab_manager._tabs.values()] == [transcript]
+
+    def test_a_close_that_is_cancelled_is_not_recorded(self, tab_manager, manager, tmp_path):
+        """A tab that refuses to close stays open and is not offered for reopening."""
+        registry = _registry(tab_manager, manager, tmp_path)
+        cid = registry.open(context_type="conversation", path=str(tmp_path / "conv.json"), title="conv")
+        tab = tab_manager._tabs[cid]
+        tab.can_close_tab = lambda: False
+
+        tab_manager.close_tab_by_id(cid)
+
+        assert cid in tab_manager._tabs
+        assert not registry.has_closed_contexts()
 
 
 class TestContentState:
@@ -149,20 +166,20 @@ class TestContentState:
 
         assert commands_seen[-1] == "npm run dev"
 
-    def test_content_state_is_captured_before_the_model_is_discarded(
-        self, tab_manager, manager, tmp_path
+    def test_content_state_is_visible_before_the_tab_is_created(
+        self, tab_manager, manager, tmp_path, commands_seen
     ):
-        """The history snapshot holds content state taken while the tab was open."""
+        """The content state is readable while the tab factory is still running."""
         registry = _registry(tab_manager, manager, tmp_path)
         cid = registry.open(
-            context_type="conversation", path=str(tmp_path / "conv.json"), title="conv"
+            context_type="terminal", path=str(tmp_path / "term.json"), title="Terminal"
         )
         registry.register_model(cid, ModelWithCommand("npm run dev"))
 
         tab_manager.close_tab_by_id(cid)
+        tab_manager.reopen_last_closed_tab()
 
-        assert tab_manager._closed_tab_history[-1].content_state == {"command": "npm run dev"}
-        assert registry.get_content_state(cid) == {}
+        assert commands_seen == [None, "npm run dev"]
 
 
 class TestEphemeralTabs:
@@ -178,7 +195,7 @@ class TestEphemeralTabs:
 
         tab_manager.close_tab_by_id(cid)
 
-        assert not tab_manager._closed_tab_history
+        assert not registry.has_closed_contexts()
 
     def test_a_reopened_tab_is_permanent(self, tab_manager, manager, tmp_path):
         """A reopened tab is permanent, so the next tab opened does not replace it."""
@@ -209,17 +226,52 @@ class TestAlreadyOpenTabs:
 
         assert list(tab_manager._tabs) == [reopened_by_other_means]
 
+    def test_reopening_a_singleton_type_already_open_focuses_it(self, tab_manager, manager, tmp_path):
+        """A context type with no path is a singleton, so it is never duplicated."""
+        registry = _registry(tab_manager, manager, tmp_path)
+        # The tab widget needs a path to construct, but the context does not:
+        # the duplicate check keys on the context type when the path is empty.
+        transcript = str(tmp_path / "log.json")
+        tab_manager.register_context_factory(
+            "log", lambda info, _registry, parent: ConversationTab(info.context_id, transcript, parent)
+        )
+        cid = registry.open(context_type="log", title="Mindspace Log")
+
+        tab_manager.close_tab_by_id(cid)
+        reopened_by_other_means = registry.open(context_type="log", title="Mindspace Log")
+
+        tab_manager.reopen_last_closed_tab()
+
+        assert list(tab_manager._tabs) == [reopened_by_other_means]
+
 
 class TestMindspaceChange:
-    def test_history_is_cleared_when_the_mindspace_closes(self, tab_manager, manager, tmp_path):
+    def test_the_history_does_not_outlive_the_mindspace(self, tab_manager, manager, tmp_path):
         """Closed tabs from one mindspace are not offered after leaving it."""
         registry = _registry(tab_manager, manager, tmp_path)
         cid = registry.open(
             context_type="conversation", path=str(tmp_path / "conv.json"), title="conv"
         )
         tab_manager.close_tab_by_id(cid)
-        assert tab_manager._closed_tab_history
+        assert registry.has_closed_contexts()
 
-        tab_manager._unsubscribe_from_registry()
+        manager.close_mindspace()
 
-        assert not tab_manager._closed_tab_history
+        assert not tab_manager._tabs
+        assert not manager.mindspace().contexts().has_closed_contexts()
+
+
+class TestRegistryOwnsTheHistory:
+    def test_a_context_closed_outside_the_frontend_is_reopenable(
+        self, tab_manager, manager, tmp_path
+    ):
+        """A close that does not go through the tab manager is still recorded."""
+        registry = _registry(tab_manager, manager, tmp_path)
+        path = str(tmp_path / "conv.json")
+        cid = registry.open(context_type="conversation", path=path, title="conv")
+
+        registry.close(cid)
+
+        assert not tab_manager._tabs
+        assert registry.has_closed_contexts()
+        assert isinstance(registry, ContextRegistry)

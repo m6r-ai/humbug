@@ -311,6 +311,19 @@ class TestSaveState:
 
         assert state["contexts"][0]["content"] == {}
 
+    def test_save_state_falls_back_to_the_content_state_a_context_was_opened_with(self) -> None:
+        """A context with no model still contributes the state it was opened with."""
+        registry = ContextRegistry()
+        registry.open(
+            context_type="stub",
+            path="/tmp/a/file.py",
+            initial_content_state={"value": "hello"},
+        )
+
+        state = registry.save_state()
+
+        assert state["contexts"][0]["content"] == {"value": "hello"}
+
     def test_save_state_captures_frontend_state(self) -> None:
         """Opaque frontend state is included in the saved state."""
         registry = ContextRegistry()
@@ -488,27 +501,6 @@ class TestContentState:
         registry.open(context_type="stub", initial_content_state={"value": "hello"})
 
         assert seen == [{"value": "hello"}]
-
-    def test_capture_content_state_reads_the_live_model(self) -> None:
-        """Capturing content state asks the model for its current state."""
-        registry = ContextRegistry()
-        cid = registry.open(context_type="stub", initial_model=_StubModel("hello"))
-
-        assert registry.capture_content_state(cid) == {"value": "hello"}
-
-    def test_capture_content_state_falls_back_to_retained_state(self) -> None:
-        """A context with no model keeps the content state it was opened with."""
-        registry = ContextRegistry()
-        cid = registry.open(context_type="stub", initial_content_state={"value": "hello"})
-
-        assert registry.capture_content_state(cid) == {"value": "hello"}
-
-    def test_capture_content_state_is_empty_without_model_or_retained_state(self) -> None:
-        """A context with neither a model nor retained state captures nothing."""
-        registry = ContextRegistry()
-        cid = registry.open(context_type="editor", path="/tmp/a/file.py")
-
-        assert registry.capture_content_state(cid) == {}
 
 
 class TestOrdering:
@@ -778,3 +770,130 @@ class TestReorderWithinColumn:
 
         order = [entry["layout"]["context_id"] for entry in saved["contexts"]]
         assert order == [third, first, second]
+
+
+class TestClosedContextHistory:
+    """Tests for the history of closed contexts that can be reopened."""
+
+    def test_a_closed_context_is_available_to_reopen(self) -> None:
+        """Closing a context records it so it can be reopened."""
+        registry = ContextRegistry()
+        cid = registry.open(context_type="editor", path="/tmp/a/file.py", title="file.py")
+
+        registry.close(cid)
+
+        assert registry.has_closed_contexts()
+        info = registry.peek_last_closed_context()
+        assert info is not None
+        assert info.context_type == "editor"
+        assert info.path == "/tmp/a/file.py"
+        assert info.title == "file.py"
+
+    def test_an_ephemeral_context_is_not_recorded(self) -> None:
+        """A preview context is not offered for reopening."""
+        registry = ContextRegistry()
+        cid = registry.open(context_type="preview", path="/tmp/a/file.md", is_ephemeral=True)
+
+        registry.close(cid)
+
+        assert not registry.has_closed_contexts()
+
+    def test_reopening_recreates_the_context(self) -> None:
+        """Reopening registers a new context for the same type, path and title."""
+        registry = ContextRegistry()
+        cid = registry.open(context_type="editor", path="/tmp/a/file.py", title="file.py")
+        registry.close(cid)
+
+        reopened = registry.reopen_last_closed_context()
+
+        assert reopened is not None
+        assert reopened != cid
+        info = registry.get(reopened)
+        assert info is not None
+        assert info.context_type == "editor"
+        assert info.path == "/tmp/a/file.py"
+        assert info.title == "file.py"
+
+    def test_reopening_pops_the_most_recently_closed_context(self) -> None:
+        """The most recently closed context is the first one reopened."""
+        registry = ContextRegistry()
+        first = registry.open(context_type="editor", path="/tmp/a/first.py")
+        second = registry.open(context_type="editor", path="/tmp/a/second.py")
+        registry.close(first)
+        registry.close(second)
+
+        reopened = registry.reopen_last_closed_context()
+
+        assert reopened is not None
+        assert registry.get(reopened).path == "/tmp/a/second.py"
+        assert registry.peek_last_closed_context().path == "/tmp/a/first.py"
+
+    def test_reopening_with_an_empty_history_returns_none(self) -> None:
+        """There is nothing to reopen when no context has been closed."""
+        registry = ContextRegistry()
+
+        assert registry.reopen_last_closed_context() is None
+
+    def test_content_state_is_captured_before_the_model_is_discarded(self) -> None:
+        """The snapshot holds the model's state, taken while the model is still live."""
+        registry = ContextRegistry()
+        cid = registry.open(context_type="stub", initial_model=_StubModel("hello"))
+
+        registry.close(cid)
+        reopened = registry.reopen_last_closed_context()
+
+        assert reopened is not None
+        assert registry.get_content_state(reopened) == {"value": "hello"}
+
+    def test_content_state_survives_a_second_close_and_reopen(self) -> None:
+        """A reopened context keeps its state when it is closed again."""
+        registry = ContextRegistry()
+        cid = registry.open(context_type="stub", initial_model=_StubModel("hello"))
+        registry.close(cid)
+        reopened = registry.reopen_last_closed_context()
+        assert reopened is not None
+
+        registry.close(reopened)
+        reopened_again = registry.reopen_last_closed_context()
+
+        assert reopened_again is not None
+        assert registry.get_content_state(reopened_again) == {"value": "hello"}
+
+    def test_the_history_is_capped(self) -> None:
+        """Only the most recent closures are retained."""
+        registry = ContextRegistry()
+        for index in range(ContextRegistry.MAX_CLOSED_CONTEXTS + 5):
+            cid = registry.open(context_type="editor", path=f"/tmp/a/{index}.py")
+            registry.close(cid)
+
+        reopened = [
+            registry.reopen_last_closed_context()
+            for _ in range(ContextRegistry.MAX_CLOSED_CONTEXTS + 5)
+        ]
+        paths = [registry.get(cid).path for cid in reopened if cid is not None]
+
+        assert len(paths) == ContextRegistry.MAX_CLOSED_CONTEXTS
+        assert "/tmp/a/0.py" not in paths
+        assert f"/tmp/a/{ContextRegistry.MAX_CLOSED_CONTEXTS + 4}.py" in paths
+
+    def test_clearing_the_registry_discards_the_history(self) -> None:
+        """The history references the mindspace being left, so clear() drops it."""
+        registry = ContextRegistry()
+        cid = registry.open(context_type="editor", path="/tmp/a/file.py")
+        registry.close(cid)
+
+        registry.clear()
+
+        assert not registry.has_closed_contexts()
+        assert registry.peek_last_closed_context() is None
+
+    def test_restoring_a_session_discards_the_history(self) -> None:
+        """A restored session starts with no closed contexts."""
+        registry = ContextRegistry()
+        cid = registry.open(context_type="editor", path="/tmp/a/file.py")
+        state = registry.save_state()
+        registry.close(cid)
+
+        registry.restore_state(state)
+
+        assert not registry.has_closed_contexts()
