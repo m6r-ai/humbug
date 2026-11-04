@@ -195,10 +195,12 @@ class SearchSidebar(SidebarBase):
         layout.addWidget(self._options_panel)
 
         self._status_label = QLabel(self)
+        self._status_label.setIndent(0)
         self._status_label.setObjectName("_status_label")
         layout.addWidget(self._status_label)
 
         self._truncated_label = QLabel(self)
+        self._truncated_label.setIndent(0)
         self._truncated_label.setObjectName("_truncated_label")
         self._truncated_label.hide()
         layout.addWidget(self._truncated_label)
@@ -546,11 +548,13 @@ class SearchSidebar(SidebarBase):
             QLabel#_status_label {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_ERROR) if self._regexp_invalid else subtle_text};
                 padding: {round(status_gap * 2)}px {inset}px {status_gap}px {inset}px;
+                margin: 0px;
                 min-height: {round(16 * zoom_factor)}px;
             }}
             QLabel#_truncated_label {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_ERROR)};
                 padding: 0px {inset}px {status_gap}px {inset}px;
+                margin: 0px;
                 min-height: {round(16 * zoom_factor)}px;
             }}
             QTreeWidget#SearchSidebarResultsTree {{

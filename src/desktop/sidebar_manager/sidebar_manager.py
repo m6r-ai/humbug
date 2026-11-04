@@ -20,6 +20,7 @@ from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.user.instance_registry import InstanceRegistry
 from desktop.sidebar.sidebar_base import SidebarBase
+from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 from desktop.style_manager import StyleManager
 from desktop.url_opener import open_url
 
@@ -674,7 +675,7 @@ class SidebarManager(QWidget):
         rail_indicator = 2
         content_radius = round(8 * zoom_factor)
         header_padding_top = round(10 * zoom_factor)
-        header_padding_side = round(8 * zoom_factor)
+        header_padding_side = self._style_manager.scale(SidebarSectionHeader.TITLE_INSET)
         header_padding_bottom = round(6 * zoom_factor)
         panel_background = style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
         rail_background = style_manager.get_color_str(ColorRole.MINDSPACE_TOOL_RAIL_BACKGROUND)

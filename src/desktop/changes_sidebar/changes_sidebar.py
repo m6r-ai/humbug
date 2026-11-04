@@ -78,6 +78,7 @@ class ChangesSidebar(SidebarBase):
         self._layout.addWidget(self._header)
 
         self._status_label = QLabel(self)
+        self._status_label.setIndent(0)
         self._status_label.setObjectName("_status_label")
         self._status_label.setWordWrap(True)
         self._layout.addWidget(self._status_label)

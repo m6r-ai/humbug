@@ -4,6 +4,7 @@ import pytest
 
 # pylint: disable=wrong-import-position
 from desktop.sidebar_manager.sidebar_manager import SidebarManager
+from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 from desktop.style_manager import StyleManager
 
 
@@ -31,16 +32,19 @@ def header_rule(stylesheet: str) -> str:
 
 
 class TestMindspaceNameHeaderIndent:
-    """The mindspace name's indent follows the zoom factor, as the panel type label's does."""
+    """The mindspace name shares the panel type label's indent, at every zoom factor."""
 
-    def test_the_indent_is_the_base_inset_when_not_zoomed(self, sidebar):
-        assert "padding: 10px 8px 6px 8px;" in header_rule(sidebar.styleSheet())
+    def test_the_indent_is_the_title_inset_when_not_zoomed(self, sidebar):
+        inset = StyleManager().scale(SidebarSectionHeader.TITLE_INSET)
+
+        assert f"padding: 10px {inset}px 6px {inset}px;" in header_rule(sidebar.styleSheet())
 
     def test_the_indent_grows_with_the_zoom_factor(self, sidebar, style_manager):
         style_manager.set_zoom(1.5)
         sidebar.apply_style()
+        inset = round(SidebarSectionHeader.TITLE_INSET * 1.5)
 
-        assert "padding: 15px 12px 9px 12px;" in header_rule(sidebar.styleSheet())
+        assert f"padding: 15px {inset}px 9px {inset}px;" in header_rule(sidebar.styleSheet())
 
 
 class TestExpandedSidebarWidth:

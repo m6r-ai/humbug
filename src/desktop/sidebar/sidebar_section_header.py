@@ -13,7 +13,7 @@ from desktop.style_manager import StyleManager
 class SidebarSectionHeader(QWidget):
     """A titled header for sidebar panes, with optional trailing icon action buttons."""
 
-    TITLE_INSET = 8
+    TITLE_INSET = 10
     VERTICAL_INSET = 4
 
     def __init__(self, title: str, parent: QWidget | None = None) -> None:
