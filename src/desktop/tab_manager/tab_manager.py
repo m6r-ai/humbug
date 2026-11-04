@@ -345,7 +345,15 @@ class TabManager(QWidget):
                 continue
 
             if tab.is_ephemeral():
-                self.close_tab_by_id(tab.tab_id(), force_close=True)
+                # Close the context rather than the tab, so the close takes the
+                # same path as every other close: the registry snapshots the
+                # context for reopening and the CLOSED event tears the tab down.
+                if self._mindspace_manager.has_mindspace():
+                    self._mindspace_manager.mindspace().contexts().close(tab.tab_id())
+
+                else:
+                    self.close_tab_by_id(tab.tab_id(), force_close=True)
+
                 break
 
     def _on_tab_label_close_clicked(self, tab_id: str) -> None:
@@ -401,6 +409,11 @@ class TabManager(QWidget):
         visual_left_is_lower_index = self._language_manager.left_to_right()
         has_tabs_before = tab_index > 0
         has_tabs_after = tab_index < tab_count - 1
+
+        contexts = self._mindspace_manager.mindspace().contexts()
+        reopen_closed_action = menu.addAction(strings.reopen_closed_tab)
+        reopen_closed_action.setEnabled(contexts.has_closed_contexts())
+        menu.addSeparator()
 
         close_left_action = menu.addAction(strings.close_tabs_to_left)
         close_left_action.setEnabled(
@@ -468,7 +481,10 @@ class TabManager(QWidget):
             move_to_right_column_action if visual_left_is_lower_index else move_to_left_column_action
         )
 
-        if action == close_before_action:
+        if action == reopen_closed_action:
+            contexts.reopen_last_closed_context()
+
+        elif action == close_before_action:
             self._close_tabs_in_column(column, list(range(0, tab_index)))
 
         elif action == close_after_action:
@@ -673,15 +689,49 @@ class TabManager(QWidget):
 
         new_tab.set_ephemeral(is_ephemeral)
         title = new_tab.tab_title_from_path() or info.title
-        column = None
-        if self._restoring and 0 <= info.column < len(self._tab_columns):
-            column = self._tab_columns[info.column]
+        column = self._column_for_opened_context(info)
 
-        self._add_tab(new_tab, title, requester_id, column=column)
+        # A context opened with an explicit position is being put back where it
+        # was, so it is inserted there rather than appended.  Session restore and
+        # reopen both supply one; a fresh open does not and lands at the end.
+        position = None
+        if column is not None and info.position is not None:
+            position = info.position
+
+        self._add_tab(new_tab, title, requester_id, column=column, position=position)
         self._apply_context_models(new_tab)
 
-        if self._restoring:
-            self._apply_frontend_state(new_tab, registry)
+        # View state is applied whenever the registry holds some, which covers
+        # both a restored session and a reopened tab.
+        self._apply_frontend_state(new_tab, registry)
+
+    def _column_for_opened_context(self, info: ContextInfo) -> ColumnWidget | None:
+        """
+        Return the column a context should open in, creating it if it is gone.
+
+        A context carries a column only when it is being put back where it was,
+        by session restore or by reopen.  If that column has since been removed,
+        because its last tab was closed, it is re-created at its original index
+        so the layout comes back as it was rather than collapsing to one column.
+
+        Args:
+            info: The context being opened.
+
+        Returns:
+            The column to open into, or None to use the normal placement rules.
+        """
+        if not 0 <= info.column < ContextRegistry.MAX_COLUMNS:
+            return None
+
+        if info.column < len(self._tab_columns):
+            return self._tab_columns[info.column]
+
+        # The column was removed, so re-create it at its old index.  Columns
+        # cannot be sparse, so this only applies to the next free index.
+        if info.column != len(self._tab_columns):
+            return None
+
+        return self._create_column(info.column)
 
     def _apply_frontend_state(self, tab: TabBase, registry: ContextRegistry) -> None:
         """
@@ -729,7 +779,9 @@ class TabManager(QWidget):
         """React to a context focus request — bring the Qt tab to front."""
         tab = self._tabs.get(context_id)
         if tab is not None:
-            self._set_current_tab(tab, False)
+            # An ephemeral tab must not take keyboard focus, so the flag is
+            # derived from the tab rather than assumed to be False.
+            self._set_current_tab(tab, tab.is_ephemeral())
 
     def _on_context_moved(self, context_id: str, column: int) -> None:
         """
@@ -893,6 +945,7 @@ class TabManager(QWidget):
 
     def _add_tab_to_column(
         self, tab: TabBase, title: str, column: ColumnWidget, restore_focus: bool,
+        position: int | None = None,
     ) -> None:
         """
         Add a tab to a column and set up associated data.
@@ -904,6 +957,9 @@ class TabManager(QWidget):
             restore_focus: Whether focus should be restored to the widget that had
                 focus before the tab was added.  This is True for non-user-initiated
                 opens (AI or another context) so the user's focus is not stolen.
+            position: Index to insert the tab at.  When None the tab is appended to
+                the end of the column.  A position past the end is clamped, so a
+                column that has shrunk since the tab closed still accepts it.
         """
         tool_tip = tab.path()
         if tool_tip:
@@ -925,6 +981,10 @@ class TabManager(QWidget):
         self._tabs[tab_id] = tab
 
         index = column.addTab(tab, "")
+        if position is not None:
+            index = min(position, column.count() - 1)
+            column.tabBar().moveTab(column.count() - 1, index)
+
         tab_bar = column.tabBar()
         assert isinstance(tab_bar, TabBar)
         tab_bar.add_tab_data(
@@ -1664,6 +1724,7 @@ class TabManager(QWidget):
     def _add_tab(
         self, tab: TabBase, title: str, requester_id: str = "",
         column: ColumnWidget | None = None,
+        position: int | None = None,
     ) -> None:
         """
         Add a new tab to the manager.
@@ -1680,6 +1741,10 @@ class TabManager(QWidget):
             column: Explicit target column.  When provided it overrides the
                     placement heuristic, which is used when restoring a saved
                     layout.
+            position: Explicit index within the target column.  When provided
+                      the tab is inserted there instead of being appended,
+                      which is how a restored or reopened tab returns to the
+                      place it was closed in.
         """
         if len(self._tabs) == 0:
             # If no tabs exist, we need to switch to the columns widget
@@ -1688,7 +1753,9 @@ class TabManager(QWidget):
         prior_active_column = self._active_column
         target_column = column if column is not None else self._get_target_column_for_new_tab(requester_id)
 
-        self._add_tab_to_column(tab, title, target_column, restore_focus=bool(requester_id))
+        self._add_tab_to_column(
+            tab, title, target_column, restore_focus=bool(requester_id), position=position
+        )
 
         # If the new tab landed in a column that wasn't already active, restore the previously
         # active column so that opening a tab doesn't implicitly steal column activation
@@ -1724,6 +1791,13 @@ class TabManager(QWidget):
 
         if not force_close and not tab.can_close_tab():
             return
+
+        # Capture view state while the widgets still exist: close_tab() tears
+        # them down, and the registry snapshots frontend state on close.
+        if self._mindspace_manager.has_mindspace():
+            self._mindspace_manager.mindspace().contexts().set_frontend_state(
+                tab_id, tab.capture_view_state()
+            )
 
         tab.close_tab()
 
@@ -1764,6 +1838,54 @@ class TabManager(QWidget):
         if not self._tabs:
             self.status_message.emit(StatusMessage(""))
             self._stack.setCurrentWidget(self._welcome_widget)
+
+    def reopen_last_closed_tab(self) -> None:
+        """
+        Reopen the most recently closed tab, if any are available.
+
+        The registry owns the history of closed contexts, so this works with no
+        tabs open at all.  A context that has been reopened by other means since
+        it closed is focused rather than duplicated, and a reopened context that
+        is a singleton is treated the same way.
+        """
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        contexts = self._mindspace_manager.mindspace().contexts()
+        if not contexts.has_closed_contexts():
+            return
+
+        # The tab may have been reopened by other means since it was closed
+        existing = self._find_open_context_matching_closed_tab(contexts)
+        if existing is not None:
+            contexts.focus(existing.context_id)
+            return
+
+        contexts.reopen_last_closed_context()
+
+    def _find_open_context_matching_closed_tab(self, contexts: ContextRegistry) -> ContextInfo | None:
+        """
+        Find an open context that the next closed tab would reopen.
+
+        Args:
+            contexts: The registry holding the closed-tab history.
+
+        Returns:
+            The open context a reopen would duplicate, or None if there is none.
+        """
+        info = contexts.peek_last_closed_context()
+        if info is None:
+            return None
+
+        if info.path:
+            return contexts.get_by_path_and_type(info.path, info.context_type)
+
+        # Contexts without a path are singletons (log, shell, usage), so a
+        # second one would be a duplicate rather than a second instance.
+        return next(
+            (other for other in contexts.list_all() if other.context_type == info.context_type),
+            None,
+        )
 
     def _find_column_for_tab(self, tab: TabBase) -> ColumnWidget | None:
         """Find which column contains the given tab."""

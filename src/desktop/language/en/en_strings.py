@@ -45,6 +45,7 @@ def get_english_strings() -> LanguageStrings:
         save_as="Save As...",
         close_mindspace="Close Mindspace",
         close_tab="Close Tab",
+        reopen_closed_tab="Reopen Closed Tab",
         settings="Settings",
         recent_mindspaces="Open Recent Mindspace",
         take_tour="Take a Tour",

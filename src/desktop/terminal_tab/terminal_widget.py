@@ -1390,6 +1390,17 @@ class TerminalWidget(QAbstractScrollArea):
         self.viewport().update()
         self._update_scrollbar()
 
+    def refresh_from_state(self) -> None:
+        """
+        Repaint after the terminal state has been restored by someone else.
+
+        The widget paints directly from the shared TerminalState, so a caller
+        that has already restored that state only needs this to redraw.
+        """
+        self._clear_selection()
+        self.viewport().update()
+        self._update_scrollbar()
+
     def get_title(self) -> str:
         """Get current terminal title."""
         return self._state.terminal_title()

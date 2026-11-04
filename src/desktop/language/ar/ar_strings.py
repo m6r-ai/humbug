@@ -46,6 +46,7 @@ def get_arabic_strings() -> LanguageStrings:
         save_as="حفظ باسم...",
         close_mindspace="إغلاق المساحة الذهنية",
         close_tab="إغلاق التبويب",
+        reopen_closed_tab="إعادة فتح التبويب المغلق",
         settings="الإعدادات",
         recent_mindspaces="فتح مساحة ذهنية حديثة",
         take_tour="أخذ جولة",

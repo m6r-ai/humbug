@@ -1,5 +1,7 @@
 """Tests for TerminalState ANSI/VT sequence processing."""
 
+import json
+
 import pytest
 
 from terminal.terminal_state import TerminalState
@@ -309,6 +311,30 @@ class TestStateMetadata:
         state2 = make_state(rows=5, cols=20)
         state2.restore_from_metadata(metadata)
         assert state2.terminal_title() == 'Test Title'
+
+    def test_metadata_survives_a_json_round_trip(self, make_state):
+        """State metadata can be persisted to a session and read back."""
+        state = make_state(rows=5, cols=20)
+        _put(state, 'Hello\r\nWorld')
+
+        metadata = json.loads(json.dumps(state.create_state_metadata()))
+
+        state2 = make_state(rows=5, cols=20)
+        state2.restore_from_metadata(metadata)
+        rows = get_screen_text(state2.current_buffer())
+        assert rows[0] == 'Hello'
+        assert rows[1] == 'World'
+
+    def test_metadata_round_trip_preserves_the_working_directory(self, make_state):
+        """The working directory a terminal was in is part of its state."""
+        state = make_state(rows=5, cols=20)
+        _put(state, '\x1b]7;file://host/tmp/project\x07')
+
+        metadata = json.loads(json.dumps(state.create_state_metadata()))
+
+        state2 = make_state(rows=5, cols=20)
+        state2.restore_from_metadata(metadata)
+        assert state2.current_directory() == state.current_directory()
 
 
 class TestResizeViaState:

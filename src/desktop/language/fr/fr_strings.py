@@ -45,6 +45,7 @@ def get_french_strings() -> LanguageStrings:
         save_as="Enregistrer sous...",
         close_mindspace="Fermer l'espace mental",
         close_tab="Fermer l'onglet",
+        reopen_closed_tab="Rouvrir l'onglet fermé",
         settings="Paramètres",
         recent_mindspaces="Ouvrir un espace mental récent",
         take_tour="Faire une visite guidée",

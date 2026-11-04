@@ -36,6 +36,7 @@ class LanguageStrings:
     save_as: str
     close_mindspace: str
     close_tab: str
+    reopen_closed_tab: str
     settings: str
     recent_mindspaces: str
     take_tour: str
