@@ -502,12 +502,14 @@ class EditorWidget(QPlainTextEdit):
         self._is_modified = False
         self._set_modified(False)
 
-    def save_file(self, actor: JournalActor = JournalActor.HUMAN) -> bool:
+    def save_file(self, actor: JournalActor = JournalActor.HUMAN, conversation: str = "") -> bool:
         """
         Save the current file.
 
         Args:
             actor: Who is performing the save, recorded in the change journal.
+            conversation: Identifier of the conversation the save belongs to, or
+                an empty string when it was not made on a conversation's behalf.
 
         Returns:
             bool: True if save was successful
@@ -521,19 +523,27 @@ class EditorWidget(QPlainTextEdit):
         content = self.toPlainText()
 
         mindspace = self._mindspace_manager.mindspace()
-        if mindspace.has_mindspace():
-            relative_path = mindspace.get_mindspace_relative_path(self._path)
-            if relative_path is not None and not mindspace.is_humbug_path(self._path):
-                mindspace.file_journal().record_write(
-                    self._path,
-                    relative_path,
-                    content.encode('utf-8'),
-                    actor,
-                    "",
-                )
+        journal = mindspace.journal_target(self._path)
+        journal_entry = None
+        if journal is not None:
+            file_journal, relative_path = journal
+            journal_entry = file_journal.record_write(
+                self._path,
+                relative_path,
+                content.encode('utf-8'),
+                actor,
+                conversation,
+            )
 
-        with open(self._path, 'w', encoding='utf-8') as f:
-            f.write(content)
+        try:
+            with open(self._path, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+        except OSError:
+            if journal_entry is not None:
+                mindspace.file_journal().void_entries([journal_entry])
+
+            raise
 
         self._editor_document.set_text(content)
         self._editor_document.mark_saved()

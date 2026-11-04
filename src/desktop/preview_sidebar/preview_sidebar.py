@@ -22,6 +22,7 @@ from desktop.preview_sidebar.preview_sidebar_tree_view import PreviewSidebarTree
 from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar.sidebar_breadcrumb_bar import SidebarBreadcrumbBar
 from desktop.sidebar.sidebar_breadcrumb_container import SidebarBreadcrumbContainer
+from desktop.sidebar.sidebar_file_delete import confirm_and_trash_file
 from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 from desktop.sidebar.sidebar_pane_style import build_tree_pane_stylesheet
 from desktop.sidebar.sidebar_tree_delegate import SidebarTreeDelegate
@@ -899,56 +900,29 @@ class PreviewSidebar(SidebarBase):
         """
         Handle request to delete a file.
 
+        The file is moved into the trash, which is also where the change journal
+        looks when it is asked to reverse the removal.
+
         Args:
             path: Path to the file to delete
         """
-        # Show confirmation dialog using MessageBox
-        strings = self._language_manager.strings()
-        result = MessageBox.show_message(
-            self,
-            MessageBoxType.WARNING,
-            strings.confirm_delete_title,
-            strings.confirm_delete_item_message.format(os.path.basename(path)) + "\n\n" + strings.delete_warning_detail,
-            [MessageBoxButton.YES, MessageBoxButton.NO],
-            True
+        confirm_and_trash_file(
+            self, path, os.path.basename(path), self.file_deleted.emit
         )
-
-        if result == MessageBoxButton.YES:
-            try:
-                # First emit signal so tabs can be closed
-                self.file_deleted.emit(path)
-
-                # Then delete the file
-                os.remove(path)
-                self._mindspace_manager.add_interaction(
-                    MindspaceLogLevel.INFO,
-                    f"User deleted file '{path}'"
-                )
-
-            except FileNotFoundError:
-                # This can happen if the file gets auto-deleted before we get to it - ignore!
-                pass
-
-            except OSError as e:
-                self._logger.error("Failed to delete file '%s': %s", path, str(e))
-                MessageBox.show_message(
-                    self,
-                    MessageBoxType.CRITICAL,
-                    strings.file_error_title,
-                    strings.error_deleting_file.format(str(e)),
-                    [MessageBoxButton.OK]
-                )
 
     def _handle_delete_folder(self, path: str) -> None:
         """
         Handle request to delete a folder.
+
+        Only an empty folder can be deleted here, and it is moved into the trash
+        rather than unlinked, so the folder can be restored the same way a file
+        can.  The confirmation says so.
 
         Args:
             path: Path to the folder to delete
         """
         strings = self._language_manager.strings()
 
-        # Check if folder is empty
         try:
             if os.listdir(path):
                 MessageBox.show_message(
@@ -971,34 +945,9 @@ class PreviewSidebar(SidebarBase):
             )
             return
 
-        # Show confirmation dialog
-        result = MessageBox.show_message(
-            self,
-            MessageBoxType.WARNING,
-            strings.confirm_delete_title,
-            strings.confirm_delete_item_message.format(os.path.basename(path)),
-            [MessageBoxButton.YES, MessageBoxButton.NO],
-            True
+        confirm_and_trash_file(
+            self, path, os.path.basename(path), self.file_deleted.emit
         )
-
-        if result == MessageBoxButton.YES:
-            try:
-                # Delete the empty folder
-                os.rmdir(path)
-                self._mindspace_manager.add_interaction(
-                    MindspaceLogLevel.INFO,
-                    f"User deleted empty folder '{path}'"
-                )
-
-            except OSError as e:
-                self._logger.error("Failed to delete folder '%s': %s", path, str(e))
-                MessageBox.show_message(
-                    self,
-                    MessageBoxType.CRITICAL,
-                    strings.file_error_title,
-                    strings.error_deleting_file.format(str(e)),
-                    [MessageBoxButton.OK]
-                )
 
     def _on_delete_requested(self) -> None:
         """Handle delete request from the tree view."""

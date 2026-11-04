@@ -9,6 +9,7 @@ import tempfile
 from mindspace.file_journal import FileJournal
 from mindspace.journal_blob_store import JournalBlobStore
 from mindspace.journal_entry import JournalActor, JournalEntry
+from mindspace.mindspace_error import MindspaceError
 
 
 class JournalRevertStatus(str, Enum):
@@ -72,6 +73,10 @@ class JournalReverser:
     what the previous one produced.  Either check failing means something
     changed that the journal cannot account for, and the path is reported as a
     conflict instead of being overwritten.
+
+    The reversal is itself a mutation, so it is recorded like any other and
+    carries the actor and conversation that asked for it.  A restore that then
+    fails voids its record, exactly as a writer does.
     """
 
     def __init__(
@@ -80,6 +85,8 @@ class JournalReverser:
         mindspace_path: str,
         trash_dir: str,
         restore_trashed: Callable[[str], str],
+        actor: JournalActor = JournalActor.HUMAN,
+        conversation: str = "",
     ) -> None:
         """
         Initialise a reverser over a journal.
@@ -91,11 +98,17 @@ class JournalReverser:
                 the trash kept instead of the journal.
             restore_trashed: Restores a trash entry to its original location and
                 returns the path it was restored to.
+            actor: Who is asking for the reversal, recorded against the mutations
+                the reversal itself makes.
+            conversation: Identifier of the conversation that asked for the
+                reversal, empty when no conversation is involved.
         """
         self._journal = journal
         self._mindspace_path = mindspace_path
         self._trash_dir = trash_dir
         self._restore_trashed = restore_trashed
+        self._actor = actor
+        self._conversation = conversation
 
     def revert(self, entries: list[JournalEntry]) -> JournalRevertResult:
         """
@@ -103,15 +116,17 @@ class JournalReverser:
 
         Args:
             entries: The entries to reverse.  Order does not matter; they are
-                grouped by path and ordered by sequence before use.
+                grouped by path and ordered by sequence before use.  Entries that
+                have since been cancelled are ignored.
 
         Returns:
             The outcome for each affected path.
         """
         result = JournalRevertResult()
-        incomplete = self._incomplete_groups(entries)
+        live = self._live_entries(entries)
+        incomplete = self._incomplete_groups(live)
 
-        for path, path_entries in self._group_by_path(entries).items():
+        for path, path_entries in self._group_by_path(live).items():
             if any(entry.group in incomplete for entry in path_entries):
                 result.outcomes.append(
                     JournalRevertOutcome(
@@ -126,6 +141,20 @@ class JournalReverser:
 
         return result
 
+    def _live_entries(self, entries: list[JournalEntry]) -> list[JournalEntry]:
+        """
+        Return the entries that still describe a mutation.
+
+        An entry the caller selected may have been cancelled since it was read,
+        because the operation it described then failed.  Reversing it would undo
+        a change that never happened, so it is dropped.
+
+        Args:
+            entries: The entries the caller asked to reverse.
+        """
+        cancelled = self._journal.voided_sequences()
+        return [entry for entry in entries if entry.sequence not in cancelled]
+
     def _incomplete_groups(self, entries: list[JournalEntry]) -> set[str]:
         """
         Return the groups the selection only partly covers.
@@ -133,6 +162,10 @@ class JournalReverser:
         An operation that records more than one entry — a move records both the
         destination and the source — can only be reversed as a whole, because
         reversing one half would leave the content in neither place or in both.
+
+        A group with a cancelled member is incomplete too: part of the operation
+        was withdrawn, so applying the rest would act on a change that is only
+        half described.
 
         Args:
             entries: The entries the caller asked to reverse.
@@ -148,12 +181,19 @@ class JournalReverser:
         if not selected:
             return set()
 
+        incomplete = {
+            cancellation.group
+            for cancellation in self._journal.cancellations()
+            if cancellation.group in selected
+        }
         recorded: dict[str, int] = {}
         for entry in self._journal.all_entries():
             if entry.group in selected:
                 recorded[entry.group] = recorded.get(entry.group, 0) + 1
 
-        return {group for group, count in selected.items() if recorded.get(group, 0) > count}
+        return incomplete | {
+            group for group, count in selected.items() if recorded.get(group, 0) > count
+        }
 
     @staticmethod
     def _group_by_path(entries: list[JournalEntry]) -> dict[str, list[JournalEntry]]:
@@ -177,6 +217,9 @@ class JournalReverser:
         """
         absolute_path = os.path.join(self._mindspace_path, path)
 
+        if os.path.isdir(absolute_path):
+            return JournalRevertOutcome(path, JournalRevertStatus.CONFLICT, "a directory now occupies this path")
+
         earliest = entries[0]
         current = self._current_digest(absolute_path)
 
@@ -188,8 +231,7 @@ class JournalReverser:
             return JournalRevertOutcome(path, JournalRevertStatus.CONFLICT, conflict)
 
         if not earliest.existed_before:
-            self._journal.record_removal(absolute_path, path, JournalActor.HUMAN, "")
-            return self._remove(absolute_path, path)
+            return self._remove_created(absolute_path, path)
 
         if earliest.pre_image_trash is not None:
             return self._restore_from_trash(earliest.pre_image_trash, absolute_path, path)
@@ -210,8 +252,38 @@ class JournalReverser:
                 path, JournalRevertStatus.NOT_REVERTABLE, "the earlier content is no longer stored"
             )
 
-        self._journal.record_write(absolute_path, path, content, JournalActor.HUMAN, "")
-        return self._write(absolute_path, path, content)
+        return self._restore_content(absolute_path, path, content)
+
+    def _restore_content(self, absolute_path: str, path: str, content: bytes) -> JournalRevertOutcome:
+        """
+        Write a recorded pre-image back over a path.
+
+        Args:
+            absolute_path: Path to write.
+            path: The path as recorded, for the outcome.
+            content: The content to restore.
+        """
+        recorded = self._journal.record_write(absolute_path, path, content, self._actor, self._conversation)
+        outcome = self._write(absolute_path, path, content)
+        if outcome.status != JournalRevertStatus.REVERTED:
+            self._journal.void_entries([recorded])
+
+        return outcome
+
+    def _remove_created(self, absolute_path: str, path: str) -> JournalRevertOutcome:
+        """
+        Remove a file whose creation is being reversed.
+
+        Args:
+            absolute_path: Path to remove.
+            path: The path as recorded, for the outcome.
+        """
+        recorded = self._journal.record_removal(absolute_path, path, self._actor, self._conversation)
+        outcome = self._remove(absolute_path, path)
+        if outcome.status != JournalRevertStatus.REVERTED:
+            self._journal.void_entries([recorded])
+
+        return outcome
 
     def _restore_from_trash(
         self,
@@ -232,22 +304,28 @@ class JournalReverser:
             path: The path as recorded, for the outcome.
         """
         trashed_path = os.path.join(self._trash_dir, trash_name)
-        if not os.path.isfile(trashed_path):
+        if not os.path.exists(trashed_path):
             return JournalRevertOutcome(
                 path, JournalRevertStatus.NOT_REVERTABLE, "the trash no longer holds this content"
             )
 
-        self._journal.record_write_from_path(
-            absolute_path, path, trashed_path, JournalActor.HUMAN, ""
+        # Recreating an empty directory writes no content, so there is nothing for a
+        # later reversal to undo and nothing to record.  The removal this restores is
+        # already in the index, and reversing it again reports a conflict once the
+        # directory is back in place.
+        recorded = None if os.path.isdir(trashed_path) else self._journal.record_write_from_path(
+            absolute_path, path, trashed_path, self._actor, self._conversation
         )
 
         try:
             restored_path = self._restore_trashed(trash_name)
 
-        except OSError as e:
+        except (MindspaceError, OSError) as e:
+            self._journal.void_entries([recorded])
             return JournalRevertOutcome(path, JournalRevertStatus.FAILED, str(e))
 
         if os.path.abspath(restored_path) != os.path.abspath(absolute_path):
+            self._journal.void_entries([recorded])
             return JournalRevertOutcome(
                 path,
                 JournalRevertStatus.FAILED,
@@ -261,11 +339,24 @@ class JournalReverser:
         """
         Return why the path cannot be safely reverted, or None if it can.
 
+        A mutation whose pre-image was too large to capture says nothing about
+        what the path held, so it is not evidence of a change that went
+        unrecorded and does not break the chain.
+
         Args:
             current: Digest of the path's current content, or None if it is absent.
             entries: That path's entries, ordered by sequence.
         """
         for previous, following in zip(entries, entries[1:]):
+            if not following.existed_before:
+                if previous.post_image_hash is not None:
+                    return "a change between the recorded mutations was not recorded"
+
+                continue
+
+            if following.pre_image_hash is None:
+                continue
+
             if following.pre_image_hash != previous.post_image_hash:
                 return "a change between the recorded mutations was not recorded"
 
@@ -286,10 +377,17 @@ class JournalReverser:
 
     @staticmethod
     def _current_digest(absolute_path: str) -> str | None:
-        """Return the digest of a file's current content, or None if it is absent."""
+        """
+        Return the digest of a file's current content, or None if it is absent.
+
+        The content is hashed in chunks so that checking a large file does not
+        cost memory proportional to its size.
+
+        Args:
+            absolute_path: The path to inspect.
+        """
         try:
-            with open(absolute_path, 'rb') as f:
-                return JournalBlobStore.digest_of(f.read())
+            return JournalBlobStore.digest_of_file(absolute_path)
 
         except FileNotFoundError:
             return None

@@ -326,7 +326,10 @@ def get_french_strings() -> LanguageStrings:
 
         # Messages
         confirm_delete_message="Êtes-vous sûr de vouloir supprimer {0} ?",
-        delete_warning_detail="Tout onglet ouvert pour ce fichier sera fermé sans enregistrement.",
+        delete_warning_detail=(
+            "Tout onglet ouvert sera fermé sans enregistrement. L'élément est déplacé "
+            "vers la corbeille, d'où il peut être restauré."
+        ),
         error_deleting_file="Impossible de supprimer le fichier : {0}",
         error_title_rename="Erreur de renommage",
         error_rename_exists="Une conversation nommée '{0}' existe déjà.",
@@ -449,7 +452,6 @@ def get_french_strings() -> LanguageStrings:
         changes_horizon="Modifications depuis {0}",
         changes_revert_file_action="Annuler cette modification",
         changes_revert_window_action="Annuler les modifications des 30 derni\u00e8res minutes",
-        changes_view_current_action="Voir le fichier tel qu'il est maintenant",
         changes_view_replaced_action="Voir la version remplac\u00e9e par cette modification",
         changes_compare_action="Comparer la version remplac\u00e9e avec le fichier actuel",
         changes_version_unavailable=(
@@ -461,6 +463,19 @@ def get_french_strings() -> LanguageStrings:
         changes_revert_result="{0} chemin(s) annul\u00e9(s), {1} impossible(s).",
         changes_bucket_today="Aujourd'hui",
         changes_bucket_earlier="Plus t\u00f4t",
+        changes_older_not_shown="{0} modification(s) plus ancienne(s) non affich\u00e9e(s)",
+        changes_size_warning=(
+            "Le journal des modifications occupe {0:.0f} Mo. Faites un clic droit ici "
+            "pour oublier l'historique ancien."
+        ),
+        changes_forget_action="Oublier les modifications de plus de {0} jours",
+        changes_forget_title="Oublier des modifications",
+        changes_forget_confirm=(
+            "Oublier toutes les modifications enregistr\u00e9es avant le {1} ? Ces fichiers "
+            "ne pourront plus \u00eatre restaur\u00e9s, et tout contenu d\u00e9tenu uniquement par le "
+            "journal sera supprim\u00e9. Cette action est irr\u00e9versible."
+        ),
+        changes_forget_result="{0} modification(s) oubli\u00e9e(s) et {1:.0f} Mo r\u00e9cup\u00e9r\u00e9s.",
         editor_read_only_marker=" (version ant\u00e9rieure)",
 
         # Tool tips

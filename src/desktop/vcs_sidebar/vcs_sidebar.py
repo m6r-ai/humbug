@@ -10,16 +10,15 @@ from PySide6.QtWidgets import (
 )
 
 from git import GitFileStatus, GitStatusCode
-from mindspace.mindspace_log_level import MindspaceLogLevel
 
 from desktop.color_role import ColorRole
 from desktop.file_utils import is_binary_image_file, is_conversation_file
 from desktop.language.language_manager import LanguageManager
-from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
 from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
+from desktop.sidebar.sidebar_file_delete import confirm_and_trash_file
 from desktop.sidebar.sidebar_pane_style import build_list_pane_stylesheet
 from desktop.style_manager import StyleManager
 from desktop.vcs_sidebar.vcs_sidebar_delegate import VCSSidebarDelegate
@@ -266,42 +265,15 @@ class VCSSidebar(SidebarBase):
         """
         Handle request to delete a file.
 
+        The file is moved into the trash, which is also where the change journal
+        looks when it is asked to reverse the removal.
+
         Args:
             path: Path to the file to delete
         """
-        strings = self._language_manager.strings()
-        result = MessageBox.show_message(
-            self,
-            MessageBoxType.WARNING,
-            strings.confirm_delete_title,
-            strings.confirm_delete_item_message.format(os.path.basename(path)) + "\n\n" + strings.delete_warning_detail,
-            [MessageBoxButton.YES, MessageBoxButton.NO],
-            True
+        confirm_and_trash_file(
+            self, path, os.path.basename(path), self.file_deleted.emit
         )
-
-        if result != MessageBoxButton.YES:
-            return
-
-        try:
-            self.file_deleted.emit(path)
-            os.remove(path)
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"User deleted file '{path}'"
-            )
-
-        except FileNotFoundError:
-            pass
-
-        except OSError as e:
-            self._logger.error("Failed to delete file '%s': %s", path, str(e))
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.file_error_title,
-                strings.error_deleting_file.format(str(e)),
-                [MessageBoxButton.OK]
-            )
 
     def _display_name(self, entry: GitFileStatus) -> str:
         """

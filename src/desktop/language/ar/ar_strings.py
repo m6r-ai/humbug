@@ -325,7 +325,10 @@ def get_arabic_strings() -> LanguageStrings:
 
         # Messages
         confirm_delete_message="هل أنت متأكد من حذف {0}؟",
-        delete_warning_detail="سيتم إغلاق أي تبويب مفتوح لهذا الملف دون حفظ.",
+        delete_warning_detail=(
+            "سيتم إغلاق أي تبويب مفتوح دون حفظ. يُنقل العنصر إلى سلة المحذوفات، "
+            "حيث يمكن استعادته."
+        ),
         error_deleting_file="تعذر حذف الملف: {0}",
         error_title_rename="خطأ في إعادة التسمية",
         error_rename_exists="توجد محادثة باسم '{0}' بالفعل.",
@@ -444,7 +447,6 @@ def get_arabic_strings() -> LanguageStrings:
         changes_revert_file_action="تراجع عن هذا التغيير",
         changes_revert_window_action="تراجع عن تغييرات آخر 30 دقيقة",
         changes_revert_title="التراجع عن التغييرات",
-        changes_view_current_action="عرض الملف كما هو الآن",
         changes_view_replaced_action="عرض النسخة التي استبدلها هذا التغيير",
         changes_compare_action="مقارنة النسخة المستبدلة بالملف الحالي",
         changes_version_unavailable=(
@@ -455,6 +457,18 @@ def get_arabic_strings() -> LanguageStrings:
         changes_revert_result="تم التراجع عن {0} مسار، وتعذر التراجع عن {1}.",
         changes_bucket_today="اليوم",
         changes_bucket_earlier="في وقت سابق",
+        changes_older_not_shown="{0} من التغييرات الأقدم غير معروضة",
+        changes_size_warning=(
+            "يستخدم سجل التغييرات {0:.0f} ميغابايت. انقر بزر الفأرة الأيمن هنا لنسيان "
+            "السجل القديم."
+        ),
+        changes_forget_action="نسيان التغييرات الأقدم من {0} يومًا",
+        changes_forget_title="نسيان التغييرات",
+        changes_forget_confirm=(
+            "هل تريد نسيان كل تغيير مسجل قبل {1}؟ لن يكون بالإمكان التراجع عن هذه "
+            "الملفات، وسيُحذف أي محتوى يحتفظ به السجل وحده. لا يمكن التراجع عن هذا الإجراء."
+        ),
+        changes_forget_result="تم نسيان {0} تغيير واستعادة {1:.0f} ميغابايت.",
         editor_read_only_marker=" (نسخة سابقة)",
 
         # Tool tips

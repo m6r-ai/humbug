@@ -48,6 +48,15 @@ class JournalEntry:
             remains, so the interface can point the user at it.
         post_image_hash: Digest of the content after the mutation, or None when
             the mutation removed the path.
+        pre_image_is_directory: True when the path held a directory before the
+            mutation.  A directory has no content to capture, so a captured
+            pre-image would be meaningless; this records that the path existed.
+        void_of: Sequence number of an earlier entry this record cancels, or None
+            for a record that describes a mutation.  A mutation that was recorded
+            but then did not happen is cancelled rather than deleted, because the
+            index is append-only.  Cancelled records are not returned by any
+            query and are not counted, so a mutation that did not happen cannot
+            be reported as though it had.
     """
 
     sequence: int
@@ -61,6 +70,8 @@ class JournalEntry:
     pre_image_hash: str | None
     post_image_hash: str | None
     pre_image_trash: str | None = None
+    pre_image_is_directory: bool = False
+    void_of: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialise the entry to a JSON-compatible dict."""
@@ -76,6 +87,8 @@ class JournalEntry:
             "pre_image_hash": self.pre_image_hash,
             "post_image_hash": self.post_image_hash,
             "pre_image_trash": self.pre_image_trash,
+            "pre_image_is_directory": self.pre_image_is_directory,
+            "void_of": self.void_of,
         }
 
     @staticmethod
@@ -105,6 +118,14 @@ class JournalEntry:
             if pre_image_trash is not None and not isinstance(pre_image_trash, str):
                 raise ValueError("pre_image_trash must be a string or null")
 
+            void_of = data.get("void_of")
+            if void_of is not None and not isinstance(void_of, int):
+                raise ValueError("void_of must be an integer or null")
+
+            pre_image_is_directory = data.get("pre_image_is_directory", False)
+            if not isinstance(pre_image_is_directory, bool):
+                raise ValueError("pre_image_is_directory must be a boolean")
+
             return JournalEntry(
                 sequence=int(data["sequence"]),
                 timestamp=str(data["timestamp"]),
@@ -117,10 +138,16 @@ class JournalEntry:
                 pre_image_hash=pre_image_hash,
                 post_image_hash=post_image_hash,
                 pre_image_trash=pre_image_trash,
+                pre_image_is_directory=pre_image_is_directory,
+                void_of=void_of,
             )
 
         except KeyError as e:
             raise ValueError(f"Journal entry is missing field {str(e)}") from e
+
+    def is_void(self) -> bool:
+        """Return True if this record cancels another entry rather than describing a mutation."""
+        return self.void_of is not None
 
     def is_revertable(self) -> bool:
         """
@@ -129,5 +156,12 @@ class JournalEntry:
         A creation is revertable by removing the file, and an overwrite is
         revertable when its pre-image was captured.  A mutation whose pre-image
         was too large to store is recorded but cannot be reversed.
+
+        A removal whose content the trash holds is revertable even though the
+        journal kept no copy of it, because the trash is where reversal looks.
         """
-        return (not self.existed_before) or self.pre_image_hash is not None
+        return (
+            (not self.existed_before)
+            or self.pre_image_hash is not None
+            or self.pre_image_trash is not None
+        )

@@ -12,8 +12,8 @@ from ai_tool import AIToolManager
 from context.context_registry import ContextRegistry
 from conversation_context.conversation_context import ConversationContext
 
-from mindspace.file_journal import FileJournal
-from mindspace.journal_entry import JournalEntry
+from mindspace.file_journal import FileJournal, JournalPurgeResult
+from mindspace.journal_entry import JournalActor, JournalEntry
 from mindspace.journal_reversal import JournalRevertResult, JournalReverser
 from mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceHumbugPathError, MindspaceNotFoundError
 from mindspace.mindspace_interactions import MindspaceInteractions
@@ -324,12 +324,66 @@ class Mindspace:
         assert self.has_mindspace(), "No mindspace is currently open"
         return self._file_journal
 
-    def revert_journal_entries(self, entries: list[JournalEntry]) -> JournalRevertResult:
+    def journal_target(self, absolute_path: str) -> tuple[FileJournal, str] | None:
+        """
+        Return the journal and the relative path for a path the journal can record.
+
+        A path outside the mindspace, or inside a .humbug/ directory, is outside the
+        journal's scope and yields None.  Every front end that records a mutation
+        asks this rather than repeating the two checks, so the scope cannot drift
+        between the tool layer and the panels.
+
+        Args:
+            absolute_path: Path about to be mutated.
+
+        Returns:
+            The journal and the path relative to the mindspace root, or None when the
+            path is outside the journal's scope.
+        """
+        if not self.has_mindspace():
+            return None
+
+        relative_path = self.get_mindspace_relative_path(absolute_path)
+        if relative_path is None or self.is_humbug_path(absolute_path):
+            return None
+
+        return self._file_journal, relative_path
+
+    def purge_journal(self, before: datetime) -> JournalPurgeResult:
+        """
+        Discard recorded file mutations older than a point in time.
+
+        This is destructive and irreversible: the caller must have told the user
+        so before asking.  Content the trash still holds is untouched, because
+        the journal does not own it.
+
+        Args:
+            before: The earliest recorded mutation to keep.
+
+        Returns:
+            What was removed.
+
+        Raises:
+            MindspaceError: No mindspace is open.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        return self._file_journal.purge_before(before)
+
+    def revert_journal_entries(
+        self,
+        entries: list[JournalEntry],
+        actor: JournalActor = JournalActor.HUMAN,
+        conversation: str = "",
+    ) -> JournalRevertResult:
         """
         Reverse recorded file mutations, restoring each path to its earlier state.
 
         Args:
             entries: The journal entries to reverse.
+            actor: Who is asking for the reversal, recorded against the changes
+                the reversal itself makes.
+            conversation: Identifier of the conversation that asked for the
+                reversal, empty when no conversation is involved.
 
         Returns:
             The outcome for each affected path.
@@ -343,6 +397,8 @@ class Mindspace:
             self._path,
             self.trash_dir(),
             self.restore_trashed,
+            actor,
+            conversation,
         ).revert(entries)
 
     def journal_pre_image(self, entry: JournalEntry) -> bytes | None:
@@ -371,7 +427,6 @@ class Mindspace:
                 return None
 
         return self._file_journal.pre_image(entry)
-
 
     def trash_dir(self) -> str:
         """
@@ -430,6 +485,58 @@ class Mindspace:
             os.path.isdir(trash_path),
         )
         manifest.save(self._trash_manifest_path())
+
+    def trash_file(self, absolute_path: str, actor: JournalActor, conversation: str = "") -> str:
+        """
+        Move a file or an empty directory into the trash and record the removal.
+
+        The trash is the cheapest possible capture for a removal, and the right
+        home for content someone deliberately discarded, so the journal records
+        where the content went instead of copying it.  Reversal consults that
+        record and delegates restoration to ``restore_trashed``, which means
+        emptying the trash makes the removal unrevertable rather than restoring
+        something else.
+
+        A directory is recorded as having existed with no content captured, because
+        there is no content to capture; the trash entry is what reversal restores.
+
+        Args:
+            absolute_path: File or empty directory to move into the trash.
+            actor: Who is removing the file.
+            conversation: Identifier of the conversation responsible, empty when
+                no conversation is involved.
+
+        Returns:
+            The absolute path within trash_dir() the file now lives at.
+
+        Raises:
+            MindspaceError: The path is outside the mindspace, inside .humbug/, or
+                could not be moved.
+        """
+        relative_path = self.get_mindspace_relative_path(absolute_path)
+        if relative_path is None or self.is_humbug_path(absolute_path):
+            raise MindspaceError(f"Cannot trash '{absolute_path}': it is outside the journalled mindspace")
+
+        is_directory = os.path.isdir(absolute_path)
+        trash_path = self.new_trash_path(absolute_path)
+        self._file_journal.record_removal(
+            absolute_path,
+            relative_path,
+            actor,
+            conversation,
+            trash_name=os.path.basename(trash_path),
+            pre_image_is_directory=is_directory,
+        )
+
+        try:
+            os.makedirs(self.trash_dir(), exist_ok=True)
+            shutil.move(absolute_path, trash_path)
+
+        except OSError as e:
+            raise MindspaceError(f"Failed to trash '{absolute_path}': {str(e)}") from e
+
+        self.record_trashed(absolute_path, trash_path)
+        return trash_path
 
     def forget_trashed(self, trash_path: str) -> None:
         """Remove trash_path's manifest entry, e.g. once it has been restored."""

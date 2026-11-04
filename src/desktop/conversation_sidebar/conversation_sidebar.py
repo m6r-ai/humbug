@@ -9,7 +9,6 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QMenu, QToolButton
 )
 
-from mindspace.journal_entry import JournalActor
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
@@ -1335,18 +1334,8 @@ class ConversationSidebar(SidebarBase):
                 try:
                     trash_path = self._trash_path_for(file_path)
 
-                    mindspace = self._mindspace_manager.mindspace()
-                    if os.path.isfile(file_path) and mindspace.has_mindspace():
-                        relative_path = mindspace.get_mindspace_relative_path(file_path)
-                        if relative_path is not None and not mindspace.is_humbug_path(file_path):
-                            mindspace.file_journal().record_removal(
-                                file_path,
-                                relative_path,
-                                JournalActor.HUMAN,
-                                "",
-                                trash_name=os.path.basename(trash_path),
-                            )
-
+                    # Conversation transcripts live under .humbug/, which the change
+                    # journal never covers, so trashing one records nothing there.
                     self.file_deleted.emit(file_path)
                     shutil.move(file_path, trash_path)
                     self._mindspace_manager.mindspace().record_trashed(file_path, trash_path)

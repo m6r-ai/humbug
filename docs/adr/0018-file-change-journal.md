@@ -47,6 +47,24 @@ outside the mindspace boundary, git operations, or the consequences of content t
 been read, executed or committed. Reversing a file is not reversing an effect. This limitation
 is the promise, and it must be stated where users will meet it rather than implied away.
 
+**Directories are covered only where the trash already holds them.** A user removing an empty
+directory moves it into the trash, and that removal is recorded as a directory: the entry says the
+path existed and had no content to capture, and reversal recreates it from the trash. Because the
+record carries no per-file detail, the same mechanism would restore a whole tree if a caller ever
+trashed one. Directory moves and creations are not recorded, and neither is the AI tool's
+`remove directory`, which unlinks an empty directory with no bin to put it in. Recursive capture of
+a directory move — one group per operation, a depth limit, and a rule for files above the capture
+threshold inside the tree — is deliberately not attempted.
+
+**Directories are covered only where the trash already holds them.** A user removing an empty
+directory moves it into the trash, and that removal is recorded as a directory: the entry says the
+path existed and had no content to capture, and reversal recreates it from the trash. Because the
+record carries no per-file detail, the same mechanism would restore a whole tree if a caller ever
+trashed one. Directory moves and creations are not recorded, and neither is the AI tool's
+`remove directory`, which unlinks an empty directory with no bin to put it in. Recursive capture of
+a directory move — one group per operation, a depth limit, and a rule for files above the capture
+threshold inside the tree — is deliberately not attempted.
+
 **Every actor is covered.** A mutation is journalled regardless of who made it. The journal is a
 record of what happened to the mindspace, not of what the AI did to it, so a window of history
 can be undone as a whole and the human's own recent work is protected by the same mechanism as
@@ -122,6 +140,15 @@ invariants and would let a defect in the newer subsystem damage the audit trail.
 between the two leaves an unreferenced blob, which is harmless and reclaimable. The reverse order
 would leave a record pointing at content that does not exist, which is not.
 
+**A mutation that does not happen is cancelled, not deleted.** The record has to be written before
+the mutation, because the pre-image can only be read while the old content is still there. If the
+mutation then fails, the record describes something that did not occur, and the changes view would
+report it and offer to reverse it. The index is append-only, so the record is withdrawn by
+appending a void record that names the sequence number it cancels; reads return live records only.
+A mutation is therefore recorded, attempted, and cancelled on failure — one rule for every writer,
+so the journal never claims a change that did not happen while keeping the audit property that
+records are only ever added.
+
 **Failure.** A capture failure does not abort the mutation, following ADR-0017's rule that
 recording must never break the action being recorded. It is not silent either: the failure is
 logged at ERROR and the affected file is reported in the changes view as not revertable. A
@@ -166,6 +193,14 @@ list entries for a set of conversations and paths, read a prior version, request
 and never accepts or returns a journal path, so the exclusion is not widened into a general read
 of `.humbug/`. Such a tool is designed separately, and a restoration it requests is a persistent
 change requiring user approval like any other.
+
+**A view reads what is new, not the whole index.** Contiguous sequence numbers make a record's byte
+position within a segment estimable, so a view that already holds the history it shows can ask for
+the records after the last one it saw and read only the tail of the newest segment. Measured on a
+20,000-entry journal, reading one appended record costs 0.1 ms against 120 ms for a whole-index
+read, which is the difference between a panel that can be open during a long task and one that
+cannot. What cannot be applied incrementally — a purge, or a cancellation of a record already
+displayed — reloads, because the alternative is a listing that quietly disagrees with the store.
 
 **The trash is unchanged.** The trash remains the user's bin, with its own retention and its own
 browsing interface, and a user's removal continues to land there. The journal records that the
@@ -242,8 +277,9 @@ does not cause agent activity to accumulate in a bin the user must learn to igno
   state that existed.
 
 - **Force a reversal over a diverging change.** Would discard work the journal never saw and
-  cannot restore, which is the loss the journal exists to prevent. Divergence is reported, with an
-  explicit per-file override available.
+  cannot restore, which is the loss the journal exists to prevent. Divergence is reported and
+  never forced: there is no override, and adding one would be a separate decision about
+  accepting that loss knowingly.
 
 - **Hash-chain the entries for tamper evidence now.** The sequence ordering a chain needs is
   already present, so a chain can be added later without changing the format. It is a separate
@@ -276,10 +312,12 @@ does not cause agent activity to accumulate in a bin the user must learn to igno
 - The journal grows with history rather than with tree size. Deduplication helps repeated
   identical writes but not iterative editing, so heavily edited files accumulate distinct blobs
   indefinitely unless the user purges.
-- The retention policy above is not yet implemented. Nothing reclaims unreferenced blobs, nothing
-  enforces a size ceiling, and there is no purge, so a heavily used mindspace currently grows
-  without limit and without warning. Until that lands, the guarantee that the journal warns before
-  it reclaims anything is a statement of intent rather than behaviour.
+- Retention is the user's decision, so a mindspace nobody tends grows without limit. The store
+  warns when it passes its size ceiling and offers the purge, but it never reclaims anything on
+  its own; the warning is only as good as the interface that shows it.
+- Reclaiming history is irreversible, and the segment that straddles the cutoff is rewritten to
+  drop the records before it. That is the one operation that does not merely append, and it is
+  confined to a segment replaced atomically under a user's explicit request.
 - Reversibility does not reduce the cost of a wrong direction. A task that goes forty writes down
   a mistaken path can be tidied up, but the tokens, the time and any executed effects are already
   spent. Recovery complements early correction; it does not replace it.

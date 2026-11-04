@@ -486,7 +486,14 @@ class DocumentConverterAITool(AITool):
                 f"Failed to record the conversion to '{output_display}' for reversal",
             )
 
-        byte_count = self._write_output(output_path, content)
+        try:
+            byte_count = self._write_output(output_path, content)
+
+        except AIToolExecutionError:
+            if journal_entry is not None:
+                self._mindspace.file_journal().void_entries([journal_entry])
+
+            raise
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,

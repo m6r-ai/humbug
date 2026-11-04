@@ -53,6 +53,16 @@ Merkle-tree-based cryptographic verification of the log's integrity — that all
 organisations in regulated environments to demonstrate that AI actions were sanctioned,
 traceable, and consistent with stated intent.
 
+The interaction log witnesses that an action happened.  It does not make the action
+undoable, so a second store sits alongside it: the file change journal records the
+pre-image of every file mutation made through Humbug, by either actor, so that the
+mutation can be reversed.  See ADR-0018.  The two stores have deliberately opposite
+retention rules — the log is never truncated, while journalled content is reclaimed
+when the user asks — and are kept separate for that reason.  Reversing a file is not
+reversing an effect: journal coverage stops at terminal commands, at the mindspace
+boundary, and at anything already read, executed or committed, and the interface says
+so rather than implying a guarantee it cannot keep.
+
 ### Minimal dependencies, maximum understandability
 Humbug follows the pattern of an OS kernel: simple, largely self-contained, and
 comprehensible from a single repository.

@@ -57,16 +57,6 @@ class AIConversationHistory:
         """
         return self._conversation_uuid
 
-    def set_conversation_uuid(self, conversation_uuid: str) -> None:
-        """
-        Set the identifier that names this conversation independently of its file.
-
-        Args:
-            conversation_uuid: The identifier read from, or assigned to, the
-                transcript.
-        """
-        self._conversation_uuid = conversation_uuid
-
     def forked_from(self) -> dict | None:
         """
         Get the conversation this one was forked from, if it was.

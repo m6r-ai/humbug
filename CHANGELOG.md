@@ -1,10 +1,24 @@
 # Change log for Humbug
 
-## v58 (2026-11-xx)
+## v59 (2026-11-xx)
 
 New features:
 
-- Added history capture for file changes as the AI or user makes edits.
+- Added a change journal: every file mutation made through Humbug, by the AI or by the user, records the content it
+  replaced so the change can be reversed.
+- Added a Changes panel listing recent mutations, showing which files changed and how far back the record reaches.
+  A change can be reverted individually, the last thirty minutes can be reverted together, and a replaced version can
+  be viewed read-only or compared with the file as it now stands.  Divergence is reported per file rather than
+  overwritten, so a file changed outside Humbug is skipped instead of losing work.
+- Deleting a file or an empty folder from the Files, Preview or VCS panel now moves it to the trash, where it can be
+  restored, instead of unlinking it permanently.
+- Journalled history can be forgotten from the Changes panel, which reports what it reclaimed.
+
+Internal structure changes:
+
+- Conversations gained an identifier that lives in the transcript and survives renaming, duplicating and moving, so
+  activity attributed to a conversation stays attributed to it.  A duplicated conversation receives a new identifier
+  and records the conversation it came from.  See ADR-0019.
 
 ## v58 (2026-11-02)
 

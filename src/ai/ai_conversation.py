@@ -180,21 +180,25 @@ class AIConversation:
 
     def set_conversation_id(self, conversation_id: str) -> None:
         """
-        Set the stable identifier for this conversation.
+        Set the location this conversation is stored at.
 
         Args:
-            conversation_id: Identifier used to attribute log entries to this
-                conversation, typically the transcript file path.
+            conversation_id: Where the conversation's transcript lives, typically a
+                mindspace-relative path.  It changes when the conversation is
+                renamed or moved, so it is not the conversation's identity; the
+                identifier in the transcript is, and `conversation_uuid` returns
+                that.  This value is the fallback attribution for a transcript that
+                carries no identifier yet.
         """
         self._conversation_id = conversation_id
 
     def conversation_id(self) -> str:
         """
-        Get the stable identifier for this conversation.
+        Get the location this conversation is stored at.
 
         Returns:
-            The conversation identifier, typically the transcript file path,
-            or an empty string if none has been set.
+            The transcript path, or an empty string if none has been set.  Use
+            `conversation_uuid` for the conversation's identity.
         """
         return self._conversation_id
 

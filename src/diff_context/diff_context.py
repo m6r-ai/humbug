@@ -23,8 +23,9 @@ class DiffContext:
     """
     Model-layer context for a diff tab.
 
-    Owns the path of the file being diffed.  The diff content itself is derived
-    from the working tree and HEAD by the git layer, so only the path is
+    Owns the path of the file being diffed and, when the comparison is against a
+    version the change journal recorded, the journal entry that names it.  The
+    diff content itself is derived when the tab is built, so neither version is
     persisted.
 
     The visualisation side-effect (scrolling the viewport to a working-tree line)

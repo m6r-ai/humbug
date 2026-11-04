@@ -112,8 +112,10 @@ class EditorTab(TabBase):
         self._search_update_timer.timeout.connect(self._update_search_after_edit)
         self._search_update_debounce_ms = 100
 
-        # Start file watching if we have a path
-        if self._path:
+        # Start file watching if we have a path.  A read-only tab shows content
+        # that did not come from the file, so watching it would let the file on
+        # disk overwrite the version being shown.
+        if self._path and not read_only:
             self._start_file_watching(self._path)
 
         self.apply_style()
@@ -247,6 +249,10 @@ class EditorTab(TabBase):
         Args:
             changed_path: Path of the file that changed
         """
+        if self._read_only:
+            self._logger.debug("Ignoring a change to a read-only view: %s", changed_path)
+            return
+
         # First, let the parent handle file existence checking
         super()._handle_file_changed(changed_path)
 

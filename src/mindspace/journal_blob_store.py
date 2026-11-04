@@ -2,6 +2,7 @@
 
 import hashlib
 import os
+import tempfile
 
 
 class JournalBlobStore:
@@ -13,10 +14,13 @@ class JournalBlobStore:
     same bytes cost nothing beyond the digest.
 
     The store is not responsible for deciding what to keep: it holds content
-    until something removes it.
+    until something removes it.  ``sweep`` is how a caller reclaims the blobs
+    nothing refers to any more, and it is deliberately driven by a set the
+    caller computes rather than by any knowledge of the index.
     """
 
     FANOUT_LENGTH = 2
+    TEMP_SUFFIX = ".tmp"
 
     def __init__(self, directory: str) -> None:
         """
@@ -68,7 +72,8 @@ class JournalBlobStore:
 
         The blob is written to a temporary file and renamed into place, so a
         crash can leave an unreferenced temporary file but never a blob whose
-        content is only partly written.
+        content is only partly written.  The temporary file is created with a
+        unique name so that two stores of the same content cannot collide.
 
         Args:
             content: Raw bytes to store.
@@ -84,11 +89,12 @@ class JournalBlobStore:
         if os.path.exists(path):
             return digest
 
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        temp_path = f"{path}.tmp"
+        directory = os.path.dirname(path)
+        os.makedirs(directory, exist_ok=True)
+        descriptor, temp_path = tempfile.mkstemp(dir=directory, prefix=digest, suffix=self.TEMP_SUFFIX)
 
         try:
-            with open(temp_path, 'wb') as f:
+            with os.fdopen(descriptor, 'wb') as f:
                 f.write(content)
                 f.flush()
                 os.fsync(f.fileno())
@@ -134,6 +140,117 @@ class JournalBlobStore:
         """
         prefix = digest[:self.FANOUT_LENGTH]
         return os.path.join(self._directory, prefix, digest)
+
+    def digests(self) -> set[str]:
+        """
+        Return the digest of every blob the store holds.
+
+        Returns:
+            The digests, which are the blob names, or an empty set when the
+            store has nothing in it.
+        """
+        found: set[str] = set()
+
+        try:
+            prefixes = os.listdir(self._directory)
+
+        except FileNotFoundError:
+            return found
+
+        except OSError:
+            return found
+
+        for prefix in prefixes:
+            prefix_dir = os.path.join(self._directory, prefix)
+            if not os.path.isdir(prefix_dir):
+                continue
+
+            try:
+                names = os.listdir(prefix_dir)
+
+            except OSError:
+                continue
+
+            for name in names:
+                if not name.endswith(self.TEMP_SUFFIX):
+                    found.add(name)
+
+        return found
+
+    def sweep(self, keep: set[str]) -> int:
+        """
+        Delete every blob whose digest is not in keep, and return the bytes freed.
+
+        A temporary file left behind by an interrupted store is removed too: it
+        is not a blob, nothing can reference it, and it will never be renamed
+        into place by a later store because temporary names are unique.
+
+        Args:
+            keep: Digests that must survive, being those a live index entry
+                still refers to.
+
+        Returns:
+            The number of bytes removed from the store.
+        """
+        reclaimed = 0
+
+        try:
+            prefixes = os.listdir(self._directory)
+
+        except OSError:
+            return 0
+
+        for prefix in prefixes:
+            prefix_dir = os.path.join(self._directory, prefix)
+            if not os.path.isdir(prefix_dir):
+                continue
+
+            try:
+                names = os.listdir(prefix_dir)
+
+            except OSError:
+                continue
+
+            for name in names:
+                if name.endswith(self.TEMP_SUFFIX):
+                    self._remove_quietly(os.path.join(prefix_dir, name))
+                    continue
+
+                if name in keep:
+                    continue
+
+                path = os.path.join(prefix_dir, name)
+                try:
+                    reclaimed += os.path.getsize(path)
+
+                except OSError:
+                    pass
+
+                self._remove_quietly(path)
+
+        return reclaimed
+
+    def total_bytes(self) -> int:
+        """
+        Return the number of bytes the blob tree occupies.
+
+        Temporary files are counted: they occupy space until a sweep removes
+        them, and a size guard should see the space that is actually in use.
+
+        Returns:
+            The total size of the blob tree in bytes.
+        """
+        total = 0
+
+        for root, _dirs, names in os.walk(self._directory):
+            for name in names:
+                try:
+                    total += os.path.getsize(os.path.join(root, name))
+
+                except OSError:
+                    pass
+
+        return total
 
     @staticmethod
     def _remove_quietly(path: str) -> None:

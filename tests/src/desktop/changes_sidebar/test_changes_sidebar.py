@@ -1,0 +1,79 @@
+"""Tests for the recent changes panel's presentation of recorded mutations."""
+
+from mindspace.journal_entry import JournalActor, JournalEntry, JournalOperation
+
+from desktop.changes_sidebar.changes_sidebar import ChangesSidebar
+
+
+def _entry(**overrides) -> JournalEntry:
+    """Build a journal entry with plausible values."""
+    values = {
+        "sequence": 1,
+        "timestamp": "2026-11-03T10:00:00+00:00",
+        "path": "notes.txt",
+        "operation": JournalOperation.WRITE,
+        "actor": JournalActor.AI,
+        "conversation": "conversation-1",
+        "group": "",
+        "existed_before": True,
+        "pre_image_hash": "a" * 64,
+        "post_image_hash": "b" * 64,
+        "pre_image_trash": None,
+    }
+    values.update(overrides)
+    return JournalEntry(**values)
+
+
+class TestReplacedVersionAvailability:
+    """A change has a replaced version to show exactly when one is still held."""
+
+    def test_an_overwrite_with_a_captured_pre_image_has_one(self):
+        assert ChangesSidebar._replaced_version_available(_entry())  # pylint: disable=protected-access
+
+    def test_a_creation_has_none(self):
+        entry = _entry(existed_before=False, pre_image_hash=None)
+
+        assert not ChangesSidebar._replaced_version_available(entry)  # pylint: disable=protected-access
+
+    def test_an_overwrite_too_large_to_capture_has_none(self):
+        entry = _entry(pre_image_hash=None)
+
+        assert not ChangesSidebar._replaced_version_available(entry)  # pylint: disable=protected-access
+
+    def test_a_removal_the_trash_holds_has_one(self):
+        entry = _entry(pre_image_hash=None, pre_image_trash="ab12cd34_notes.txt", post_image_hash=None)
+
+        assert ChangesSidebar._replaced_version_available(entry)  # pylint: disable=protected-access
+
+    def test_a_removed_directory_has_none(self):
+        entry = _entry(
+            pre_image_hash=None,
+            pre_image_trash="ab12cd34_folder",
+            pre_image_is_directory=True,
+            post_image_hash=None,
+        )
+
+        assert not ChangesSidebar._replaced_version_available(entry)  # pylint: disable=protected-access
+
+    def test_a_removed_directory_has_none(self):
+        entry = _entry(
+            pre_image_hash=None,
+            pre_image_trash="ab12cd34_folder",
+            pre_image_is_directory=True,
+            post_image_hash=None,
+        )
+
+        assert not ChangesSidebar._replaced_version_available(entry)  # pylint: disable=protected-access
+
+
+class TestRecordedTimeRendering:
+    """A recorded timestamp is shown in the reader's own time."""
+
+    def test_a_valid_timestamp_is_rendered_without_its_timezone(self):
+        rendered = ChangesSidebar._format_time("2026-11-03T10:00:00+00:00")  # pylint: disable=protected-access
+
+        assert "2026-11-03" in rendered
+        assert "+00:00" not in rendered
+
+    def test_an_unreadable_timestamp_is_shown_as_stored(self):
+        assert ChangesSidebar._format_time("not a time") == "not a time"  # pylint: disable=protected-access

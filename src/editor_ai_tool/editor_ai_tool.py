@@ -665,7 +665,9 @@ class EditorAITool(AITool):
             raise AIToolAuthorizationDenied("User denied permission to save file")
 
         try:
-            success = context.save(JournalActor.AI)
+            success = context.save(
+                JournalActor.AI, self._mindspace.conversation_identifier(requester_ref)
+            )
 
             if not success:
                 raise AIToolExecutionError("Save operation failed")

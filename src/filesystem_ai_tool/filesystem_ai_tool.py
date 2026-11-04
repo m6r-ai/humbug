@@ -24,7 +24,7 @@ from ai_tool import (
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
 from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
 from mindspace.mindspace import Mindspace
-from mindspace.journal_entry import JournalActor
+from mindspace.journal_entry import JournalActor, JournalEntry
 from mindspace.mindspace_error import MindspaceHumbugPathError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from pdf import PDFError, PDFUnsupportedError, extract_text, parse as parse_pdf
@@ -1073,19 +1073,19 @@ class FileSystemAITool(AITool):
         line_ending = FileSystemAITool._detect_line_ending(content)
         return content + line_ending
 
-    def _requester_conversation_id(self, requester_ref: Any) -> str:
+    def _void_journal_entry(self, *entries: JournalEntry | None) -> None:
         """
-        Return the identifier of the conversation making a request.
+        Cancel journal records for a mutation that did not happen.
+
+        A mutation is recorded before it is attempted, because the pre-image has
+        to be read while the old content is still there.  When the attempt then
+        fails, the records it made must be withdrawn, or the changes panel would
+        report a change that never occurred and offer to reverse it.
 
         Args:
-            requester_ref: The requester passed to execute(), which identifies a
-                conversation when the request comes from one.
-
-        Returns:
-            The conversation identifier, or an empty string when the requester is
-            not a conversation.
+            *entries: Whatever the recording calls returned.  None is ignored.
         """
-        return self._mindspace.conversation_identifier(requester_ref)
+        self._mindspace.file_journal().void_entries(list(entries))
 
     async def _write_file(
         self,
@@ -1147,7 +1147,7 @@ class FileSystemAITool(AITool):
             display_path,
             content.encode(encoding),
             JournalActor.AI,
-            self._requester_conversation_id(requester_ref),
+            self._mindspace.conversation_identifier(requester_ref),
         )
         if journal_entry is None:
             self._mindspace.add_interaction(
@@ -1274,7 +1274,7 @@ class FileSystemAITool(AITool):
             display_path,
             content.encode(encoding),
             JournalActor.AI,
-            self._requester_conversation_id(requester_ref),
+            self._mindspace.conversation_identifier(requester_ref),
         )
         if journal_entry is None:
             self._mindspace.add_interaction(
@@ -1519,7 +1519,7 @@ class FileSystemAITool(AITool):
             str(path),
             display_path,
             JournalActor.AI,
-            self._requester_conversation_id(requester_ref),
+            self._mindspace.conversation_identifier(requester_ref),
         )
         if journal_entry is None:
             self._mindspace.add_interaction(
@@ -1603,7 +1603,7 @@ class FileSystemAITool(AITool):
             dest_display_path,
             str(source_path),
             JournalActor.AI,
-            self._requester_conversation_id(requester_ref),
+            self._mindspace.conversation_identifier(requester_ref),
         )
         if journal_entry is None:
             self._mindspace.add_interaction(
@@ -1684,8 +1684,10 @@ class FileSystemAITool(AITool):
         # A move is two mutations of a file: the destination gains the content
         # and the source loses it.  Directories are not journalled, so their
         # move is not reversible and the authorization text says so.
+        destination_entry: JournalEntry | None = None
+        source_entry: JournalEntry | None = None
         if source_path.is_file():
-            conversation = self._requester_conversation_id(requester_ref)
+            conversation = self._mindspace.conversation_identifier(requester_ref)
             journal = self._mindspace.file_journal()
             group = uuid.uuid4().hex
             destination_entry = journal.record_write_from_path(
@@ -2614,7 +2616,7 @@ class FileSystemAITool(AITool):
             display_path,
             modified_content.encode(cast(str, encoding)),
             JournalActor.AI,
-            self._requester_conversation_id(requester_ref),
+            self._mindspace.conversation_identifier(requester_ref),
         )
         if journal_entry is None:
             self._mindspace.add_interaction(
@@ -3022,7 +3024,7 @@ class FileSystemAITool(AITool):
             out_display_path,
             new_bytes,
             JournalActor.AI,
-            self._requester_conversation_id(requester_ref),
+            self._mindspace.conversation_identifier(requester_ref),
         )
         if journal_entry is None:
             self._mindspace.add_interaction(

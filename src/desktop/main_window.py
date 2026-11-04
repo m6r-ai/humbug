@@ -119,7 +119,7 @@ def _create_editor_tab(
     """Context factory for EditorTab."""
     historical_content = registry.get_model(info.context_id, str)
     tab = EditorTab(
-        info.context_id, info.path, None, parent, read_only=historical_content is not None
+        info.context_id, info.path, None, parent, read_only=info.read_only
     )
     if historical_content is not None:
         tab.set_content(historical_content)

@@ -11,7 +11,7 @@ from ai import AIConversationHistory, AIConversationParent
 from ai.ai_message import AIMessage
 
 from ai_transcript_conversation.ai_conversation_transcript_error import (
-    AIConversationTranscriptFormatError, AIConversationTranscriptIOError
+    AIConversationTranscriptError, AIConversationTranscriptFormatError, AIConversationTranscriptIOError
 )
 
 
@@ -220,7 +220,7 @@ class AIConversationTranscriptHandler:
                 raise AIConversationTranscriptFormatError(f"Invalid message format: {str(e)}") from e
 
         parent = self._parse_parent(data["metadata"].get("parent"))
-        conversation_uuid = self._resolve_conversation_uuid(data["metadata"])
+        conversation_uuid, assigned = self._resolve_conversation_uuid(data["metadata"])
         forked_from = self._parse_forked_from(data["metadata"].get("forked_from"))
 
         # Load attachments — absent in old transcripts, treat as empty
@@ -244,7 +244,7 @@ class AIConversationTranscriptHandler:
                 "content": attachment_data["content"],
             }
 
-        return AIConversationHistory(
+        history = AIConversationHistory(
             messages=messages,
             version=data["metadata"]["version"],
             parent=parent,
@@ -253,29 +253,56 @@ class AIConversationTranscriptHandler:
             forked_from=forked_from,
         )
 
-    def _resolve_conversation_uuid(self, metadata: dict) -> str:
+        if assigned:
+            self._persist_assigned_identifier(history)
+
+        return history
+
+    def _resolve_conversation_uuid(self, metadata: dict) -> tuple[str, bool]:
         """
         Return the transcript's identifier, assigning one when it has none.
 
         A transcript written before identifiers existed is given one the first
-        time it is opened, and the assignment is written back immediately so that
-        activity attributed to the conversation from then on refers to a value
-        the file actually carries.
+        time it is opened.  The caller persists that assignment before returning,
+        so the value activity is attributed to is the value the file carries; an
+        identifier assigned in memory only would be replaced by a different one
+        on the next read.
 
         Args:
             metadata: The transcript's metadata, updated in place.
 
         Returns:
-            The conversation's identifier.
+            The conversation's identifier, and whether it was just assigned.
         """
         conversation_uuid = metadata.get("id")
         if isinstance(conversation_uuid, str) and conversation_uuid:
-            return conversation_uuid
+            return conversation_uuid, False
 
         conversation_uuid = str(uuid.uuid4())
         metadata["id"] = conversation_uuid
         self._logger.info("Assigned identifier %s to transcript '%s'", conversation_uuid, self._filename)
-        return conversation_uuid
+        return conversation_uuid, True
+
+    def _persist_assigned_identifier(self, history: AIConversationHistory) -> None:
+        """
+        Write a newly assigned identifier back to the transcript.
+
+        Failing to persist is not fatal: the conversation is still usable and is
+        attributed for this session, and the next read attempts the assignment
+        again.  It is logged, because until it succeeds every entry that names
+        the conversation refers to an identifier no file carries.
+
+        Args:
+            history: The history whose identifier was just assigned.
+        """
+        try:
+            self.write(history)
+
+        except AIConversationTranscriptError as e:
+            self._logger.error(
+                "Failed to persist the identifier assigned to transcript '%s': %s",
+                self._filename, e,
+            )
 
     @staticmethod
     def _parse_forked_from(raw_forked_from: Any) -> dict | None:

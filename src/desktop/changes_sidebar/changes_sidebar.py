@@ -1,6 +1,6 @@
 """Recent changes panel: lists the mutations recorded in the change journal."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 import os
 
 from PySide6.QtCore import QFileInfo, QPoint, QSize, Qt, Signal
@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QFrame, QLabel, QSpacerItem, QSizePolicy, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
+from mindspace.file_journal import FileJournal
 from mindspace.journal_entry import JournalEntry, JournalActor
 from mindspace.journal_reversal import JournalRevertOutcome
 
@@ -28,6 +29,8 @@ from desktop.color_role import ColorRole
 
 _ENTRY_ROLE = Qt.ItemDataRole.UserRole + 1
 _WINDOW_MINUTES = 30
+_PURGE_DAYS = 30
+_MAX_ROWS = 500
 
 
 class ChangesSidebar(SidebarBase):
@@ -38,6 +41,13 @@ class ChangesSidebar(SidebarBase):
     row is a recorded mutation, and reversing them delegates to the journal, which
     refuses to touch a path that has changed since it was recorded.  A refusal is
     shown as a result, not hidden.
+
+    The list is bounded to the newest few hundred mutations so that a long-lived
+    mindspace cannot make the panel expensive to build or to read.  The header says
+    how many are not shown, and the journal's own horizon is reported as a fact.
+
+    The entries are held in memory between refreshes, so a mutation costs a read of
+    the records made since the last look rather than a re-read of the whole index.
     """
 
     file_opened_in_preview = Signal(str)
@@ -55,6 +65,11 @@ class ChangesSidebar(SidebarBase):
         self._watched_paths: set[str] = set()
         self._mindspace_path = ""
         self._empty_state_spacer: QSpacerItem | None = None
+        self._entries: list[JournalEntry] = []
+        self._by_sequence: dict[int, JournalEntry] = {}
+        self._older_count = 0
+        self._last_sequence = 0
+        self._journal_bytes = 0
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -84,6 +99,7 @@ class ChangesSidebar(SidebarBase):
     def set_mindspace(self, path: str) -> None:
         """Set the active mindspace root and refresh the listing."""
         self._mindspace_path = path
+        self._forget_entries()
         if path:
             self._watch_journal()
 
@@ -136,45 +152,117 @@ class ChangesSidebar(SidebarBase):
 
     def _on_journal_changed(self, _path: str) -> None:
         """
-        Re-establish the watches and rebuild the listing after a change.
+        Re-establish the watches and pick up what has been recorded since.
 
-        Rotation moves the newest segment, so the registrations are rebuilt before
-        the listing is refreshed.
+        Rotation moves the newest segment, so the registrations are rebuilt first.
+        Only the new records are read: the entries already shown are kept, so a
+        mutation costs a read of the newest segment rather than of the whole index.
 
         Args:
             _path: The path the watcher reported, which is one of the journal paths.
         """
         self._watch_journal()
-        self.refresh()
+        self._refresh_from_journal()
 
-    def refresh(self) -> None:
-        """Rebuild the listing from the change journal."""
-        self._tree.clear()
+    def _refresh_from_journal(self) -> None:
+        """
+        Add the records made since the listing was last built.
+
+        History can also be removed under the panel, by a purge or by a
+        cancellation, and neither can be applied incrementally: both reload.
+        """
         strings = self._language_manager.strings()
-
         mindspace = self._mindspace_manager.mindspace()
         if not self._mindspace_path or not mindspace.has_mindspace():
+            self._forget_entries()
             self._show_empty_state(strings.changes_no_mindspace_message)
             return
 
-        entries = mindspace.file_journal().all_entries()
-        if not entries:
+        journal = mindspace.file_journal()
+        newest = journal.newest_sequence()
+        if newest < self._last_sequence:
+            self.refresh()
+            return
+
+        added = newest - self._last_sequence
+        if added == 0:
+            return
+
+        fresh = journal.entries_from(self._last_sequence + 1, added)
+        if len(fresh) < added:
+            self.refresh()
+            return
+
+        self._last_sequence = newest
+        self._remember_entries(self._entries + fresh)
+        self._tree.clear()
+        self._render()
+
+    def refresh(self) -> None:
+        """
+        Reload the listing from the change journal.
+
+        This is the expensive path, used when the panel is activated, when the
+        mindspace changes, and whenever history was removed under it.  It is also
+        where the journal's size is measured, because a directory walk on every
+        appended record would cost more than the guard is worth.
+        """
+        strings = self._language_manager.strings()
+        mindspace = self._mindspace_manager.mindspace()
+        self._tree.clear()
+
+        if not self._mindspace_path or not mindspace.has_mindspace():
+            self._forget_entries()
+            self._show_empty_state(strings.changes_no_mindspace_message)
+            return
+
+        journal = mindspace.file_journal()
+        self._last_sequence = journal.newest_sequence()
+        self._journal_bytes = journal.size_bytes()
+        self._remember_entries(journal.all_entries())
+        self._render()
+
+    def _render(self) -> None:
+        """Show the entries held, or the empty state when there are none."""
+        strings = self._language_manager.strings()
+        if not self._entries:
             self._show_empty_state(strings.changes_empty_message)
             return
 
-        oldest = mindspace.file_journal().oldest_entry()
-        self._show_tree(oldest.timestamp if oldest is not None else "")
-        self._populate(entries)
+        self._show_tree()
+        self._populate()
 
-    def _show_tree(self, horizon: str) -> None:
+    def _remember_entries(self, entries: list[JournalEntry]) -> None:
         """
-        Show the tree and report how far back the journal reaches.
+        Keep the newest _MAX_ROWS entries and count the rest as older.
 
         Args:
-            horizon: Timestamp of the oldest recorded mutation.
+            entries: The entries to keep, oldest first.  Any already counted as
+                older are not repeated here, so the count accumulates.
         """
+        self._entries = entries[-_MAX_ROWS:]
+        self._older_count += len(entries) - len(self._entries)
+        self._by_sequence = {entry.sequence: entry for entry in self._entries}
+
+    def _forget_entries(self) -> None:
+        """Discard everything the listing holds."""
+        self._entries = []
+        self._by_sequence = {}
+        self._older_count = 0
+        self._last_sequence = 0
+        self._journal_bytes = 0
+
+    def _show_tree(self) -> None:
+        """Show the tree and report how far back the journal reaches."""
         strings = self._language_manager.strings()
-        self._status_label.setText(strings.changes_horizon.format(horizon) if horizon else "")
+        lines: list[str] = []
+        if self._entries:
+            lines.append(strings.changes_horizon.format(self._format_time(self._entries[0].timestamp)))
+
+        if self._journal_bytes > FileJournal.WARN_BYTES:
+            lines.append(strings.changes_size_warning.format(self._journal_bytes / (1024 * 1024)))
+
+        self._status_label.setText("\n".join(lines))
         self._status_label.show()
         self._tree.show()
         if self._empty_state_spacer is not None:
@@ -190,18 +278,18 @@ class ChangesSidebar(SidebarBase):
             self._empty_state_spacer = QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
             self._layout.addItem(self._empty_state_spacer)
 
-    def _populate(self, entries: list[JournalEntry]) -> None:
+    def _populate(self) -> None:
         """
-        Build the tree from entries, newest first, split into time buckets.
+        Build the tree from the entries held, newest first, split into buckets.
 
-        Args:
-            entries: Every recorded mutation, oldest first.
+        Only the newest _MAX_ROWS entries are listed, with a final row saying how
+        many older ones exist, so a long history cannot make the panel unbounded.
         """
         strings = self._language_manager.strings()
         headers: dict[str, QTreeWidgetItem] = {}
         today = datetime.now(timezone.utc).date()
 
-        for entry in reversed(entries):
+        for entry in reversed(self._entries):
             bucket = strings.changes_bucket_today if self._entry_date(entry) == today else strings.changes_bucket_earlier
             if bucket not in headers:
                 headers[bucket] = self._add_header(bucket)
@@ -210,6 +298,9 @@ class ChangesSidebar(SidebarBase):
             item.setIcon(0, self._icon_for(entry))
             item.setToolTip(0, self._tooltip_text(entry))
             item.setData(0, _ENTRY_ROLE, entry.sequence)
+
+        if self._older_count:
+            self._add_header(strings.changes_older_not_shown.format(self._older_count))
 
     def _add_header(self, text: str) -> QTreeWidgetItem:
         """
@@ -227,13 +318,27 @@ class ChangesSidebar(SidebarBase):
         return header
 
     @staticmethod
-    def _entry_date(entry: JournalEntry) -> object:
+    def _entry_date(entry: JournalEntry) -> date | None:
         """Return the local date an entry was recorded, or None when unreadable."""
         try:
             return datetime.fromisoformat(entry.timestamp).astimezone().date()
 
         except ValueError:
             return None
+
+    @staticmethod
+    def _format_time(timestamp: str) -> str:
+        """
+        Render a recorded timestamp in the user's local time, or as stored.
+
+        Args:
+            timestamp: The ISO-8601 timestamp recorded with an entry.
+        """
+        try:
+            return datetime.fromisoformat(timestamp).astimezone().strftime("%Y-%m-%d %H:%M")
+
+        except ValueError:
+            return timestamp
 
     def _row_text(self, entry: JournalEntry) -> str:
         """
@@ -255,10 +360,12 @@ class ChangesSidebar(SidebarBase):
             entry: The entry to describe.
         """
         actor = "AI" if entry.actor is JournalActor.AI else "You"
-        recorded_at = self._entry_date(entry)
-        when = entry.timestamp if recorded_at is not None else f"{entry.timestamp} (unreadable time)"
+        when = self._format_time(entry.timestamp)
 
         lines = [entry.path, f"{entry.operation.value} · {actor} · {when}"]
+        if entry.conversation:
+            lines.append(f"conversation {entry.conversation}")
+
         if not entry.is_revertable():
             lines.append("this change cannot be reverted")
 
@@ -286,25 +393,22 @@ class ChangesSidebar(SidebarBase):
         if sequence is None:
             return None
 
-        mindspace = self._mindspace_manager.mindspace()
-        if not mindspace.has_mindspace():
-            return None
+        return self._by_sequence.get(sequence)
 
-        for entry in mindspace.file_journal().all_entries():
-            if entry.sequence == sequence:
-                return entry
-
-        return None
 
     def _show_context_menu(self, position: QPoint) -> None:
         """
         Offer the reversal actions that apply to the row under the cursor.
+
+        Right-clicking outside a row offers the retention action instead, since
+        forgetting history is not about any one change.
 
         Args:
             position: Cursor position within the tree.
         """
         item = self._tree.itemAt(position)
         if item is None:
+            self._show_retention_menu(position)
             return
 
         entry = self._entry_for_item(item)
@@ -326,6 +430,52 @@ class ChangesSidebar(SidebarBase):
         compare_action.setEnabled(self._replaced_version_available(entry))
         compare_action.triggered.connect(lambda: self._compare_with_current(entry))
         menu.exec(self._tree.viewport().mapToGlobal(position))
+
+    def _show_retention_menu(self, position: QPoint) -> None:
+        """
+        Offer the action that reclaims journal history.
+
+        Args:
+            position: Cursor position within the tree.
+        """
+        mindspace = self._mindspace_manager.mindspace()
+        if not self._mindspace_path or not mindspace.has_mindspace():
+            return
+
+        strings = self._language_manager.strings()
+        menu = self._style_manager.create_menu(self)
+        menu.addAction(strings.changes_forget_action.format(_PURGE_DAYS)).triggered.connect(self._forget_older)
+        menu.exec(self._tree.viewport().mapToGlobal(position))
+
+    def _forget_older(self) -> None:
+        """Discard journal history older than the retention window, after confirming it."""
+        mindspace = self._mindspace_manager.mindspace()
+        if not mindspace.has_mindspace():
+            return
+
+        strings = self._language_manager.strings()
+        cutoff = datetime.now(timezone.utc) - timedelta(days=_PURGE_DAYS)
+        confirm = MessageBox.show_message(
+            self,
+            MessageBoxType.WARNING,
+            strings.changes_forget_title,
+            strings.changes_forget_confirm.format(_PURGE_DAYS, self._format_time(cutoff.isoformat())),
+            [MessageBoxButton.YES, MessageBoxButton.NO],
+            True,
+        )
+        if confirm != MessageBoxButton.YES:
+            return
+
+        result = mindspace.purge_journal(cutoff)
+        MessageBox.show_message(
+            self,
+            MessageBoxType.INFORMATION,
+            strings.changes_forget_title,
+            strings.changes_forget_result.format(
+                result.entries_dropped, result.bytes_reclaimed / (1024 * 1024)
+            ),
+        )
+        self.refresh()
 
     def _compare_with_current(self, entry: JournalEntry) -> None:
         """
@@ -351,12 +501,20 @@ class ChangesSidebar(SidebarBase):
         """
         Return True when the change replaced a version the journal still holds.
 
-        A creation replaced nothing, and a change whose earlier content was too
-        large to capture has no content to show.
+        A creation replaced nothing.  A change whose earlier content was too large
+        to capture has no content of its own, but the trash may still hold it, so
+        a recorded trash entry counts too.  A directory has no content to show at
+        all, so it never does, even though it can be restored.
 
         Args:
             entry: The entry to test.
         """
+        if entry.pre_image_is_directory:
+            return False
+
+        if entry.pre_image_trash is not None:
+            return True
+
         return entry.existed_before and entry.pre_image_hash is not None
 
     def _view_version(self, entry: JournalEntry) -> None:
@@ -393,6 +551,7 @@ class ChangesSidebar(SidebarBase):
             path=os.path.join(mindspace.mindspace_path(), entry.path),
             title=os.path.basename(entry.path) or entry.path,
             is_ephemeral=True,
+            read_only=True,
             initial_model=text,
         )
 
@@ -423,20 +582,6 @@ class ChangesSidebar(SidebarBase):
             strings.changes_revert_title,
             strings.changes_version_unavailable,
         )
-
-    def _current_path_for(self, entry: JournalEntry) -> str | None:
-        """
-        Return the path an entry names, when that path exists now.
-
-        Args:
-            entry: The entry naming the path.
-        """
-        mindspace = self._mindspace_manager.mindspace()
-        if not mindspace.has_mindspace():
-            return None
-
-        absolute_path = os.path.join(mindspace.mindspace_path(), entry.path)
-        return absolute_path if os.path.isfile(absolute_path) else None
 
     def _entries_for(self, entry: JournalEntry) -> list[JournalEntry]:
         """

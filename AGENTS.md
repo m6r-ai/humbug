@@ -172,6 +172,8 @@ the front-end-agnostic modules (`mindspace`, the `*_context` modules, `ai`, the 
 modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 
 **Subdirectories:**
+- `changes_sidebar/` - Recent changes panel: lists the mutations recorded in the
+  change journal and reverses them
 - `conversation_sidebar/` - Conversations panel implementation
 - `conversation_tab/` - Conversation tab implementation
 - `diff_tab/` - Diff tab implementation
@@ -291,6 +293,27 @@ the `.humbug/` directory (via `Mindspace.is_humbug_path()`), resolving symlinks 
 the target and the mindspace root.  Do not re-implement this check in individual tools;
 delegate to it.  The separate `Mindspace.get_mindspace_relative_path()` is for internal
 use only and does not apply the `.humbug/` exclusion.
+
+The change journal (`file_journal.py`, `journal_entry.py`, `journal_index.py`,
+`journal_blob_store.py`, `journal_reversal.py`) records the pre-image of every file
+mutation made through Humbug so that it can be reversed; see ADR-0018.  It is a
+different store from the interaction log, with the opposite retention rule: the log is
+never truncated, while journal blobs are reclaimed by `FileJournal.purge_before()`.
+Writers record before they mutate and call `FileJournal.void_entries()` if the mutation
+then fails, so the journal never claims a change that did not happen.  A new writer
+joins by calling the same `record_*` helpers; do not give it its own capture policy.
+
+A view that lists entries should hold them and ask `entries_from(sequence, limit)` for
+what has been added since, rather than calling `all_entries()` again: the index skips
+segments older than the requested sequence and reads only the tail of the newest one,
+which is the difference between a listing that can stay open and one that cannot.  A
+purge or a cancellation invalidates what the view holds, so both must reload.
+
+A view that lists entries should hold them and ask `entries_from(sequence, limit)` for
+what has been added since, rather than calling `all_entries()` again: the index skips
+segments older than the requested sequence and reads only the tail of the newest one,
+which is the difference between a listing that can stay open and one that cannot.  A
+purge or a cancellation invalidates what the view holds, so both must reload.
 
 An outside-boundary path raises `MindspaceError`; a `.humbug/` path raises
 `MindspaceHumbugPathError` (a subclass).  The distinction matters to the filesystem

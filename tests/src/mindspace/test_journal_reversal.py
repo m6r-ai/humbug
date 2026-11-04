@@ -5,7 +5,7 @@ import os
 from mindspace.file_journal import FileJournal
 from mindspace.journal_blob_store import JournalBlobStore
 from mindspace.journal_entry import JournalActor
-from mindspace.journal_reversal import JournalReverser, JournalRevertStatus
+from mindspace.journal_reversal import JournalReverser, JournalRevertOutcome, JournalRevertStatus
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_settings import MindspaceSettings
 
@@ -377,3 +377,108 @@ class TestTrashBackedRemoval:
 
         assert result.outcomes[0].status == JournalRevertStatus.NOT_REVERTABLE
         assert "no longer holds" in result.outcomes[0].detail
+
+
+class TestUncapturedPreImage:
+    """A mutation whose pre-image was too large to capture is not evidence of divergence."""
+
+    def test_a_chain_through_an_uncaptured_pre_image_can_still_be_reverted(self, tmp_path, monkeypatch):
+        journal = _journal(tmp_path)
+        path = tmp_path / "big.bin"
+        path.write_bytes(b"small")
+        _write_and_record(journal, tmp_path, "big.bin", b"still small")
+        monkeypatch.setattr(FileJournal, "MAX_CAPTURE_BYTES", 4)
+        journal.record_write(str(path), "big.bin", b"large", JournalActor.AI, "conv")
+        path.write_bytes(b"large")
+
+        result = _reverser(journal, tmp_path).revert(journal.entries_for_path("big.bin"))
+
+        assert result.reverted_paths() == ["big.bin"]
+        assert path.read_bytes() == b"small"
+
+
+class TestVoidedEntries:
+    """A mutation that was cancelled is not reversed."""
+
+    def test_a_voided_entry_is_ignored(self, tmp_path):
+        journal = _journal(tmp_path)
+        path = tmp_path / "notes.txt"
+        path.write_bytes(b"before")
+        entry = journal.record_write(str(path), "notes.txt", b"after", JournalActor.AI, "conv")
+        journal.void_entries([entry])
+
+        outcome = _reverser(journal, tmp_path).revert([entry])
+
+        assert outcome.outcomes == []
+        assert path.read_bytes() == b"before"
+
+    def test_an_operation_whose_other_half_was_voided_is_reversed_as_a_whole(self, tmp_path):
+        journal = _journal(tmp_path)
+        source = tmp_path / "source.txt"
+        source.write_bytes(b"content")
+        group = "group-1"
+        destination_entry = journal.record_write_from_path(
+            str(tmp_path / "dest.txt"), "dest.txt", str(source), JournalActor.AI, "", group
+        )
+        source_entry = journal.record_removal(str(source), "source.txt", JournalActor.AI, "", group)
+        os.rename(source, tmp_path / "dest.txt")
+        journal.void_entries([destination_entry])
+
+        outcome = _reverser(journal, tmp_path).revert([destination_entry, source_entry])
+
+        assert outcome.outcomes[0].status == JournalRevertStatus.INCOMPLETE
+
+
+class TestReversalRecordsWhatItDid:
+    """A reversal is attributed and is itself revertable."""
+
+    def test_the_reversal_carries_the_actor_and_conversation_it_was_given(self, tmp_path):
+        journal = _journal(tmp_path)
+        path = tmp_path / "notes.txt"
+        path.write_bytes(b"before")
+        entry = journal.record_write(str(path), "notes.txt", b"after", JournalActor.AI, "conv")
+        path.write_bytes(b"after")
+        reverser = JournalReverser(
+            journal, str(tmp_path), str(tmp_path), _no_trash, JournalActor.AI, "conversation-9"
+        )
+
+        reverser.revert([entry])
+
+        recorded = journal.entries_for_path("notes.txt")[-1]
+        assert recorded.actor == JournalActor.AI
+        assert recorded.conversation == "conversation-9"
+
+    def test_a_failed_restore_leaves_no_record(self, tmp_path, monkeypatch):
+        journal = _journal(tmp_path)
+        path = tmp_path / "notes.txt"
+        path.write_bytes(b"before")
+        entry = journal.record_write(str(path), "notes.txt", b"after", JournalActor.AI, "conv")
+        path.write_bytes(b"after")
+
+        def _fail(_absolute_path: str, path_str: str, _content: bytes) -> JournalRevertOutcome:
+            return JournalRevertOutcome(path_str, JournalRevertStatus.FAILED, "disk full")
+
+        monkeypatch.setattr(JournalReverser, "_write", staticmethod(_fail))
+        count_before = len(journal.entries_for_path("notes.txt"))
+
+        result = _reverser(journal, tmp_path).revert([entry])
+
+        assert result.failed_outcomes()[0].status == JournalRevertStatus.FAILED
+        assert len(journal.entries_for_path("notes.txt")) == count_before
+
+
+class TestDirectoryInPlaceOfFile:
+    """A directory where a file is expected is reported, not overwritten."""
+
+    def test_a_directory_at_the_path_is_a_conflict(self, tmp_path):
+        journal = _journal(tmp_path)
+        path = tmp_path / "notes.txt"
+        path.write_bytes(b"before")
+        entry = journal.record_write(str(path), "notes.txt", b"after", JournalActor.AI, "conv")
+        path.unlink()
+        path.mkdir()
+
+        outcome = _reverser(journal, tmp_path).revert([entry])
+
+        assert outcome.outcomes[0].status == JournalRevertStatus.CONFLICT
+        assert path.is_dir()
