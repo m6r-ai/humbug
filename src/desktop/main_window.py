@@ -741,7 +741,8 @@ class MainWindow(QMainWindow):
         tab_manager.register_context_factory("usage", _create_usage_tab)
 
         # Set initial sidebar width
-        self._splitter.setSizes([300, self.width() - 300])
+        sidebar_width = self._sidebar_manager.expanded_sidebar_width()
+        self._splitter.setSizes([sidebar_width, self.width() - sidebar_width])
 
         # Set the stretch factors: 0 for sidebar (no stretch) and 1 for tabs (stretch to fill)
         self._splitter.setStretchFactor(0, 0)
@@ -2711,11 +2712,13 @@ class MainWindow(QMainWindow):
         if self._window_controls is not None:
             self._window_controls.apply_style()
 
-        self._apply_splitter_style()
-
         # Apply styles to the sidebar manager and column manager
         self._sidebar_manager.apply_style()
         self._tab_manager.apply_style()
+
+        # The sidebar's metrics are updated by its own apply_style, so the splitter
+        # has to be told where the sidebar now belongs afterwards.
+        self._apply_splitter_style()
 
     def _apply_main_surface_style(self) -> None:
         """Apply the app-level background surface."""
@@ -2804,9 +2807,10 @@ class MainWindow(QMainWindow):
         self._status_message_label.setFont(status_font)
 
     def _apply_splitter_style(self) -> None:
-        """Trigger repaint of main window splitter handle."""
+        """Repaint the splitter handle and keep the sidebar in proportion with the zoom factor."""
         # The main window splitter uses custom painted handles, so we just need to trigger a repaint
         self._splitter.update()
+        self._splitter.apply_sidebar_width()
 
     def _generate_conversation_path(self, relative_folder: str | None = None) -> tuple[str, str]:
         """

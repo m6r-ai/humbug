@@ -1,8 +1,12 @@
 """Tests for the recent changes panel's presentation of recorded mutations."""
 
+from PySide6.QtWidgets import QTreeWidget
+
 from mindspace.journal_entry import JournalActor, JournalEntry, JournalOperation
 
 from desktop.changes_sidebar.changes_sidebar import ChangesSidebar
+from desktop.style_manager import StyleManager
+from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 
 
 def _entry(**overrides) -> JournalEntry:
@@ -77,3 +81,26 @@ class TestRecordedTimeRendering:
 
     def test_an_unreadable_timestamp_is_shown_as_stored(self):
         assert ChangesSidebar._format_time("not a time") == "not a time"  # pylint: disable=protected-access
+
+
+class TestInsetAlignment:
+    """The title, the rows and the status text share one left inset."""
+
+    def test_the_header_inset_follows_the_zoom_factor(self, qapp):
+        header = SidebarSectionHeader("Changes")
+
+        margins = header.layout().contentsMargins()
+        expected = StyleManager().scale(SidebarSectionHeader.TITLE_INSET)
+
+        assert margins.left() == expected
+        assert margins.right() == expected
+
+    def test_the_panel_insets_rows_and_status_text_like_the_title(self, qapp):
+        panel = ChangesSidebar()
+        style_manager = StyleManager()
+        inset = style_manager.scale(SidebarSectionHeader.TITLE_INSET)
+
+        sheet = panel.styleSheet()
+
+        assert f"padding-left: {inset}px;" in sheet
+        assert f"padding: {round(12 * style_manager.zoom_factor())}px {inset}px;" in sheet

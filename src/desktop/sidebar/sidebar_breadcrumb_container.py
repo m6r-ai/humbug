@@ -6,7 +6,7 @@ import os
 
 from PySide6.QtCore import QEvent, QModelIndex, QObject, QPoint, QRect, QSize, Qt, QTimer
 from PySide6.QtGui import QFont, QResizeEvent
-from PySide6.QtWidgets import QApplication, QScrollBar, QSizePolicy, QWidget
+from PySide6.QtWidgets import QApplication, QScrollBar, QSizePolicy, QTreeView, QWidget
 
 from desktop.sidebar.sidebar_breadcrumb_bar import SidebarBreadcrumbBar
 from desktop.sidebar.sidebar_tree_view import SidebarTreeView
@@ -152,15 +152,53 @@ class SidebarBreadcrumbContainer(QWidget):
         Apply icon size, indentation, and font to the tree view.
 
         Routing these through the container keeps the view layer from holding
-        direct references to the tree view for styling purposes.
+        direct references to the tree view for styling purposes.  The container is
+        re-laid out afterwards so the breadcrumb bar matches the new row heights.
 
         Args:
             icon_size: Pixel size for tree icons and indentation.
+            indentation: Extra indentation in pixels, added to the icon size.
             font: QFont to apply to the tree view.
         """
         self._tree_view.setIconSize(QSize(icon_size, icon_size))
         self._tree_view.setIndentation(icon_size + indentation)
         self._tree_view.setFont(font)
+        self._breadcrumb_rows = self._breadcrumb_bar.spine_length()
+        self._remeasure_row_heights()
+        self._apply_geometry()
+
+    def _remeasure_row_heights(self) -> None:
+        """
+        Re-measure the cached row heights from the widgets' current fonts.
+
+        The breadcrumb bar's height is a whole number of bar rows, and the
+        container's scroll arithmetic works in tree row heights, so both are
+        cached.  A font change alters every row height, and a stale value leaves
+        the bar at its old height — clipping its rows — until some later scroll
+        happens to change the spine and re-measure it.
+        """
+        self._row_height = self._first_row_height(self._tree_view)
+        self._bc_row_height = self._first_row_height(self._breadcrumb_bar)
+        if self._bc_row_height <= 0:
+            self._bc_row_height = self._row_height
+
+    @staticmethod
+    def _first_row_height(view: QTreeView) -> int:
+        """
+        Return the height of the first row in view.
+
+        Args:
+            view: The tree view to measure.
+
+        Returns:
+            The row height in pixels, or 0 if the view has no rows.
+        """
+        model = view.model()
+        root_index = QModelIndex()
+        if model is None or model.rowCount(root_index) == 0:
+            return 0
+
+        return view.rowHeight(model.index(0, 0, root_index))
 
     def configure_tree_for_path(self, path: str) -> None:
         """

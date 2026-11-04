@@ -732,6 +732,7 @@ class ChangesSidebar(SidebarBase):
         self._tree.setIconSize(QSize(icon_size, icon_size))
 
         subtle_text = self._style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
+        inset = self._style_manager.scale(SidebarSectionHeader.TITLE_INSET)
 
         self.setStyleSheet(
             build_tree_pane_stylesheet(
@@ -744,7 +745,10 @@ class ChangesSidebar(SidebarBase):
             + f"""
             QLabel#_status_label {{
                 color: {subtle_text};
-                padding: {round(12 * zoom_factor)}px {round(6 * zoom_factor)}px;
+                padding: {round(12 * zoom_factor)}px {inset}px;
+            }}
+            QTreeWidget#ChangesSidebarTree::item {{
+                padding-left: {inset}px;
             }}
             QTreeWidget#ChangesSidebarTree {{
                 border: none;
