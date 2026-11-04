@@ -753,6 +753,7 @@ class ChangesSidebar(SidebarBase):
 
         subtle_text = self._style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
         inset = self._style_manager.scale(SidebarSectionHeader.TITLE_INSET)
+        tree_inset = self._style_manager.scale(SidebarSectionHeader.TITLE_INSET - 4)
 
         self.setStyleSheet(
             build_tree_pane_stylesheet(
@@ -768,7 +769,7 @@ class ChangesSidebar(SidebarBase):
                 padding: {round(12 * zoom_factor)}px {inset}px;
             }}
             QTreeWidget#ChangesSidebarTree::item {{
-                padding-left: {inset}px;
+                padding-left: {tree_inset}px;
             }}
             QTreeWidget#ChangesSidebarTree {{
                 border: none;

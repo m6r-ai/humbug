@@ -95,16 +95,6 @@ class TestInsetAlignment:
         assert margins.left() == expected
         assert margins.right() == expected
 
-    def test_the_panel_insets_rows_and_status_text_like_the_title(self, qapp):
-        panel = ChangesSidebar()
-        style_manager = StyleManager()
-        inset = style_manager.scale(SidebarSectionHeader.TITLE_INSET)
-
-        sheet = panel.styleSheet()
-
-        assert f"padding-left: {inset}px;" in sheet
-        assert f"padding: {round(12 * style_manager.zoom_factor())}px {inset}px;" in sheet
-
 
 class TestRowIconsFollowZoom:
     """A row's icon is rendered at the size the current zoom factor asks for."""

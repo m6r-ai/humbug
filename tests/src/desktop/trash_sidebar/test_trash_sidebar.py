@@ -13,6 +13,7 @@ from desktop.message_box import MessageBox, MessageBoxButton
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.style_manager import StyleManager
 from desktop.sidebar.sidebar_row_spacing_delegate import SidebarRowSpacingDelegate
+from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 from desktop.trash_sidebar.trash_sidebar import TrashSidebar, _TRASH_NAME_ROLE
 
 

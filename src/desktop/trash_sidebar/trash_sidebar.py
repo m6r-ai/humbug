@@ -292,6 +292,8 @@ class TrashSidebar(SidebarBase):
         self._refresh_row_icons()
 
         subtle_text = self._style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
+        inset = self._style_manager.scale(SidebarSectionHeader.TITLE_INSET)
+        tree_inset = self._style_manager.scale(SidebarSectionHeader.TITLE_INSET - 4)
 
         self.setStyleSheet(
             build_tree_pane_stylesheet(
@@ -304,13 +306,17 @@ class TrashSidebar(SidebarBase):
             + f"""
             QLabel#_status_label {{
                 color: {subtle_text};
-                padding: {round(12 * zoom_factor)}px {round(6 * zoom_factor)}px;
+                padding: {round(12 * zoom_factor)}px {inset}px;
             }}
             QTreeWidget#TrashSidebarTree {{
                 border: none;
             }}
+            QTreeWidget#TrashSidebarTree::item {{
+                padding-left: {tree_inset}px;
+            }}
             """
         )
+
 
 
 class TrashTreeWidget(QTreeWidget):
