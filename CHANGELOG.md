@@ -7,12 +7,14 @@ New features:
 - Added a change journal: every file mutation made through Humbug, by the AI or by the user, records the content it
   replaced so the change can be reversed.
 - Added a Changes panel listing recent mutations, showing which files changed and how far back the record reaches.
-  A change can be reverted individually, the last thirty minutes can be reverted together, and a replaced version can
-  be viewed read-only or compared with the file as it now stands.  Divergence is reported per file rather than
-  overwritten, so a file changed outside Humbug is skipped instead of losing work.
-- Deleting a file or an empty folder from the Files, Preview or VCS panel now moves it to the trash, where it can be
-  restored, instead of unlinking it permanently.
-- Journalled history can be forgotten from the Changes panel, which reports what it reclaimed.
+  A change can be reverted individually, or the mindspace restored to the state it held at any listed change by
+  reverting everything recorded after it, and a replaced version can be viewed read-only or compared with the
+  file as it now stands.  Divergence is reported per file rather than overwritten, so a file changed outside
+  Humbug is skipped instead of losing work.
+- Deleting a file or an empty folder from the Files, Preview or VCS panel now moves it to the trash, where it can
+  be restored, instead of unlinking it permanently.
+- Journalled history can be forgotten from the Changes panel, up to and including any listed change or in its
+  entirety, and the panel reports what it reclaimed.
 
 Internal structure changes:
 

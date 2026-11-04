@@ -445,7 +445,7 @@ def get_arabic_strings() -> LanguageStrings:
         changes_empty_message="لم يتم تسجيل أي تغيير بعد.",
         changes_horizon="التغييرات منذ {0}",
         changes_revert_file_action="تراجع عن هذا التغيير",
-        changes_revert_window_action="تراجع عن تغييرات آخر 30 دقيقة",
+        changes_restore_to_point_action="استعادة مساحة العمل إلى هذا التغيير",
         changes_revert_title="التراجع عن التغييرات",
         changes_view_replaced_action="عرض النسخة التي استبدلها هذا التغيير",
         changes_compare_action="مقارنة النسخة المستبدلة بالملف الحالي",
@@ -455,6 +455,10 @@ def get_arabic_strings() -> LanguageStrings:
         ),
         changes_revert_confirm="هل تريد التراجع عن {0} تغيير؟ سيعود كل ملف متأثر إلى الحالة التي كان عليها.",
         changes_revert_result="تم التراجع عن {0} مسار، وتعذر التراجع عن {1}.",
+        changes_restore_to_point_confirm=(
+            "هل تريد التراجع عن {0} تغيير مسجل بعد هذا التغيير؟ سيعود كل ملف متأثر إلى "
+            "الحالة التي كان عليها عند هذا التغيير."
+        ),
         changes_bucket_today="اليوم",
         changes_bucket_earlier="في وقت سابق",
         changes_older_not_shown="{0} من التغييرات الأقدم غير معروضة",
@@ -462,12 +466,15 @@ def get_arabic_strings() -> LanguageStrings:
             "يستخدم سجل التغييرات {0:.0f} ميغابايت. انقر بزر الفأرة الأيمن هنا لنسيان "
             "السجل القديم."
         ),
-        changes_forget_action="نسيان التغييرات الأقدم من {0} يومًا",
+        changes_forget_through_action="نسيان هذا التغيير وكل ما قبله",
+        changes_forget_all_action="نسيان كل التغييرات",
         changes_forget_title="نسيان التغييرات",
         changes_forget_confirm=(
-            "هل تريد نسيان كل تغيير مسجل قبل {1}؟ لن يكون بالإمكان التراجع عن هذه "
-            "الملفات، وسيُحذف أي محتوى يحتفظ به السجل وحده. لا يمكن التراجع عن هذا الإجراء."
+            "هل تريد نسيان {0}؟ لن يكون بالإمكان التراجع عن هذه التغييرات، وسيُحذف أي "
+            "محتوى يحتفظ به السجل وحده. لا يمكن التراجع عن هذا الإجراء."
         ),
+        changes_forget_scope_through="هذا التغيير وكل ما قبله",
+        changes_forget_scope_all="كل تغيير مسجل",
         changes_forget_result="تم نسيان {0} تغيير واستعادة {1:.0f} ميغابايت.",
         editor_read_only_marker=" (نسخة سابقة)",
 

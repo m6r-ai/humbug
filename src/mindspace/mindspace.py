@@ -369,6 +369,39 @@ class Mindspace:
         assert self.has_mindspace(), "No mindspace is currently open"
         return self._file_journal.purge_before(before)
 
+    def purge_journal_through(self, sequence: int) -> JournalPurgeResult:
+        """
+        Discard recorded file mutations up to and including a sequence number.
+
+        Destructive and irreversible, like ``purge_journal``, but addressed to a
+        record rather than a clock: the caller has chosen the last change worth
+        keeping.
+
+        Args:
+            sequence: The last sequence number to discard.
+
+        Returns:
+            What was removed.
+
+        Raises:
+            MindspaceError: No mindspace is open.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        return self._file_journal.purge_through(sequence)
+
+    def purge_whole_journal(self) -> JournalPurgeResult:
+        """
+        Discard every recorded file mutation.
+
+        Returns:
+            What was removed.
+
+        Raises:
+            MindspaceError: No mindspace is open.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        return self._file_journal.purge_all()
+
     def revert_journal_entries(
         self,
         entries: list[JournalEntry],

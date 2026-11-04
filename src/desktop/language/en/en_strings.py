@@ -449,7 +449,7 @@ def get_english_strings() -> LanguageStrings:
         changes_empty_message="No changes have been recorded yet.",
         changes_horizon="Changes since {0}",
         changes_revert_file_action="Revert this change",
-        changes_revert_window_action="Revert changes from the last 30 minutes",
+        changes_restore_to_point_action="Restore the mindspace to this change",
         changes_view_replaced_action="View the version this change replaced",
         changes_compare_action="Compare the replaced version with the file now",
         changes_version_unavailable=(
@@ -459,19 +459,25 @@ def get_english_strings() -> LanguageStrings:
         changes_revert_title="Revert changes",
         changes_revert_confirm="Revert {0} change(s)? Every affected file returns to the state it held before.",
         changes_revert_result="{0} path(s) reverted, {1} could not be.",
+        changes_restore_to_point_confirm=(
+            "Undo {0} change(s) recorded after this one? Every affected file returns to "
+            "the state it held at this change."
+        ),
         changes_bucket_today="Today",
         changes_bucket_earlier="Earlier",
         changes_older_not_shown="{0} older change(s) not shown",
         changes_size_warning=(
             "The change journal is using {0:.0f} MB. Right-click here to forget old history."
         ),
-        changes_forget_action="Forget changes older than {0} days",
+        changes_forget_through_action="Forget this change and everything before it",
+        changes_forget_all_action="Forget all changes",
         changes_forget_title="Forget changes",
         changes_forget_confirm=(
-            "Forget every recorded change before {1}? Those files can no longer be "
-            "reverted, and any content held only by the journal is deleted. This cannot "
-            "be undone."
+            "Forget {0}? Those changes can no longer be reverted, and any content held "
+            "only by the journal is deleted. This cannot be undone."
         ),
+        changes_forget_scope_through="this change and every change before it",
+        changes_forget_scope_all="every recorded change",
         changes_forget_result="Forgot {0} change(s) and reclaimed {1:.0f} MB.",
         editor_read_only_marker=" (earlier version)",
 

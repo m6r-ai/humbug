@@ -451,7 +451,7 @@ def get_french_strings() -> LanguageStrings:
         changes_empty_message="Aucune modification n'a encore \u00e9t\u00e9 enregistr\u00e9e.",
         changes_horizon="Modifications depuis {0}",
         changes_revert_file_action="Annuler cette modification",
-        changes_revert_window_action="Annuler les modifications des 30 derni\u00e8res minutes",
+        changes_restore_to_point_action="Revenir à cette modification",
         changes_view_replaced_action="Voir la version remplac\u00e9e par cette modification",
         changes_compare_action="Comparer la version remplac\u00e9e avec le fichier actuel",
         changes_version_unavailable=(
@@ -461,6 +461,10 @@ def get_french_strings() -> LanguageStrings:
         changes_revert_title="Annuler des modifications",
         changes_revert_confirm="Annuler {0} modification(s) ? Retour \u00e0 l'\u00e9tat pr\u00e9c\u00e9dent.",
         changes_revert_result="{0} chemin(s) annul\u00e9(s), {1} impossible(s).",
+        changes_restore_to_point_confirm=(
+            "Annuler {0} modification(s) enregistrée(s) après celle-ci ? Chaque fichier "
+            "concerné revient à l'état qu'il avait à cette modification."
+        ),
         changes_bucket_today="Aujourd'hui",
         changes_bucket_earlier="Plus t\u00f4t",
         changes_older_not_shown="{0} modification(s) plus ancienne(s) non affich\u00e9e(s)",
@@ -468,13 +472,16 @@ def get_french_strings() -> LanguageStrings:
             "Le journal des modifications occupe {0:.0f} Mo. Faites un clic droit ici "
             "pour oublier l'historique ancien."
         ),
-        changes_forget_action="Oublier les modifications de plus de {0} jours",
+        changes_forget_through_action="Oublier cette modification et toutes les précédentes",
+        changes_forget_all_action="Oublier toutes les modifications",
         changes_forget_title="Oublier des modifications",
         changes_forget_confirm=(
-            "Oublier toutes les modifications enregistr\u00e9es avant le {1} ? Ces fichiers "
-            "ne pourront plus \u00eatre restaur\u00e9s, et tout contenu d\u00e9tenu uniquement par le "
-            "journal sera supprim\u00e9. Cette action est irr\u00e9versible."
+            "Oublier {0} ? Ces modifications ne pourront plus être restaurées, et tout "
+            "contenu détenu uniquement par le journal sera supprimé. Cette action est "
+            "irréversible."
         ),
+        changes_forget_scope_through="cette modification et toutes les précédentes",
+        changes_forget_scope_all="toutes les modifications enregistrées",
         changes_forget_result="{0} modification(s) oubli\u00e9e(s) et {1:.0f} Mo r\u00e9cup\u00e9r\u00e9s.",
         editor_read_only_marker=" (version ant\u00e9rieure)",
 

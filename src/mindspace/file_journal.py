@@ -360,6 +360,23 @@ class FileJournal:
         """
         return self._index.count()
 
+    def entries_after(self, sequence: int) -> list[JournalEntry]:
+        """
+        Return every live mutation recorded after a sequence number.
+
+        This is what "put the mindspace back as it was at this change" reverses: the
+        chosen record stays, and everything later is undone.  Per-path replay then
+        leaves each affected file holding what the newest record at or before the
+        sequence left there, which is the state that existed at that moment.
+
+        Args:
+            sequence: The sequence number whose state should be kept.
+
+        Returns:
+            The later entries, oldest first, as a concrete list.
+        """
+        return self._index.read(sequence + 1, self._index.count())
+
     def entries_since(self, since: datetime) -> list[JournalEntry]:
         """
         Return the mutations recorded at or after a point in time.
@@ -376,25 +393,41 @@ class FileJournal:
         """
         return [entry for entry in self._index.read_all() if self._recorded_at(entry) >= since]
 
-    def oldest_entry(self) -> JournalEntry | None:
+    def purge_through(self, sequence: int) -> JournalPurgeResult:
         """
-        Return the oldest recorded mutation, or None when the journal is empty.
+        Discard every recorded mutation up to and including a sequence number.
 
-        This is the horizon a caller can honestly offer: everything older has
-        never been recorded, so no interface should promise to reach past it.
+        This is the destructive half of retention, anchored to a record rather
+        than to a clock: the caller has chosen the last change worth keeping, and
+        everything at or before it goes.  Segments holding only discarded records
+        are deleted; the segment that straddles the cutoff is rewritten without
+        them, atomically and under a new name if its first record went with them.
+        Content no surviving record refers to is then reclaimed.
+
+        Args:
+            sequence: The last sequence number to discard.  Zero discards
+                nothing; a number past the end discards everything.
+
+        Returns:
+            What was removed, for the caller to report.
         """
-        entries = self._index.read_all()
-        return entries[0] if entries else None
+        through = max(0, min(sequence, self._index.count()))
+        dropped = self._index.drop_segments_before(through + 1)
+        reclaimed = self._sweep_unreferenced_blobs()
+
+        self._logger.info("Purged %d journal entries and reclaimed %d bytes", dropped, reclaimed)
+        return JournalPurgeResult(entries_dropped=dropped, bytes_reclaimed=reclaimed)
+
+    def purge_all(self) -> JournalPurgeResult:
+        """Discard every recorded mutation, leaving an empty journal."""
+        return self.purge_through(self._index.count())
 
     def purge_before(self, before: datetime) -> JournalPurgeResult:
         """
         Discard every recorded mutation older than a point in time.
 
-        This is the destructive half of retention: the caller must have told the
-        user that history beyond this point will be gone for good.  Whole index
-        segments are removed rather than records rewritten, so what survives is
-        byte-for-byte what was written, and any blob no surviving entry refers to
-        is then reclaimed.
+        A time window is a convenience over the sequence-addressed purge: it is
+        resolved to a cutoff once, and exactly that set is discarded.
 
         Args:
             before: The earliest time to keep.
@@ -407,16 +440,21 @@ class FileJournal:
             if self._recorded_at(entry) < before:
                 cutoff = max(cutoff, entry.sequence)
 
-        dropped = self._index.drop_segments_before(cutoff + 1) if cutoff else 0
+        return self.purge_through(cutoff)
+
+    def _sweep_unreferenced_blobs(self) -> int:
+        """
+        Reclaim stored content that no surviving record refers to.
+
+        Returns:
+            The number of bytes reclaimed.
+        """
         keep = {
             entry.pre_image_hash
             for entry in self._index.read_all()
             if entry.pre_image_hash is not None
         }
-        reclaimed = self._blobs.sweep(keep)
-
-        self._logger.info("Purged %d journal entries and reclaimed %d bytes", dropped, reclaimed)
-        return JournalPurgeResult(entries_dropped=dropped, bytes_reclaimed=reclaimed)
+        return self._blobs.sweep(keep)
 
     def pre_image(self, entry: JournalEntry) -> bytes | None:
         """

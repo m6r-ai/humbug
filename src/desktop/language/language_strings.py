@@ -412,20 +412,24 @@ class LanguageStrings:
     changes_empty_message: str
     changes_horizon: str
     changes_revert_file_action: str
-    changes_revert_window_action: str
+    changes_restore_to_point_action: str
     changes_view_replaced_action: str
     changes_compare_action: str
     changes_version_unavailable: str
     changes_revert_title: str
     changes_revert_confirm: str
     changes_revert_result: str
+    changes_restore_to_point_confirm: str
     changes_bucket_today: str
     changes_bucket_earlier: str
     changes_older_not_shown: str
     changes_size_warning: str
-    changes_forget_action: str
+    changes_forget_through_action: str
+    changes_forget_all_action: str
     changes_forget_title: str
     changes_forget_confirm: str
+    changes_forget_scope_through: str
+    changes_forget_scope_all: str
     changes_forget_result: str
     editor_read_only_marker: str
 

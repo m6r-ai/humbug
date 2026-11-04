@@ -174,6 +174,18 @@ sequence, never a file timestamp, which a process may set arbitrarily. The windo
 a concrete set of entries before the preview is shown and exactly that set is applied, so entries
 cannot fall out of the window while the human is deciding.
 
+In practice the useful scope is anchored to a record rather than a clock: "restore the mindspace
+to this change" reverses exactly the entries after one the user chose, and the per-path replay
+leaves each affected file holding what the newest record at or before it produced. That is the
+state the mindspace was in at that moment, described by pointing at something visible rather than
+by naming a duration, and it needs no window arithmetic on a wall clock that may be wrong.
+
+In practice the useful scope is anchored to a record rather than a clock: "restore the mindspace
+to this change" reverses exactly the entries after one the user chose, and the per-path replay
+leaves each affected file holding what the newest record at or before it produced. That is the
+state the mindspace was in at that moment, described by pointing at something visible rather than
+by naming a duration, and it needs no window arithmetic on a wall clock that may be wrong.
+
 **Retention.** The journal is not capped by age. Age-based expiry would make the reachable
 horizon a promise the store cannot keep; with no expiry the horizon is simply the oldest entry,
 which the interface reports as a fact. A size ceiling exists as a guard against disk exhaustion,
@@ -185,6 +197,14 @@ but not revertable, so that one large binary cannot dominate the store. The thre
 which was measured rather than guessed: on the Humbug mindspace it captures 96% of files while
 holding a complete first capture to about 43 MiB, and leaves 38 metadata-only entries rather than
 a long tail. The figures are recorded in `docs/mindspace-tree-scan-measurement.md`.
+
+Retention is addressed by record as well as by time: a caller discards everything up to a sequence
+number it has chosen, or all of it. That is what a person means by "forget this and everything
+before it", and a time window is a convenience resolved to the same cutoff.
+
+Retention is addressed by record as well as by time: a caller discards everything up to a sequence
+number it has chosen, or all of it. That is what a person means by "forget this and everything
+before it", and a time window is a convenience resolved to the same cutoff.
 
 **The store is unreachable by tools.** The journal lives inside `.humbug/`, which every tool path
 resolver refuses, so no tool can read the store or invoke a reversal by naming a journal path. Any

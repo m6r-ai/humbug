@@ -1,6 +1,7 @@
 """Recent changes panel: lists the mutations recorded in the change journal."""
 
-from datetime import date, datetime, timedelta, timezone
+from collections.abc import Callable
+from datetime import date, datetime, timezone
 import os
 
 from PySide6.QtCore import QFileInfo, QPoint, QSize, Qt, Signal
@@ -9,7 +10,7 @@ from PySide6.QtWidgets import (
     QFrame, QLabel, QSpacerItem, QSizePolicy, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
-from mindspace.file_journal import FileJournal
+from mindspace.file_journal import FileJournal, JournalPurgeResult
 from mindspace.journal_entry import JournalEntry, JournalActor
 from mindspace.journal_reversal import JournalRevertOutcome
 
@@ -28,8 +29,6 @@ from desktop.style_manager import StyleManager
 from desktop.color_role import ColorRole
 
 _ENTRY_ROLE = Qt.ItemDataRole.UserRole + 1
-_WINDOW_MINUTES = 30
-_PURGE_DAYS = 30
 _MAX_ROWS = 500
 
 
@@ -398,10 +397,10 @@ class ChangesSidebar(SidebarBase):
 
     def _show_context_menu(self, position: QPoint) -> None:
         """
-        Offer the reversal actions that apply to the row under the cursor.
+        Offer the actions that apply to the row under the cursor.
 
-        Right-clicking outside a row offers the retention action instead, since
-        forgetting history is not about any one change.
+        Right-clicking outside a row offers forgetting all history instead,
+        since that is not about any one change.
 
         Args:
             position: Cursor position within the tree.
@@ -422,18 +421,26 @@ class ChangesSidebar(SidebarBase):
         view_action.triggered.connect(
             lambda: self._view_version(entry)
         )
-        menu.addAction(strings.changes_revert_file_action).triggered.connect(
-            lambda: self._revert(self._entries_for(entry))
-        )
-        menu.addAction(strings.changes_revert_window_action).triggered.connect(self._revert_recent_window)
         compare_action = menu.addAction(strings.changes_compare_action)
         compare_action.setEnabled(self._replaced_version_available(entry))
         compare_action.triggered.connect(lambda: self._compare_with_current(entry))
+
+        menu.addSeparator()
+        menu.addAction(strings.changes_revert_file_action).triggered.connect(
+            lambda: self._revert(self._entries_for(entry))
+        )
+        menu.addAction(strings.changes_restore_to_point_action).triggered.connect(
+            lambda: self._restore_to_point(entry)
+        )
+        menu.addSeparator()
+        menu.addAction(strings.changes_forget_through_action).triggered.connect(
+            lambda: self._forget_through(entry)
+        )
         menu.exec(self._tree.viewport().mapToGlobal(position))
 
     def _show_retention_menu(self, position: QPoint) -> None:
         """
-        Offer the action that reclaims journal history.
+        Offer forgetting the whole journal.
 
         Args:
             position: Cursor position within the tree.
@@ -444,29 +451,55 @@ class ChangesSidebar(SidebarBase):
 
         strings = self._language_manager.strings()
         menu = self._style_manager.create_menu(self)
-        menu.addAction(strings.changes_forget_action.format(_PURGE_DAYS)).triggered.connect(self._forget_older)
+        menu.addAction(strings.changes_forget_all_action).triggered.connect(self._forget_all)
         menu.exec(self._tree.viewport().mapToGlobal(position))
 
-    def _forget_older(self) -> None:
-        """Discard journal history older than the retention window, after confirming it."""
+    def _forget_through(self, entry: JournalEntry) -> None:
+        """
+        Discard this change and every earlier one, after confirming it.
+
+        Args:
+            entry: The last change to forget.
+        """
         mindspace = self._mindspace_manager.mindspace()
         if not mindspace.has_mindspace():
             return
 
         strings = self._language_manager.strings()
-        cutoff = datetime.now(timezone.utc) - timedelta(days=_PURGE_DAYS)
+        scope = strings.changes_forget_scope_through.format(self._row_text(entry))
+        self._confirm_and_purge(scope, lambda: mindspace.purge_journal_through(entry.sequence))
+
+    def _forget_all(self) -> None:
+        """Discard the whole journal, after confirming it."""
+        mindspace = self._mindspace_manager.mindspace()
+        if not mindspace.has_mindspace():
+            return
+
+        strings = self._language_manager.strings()
+        scope = strings.changes_forget_scope_all
+        self._confirm_and_purge(scope, mindspace.purge_whole_journal)
+
+    def _confirm_and_purge(self, scope: str, purge: Callable[[], JournalPurgeResult]) -> None:
+        """
+        Confirm a destructive purge, run it, and report what it reclaimed.
+
+        Args:
+            scope: Description of what will be forgotten, for the confirmation.
+            purge: The purge to run once the user agrees.
+        """
+        strings = self._language_manager.strings()
         confirm = MessageBox.show_message(
             self,
             MessageBoxType.WARNING,
             strings.changes_forget_title,
-            strings.changes_forget_confirm.format(_PURGE_DAYS, self._format_time(cutoff.isoformat())),
+            strings.changes_forget_confirm.format(scope),
             [MessageBoxButton.YES, MessageBoxButton.NO],
             True,
         )
         if confirm != MessageBoxButton.YES:
             return
 
-        result = mindspace.purge_journal(cutoff)
+        result = purge()
         MessageBox.show_message(
             self,
             MessageBoxType.INFORMATION,
@@ -602,31 +635,44 @@ class ChangesSidebar(SidebarBase):
 
         return [candidate for candidate in mindspace.file_journal().all_entries() if candidate.group == entry.group]
 
-    def _revert_recent_window(self) -> None:
-        """Offer to revert every mutation recorded in the last half hour."""
+    def _restore_to_point(self, entry: JournalEntry) -> None:
+        """
+        Offer to undo every change recorded after a given one.
+
+        Reversal lands each affected file on the state held before the earliest
+        entry being reversed, so undoing what came after a change leaves the
+        mindspace as it stood at that change.
+
+        Args:
+            entry: The change whose state should be kept.
+        """
         mindspace = self._mindspace_manager.mindspace()
         if not mindspace.has_mindspace():
             return
 
-        since = datetime.now(timezone.utc) - timedelta(minutes=_WINDOW_MINUTES)
-        self._revert(mindspace.file_journal().entries_since(since))
+        entries = mindspace.file_journal().entries_after(entry.sequence)
+        strings = self._language_manager.strings()
+        self._revert(entries, strings.changes_restore_to_point_confirm.format(len(entries)))
 
-    def _revert(self, entries: list[JournalEntry]) -> None:
+    def _revert(self, entries: list[JournalEntry], confirmation: str | None = None) -> None:
         """
         Confirm and then reverse a fixed set of entries.
 
         Args:
             entries: The entries to reverse, resolved before the user is asked.
+            confirmation: What to ask before acting, or None to ask in the default
+                terms for reversing a set of changes.
         """
         if not entries:
             return
 
         strings = self._language_manager.strings()
+        question = confirmation or strings.changes_revert_confirm.format(len(entries))
         confirm = MessageBox.show_message(
             self,
             MessageBoxType.WARNING,
             strings.changes_revert_title,
-            strings.changes_revert_confirm.format(len(entries)),
+            question,
             [MessageBoxButton.YES, MessageBoxButton.NO],
             True,
         )

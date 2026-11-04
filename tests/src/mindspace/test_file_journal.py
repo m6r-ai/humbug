@@ -347,20 +347,6 @@ class TestFileJournal:
         journal.record_write(str(tmp_path / "a.txt"), "a.txt", b"one", JournalActor.AI, "conv")
 
         assert journal.entries_since(datetime.now(timezone.utc) + timedelta(hours=1)) == []
-
-    def test_oldest_entry_of_an_empty_journal_is_none(self, tmp_path):
-        assert self._journal(tmp_path).oldest_entry() is None
-
-    def test_oldest_entry_is_the_first_mutation(self, tmp_path):
-        journal = self._journal(tmp_path)
-        journal.record_write(str(tmp_path / "a.txt"), "a.txt", b"one", JournalActor.AI, "conv")
-        journal.record_write(str(tmp_path / "b.txt"), "b.txt", b"two", JournalActor.AI, "conv")
-
-        oldest = journal.oldest_entry()
-
-        assert oldest is not None
-        assert oldest.sequence == 1
-
     def test_reopening_keeps_the_recorded_entries(self, tmp_path):
         directory = str(tmp_path / "journal")
         first = FileJournal()
@@ -1035,3 +1021,97 @@ class TestFileJournalIncrementalRead:
         journal.record_write(str(tmp_path / "b.txt"), "b.txt", b"two", JournalActor.AI, "conv")
 
         assert [e.path for e in journal.entries_from(seen + 1, 10)] == ["b.txt"]
+
+
+class TestPurgeBySequence:
+    """History can be forgotten up to a chosen record, or entirely."""
+
+    def _journal(self, tmp_path) -> FileJournal:
+        journal = FileJournal()
+        journal.open(str(tmp_path / "journal"))
+        return journal
+
+    def _fill(self, journal: FileJournal, count: int) -> None:
+        """Record count mutations, each over the previous one."""
+        for number in range(count):
+            path = f"file{number}.txt"
+            journal.record_write(path, path, b"x", JournalActor.AI, "conv")
+
+    def test_purging_through_a_sequence_keeps_the_later_records(self, tmp_path):
+        journal = self._journal(tmp_path)
+        self._fill(journal, 5)
+
+        result = journal.purge_through(3)
+
+        assert result.entries_dropped == 3
+        assert [e.sequence for e in journal.all_entries()] == [4, 5]
+
+    def test_purging_through_the_newest_record_empties_the_journal(self, tmp_path):
+        journal = self._journal(tmp_path)
+        self._fill(journal, 4)
+
+        result = journal.purge_through(4)
+
+        assert result.entries_dropped == 4
+        assert journal.all_entries() == []
+
+    def test_purging_all_empties_the_journal(self, tmp_path):
+        journal = self._journal(tmp_path)
+        self._fill(journal, 4)
+
+        result = journal.purge_all()
+
+        assert result.entries_dropped == 4
+        assert journal.all_entries() == []
+
+    def test_purging_through_zero_keeps_everything(self, tmp_path):
+        journal = self._journal(tmp_path)
+        self._fill(journal, 3)
+
+        result = journal.purge_through(0)
+
+        assert result.entries_dropped == 0
+        assert len(journal.all_entries()) == 3
+
+    def test_purge_all_on_an_empty_journal_removes_nothing(self, tmp_path):
+        journal = self._journal(tmp_path)
+
+        result = journal.purge_all()
+
+        assert result.entries_dropped == 0
+        assert journal.all_entries() == []
+
+    def test_purging_reclaims_the_content_the_dropped_records_held(self, tmp_path):
+        journal = self._journal(tmp_path)
+        path = tmp_path / "kept.txt"
+        path.write_bytes(b"older content")
+        journal.record_write(str(path), "kept.txt", b"newer", JournalActor.AI, "conv")
+        path.write_bytes(b"newest")
+        journal.record_write(str(path), "kept.txt", b"newest", JournalActor.AI, "conv")
+
+        result = journal.purge_through(1)
+
+        assert result.bytes_reclaimed == len(b"older content")
+        assert journal.all_entries()[0].sequence == 2
+
+
+class TestEntriesAfter:
+    """Restoring to a point reverses exactly the records that came after it."""
+
+    def _journal(self, tmp_path) -> FileJournal:
+        journal = FileJournal()
+        journal.open(str(tmp_path / "journal"))
+        return journal
+
+    def test_it_returns_only_the_later_records(self, tmp_path):
+        journal = self._journal(tmp_path)
+        for number in range(5):
+            journal.record_write(str(tmp_path / f"f{number}.txt"), f"f{number}.txt", b"x", JournalActor.AI, "conv")
+
+        assert [e.sequence for e in journal.entries_after(2)] == [3, 4, 5]
+
+    def test_after_the_newest_record_there_is_nothing(self, tmp_path):
+        journal = self._journal(tmp_path)
+        journal.record_write(str(tmp_path / "a.txt"), "a.txt", b"x", JournalActor.AI, "conv")
+
+        assert journal.entries_after(1) == []
