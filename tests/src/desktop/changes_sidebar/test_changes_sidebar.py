@@ -104,3 +104,26 @@ class TestInsetAlignment:
 
         assert f"padding-left: {inset}px;" in sheet
         assert f"padding: {round(12 * style_manager.zoom_factor())}px {inset}px;" in sheet
+
+
+class TestRowIconsFollowZoom:
+    """A row's icon is rendered at the size the current zoom factor asks for."""
+
+    def test_icons_are_rebuilt_when_the_zoom_factor_changes(self, mindspace_sandbox):  # pylint: disable=unused-argument
+        panel = ChangesSidebar()
+        panel._remember_entries([_entry()])  # pylint: disable=protected-access
+        panel._render()  # pylint: disable=protected-access
+        style_manager = StyleManager()
+        original_zoom = style_manager.zoom_factor()
+        row = panel._tree.topLevelItem(1)  # pylint: disable=protected-access
+
+        try:
+            assert row.icon(0).availableSizes()[0].width() == round(16 * original_zoom)
+
+            style_manager.set_zoom(2.0)
+            panel.apply_style()
+
+            assert row.icon(0).availableSizes()[0].width() == round(16 * 2.0)
+        finally:
+            style_manager.set_zoom(original_zoom)
+            panel.deleteLater()

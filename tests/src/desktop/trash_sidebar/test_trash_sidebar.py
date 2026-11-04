@@ -170,6 +170,28 @@ class TestTrashSidebarClickToOpen:
         assert emitted[0][2] is False  # non-ephemeral on double click
 
 
+class TestTrashRowIcons:
+    """A row's icon is rendered at the size the current zoom factor asks for."""
+
+    def test_icons_are_rebuilt_when_the_zoom_factor_changes(self, sidebar_env, panel):
+        mgr, _ms_path, conv_dir = sidebar_env
+        _trash_a_file(mgr, conv_dir)
+        panel.refresh()
+        style_manager = StyleManager()
+        original_zoom = style_manager.zoom_factor()
+        row = panel._tree.topLevelItem(0)  # pylint: disable=protected-access
+
+        try:
+            assert row.icon(0).availableSizes()[0].width() == round(16 * original_zoom)
+
+            style_manager.set_zoom(2.0)
+            panel.apply_style()
+
+            assert row.icon(0).availableSizes()[0].width() == round(16 * 2.0)
+        finally:
+            style_manager.set_zoom(original_zoom)
+
+
 class TestSidebarRowSpacingDelegate:
     """The shared delegate provides consistent, zoom-scaled row heights for tree panels."""
 

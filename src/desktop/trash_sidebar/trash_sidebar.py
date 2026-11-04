@@ -136,6 +136,24 @@ class TrashSidebar(SidebarBase):
         item.setIcon(0, self._icon_provider.icon(QFileInfo(trash_path)))
         return item
 
+    def _refresh_row_icons(self) -> None:
+        """
+        Re-request every row's icon at the current zoom factor.
+
+        Qt does not enlarge an icon beyond the pixmap it already holds, so a row
+        that keeps the icon handed to it when the listing was built stays at the
+        size it was drawn then.  The icon provider's cache is cleared before this
+        runs, so each icon is rebuilt at the zoom factor in force.
+        """
+        for index in range(self._tree.topLevelItemCount()):
+            item = self._tree.topLevelItem(index)
+            if item is None:
+                continue
+
+            trash_path = self._trash_path_for_item(item)
+            if trash_path:
+                item.setIcon(0, self._icon_provider.icon(QFileInfo(trash_path)))
+
     def _format_deleted_at(self, deleted_at: str) -> str:
         """Format an ISO 8601 timestamp as a short relative time string."""
         strings = self._language_manager.strings()
@@ -262,7 +280,6 @@ class TrashSidebar(SidebarBase):
         base_font_size = self._style_manager.base_font_size()
 
         self._header.apply_style()
-        self._icon_provider.update_icons()
 
         font = self.font()
         font.setPointSizeF(base_font_size * zoom_factor)
@@ -271,6 +288,8 @@ class TrashSidebar(SidebarBase):
         self._tree.setFont(font)
         icon_size = round(16 * zoom_factor)
         self._tree.setIconSize(QSize(icon_size, icon_size))
+        self._icon_provider.update_icons()
+        self._refresh_row_icons()
 
         subtle_text = self._style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
 

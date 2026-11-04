@@ -382,6 +382,24 @@ class ChangesSidebar(SidebarBase):
         absolute_path = os.path.join(mindspace.mindspace_path(), entry.path)
         return self._icon_provider.icon(QFileInfo(absolute_path))
 
+    def _refresh_row_icons(self) -> None:
+        """
+        Re-request every row's icon at the current zoom factor.
+
+        Qt does not enlarge an icon beyond the pixmap it already holds, so a row
+        that keeps the icon handed to it when the listing was built stays at the
+        size it was drawn then.  The icon provider's cache is cleared before this
+        runs, so each icon is rebuilt at the zoom factor in force.
+        """
+        for index in range(self._tree.topLevelItemCount()):
+            item = self._tree.topLevelItem(index)
+            if item is None:
+                continue
+
+            entry = self._entry_for_item(item)
+            if entry is not None:
+                item.setIcon(0, self._icon_for(entry))
+
     def _entry_for_item(self, item: QTreeWidgetItem) -> JournalEntry | None:
         """
         Return the entry a tree item stands for, if it stands for one.
@@ -722,7 +740,6 @@ class ChangesSidebar(SidebarBase):
         base_font_size = self._style_manager.base_font_size()
 
         self._header.apply_style()
-        self._icon_provider.update_icons()
 
         font = self.font()
         font.setPointSizeF(base_font_size * zoom_factor)
@@ -731,6 +748,8 @@ class ChangesSidebar(SidebarBase):
         self._tree.setFont(font)
         icon_size = round(16 * zoom_factor)
         self._tree.setIconSize(QSize(icon_size, icon_size))
+        self._icon_provider.update_icons()
+        self._refresh_row_icons()
 
         subtle_text = self._style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
         inset = self._style_manager.scale(SidebarSectionHeader.TITLE_INSET)
