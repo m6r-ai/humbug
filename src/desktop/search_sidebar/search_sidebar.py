@@ -123,6 +123,11 @@ class _SearchResultDelegate(QStyledItemDelegate):
 class SearchSidebar(SidebarBase):
     """Global search pane for searching across the current mindspace."""
 
+    SEARCH_TOP_INSET = 5
+    SEARCH_BOTTOM_INSET = 3
+    OPTIONS_TOP_INSET = 3
+    OPTIONS_BOTTOM_INSET = 5
+
     file_clicked = Signal(str, str, bool)               # panel_id, path, ephemeral
 
     # panel_id, path, ephemeral, query, case_sensitive, regexp, line_number, message_id
@@ -148,21 +153,19 @@ class SearchSidebar(SidebarBase):
 
         search_bar = QWidget(self)
         search_bar.setObjectName("_search_bar")
-        search_layout = QHBoxLayout(search_bar)
-        search_layout.setContentsMargins(10, 5, 10, 3)
-        search_layout.setSpacing(0)
+        self._search_layout = QHBoxLayout(search_bar)
+        self._search_layout.setSpacing(0)
 
         self._search_input = QLineEdit(search_bar)
         self._search_input.setObjectName("_search_input")
         self._search_input.textChanged.connect(self._schedule_search)
-        search_layout.addWidget(self._search_input, 1)
+        self._search_layout.addWidget(self._search_input, 1)
 
         layout.addWidget(search_bar)
 
         self._options_panel = QWidget(self)
         self._options_panel.setObjectName("_options_panel")
         self._options_layout = QHBoxLayout(self._options_panel)
-        self._options_layout.setContentsMargins(10, 3, 10, 5)
         self._options_layout.addStretch()
 
         self._match_case_button = QToolButton(self._options_panel)
@@ -455,6 +458,8 @@ class SearchSidebar(SidebarBase):
         base_font_size = self._style_manager.base_font_size()
 
         self._header.apply_style()
+        inset = self._style_manager.scale(SidebarSectionHeader.TITLE_INSET)
+        self._apply_insets(inset)
 
         font = self.font()
         font.setPointSizeF(base_font_size * zoom_factor)
@@ -473,6 +478,7 @@ class SearchSidebar(SidebarBase):
         button_checked = self._style_manager.get_color_str(ColorRole.TEXT_FOUND)
         button_checked_hover = self._style_manager.get_color_str(ColorRole.TEXT_FOUND_DIM)
         status_gap = round(6 * zoom_factor)
+        field_padding = round(4 * zoom_factor)
         input_field_bg = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)
         input_field_bg_error = self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)
         self._options_layout.setSpacing(round(6 * zoom_factor))
@@ -505,7 +511,7 @@ class SearchSidebar(SidebarBase):
                 color: {text};
                 border: none;
                 border-radius: 4px;
-                padding: 4px;
+                padding: {field_padding}px;
                 font-size: {int(base_font_size * zoom_factor)}pt;
             }}
             QWidget#_options_panel {{
@@ -518,7 +524,7 @@ class SearchSidebar(SidebarBase):
                 background-color: {input_field_bg};
                 border: none;
                 border-radius: 4px;
-                padding: 4px;
+                padding: {field_padding}px;
                 font-size: {int(base_font_size * zoom_factor)}pt;
             }}
             QWidget#_options_panel QToolButton#toggleButton:hover {{
@@ -539,12 +545,12 @@ class SearchSidebar(SidebarBase):
             }}
             QLabel#_status_label {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_ERROR) if self._regexp_invalid else subtle_text};
-                padding: {round(status_gap * 2)}px {round(6 * zoom_factor)}px {status_gap}px {round(6 * zoom_factor)}px;
+                padding: {round(status_gap * 2)}px {inset}px {status_gap}px {inset}px;
                 min-height: {round(16 * zoom_factor)}px;
             }}
             QLabel#_truncated_label {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_ERROR)};
-                padding: 0px {round(6 * zoom_factor)}px {status_gap}px {round(6 * zoom_factor)}px;
+                padding: 0px {inset}px {status_gap}px {inset}px;
                 min-height: {round(16 * zoom_factor)}px;
             }}
             QTreeWidget#SearchSidebarResultsTree {{
@@ -565,4 +571,28 @@ class SearchSidebar(SidebarBase):
                 color: {text};
             }}
             """
+        )
+
+    def _apply_insets(self, inset: int) -> None:
+        """
+        Set the search field's and the option buttons' indent.
+
+        Both rows share the same horizontal inset so the option buttons stay lined up
+        with the field above them.
+
+        Args:
+            inset: Horizontal indent in pixels, matching the section title's.
+        """
+        sm = self._style_manager
+        self._search_layout.setContentsMargins(
+            inset,
+            sm.scale(self.SEARCH_TOP_INSET),
+            inset,
+            sm.scale(self.SEARCH_BOTTOM_INSET),
+        )
+        self._options_layout.setContentsMargins(
+            inset,
+            sm.scale(self.OPTIONS_TOP_INSET),
+            inset,
+            sm.scale(self.OPTIONS_BOTTOM_INSET),
         )
