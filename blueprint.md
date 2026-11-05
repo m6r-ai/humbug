@@ -59,9 +59,16 @@ pre-image of every file mutation made through Humbug, by either actor, so that t
 mutation can be reversed.  See ADR-0018.  The two stores have deliberately opposite
 retention rules — the log is never truncated, while journalled content is reclaimed
 when the user asks — and are kept separate for that reason.  Reversing a file is not
-reversing an effect: journal coverage stops at terminal commands, at the mindspace
-boundary, and at anything already read, executed or committed, and the interface says
-so rather than implying a guarantee it cannot keep.
+reversing an effect: journal coverage stops at the mindspace boundary, at changes made
+since the most recent checkpoint, at content too large to capture, and at anything
+already read, executed or committed, and the interface says so rather than implying a
+guarantee it cannot keep.
+
+Beside the journal a change watcher compares successive metadata walks of the mindspace,
+so a file changed by a terminal command, or by anything else outside Humbug, is recorded
+as an ordinary journalled change and can be reversed with the rest.  It records what
+changed and when and never why: the change is unattributed because attributing it would
+be recording a guess.  See ADR-0020.
 
 ### Minimal dependencies, maximum understandability
 Humbug follows the pattern of an OS kernel: simple, largely self-contained, and

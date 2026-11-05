@@ -449,21 +449,31 @@ def get_french_strings() -> LanguageStrings:
         changes="Modifications",
         changes_no_mindspace_message="Ouvrez un mindspace pour voir ses modifications r\u00e9centes.",
         changes_empty_message="Aucune modification n'a encore \u00e9t\u00e9 enregistr\u00e9e.",
-        changes_horizon="Modifications depuis {0}",
+        changes_until="Modifications jusqu'à {0} inclus",
+        changes_since_action="Afficher les modifications jusqu'à une date incluse…",
+        changes_show_all_action="Afficher toutes les modifications",
         changes_revert_file_action="Annuler cette modification",
         changes_restore_to_point_action="Revenir à cette modification",
+        changes_view_this_version_action="Voir la version produite par cette modification",
         changes_view_replaced_action="Voir la version remplac\u00e9e par cette modification",
-        changes_compare_action="Comparer la version remplac\u00e9e avec le fichier actuel",
+        changes_compare_action="Comparer la version remplac\u00e9e avec celle-ci",
         changes_version_unavailable=(
             "Cette version ne peut pas \u00eatre affich\u00e9e : son contenu n'est plus "
             "conserv\u00e9, ou il ne s'agit pas de texte et le fichier a chang\u00e9 depuis."
         ),
+        changes_this_version_unavailable="Cette modification a supprim\u00e9 le fichier : elle n'a donc pas de version propre.",
         changes_revert_title="Annuler des modifications",
-        changes_revert_confirm="Annuler {0} modification(s) ? Retour \u00e0 l'\u00e9tat pr\u00e9c\u00e9dent.",
+        changes_revert_confirm=(
+            "Annuler {0} modification(s) ? Chaque fichier concern\u00e9 revient \u00e0 l'\u00e9tat "
+            "qu'il avait avant. Les modifications faites en dehors de Humbug ne sont pas "
+            "enregistr\u00e9es et ne sont donc pas annul\u00e9es."
+        ),
         changes_revert_result="{0} chemin(s) annul\u00e9(s), {1} impossible(s).",
         changes_restore_to_point_confirm=(
             "Annuler {0} modification(s) enregistrée(s) après celle-ci ? Chaque fichier "
-            "concerné revient à l'état qu'il avait à cette modification."
+            "concerné revient à l'état qu'il avait à cette modification. Les modifications "
+            "faites en dehors de Humbug ne sont pas enregistrées, l'espace mental n'est "
+            "donc peut-être pas exactement tel qu'il était."
         ),
         changes_bucket_today="Aujourd'hui",
         changes_bucket_earlier="Plus t\u00f4t",

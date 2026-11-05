@@ -134,11 +134,13 @@ class TestRevertNotRevertable:
 
     def test_reports_an_uncaptured_pre_image(self, tmp_path):
         journal = _journal(tmp_path)
-        journal.MAX_CAPTURE_BYTES = 4
-        (tmp_path / "a.txt").write_bytes(b"far too large to capture")
-        _write_and_record(journal, tmp_path, "a.txt", b"changed")
+        (tmp_path / "a.txt").write_bytes(b"changed")
+        entry = journal.record_detected(
+            "a.txt", "0" * 64, JournalBlobStore.digest_of(b"changed"), True
+        )
+        assert entry is not None
 
-        result = _reverser(journal, tmp_path).revert(journal.entries_for_path("a.txt"))
+        result = _reverser(journal, tmp_path).revert([entry])
 
         assert result.outcomes[0].status == JournalRevertStatus.NOT_REVERTABLE
         assert (tmp_path / "a.txt").read_bytes() == b"changed"
@@ -382,13 +384,12 @@ class TestTrashBackedRemoval:
 class TestUncapturedPreImage:
     """A mutation whose pre-image was too large to capture is not evidence of divergence."""
 
-    def test_a_chain_through_an_uncaptured_pre_image_can_still_be_reverted(self, tmp_path, monkeypatch):
+    def test_a_chain_through_an_uncaptured_pre_image_can_still_be_reverted(self, tmp_path):
         journal = _journal(tmp_path)
         path = tmp_path / "big.bin"
         path.write_bytes(b"small")
         _write_and_record(journal, tmp_path, "big.bin", b"still small")
-        monkeypatch.setattr(FileJournal, "MAX_CAPTURE_BYTES", 4)
-        journal.record_write(str(path), "big.bin", b"large", JournalActor.AI, "conv")
+        journal.record_detected("big.bin", None, JournalBlobStore.digest_of(b"large"), True)
         path.write_bytes(b"large")
 
         result = _reverser(journal, tmp_path).revert(journal.entries_for_path("big.bin"))

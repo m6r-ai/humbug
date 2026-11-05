@@ -447,21 +447,29 @@ def get_english_strings() -> LanguageStrings:
         changes="Changes",
         changes_no_mindspace_message="Open a mindspace to see its recent changes.",
         changes_empty_message="No changes have been recorded yet.",
-        changes_horizon="Changes since {0}",
+        changes_until="Changes on or before {0}",
+        changes_since_action="Show changes on or before…",
+        changes_show_all_action="Show all changes",
         changes_revert_file_action="Revert this change",
         changes_restore_to_point_action="Restore the mindspace to this change",
+        changes_view_this_version_action="View the version this change produced",
         changes_view_replaced_action="View the version this change replaced",
-        changes_compare_action="Compare the replaced version with the file now",
+        changes_compare_action="Compare the replaced version with this one",
         changes_version_unavailable=(
             "This version cannot be shown: its content is no longer stored, or it "
             "is not text and the file has changed since."
         ),
+        changes_this_version_unavailable="This change removed the file, so it has no version of its own.",
         changes_revert_title="Revert changes",
-        changes_revert_confirm="Revert {0} change(s)? Every affected file returns to the state it held before.",
+        changes_revert_confirm=(
+            "Revert {0} change(s)? Every affected file returns to the state it held before. "
+            "Changes made outside Humbug are not recorded, so they are not reverted."
+        ),
         changes_revert_result="{0} path(s) reverted, {1} could not be.",
         changes_restore_to_point_confirm=(
             "Undo {0} change(s) recorded after this one? Every affected file returns to "
-            "the state it held at this change."
+            "the state it held at this change. Changes made outside Humbug are not "
+            "recorded, so the mindspace may not be exactly as it was."
         ),
         changes_bucket_today="Today",
         changes_bucket_earlier="Earlier",

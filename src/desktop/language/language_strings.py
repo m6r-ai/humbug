@@ -410,12 +410,16 @@ class LanguageStrings:
     changes: str
     changes_no_mindspace_message: str
     changes_empty_message: str
-    changes_horizon: str
+    changes_until: str
+    changes_since_action: str
+    changes_show_all_action: str
     changes_revert_file_action: str
     changes_restore_to_point_action: str
+    changes_view_this_version_action: str
     changes_view_replaced_action: str
     changes_compare_action: str
     changes_version_unavailable: str
+    changes_this_version_unavailable: str
     changes_revert_title: str
     changes_revert_confirm: str
     changes_revert_result: str

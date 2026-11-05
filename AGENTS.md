@@ -303,6 +303,17 @@ Writers record before they mutate and call `FileJournal.void_entries()` if the m
 then fails, so the journal never claims a change that did not happen.  A new writer
 joins by calling the same `record_*` helpers; do not give it its own capture policy.
 
+The change watcher (`mindspace_change_watcher.py`, `mindspace_tree_scanner.py`) compares
+successive metadata walks of the tree and reports the files that changed without a
+journal entry to account for them; see ADR-0020.  A detected change is recorded as an
+ordinary journal entry with the actor `unattributed`, carrying the digests before and
+after, so it is reversible by the existing reversal path and needs no separate store.
+A checkpoint's stored content is the pre-image of the interval that follows it.  The
+baseline is a file under `.humbug/watch/`, which is what makes a change made while
+Humbug was closed reportable at the next open, and it is written on the assumption that
+only one instance has a mindspace open.  A checkpoint never names a command, an actor
+or a process as the cause of a change.
+
 A view that lists entries should hold them and ask `entries_from(sequence, limit)` for
 what has been added since, rather than calling `all_entries()` again: the index skips
 segments older than the requested sequence and reads only the tail of the newest one,

@@ -19,6 +19,7 @@ from terminal_context.terminal_context import TerminalContext
 
 from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
+from desktop.mindspace.mindspace_change_poller import MindspaceChangePoller
 from desktop.status_message import StatusMessage
 from desktop.style_manager import StyleManager
 from desktop.color_role import ColorRole
@@ -316,6 +317,7 @@ class TerminalTab(TabBase):
                             if complete_data:
                                 self._terminal_widget.put_data(complete_data)
                                 self.set_updated(True)
+                                MindspaceChangePoller().trigger()
 
                     except EOFError:
                         # Terminal pipe closed/EOF reached
@@ -370,10 +372,24 @@ class TerminalTab(TabBase):
                         self._logger.debug("Could not write completion message: %s", e)
 
     def _on_data_ready(self, data: bytes) -> None:
-        """Handle data from terminal."""
+        """
+        Handle input the user has typed, passing it to the terminal process.
+
+        A checkpoint is taken before the input is written.  A write is not a command
+        boundary — one write may carry a whole batch of commands, and they run as soon
+        as the bytes arrive, so there is no point between them to hook.  The checkpoint
+        is therefore taken at the earliest moment a command might run, which is the
+        only direction that helps: the state it records is the state about to be
+        overwritten.  How often that can happen is the poller's business, not this
+        method's.
+
+        Args:
+            data: The input to write to the PTY.
+        """
         try:
             if self._running:
                 asyncio.create_task(self._terminal_process.write_data(data))
+                MindspaceChangePoller().trigger()
 
         except Exception as e:
             self._logger.error("Failed to write to process: %s", str(e))

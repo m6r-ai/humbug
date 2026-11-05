@@ -107,6 +107,53 @@ class JournalBlobStore:
 
         return digest
 
+    def store_file(self, source_path: str) -> str:
+        """
+        Store a file's content and return its digest, without holding it in memory.
+
+        Content is copied in chunks through a temporary file and renamed into place,
+        so storing a file of any size costs a constant amount of memory.  This is what
+        lets a large file be captured at all: reading it whole would make the capture
+        cost scale with the file rather than with the change.
+
+        Args:
+            source_path: The file to store.
+
+        Returns:
+            The SHA-256 digest identifying the stored content.
+
+        Raises:
+            OSError: The source could not be read or the blob could not be written.
+        """
+        digest = hashlib.sha256()
+        directory = os.path.dirname(self.path_for("0" * 64))
+        os.makedirs(directory, exist_ok=True)
+        descriptor, temp_path = tempfile.mkstemp(dir=directory, prefix="storing", suffix=self.TEMP_SUFFIX)
+
+        try:
+            with os.fdopen(descriptor, 'wb') as destination, open(source_path, 'rb') as source:
+                while chunk := source.read(1024 * 1024):
+                    digest.update(chunk)
+                    destination.write(chunk)
+
+                destination.flush()
+                os.fsync(destination.fileno())
+
+            hexdigest = digest.hexdigest()
+            path = self.path_for(hexdigest)
+            if os.path.exists(path):
+                self._remove_quietly(temp_path)
+                return hexdigest
+
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            os.replace(temp_path, path)
+
+        except OSError:
+            self._remove_quietly(temp_path)
+            raise
+
+        return hexdigest
+
     def retrieve(self, digest: str) -> bytes | None:
         """
         Return the content of a stored blob, or None if it is not present.

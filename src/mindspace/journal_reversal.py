@@ -371,7 +371,7 @@ class JournalReverser:
             return "the file is no longer present"
 
         if current != expected:
-            return "the file has changed since it was recorded"
+            return "the file was changed by something Humbug did not record"
 
         return None
 

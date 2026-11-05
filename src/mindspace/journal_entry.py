@@ -17,10 +17,17 @@ class JournalOperation(str, Enum):
 
 
 class JournalActor(str, Enum):
-    """Who performed a mutation."""
+    """
+    Who performed a mutation, or that Humbug did not see it happen.
+
+    A detection is not an actor: it records that a path changed with nothing in
+    Humbug having done it, which is a statement of fact rather than a guess at
+    which process was responsible.
+    """
 
     AI = "ai"
     HUMAN = "human"
+    UNATTRIBUTED = "unattributed"
 
 
 @dataclass

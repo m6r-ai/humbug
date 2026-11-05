@@ -443,21 +443,30 @@ def get_arabic_strings() -> LanguageStrings:
         changes="التغييرات",
         changes_no_mindspace_message="افتح مساحة عمل لعرض تغييراتها الأخيرة.",
         changes_empty_message="لم يتم تسجيل أي تغيير بعد.",
-        changes_horizon="التغييرات منذ {0}",
+        changes_until="التغييرات في {0} أو قبله",
+        changes_since_action="عرض التغييرات حتى تاريخ محدد…",
+        changes_show_all_action="عرض كل التغييرات",
         changes_revert_file_action="تراجع عن هذا التغيير",
         changes_restore_to_point_action="استعادة مساحة العمل إلى هذا التغيير",
         changes_revert_title="التراجع عن التغييرات",
         changes_view_replaced_action="عرض النسخة التي استبدلها هذا التغيير",
-        changes_compare_action="مقارنة النسخة المستبدلة بالملف الحالي",
+        changes_view_this_version_action="عرض النسخة التي أنتجها هذا التغيير",
+        changes_compare_action="مقارنة النسخة المستبدلة بهذه النسخة",
         changes_version_unavailable=(
             "لا يمكن عرض هذه النسخة: محتواها لم يعد محفوظًا، أو أنها ليست نصًا وقد "
             "تغير الملف منذ ذلك الحين."
         ),
-        changes_revert_confirm="هل تريد التراجع عن {0} تغيير؟ سيعود كل ملف متأثر إلى الحالة التي كان عليها.",
+        changes_this_version_unavailable="حذف هذا التغيير الملف، لذا ليس له نسخة خاصة به.",
+        changes_revert_confirm=(
+            "هل تريد التراجع عن {0} تغيير؟ سيعود كل ملف متأثر إلى الحالة التي كان "
+            "عليها من قبل. التغييرات التي تُجرى خارج Humbug لا تُسجَّل، لذلك لا "
+            "يُتراجع عنها."
+        ),
         changes_revert_result="تم التراجع عن {0} مسار، وتعذر التراجع عن {1}.",
         changes_restore_to_point_confirm=(
             "هل تريد التراجع عن {0} تغيير مسجل بعد هذا التغيير؟ سيعود كل ملف متأثر إلى "
-            "الحالة التي كان عليها عند هذا التغيير."
+            "الحالة التي كان عليها عند هذا التغيير. التغييرات التي تُجرى خارج Humbug "
+            "لا تُسجَّل، لذا قد لا يعود كل شيء تمامًا كما كان."
         ),
         changes_bucket_today="اليوم",
         changes_bucket_earlier="في وقت سابق",

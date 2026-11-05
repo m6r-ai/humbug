@@ -15,11 +15,14 @@ from conversation_context.conversation_context import ConversationContext
 from mindspace.file_journal import FileJournal, JournalPurgeResult
 from mindspace.journal_entry import JournalActor, JournalEntry
 from mindspace.journal_reversal import JournalRevertResult, JournalReverser
+from mindspace.mindspace_change_watcher import ChangeCheckpoint, MindspaceChangeWatcher
 from mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceHumbugPathError, MindspaceNotFoundError
 from mindspace.mindspace_interactions import MindspaceInteractions
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_message import MindspaceMessage
+from mindspace.mindspace_scan_pruned_dirs import SCAN_PRUNED_DIRS
 from mindspace.mindspace_settings import MindspaceSettings
+from mindspace.mindspace_tree_scanner import TreeSnapshot
 from mindspace.mindspace_usage import MindspaceUsage
 from mindspace.trash_manifest import TrashEntry, TrashManifest, strip_trash_prefix
 
@@ -63,6 +66,7 @@ class Mindspace:
         self._settings: MindspaceSettings | None = None
         self._interactions = MindspaceInteractions()
         self._file_journal = FileJournal()
+        self._change_watcher = MindspaceChangeWatcher("", self._file_journal, SCAN_PRUNED_DIRS, 5.0)
         self._usage = MindspaceUsage()
         self._context_registry = ContextRegistry()
         self._tool_manager = AIToolManager()
@@ -190,6 +194,10 @@ class Mindspace:
             self._open_interactions()
             self._load_usage()
             self._file_journal.open(self.journal_dir())
+            self._change_watcher = MindspaceChangeWatcher(
+                path, self._file_journal, SCAN_PRUNED_DIRS, settings.changes_checkpoint_interval
+            )
+            self._change_watcher.open()
             self._apply_tool_settings(settings)
             self._on_settings_changed()
 
@@ -204,6 +212,7 @@ class Mindspace:
             self._settings = None
             self._interactions.close()
             self._file_journal.close()
+            self._change_watcher.close()
             self._usage = MindspaceUsage()
             self._context_registry.clear()
             self._reset_tool_manager()
@@ -225,6 +234,10 @@ class Mindspace:
             new_settings.save(settings_path)
             self._settings = new_settings
             self._apply_tool_settings(new_settings)
+            self._change_watcher = MindspaceChangeWatcher(
+                self._path, self._file_journal, SCAN_PRUNED_DIRS, new_settings.changes_checkpoint_interval
+            )
+            self._change_watcher.open()
             self._on_settings_changed()
 
         except OSError as e:
@@ -324,6 +337,71 @@ class Mindspace:
         assert self.has_mindspace(), "No mindspace is currently open"
         return self._file_journal
 
+    def change_watcher(self) -> MindspaceChangeWatcher:
+        """
+        Return the change watcher for the open mindspace.
+
+        The watcher reports file changes that no journal entry accounts for.  It
+        does not make them revertable: a checkpoint holds metadata and no content.
+
+        Returns:
+            The change watcher.
+
+        Raises:
+            MindspaceError: No mindspace is open.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        return self._change_watcher
+
+    def checkpoint_changes(self) -> ChangeCheckpoint:
+        """
+        Walk the mindspace and record what changed since the previous checkpoint.
+
+        Recording never raises into the caller's work beyond a write failure: a
+        scan that cannot complete reports nothing rather than failing the action
+        that triggered it, on the same terms as the journal's own recording.
+
+        Returns:
+            The checkpoint that was recorded.
+
+        Raises:
+            MindspaceError: No mindspace is open.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        return self._change_watcher.checkpoint()
+
+    def scan_tree(self) -> TreeSnapshot:
+        """
+        Walk the mindspace tree without recording anything.
+
+        This is the half of a checkpoint that must not run on the thread that owns
+        the interface, so a caller with one takes the walk there and hands it back.
+
+        Returns:
+            The walk.
+
+        Raises:
+            MindspaceError: No mindspace is open.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        return self._change_watcher.scan()
+
+    def checkpoint_change_snapshot(self, snapshot: TreeSnapshot) -> ChangeCheckpoint:
+        """
+        Record the changes a walk found.
+
+        Args:
+            snapshot: A walk taken by ``scan_tree``.
+
+        Returns:
+            The checkpoint that was recorded.
+
+        Raises:
+            MindspaceError: No mindspace is open.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        return self._change_watcher.checkpoint(snapshot)
+
     def journal_target(self, absolute_path: str) -> tuple[FileJournal, str] | None:
         """
         Return the journal and the relative path for a path the journal can record.
@@ -367,7 +445,9 @@ class Mindspace:
             MindspaceError: No mindspace is open.
         """
         assert self.has_mindspace(), "No mindspace is currently open"
-        return self._file_journal.purge_before(before)
+        result = self._file_journal.purge_before(before)
+        self._change_watcher.redeclare_retained()
+        return result
 
     def purge_journal_through(self, sequence: int) -> JournalPurgeResult:
         """
@@ -387,7 +467,9 @@ class Mindspace:
             MindspaceError: No mindspace is open.
         """
         assert self.has_mindspace(), "No mindspace is currently open"
-        return self._file_journal.purge_through(sequence)
+        result = self._file_journal.purge_through(sequence)
+        self._change_watcher.redeclare_retained()
+        return result
 
     def purge_whole_journal(self) -> JournalPurgeResult:
         """
@@ -400,7 +482,9 @@ class Mindspace:
             MindspaceError: No mindspace is open.
         """
         assert self.has_mindspace(), "No mindspace is currently open"
-        return self._file_journal.purge_all()
+        result = self._file_journal.purge_all()
+        self._change_watcher.redeclare_retained()
+        return result
 
     def revert_journal_entries(
         self,

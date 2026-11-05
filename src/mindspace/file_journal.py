@@ -46,7 +46,6 @@ class FileJournal:
     """
 
     BLOB_DIR = "blobs"
-    MAX_CAPTURE_BYTES = 1024 * 1024
     WARN_BYTES = 512 * 1024 * 1024
 
     def __init__(self) -> None:
@@ -98,8 +97,8 @@ class FileJournal:
 
         The pre-image is read from disk, not taken from the caller, so the entry
         describes what was actually there rather than what the caller believed
-        was there.  Content larger than MAX_CAPTURE_BYTES is recorded as
-        metadata only: the entry names the mutation but cannot reverse it.
+        was there.  It is copied in chunks, so a large file costs memory
+        proportional to nothing and can still be reversed.
 
         Args:
             absolute_path: Path about to be written.
@@ -262,6 +261,92 @@ class FileJournal:
             trash_name is None,
             pre_image_is_directory,
         )
+
+    def retain_file(self, path: str) -> str | None:
+        """
+        Store a file's content and return its digest, or None if it could not be stored.
+
+        The file is copied in chunks, so it may be of any size: the cost of retaining
+        it is the cost of reading and writing it once, not of holding it.
+
+        Args:
+            path: The file to retain.
+
+        Returns:
+            The digest identifying the stored content, or None.
+        """
+        try:
+            return self._blobs.store_file(path)
+
+        except OSError as e:
+            self._logger.error("Failed to retain '%s' in the journal: %s", path, e)
+            return None
+
+    def stored_digests(self) -> set[str]:
+        """
+        Return the digest of every blob the store actually holds.
+
+        A caller that has reclaimed content needs to know what survived, so that it
+        stops naming a pre-image the store can no longer produce.  Naming a missing
+        blob is worse than naming none: an entry with no pre-image is reported as not
+        revertable, while one whose content is gone is reported as a conflict at the
+        moment the user asks for it back.
+
+        Returns:
+            The digests present in the blob tree.
+        """
+        return self._blobs.digests()
+
+    def record_detected(
+        self,
+        relative_path: str,
+        pre_image_hash: str | None,
+        post_image_hash: str | None,
+        existed_before: bool,
+    ) -> JournalEntry | None:
+        """
+        Record a change the journal observed but did not cause.
+
+        The pre-image is named by digest rather than read from disk, because by the
+        time a change is detected the path already holds its new content.  The digest
+        names content the store already holds: the capture taken when the mindspace
+        was first watched, or a previous detection.
+
+        The entry is recorded against the unattributed actor, which states what is
+        known — that nothing in Humbug made this change — rather than guessing at
+        which process did.  Everything the rest of the journal does with an entry
+        then applies unchanged, including reversal and the divergence check.
+
+        Args:
+            relative_path: The path, relative to the mindspace root.
+            pre_image_hash: Digest of the content before the change, or None when
+                the path did not exist or its content was not captured.
+            post_image_hash: Digest of the content after the change, or None when
+                the path was removed.
+            existed_before: True if the path existed before the change.
+
+        Returns:
+            The entry as recorded, or None if recording failed.
+        """
+        entry = JournalEntry(
+            sequence=0,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            path=relative_path,
+            operation=JournalOperation.DELETE if post_image_hash is None else JournalOperation.WRITE,
+            actor=JournalActor.UNATTRIBUTED,
+            conversation="",
+            group="",
+            existed_before=existed_before,
+            pre_image_hash=pre_image_hash,
+            post_image_hash=post_image_hash,
+        )
+
+        try:
+            return self._index.append(entry)
+
+        except OSError as e:
+            self._logger.error("Failed to record a detected change of '%s': %s", relative_path, e)
+            return None
 
     def void_entries(self, entries: list[JournalEntry | None]) -> None:
         """
@@ -454,6 +539,12 @@ class FileJournal:
             for entry in self._index.read_all()
             if entry.pre_image_hash is not None
         }
+        keep |= {
+            entry.post_image_hash
+            for entry in self._index.read_all()
+            if entry.post_image_hash is not None
+        }
+
         return self._blobs.sweep(keep)
 
     def pre_image(self, entry: JournalEntry) -> bytes | None:
@@ -474,6 +565,28 @@ class FileJournal:
             return None
 
         return self._blobs.retrieve(entry.pre_image_hash)
+
+    def post_image(self, entry: JournalEntry) -> bytes | None:
+        """
+        Return the content an entry recorded as the result of its mutation.
+
+        This is the version the change produced, which is what a history view shows
+        when it is asked about a row.  It is not the file: the file may have moved on,
+        and reading it would answer a different question.
+
+        Args:
+            entry: The entry whose post-image is wanted.
+
+        Returns:
+            The content the mutation produced, or None when it is not held.
+
+        Raises:
+            OSError: The blob exists but could not be read.
+        """
+        if entry.post_image_hash is None:
+            return None
+
+        return self._blobs.retrieve(entry.post_image_hash)
 
     def _record(
         self,
@@ -513,18 +626,18 @@ class FileJournal:
         """
         try:
             if pre_image_is_directory:
-                existed_before, pre_image = True, None
+                existed_before = True
+                pre_image_hash = None
 
             else:
-                existed_before, pre_image = self._read_pre_image(absolute_path)
+                existed_before = os.path.isfile(absolute_path)
+                pre_image_hash = None
+                if existed_before:
+                    if store_pre_image:
+                        pre_image_hash = self._blobs.store_file(absolute_path)
 
-            pre_image_hash = None
-            if pre_image is not None:
-                if store_pre_image:
-                    pre_image_hash = self._blobs.store(pre_image)
-
-                else:
-                    pre_image_hash = JournalBlobStore.digest_of(pre_image)
+                    else:
+                        pre_image_hash = JournalBlobStore.digest_of_file(absolute_path)
 
             entry = JournalEntry(
                 sequence=0,
@@ -563,26 +676,3 @@ class FileJournal:
         except ValueError:
             self._logger.warning("Journalled entry %d has an unreadable timestamp", entry.sequence)
             return datetime.min.replace(tzinfo=timezone.utc)
-
-    def _read_pre_image(self, absolute_path: str) -> tuple[bool, bytes | None]:
-        """
-        Read the content a path holds now, before it is mutated.
-
-        Args:
-            absolute_path: Path about to be mutated.
-
-        Returns:
-            A tuple of whether the path existed, and its content when it existed
-            and was small enough to capture.
-
-        Raises:
-            OSError: The path exists but could not be inspected or read.
-        """
-        if not os.path.isfile(absolute_path):
-            return False, None
-
-        if os.path.getsize(absolute_path) > self.MAX_CAPTURE_BYTES:
-            return True, None
-
-        with open(absolute_path, 'rb') as f:
-            return True, f.read()

@@ -4,14 +4,16 @@ from collections.abc import Callable
 from datetime import date, datetime, timezone
 import os
 
-from PySide6.QtCore import QFileInfo, QPoint, QSize, Qt, Signal
+from PySide6.QtCore import QDateTime, QFileInfo, QPoint, QSize, Qt, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QFrame, QLabel, QSpacerItem, QSizePolicy, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
+    QDateTimeEdit, QHBoxLayout, QToolButton,
 )
 
 from mindspace.file_journal import FileJournal, JournalPurgeResult
 from mindspace.journal_entry import JournalEntry, JournalActor
+from mindspace.journal_blob_store import JournalBlobStore
 from mindspace.journal_reversal import JournalRevertOutcome
 
 from diff_context.diff_context import JournalDiffTarget
@@ -30,7 +32,6 @@ from desktop.color_role import ColorRole
 
 _ENTRY_ROLE = Qt.ItemDataRole.UserRole + 1
 _MAX_ROWS = 500
-
 
 class ChangesSidebar(SidebarBase):
     """
@@ -69,6 +70,7 @@ class ChangesSidebar(SidebarBase):
         self._older_count = 0
         self._last_sequence = 0
         self._journal_bytes = 0
+        self._until: datetime | None = None
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -76,6 +78,42 @@ class ChangesSidebar(SidebarBase):
 
         self._header = SidebarSectionHeader(self._language_manager.strings().changes, self)
         self._layout.addWidget(self._header)
+
+        window_bar = QWidget(self)
+        window_bar.setObjectName("_window_bar")
+        self._window_layout = QHBoxLayout(window_bar)
+        self._window_layout.setSpacing(0)
+
+        self._window_button = QToolButton(window_bar)
+        self._window_button.setObjectName("windowButton")
+        self._window_button.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self._window_button.clicked.connect(self._on_window_button_clicked)
+        self._window_layout.addWidget(self._window_button)
+
+        self._clear_window_button = QToolButton(window_bar)
+        self._clear_window_button.setObjectName("windowButton")
+        self._clear_window_button.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self._clear_window_button.clicked.connect(self._show_all_changes)
+        self._window_layout.addWidget(self._clear_window_button)
+        self._window_layout.addStretch()
+
+        self._layout.addWidget(window_bar)
+
+        self._window_editor = QWidget(self)
+        self._window_editor.setObjectName("_window_editor")
+        editor_layout = QVBoxLayout(self._window_editor)
+        editor_layout.setContentsMargins(0, 0, 0, 0)
+        editor_layout.setSpacing(0)
+
+        self._until_edit = QDateTimeEdit(self._window_editor)
+        self._until_edit.setObjectName("sinceEdit")
+        self._until_edit.setCalendarPopup(True)
+        self._until_edit.setDisplayFormat("yyyy-MM-dd HH:mm")
+        self._until_edit.dateTimeChanged.connect(self._on_until_changed)
+        editor_layout.addWidget(self._until_edit)
+
+        self._window_editor.hide()
+        self._layout.addWidget(self._window_editor)
 
         self._status_label = QLabel(self)
         self._status_label.setIndent(0)
@@ -179,6 +217,12 @@ class ChangesSidebar(SidebarBase):
             return
 
         journal = mindspace.file_journal()
+        if self._until is not None:
+            # A windowed listing cannot be extended from the tail: the new records may
+            # fall outside it, and the count of what is not shown depends on the window.
+            self.refresh()
+            return
+
         newest = journal.newest_sequence()
         if newest < self._last_sequence:
             self.refresh()
@@ -217,31 +261,73 @@ class ChangesSidebar(SidebarBase):
             return
 
         journal = mindspace.file_journal()
-        self._last_sequence = journal.newest_sequence()
         self._journal_bytes = journal.size_bytes()
-        self._remember_entries(journal.all_entries())
+
+        # The window selects from the store, rather than filtering what was already
+        # selected.  Filtering the newest rows and then applying a window would report
+        # "nothing recorded" whenever the window lies beyond the rows held, which is the
+        # one answer that is definitely wrong.
+        entries = journal.all_entries()
+        until = self._until
+        if until is not None:
+            entries = [entry for entry in entries if self._recorded_by(entry, until)]
+
+        self._last_sequence = journal.newest_sequence()
+        self._remember_entries(entries, replace=True)
         self._render()
+
+    def _recorded_by(self, entry: JournalEntry, until: datetime) -> bool:
+        """
+        Return True when an entry was recorded at or before the chosen time.
+
+        The bound is inclusive so that choosing the time shown on a row includes that
+        row, which is what anyone picking a time off the list will expect.
+
+        Args:
+            entry: The entry to test.
+            until: The bound, which the caller has already established is set.
+        """
+        try:
+            return datetime.fromisoformat(entry.timestamp) <= until
+
+        except ValueError:
+            return False
 
     def _render(self) -> None:
         """Show the entries held, or the empty state when there are none."""
         strings = self._language_manager.strings()
+        self._update_window_button()
         if not self._entries:
-            self._show_empty_state(strings.changes_empty_message)
+            if self._until is None:
+                self._show_empty_state(strings.changes_empty_message)
+
+            else:
+                self._show_empty_state(strings.changes_until.format(self._format_time(self._until.isoformat())))
+
             return
 
         self._show_tree()
         self._populate()
 
-    def _remember_entries(self, entries: list[JournalEntry]) -> None:
+    def _remember_entries(self, entries: list[JournalEntry], replace: bool = False) -> None:
         """
-        Keep the newest _MAX_ROWS entries and count the rest as older.
+        Keep the newest _MAX_ROWS entries, counting the rest as older.
+
+        The two callers mean different things by the list they pass.  A reload passes
+        every entry the journal holds, so the count is rebuilt from scratch.  An
+        incremental refresh passes only what was already held plus the new records, so
+        the entries counted as older on a previous pass are not repeated and the count
+        accumulates.  Treating a reload as incremental makes the count grow without
+        bound, because each reload adds its overflow to every earlier reload's.
 
         Args:
-            entries: The entries to keep, oldest first.  Any already counted as
-                older are not repeated here, so the count accumulates.
+            entries: The entries to keep, oldest first.
+            replace: True when entries is the whole history, so the older count is
+                rebuilt rather than added to.
         """
         self._entries = entries[-_MAX_ROWS:]
-        self._older_count += len(entries) - len(self._entries)
+        older = len(entries) - len(self._entries)
+        self._older_count = older if replace else self._older_count + older
         self._by_sequence = {entry.sequence: entry for entry in self._entries}
 
     def _forget_entries(self) -> None:
@@ -256,14 +342,18 @@ class ChangesSidebar(SidebarBase):
         """Show the tree and report how far back the journal reaches."""
         strings = self._language_manager.strings()
         lines: list[str] = []
-        if self._entries:
-            lines.append(strings.changes_horizon.format(self._format_time(self._entries[0].timestamp)))
+        if self._until is not None:
+            lines.append(strings.changes_until.format(self._format_time(self._until.isoformat())))
 
         if self._journal_bytes > FileJournal.WARN_BYTES:
             lines.append(strings.changes_size_warning.format(self._journal_bytes / (1024 * 1024)))
 
         self._status_label.setText("\n".join(lines))
-        self._status_label.show()
+
+        # The label carries vertical padding, so showing it with nothing to say leaves a
+        # blank band under the controls.  There is usually nothing to say: the bound is
+        # only reported when one is set, and the size warning only when it applies.
+        self._status_label.setVisible(bool(lines))
         self._tree.show()
         if self._empty_state_spacer is not None:
             self._layout.removeItem(self._empty_state_spacer)
@@ -319,9 +409,9 @@ class ChangesSidebar(SidebarBase):
 
     @staticmethod
     def _entry_date(entry: JournalEntry) -> date | None:
-        """Return the local date an entry was recorded, or None when unreadable."""
+        """Return the date an entry was recorded, or None when unreadable."""
         try:
-            return datetime.fromisoformat(entry.timestamp).astimezone().date()
+            return datetime.fromisoformat(entry.timestamp).date()
 
         except ValueError:
             return None
@@ -329,13 +419,17 @@ class ChangesSidebar(SidebarBase):
     @staticmethod
     def _format_time(timestamp: str) -> str:
         """
-        Render a recorded timestamp in the user's local time, or as stored.
+        Render a recorded timestamp as stored, or as it is written when unreadable.
+
+        Timestamps are recorded and reported in UTC throughout, so they are not
+        converted for display: a reader comparing the list against the time they
+        chose in the picker is comparing two UTC values.
 
         Args:
             timestamp: The ISO-8601 timestamp recorded with an entry.
         """
         try:
-            return datetime.fromisoformat(timestamp).astimezone().strftime("%Y-%m-%d %H:%M")
+            return datetime.fromisoformat(timestamp).strftime("%Y-%m-%d %H:%M")
 
         except ValueError:
             return timestamp
@@ -359,7 +453,15 @@ class ChangesSidebar(SidebarBase):
         Args:
             entry: The entry to describe.
         """
-        actor = "AI" if entry.actor is JournalActor.AI else "You"
+        if entry.actor is JournalActor.AI:
+            actor = "AI"
+
+        elif entry.actor is JournalActor.HUMAN:
+            actor = "You"
+
+        else:
+            actor = "Detected"
+
         when = self._format_time(entry.timestamp)
 
         lines = [entry.path, f"{entry.operation.value} · {actor} · {when}"]
@@ -435,11 +537,15 @@ class ChangesSidebar(SidebarBase):
 
         strings = self._language_manager.strings()
         menu = self._style_manager.create_menu(self)
-        view_action = menu.addAction(strings.changes_view_replaced_action)
-        view_action.setEnabled(self._replaced_version_available(entry))
-        view_action.triggered.connect(
-            lambda: self._view_version(entry)
-        )
+
+        this_action = menu.addAction(strings.changes_view_this_version_action)
+        this_action.setEnabled(self._this_version_available(entry))
+        this_action.triggered.connect(lambda: self._view_this_version(entry))
+
+        replaced_action = menu.addAction(strings.changes_view_replaced_action)
+        replaced_action.setEnabled(self._replaced_version_available(entry))
+        replaced_action.triggered.connect(lambda: self._view_version(entry))
+
         compare_action = menu.addAction(strings.changes_compare_action)
         compare_action.setEnabled(self._replaced_version_available(entry))
         compare_action.triggered.connect(lambda: self._compare_with_current(entry))
@@ -472,6 +578,72 @@ class ChangesSidebar(SidebarBase):
         menu = self._style_manager.create_menu(self)
         menu.addAction(strings.changes_forget_all_action).triggered.connect(self._forget_all)
         menu.exec(self._tree.viewport().mapToGlobal(position))
+
+    def _on_window_button_clicked(self) -> None:
+        """
+        Reveal or hide the time picker in place.
+
+        A modal dialog for this interrupts the panel to ask one question and hides the
+        list while it is answered, which is the opposite of what a filter is for.  The
+        picker belongs beside the list it filters.
+        """
+        self._window_editor.setVisible(not self._window_editor.isVisible())
+        if self._window_editor.isVisible():
+            self._until_edit.setDateTime(QDateTime(self._window_end()))
+            self._until_edit.setFocus()
+
+    def _update_window_button(self) -> None:
+        """
+        Keep the button's wording fixed, and offer to drop the bound when there is one.
+
+        The bound appears in the status line rather than on the button: a control that
+        changes its own label to report its state reads as two different buttons, and
+        the button's job is to open the picker, not to be the readout.
+        """
+        strings = self._language_manager.strings()
+        self._window_button.setText(strings.changes_since_action)
+
+        if self._until is None:
+            self._clear_window_button.hide()
+            return
+
+        self._clear_window_button.setText("\u00d7")
+        self._clear_window_button.setToolTip(strings.changes_show_all_action)
+        self._clear_window_button.show()
+
+    def _window_end(self) -> datetime:
+        """
+        Return the time the picker should show.
+
+        With no bound in force the picker opens at now, because "everything up to now"
+        is what the list is already showing: winding it back narrows the list, which is
+        the only direction that does anything.
+        """
+        if self._until is not None:
+            return self._until
+
+        return datetime.now(timezone.utc)
+
+    def _on_until_changed(self, value: QDateTime) -> None:
+        """
+        Apply the picker's time as the window, as soon as it changes.
+
+        There is no OK button: the picker is the filter, and a change that has to be
+        confirmed is a change the reader cannot see the effect of while choosing it.
+
+        Args:
+            value: The time the picker now shows.
+        """
+        self._until = value.toPython().replace(tzinfo=timezone.utc)
+        self._forget_entries()
+        self.refresh()
+
+    def _show_all_changes(self) -> None:
+        """Drop the time window and list everything the journal holds."""
+        self._until = None
+        self._window_editor.hide()
+        self._forget_entries()
+        self.refresh()
 
     def _forget_through(self, entry: JournalEntry) -> None:
         """
@@ -546,6 +718,123 @@ class ChangesSidebar(SidebarBase):
             title=os.path.basename(entry.path) or entry.path,
             is_ephemeral=True,
             initial_model=JournalDiffTarget(sequence=entry.sequence),
+        )
+
+    @staticmethod
+    def _this_version_available(entry: JournalEntry) -> bool:
+        """
+        Return True when this change produced a version the journal can show.
+
+        A removal produced nothing, so it has no version of its own.  Anything else
+        produced content, and content is shown from the change rather than from the
+        file: what is on disk now is some later state, and this panel is a history.
+
+        Args:
+            entry: The entry to test.
+        """
+        return not entry.pre_image_is_directory and entry.post_image_hash is not None
+
+    @staticmethod
+    def _current_digest(absolute_path: str) -> str | None:
+        """
+        Return the digest of a path's current content, or None if it cannot be read.
+
+        Args:
+            absolute_path: The path to inspect.
+        """
+        try:
+            return JournalBlobStore.digest_of_file(absolute_path)
+
+        except OSError:
+            return None
+
+    def _view_this_version(self, entry: JournalEntry) -> None:
+        """
+        Show the version this change produced, as the change recorded it.
+
+        For a change whose file still holds exactly that content, this is also what is
+        on disk.  For one that has since been edited — by anything — it is the state
+        the panel is describing, and not the file.  Showing the file would quietly
+        answer a different question from the one the row asks.
+
+        The tab is ephemeral and read-only: the panel is a history, and editing from it
+        would be an edit dressed up as inspection.
+
+        Args:
+            entry: The entry whose produced version should be shown.
+        """
+        mindspace = self._mindspace_manager.mindspace()
+        if not mindspace.has_mindspace():
+            return
+
+        if entry.pre_image_is_directory:
+            self._report_this_version_unavailable()
+            return
+
+        content = self._post_image(entry)
+        if content is None:
+            self._report_this_version_unavailable()
+            return
+
+        try:
+            text = content.decode("utf-8")
+
+        except UnicodeDecodeError:
+            self._preview_current(entry)
+            return
+
+        mindspace.contexts().open(
+            context_type="editor",
+            path=os.path.join(mindspace.mindspace_path(), entry.path),
+            title=os.path.basename(entry.path) or entry.path,
+            is_ephemeral=True,
+            read_only=True,
+            initial_model=text,
+        )
+
+    def _post_image(self, entry: JournalEntry) -> bytes | None:
+        """
+        Return the content this change produced, if the journal still holds it.
+
+        Args:
+            entry: The entry whose produced version is wanted.
+        """
+        mindspace = self._mindspace_manager.mindspace()
+        if not mindspace.has_mindspace():
+            return None
+
+        try:
+            return mindspace.file_journal().post_image(entry)
+
+        except OSError:
+            return None
+
+    def _preview_current(self, entry: JournalEntry) -> None:
+        """
+        Show a produced version that is not text, when the file still holds it.
+
+        Content that cannot be rendered from bytes has to be previewed from a file,
+        and the only file is the one on disk.  That is only the version this change
+        produced while nothing has rewritten it since, so a file that has moved on is
+        reported as unavailable rather than shown as if it were the recorded state.
+
+        Args:
+            entry: The entry whose produced version should be previewed.
+        """
+        mindspace = self._mindspace_manager.mindspace()
+        if not mindspace.has_mindspace():
+            return
+
+        absolute_path = os.path.join(mindspace.mindspace_path(), entry.path)
+        if self._current_digest(absolute_path) != entry.post_image_hash:
+            self._report_this_version_unavailable()
+            return
+
+        mindspace.contexts().open(
+            context_type="preview",
+            path=absolute_path,
+            title=os.path.basename(entry.path) or entry.path,
+            is_ephemeral=True,
         )
 
     @staticmethod
@@ -633,6 +922,16 @@ class ChangesSidebar(SidebarBase):
             MessageBoxType.INFORMATION,
             strings.changes_revert_title,
             strings.changes_version_unavailable,
+        )
+
+    def _report_this_version_unavailable(self) -> None:
+        """Tell the user that this change has no version of its own to show."""
+        strings = self._language_manager.strings()
+        MessageBox.show_message(
+            self,
+            MessageBoxType.INFORMATION,
+            strings.changes_revert_title,
+            strings.changes_this_version_unavailable,
         )
 
     def _entries_for(self, entry: JournalEntry) -> list[JournalEntry]:
@@ -745,6 +1044,9 @@ class ChangesSidebar(SidebarBase):
         font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)
         self._status_label.setFont(font)
+        self._window_button.setFont(font)
+        self._clear_window_button.setFont(font)
+        self._until_edit.setFont(font)
         self._tree.setFont(font)
         icon_size = round(16 * zoom_factor)
         self._tree.setIconSize(QSize(icon_size, icon_size))
@@ -754,6 +1056,17 @@ class ChangesSidebar(SidebarBase):
         subtle_text = self._style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
         inset = self._style_manager.scale(SidebarSectionHeader.TITLE_INSET)
         tree_inset = self._style_manager.scale(SidebarSectionHeader.TITLE_INSET - 4)
+        field_padding = round(3 * zoom_factor)
+        self._window_layout.setContentsMargins(
+            inset, round(5 * zoom_factor), inset, round(3 * zoom_factor)
+        )
+        self._window_layout.setSpacing(round(6 * zoom_factor))
+        self._until_edit.setMinimumHeight(round(22 * zoom_factor))
+        editor_layout = self._window_editor.layout()
+        if editor_layout is not None:
+            editor_layout.setContentsMargins(
+                inset, round(3 * zoom_factor), inset, round(5 * zoom_factor)
+            )
 
         self.setStyleSheet(
             build_tree_pane_stylesheet(
@@ -764,6 +1077,28 @@ class ChangesSidebar(SidebarBase):
                 zoom_factor,
             )
             + f"""
+            QWidget#_window_bar {{
+                background-color: transparent;
+                border: none;
+            }}
+            QToolButton#windowButton {{
+                color: {subtle_text};
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
+                border: none;
+                border-radius: 4px;
+                padding: {field_padding}px;
+            }}
+            QToolButton#windowButton:hover {{
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
+            }}
+            QDateTimeEdit#sinceEdit {{
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER)};
+                border-radius: 4px;
+                padding: {field_padding}px;
+            }}
             QLabel#_status_label {{
                 color: {subtle_text};
                 padding: {round(12 * zoom_factor)}px {inset}px;

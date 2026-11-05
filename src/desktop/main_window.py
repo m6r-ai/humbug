@@ -56,6 +56,7 @@ from desktop.log_tab.log_tab import LogTab
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_folders_dialog import MindspaceFoldersDialog
 from desktop.mindspace.mindspace_manager import MindspaceManager
+from desktop.mindspace.mindspace_change_poller import MindspaceChangePoller
 from desktop.main_window_splitter import MainWindowSplitter
 from desktop.preview_sidebar.preview_sidebar import PreviewSidebar
 from desktop.preview_tab.preview_tab import PreviewTab
@@ -1452,6 +1453,7 @@ class MainWindow(QMainWindow):
             # has one open, making it invisible to other instances' deduplication checks.
             self._update_instance_registry()
             self._sidebar_manager.set_mindspace(mindspace_path)
+            MindspaceChangePoller().start()
             self._restore_mindspace_state()
             self._restore_prompt_marker_setting()
 
@@ -1773,6 +1775,7 @@ class MainWindow(QMainWindow):
             # has one open, making it invisible to other instances' deduplication checks.
             self._update_instance_registry()
             self._sidebar_manager.set_mindspace(path)
+            MindspaceChangePoller().start()
 
         except MindspaceAlreadyOpenError:
             strings = self._language_manager.strings()
@@ -1808,6 +1811,7 @@ class MainWindow(QMainWindow):
         if not self._close_all_tabs():
             return
 
+        MindspaceChangePoller().stop()
         self._sidebar_manager.set_mindspace("")
 
         self._mindspace_manager.close_mindspace()

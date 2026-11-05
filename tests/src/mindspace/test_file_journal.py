@@ -276,18 +276,17 @@ class TestFileJournal:
         assert journal.pre_image(entry) == b"before"
         assert entry.post_image_hash == JournalBlobStore.digest_of(b"after")
 
-    def test_records_an_oversized_file_without_capturing_it(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(FileJournal, "MAX_CAPTURE_BYTES", 4)
+    def test_captures_a_large_file_so_that_it_can_be_reversed(self, tmp_path):
         journal = self._journal(tmp_path)
         path = tmp_path / "large.bin"
-        path.write_bytes(b"far too large to capture")
+        path.write_bytes(b"x" * (3 * 1024 * 1024))
 
         entry = journal.record_write(str(path), "large.bin", b"after", JournalActor.AI, "conv")
 
         assert entry is not None
         assert entry.existed_before
-        assert entry.pre_image_hash is None
-        assert not entry.is_revertable()
+        assert entry.is_revertable()
+        assert journal.pre_image(entry) == b"x" * (3 * 1024 * 1024)
 
     def test_returns_none_when_the_entry_cannot_be_written(self, tmp_path, monkeypatch):
         journal = self._journal(tmp_path)
@@ -850,16 +849,16 @@ class TestDirectoryRemoval:
         assert entry is not None
         assert entry.is_revertable()
 
-    def test_a_removal_whose_content_was_not_captured_is_not_revertable(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(FileJournal, "MAX_CAPTURE_BYTES", 4)
+    def test_a_removal_of_a_large_file_is_revertable(self, tmp_path):
         journal = self._journal(tmp_path)
         path = tmp_path / "large.bin"
-        path.write_bytes(b"far too large to capture")
+        path.write_bytes(b"x" * (3 * 1024 * 1024))
 
         entry = journal.record_removal(str(path), "large.bin", JournalActor.AI, "")
 
         assert entry is not None
-        assert not entry.is_revertable()
+        assert entry.is_revertable()
+        assert journal.pre_image(entry) == b"x" * (3 * 1024 * 1024)
 
 
 class TestMindspaceTrashDirectory:

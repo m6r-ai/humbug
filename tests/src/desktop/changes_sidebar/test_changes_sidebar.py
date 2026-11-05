@@ -117,3 +117,87 @@ class TestRowIconsFollowZoom:
         finally:
             style_manager.set_zoom(original_zoom)
             panel.deleteLater()
+
+
+class TestDetectedChanges:
+    """A change nothing in Humbug made is listed like any other change."""
+
+    def test_a_detected_change_is_listed_under_the_file_name(self):
+        panel = ChangesSidebar()
+
+        rendered = panel._row_text(  # pylint: disable=protected-access
+            _entry(path="notes.txt", actor=JournalActor.UNATTRIBUTED, conversation="")
+        )
+
+        assert rendered == "notes.txt"
+
+    def test_a_detected_change_records_that_nothing_made_it(self):
+        panel = ChangesSidebar()
+
+        tooltip = panel._tooltip_text(  # pylint: disable=protected-access
+            _entry(path="sub/config.json", actor=JournalActor.UNATTRIBUTED, conversation="")
+        )
+
+        assert "Detected" in tooltip
+
+
+class TestOlderChangeCount:
+    """The count of changes not shown reflects the journal, not how often it was read."""
+
+    def _entries(self, count):
+        return [_entry(sequence=n) for n in range(1, count + 1)]
+
+    def test_a_reload_rebuilds_the_count_rather_than_adding_to_it(self):
+        panel = ChangesSidebar()
+        entries = self._entries(800)
+
+        panel._remember_entries(entries, replace=True)  # pylint: disable=protected-access
+        first = panel._older_count  # pylint: disable=protected-access
+
+        panel._remember_entries(entries, replace=True)  # pylint: disable=protected-access
+
+        assert panel._older_count == first  # pylint: disable=protected-access
+
+    def test_a_reload_after_everything_was_forgotten_counts_nothing(self):
+        panel = ChangesSidebar()
+        panel._remember_entries(self._entries(800), replace=True)  # pylint: disable=protected-access
+
+        panel._remember_entries([], replace=True)  # pylint: disable=protected-access
+
+        assert panel._older_count == 0  # pylint: disable=protected-access
+
+    def test_an_incremental_refresh_adds_only_what_overflowed(self):
+        panel = ChangesSidebar()
+        panel._remember_entries(self._entries(800), replace=True)  # pylint: disable=protected-access
+        held = panel._entries  # pylint: disable=protected-access
+
+        panel._remember_entries(held + self._entries(100), replace=False)  # pylint: disable=protected-access
+
+        assert panel._older_count == 400  # pylint: disable=protected-access
+
+
+class TestVersionActions:
+    """Every action in the panel is about the change, not about the file on disk."""
+
+    def _entry_for(self, path, **overrides):
+        values = {"path": path}
+        values.update(overrides)
+        return _entry(**values)
+
+    def test_a_creation_has_a_version_of_its_own_but_nothing_replaced(self):
+        entry = self._entry_for("new.txt", existed_before=False, pre_image_hash=None)
+
+        assert ChangesSidebar._this_version_available(entry)  # pylint: disable=protected-access
+        assert not ChangesSidebar._replaced_version_available(entry)  # pylint: disable=protected-access
+
+    def test_a_removal_has_nothing_of_its_own_but_something_replaced(self):
+        entry = self._entry_for("gone.txt", operation=JournalOperation.DELETE, post_image_hash=None)
+
+        assert not ChangesSidebar._this_version_available(entry)  # pylint: disable=protected-access
+        assert ChangesSidebar._replaced_version_available(entry)  # pylint: disable=protected-access
+
+    def test_an_overwrite_offers_both_versions(self):
+        entry = self._entry_for("notes.txt")
+
+        assert ChangesSidebar._this_version_available(entry)  # pylint: disable=protected-access
+        assert ChangesSidebar._replaced_version_available(entry)  # pylint: disable=protected-access
