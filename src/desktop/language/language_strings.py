@@ -197,6 +197,7 @@ class LanguageStrings:
     mindspace_files: str
     mindspace_vcs: str
     mindspace_vcs_no_repo: str
+    mindspace_vcs_root: str
     mindspace_conversations: str
     pinned_section: str
     mindspace_preview: str

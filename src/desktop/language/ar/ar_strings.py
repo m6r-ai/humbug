@@ -207,6 +207,7 @@ def get_arabic_strings() -> LanguageStrings:
         mindspace_files="ملفات",
         mindspace_vcs="الملفات المتغيرة",
         mindspace_vcs_no_repo="لم يتم العثور على مستودع",
+        mindspace_vcs_root="جذر المساحة الذهنية",
         mindspace_conversations="محادثات",
         pinned_section="مثبت",
         mindspace_preview="معاينة",

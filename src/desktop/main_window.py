@@ -688,7 +688,6 @@ class MainWindow(QMainWindow):
 
         self._sidebar_manager = SidebarManager(self)
         self._sidebar_manager.register_panel("conversations", "conversation", ConversationSidebar, _wire_conversation_sidebar)
-        self._sidebar_manager.register_panel("vcs", "diff", VCSSidebar, _wire_vcs_sidebar, visibility_signal="repo_available")
         self._sidebar_manager.register_panel("files", "files", FileSidebar, _wire_file_sidebar)
         self._sidebar_manager.register_panel("preview", "preview", PreviewSidebar, _wire_preview_sidebar)
         self._sidebar_manager.register_panel(
@@ -698,6 +697,7 @@ class MainWindow(QMainWindow):
             "trash", "trash", TrashSidebar, _wire_trash_sidebar,
             on_activated=_activate_trash_sidebar, place_at_bottom=True
         )
+        self._sidebar_manager.register_panel("vcs", "diff", VCSSidebar, _wire_vcs_sidebar, visibility_signal="repo_available")
         self._sidebar_manager.register_panel(
             "changes", "changes", ChangesSidebar, _wire_changes_sidebar,
             on_activated=_activate_changes_sidebar

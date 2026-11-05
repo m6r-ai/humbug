@@ -207,6 +207,7 @@ def get_french_strings() -> LanguageStrings:
         mindspace_files="Fichiers",
         mindspace_vcs="Fichiers modifiés",
         mindspace_vcs_no_repo="Aucun dépôt trouvé",
+        mindspace_vcs_root="Racine de l'espace mental",
         mindspace_conversations="Conversations",
         pinned_section="Épinglés",
         mindspace_preview="Aperçu",

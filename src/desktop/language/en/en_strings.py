@@ -206,6 +206,7 @@ def get_english_strings() -> LanguageStrings:
         mindspace_files="Files",
         mindspace_vcs="Changed Files",
         mindspace_vcs_no_repo="No repository found",
+        mindspace_vcs_root="Mindspace root",
         mindspace_conversations="Conversations",
         pinned_section="Pinned",
         mindspace_preview="Preview",

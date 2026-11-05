@@ -21,7 +21,7 @@ from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 from desktop.sidebar.sidebar_file_delete import confirm_and_trash_file
 from desktop.sidebar.sidebar_pane_style import build_list_pane_stylesheet
 from desktop.style_manager import StyleManager
-from desktop.vcs_sidebar.vcs_sidebar_delegate import VCSSidebarDelegate
+from desktop.vcs_sidebar.vcs_sidebar_delegate import VCSSidebarDelegate, _HEADER_ROLE
 
 
 _STATUS_LABELS: dict[GitStatusCode, str] = {
@@ -166,7 +166,11 @@ class VCSSidebar(SidebarBase):
             if item is None:
                 continue
 
-            if os.path.normpath(item.data(Qt.ItemDataRole.UserRole)) == normalized_path:
+            item_path = item.data(Qt.ItemDataRole.UserRole)
+            if not item_path:
+                continue
+
+            if os.path.normpath(item_path) == normalized_path:
                 self._list_widget.clearSelection()
                 self._list_widget.setCurrentItem(item)
                 self._list_widget.scrollToItem(item, QListWidget.ScrollHint.EnsureVisible)
@@ -208,17 +212,45 @@ class VCSSidebar(SidebarBase):
         self._rebuild_list()
 
     def _rebuild_list(self) -> None:
-        """Rebuild the QListWidget from the current status list."""
+        """Rebuild the QListWidget from the current status list, grouped by directory."""
         self._list_widget.clear()
 
+        for directory, entries in self._group_by_directory().items():
+            header = QListWidgetItem(directory)
+            header.setFlags(Qt.ItemFlag.NoItemFlags)
+            header.setData(_HEADER_ROLE, True)
+            self._list_widget.addItem(header)
+
+            for entry in entries:
+                badge = _STATUS_LABELS.get(entry.code, "?")
+                item = QListWidgetItem(f"{badge}  {self._display_name(entry)}")
+                item.setData(Qt.ItemDataRole.UserRole, entry.path)
+                item.setToolTip(self._tooltip_text(entry))
+                item.setForeground(self._color_for_code(entry.code))
+                self._list_widget.addItem(item)
+
+    def _group_by_directory(self) -> dict[str, list[GitFileStatus]]:
+        """
+        Group the changed files by the directory each one sits in.
+
+        An entry is grouped under its own path, so a rename appears once, under
+        the directory it was renamed into.  Git reports entries in path order, so
+        the groups and the rows within each of them come out in that order.
+
+        Returns:
+            Mindspace-relative directory label to the entries it holds.
+        """
+        root_label = self._language_manager.strings().mindspace_vcs_root
+        groups: dict[str, list[GitFileStatus]] = {}
+
         for entry in self._current_status:
-            display_name = self._display_name(entry)
-            badge = _STATUS_LABELS.get(entry.code, "?")
-            item = QListWidgetItem(f"{badge}  {display_name}")
-            item.setData(Qt.ItemDataRole.UserRole, entry.path)
-            item.setToolTip(entry.path)
-            item.setForeground(self._color_for_code(entry.code))
-            self._list_widget.addItem(item)
+            directory = self._rel_path(os.path.dirname(entry.path))
+            if directory in ("", os.curdir):
+                directory = root_label
+
+            groups.setdefault(directory, []).append(entry)
+
+        return groups
 
     def _show_context_menu(self, position: QPoint) -> None:
         """
@@ -279,14 +311,37 @@ class VCSSidebar(SidebarBase):
         """
         Return a short display name for a status entry.
 
-        For renames, shows "old → new".  For all other entries shows the
-        path relative to the mindspace root.
+        For renames and copies, shows "old → new".  Other entries show only the
+        file name, because the directory the file sits in is already the label of
+        the group it appears under.
 
         Args:
             entry: The GitFileStatus entry to format.
 
         Returns:
             Human-readable display string.
+        """
+        name = os.path.basename(entry.path) or entry.path
+
+        if entry.code in (GitStatusCode.RENAMED, GitStatusCode.COPIED) and entry.original_path:
+            old_name = os.path.basename(entry.original_path) or entry.original_path
+            return f"{old_name} → {name}"
+
+        return name
+
+    def _tooltip_text(self, entry: GitFileStatus) -> str:
+        """
+        Return the full path of a status entry, for the entry's tooltip.
+
+        The group label and the row label together spell out the path, but either
+        of them can be elided in a narrow panel, so the path as a whole is
+        reported here.
+
+        Args:
+            entry: The GitFileStatus entry to format.
+
+        Returns:
+            The mindspace-relative path, or "old → new" for renames and copies.
         """
         rel = self._rel_path(entry.path)
 

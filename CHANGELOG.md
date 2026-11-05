@@ -15,6 +15,7 @@ New features:
   be restored, instead of unlinking it permanently.
 - Journalled history can be forgotten from the Changes panel, up to and including any listed change or in its
   entirety, and the panel reports what it reclaimed.
+- Improved the rendering of the mindspace VCS entries so they aren't as horizontally wide.
 
 Bug fixes:
 
