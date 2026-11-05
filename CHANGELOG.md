@@ -16,6 +16,10 @@ New features:
 - Journalled history can be forgotten from the Changes panel, up to and including any listed change or in its
   entirety, and the panel reports what it reclaimed.
 
+Bug fixes:
+
+- Fixed issues with various sidebar panels not scaling correctly with zoom size.
+
 Internal structure changes:
 
 - Conversations gained an identifier that lives in the transcript and survives renaming, duplicating and moving, so

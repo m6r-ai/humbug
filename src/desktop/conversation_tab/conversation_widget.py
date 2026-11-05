@@ -837,7 +837,7 @@ class ConversationWidget(QWidget):
         Args:
             message: The message that was added
         """
-        self._hide_last_ai_connected_message()
+        self._remove_last_ai_connected_message()
         self._remove_last_error_retry_ui()
 
         # If this is a USER message, delete any previous USER_QUEUED messages
@@ -853,12 +853,13 @@ class ConversationWidget(QWidget):
         # Ensure animation is on the correct messages.
         self._update_animated_messages()
 
-    def _hide_last_ai_connected_message(self) -> None:
+    def _remove_last_ai_connected_message(self) -> None:
         """
-        Hide the last AI_CONNECTED message from the UI if it is present.
+        Delete the last AI_CONNECTED message widget if it is present.
 
-        This keeps the message in the transcript for analytics but removes it from
-        the visual conversation flow.
+        This keeps the message in the transcript for analytics and in the display
+        order, so that anything addressing messages by position still lines up, but
+        the widget is never shown again once the turn it announced has begun.
         """
         last_message_widget = self._last_message_widget()
         if last_message_widget is None:
@@ -867,14 +868,11 @@ class ConversationWidget(QWidget):
         if last_message_widget.message_source() != AIMessageSource.AI_CONNECTED:
             return
 
-        # Remove from UI
-        last_message_widget.set_rendered(False)
+        message_id = last_message_widget.message_id()
+        if message_id is None:
+            return
 
-        if self._message_with_selection == last_message_widget:
-            self._message_with_selection = None
-
-        # If this was an animated message, remove it (new message will start it)
-        self._animated_messages.discard(last_message_widget)
+        self._delete_message_widget(message_id)
 
     def _delete_user_queued_messages(self) -> None:
         """
@@ -909,6 +907,34 @@ class ConversationWidget(QWidget):
             # Remove from the display order
             del self._message_widgets[message_id]
             self._message_ids.remove(message_id)
+
+    def _delete_message_widget(self, message_id: str) -> None:
+        """
+        Delete the widget for a message that will never be shown again.
+
+        The message keeps its place in the display order, which is what a conversation
+        load leaves behind for a message that is never given a widget, so anything
+        addressing messages by position is unaffected.  Deleting the widget rather
+        than hiding it keeps the layout and the widget tree small for the whole life
+        of the conversation.
+
+        Args:
+            message_id: Id of the message whose widget should be deleted.
+        """
+        message_widget = self._message_widgets.pop(message_id, None)
+        if message_widget is None:
+            return
+
+        if self._message_with_selection == message_widget:
+            self._message_with_selection = None
+
+        if self._last_error_message_widget == message_widget:
+            self._last_error_message_widget = None
+
+        self._animated_messages.discard(message_widget)
+        self._remove_response_reveal(message_widget)
+        self._messages_layout.removeWidget(message_widget)
+        message_widget.deleteLater()
 
     def _change_message_expansion(self, message_id: str, expanded: bool) -> None:
         """
@@ -1804,6 +1830,12 @@ class ConversationWidget(QWidget):
         # Update with the completed message immediately
         self._update_last_message(message)
         self.status_updated.emit()
+
+        # A completed message that is never shown will not be shown later either, so
+        # its widget is deleted rather than left hidden in the layout.  A connection
+        # notice is the exception: it stays on show until the next message arrives.
+        if message.source not in _STREAMING_ONLY_SOURCES and not self._is_displayable(message):
+            self._delete_message_widget(message.id)
 
     def _log_completed_message(self, message: AIMessage) -> None:
         """
