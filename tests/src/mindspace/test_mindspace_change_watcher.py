@@ -16,10 +16,10 @@ def _mindspace(tmp_path):
     return root
 
 
-def _watcher(root, interval=5.0):
+def _watcher(root, interval=5.0, pruned=frozenset({".humbug"})):
     journal = FileJournal()
     journal.open(str(root / ".humbug" / "journal"))
-    watcher = MindspaceChangeWatcher(str(root), journal, frozenset({".humbug"}), interval)
+    watcher = MindspaceChangeWatcher(str(root), journal, pruned, interval)
     watcher.open()
     return watcher, journal
 
@@ -490,3 +490,63 @@ def test_a_change_the_journal_never_saw_is_still_recorded(tmp_path):
     watcher.checkpoint()
 
     assert journal.entries_for_path("fred.txt")[0].actor == JournalActor.UNATTRIBUTED
+
+
+def test_a_baseline_spans_a_restart_taken_with_the_same_scanned_paths(tmp_path):
+    root = _mindspace(tmp_path)
+    (root / "fred.txt").write_bytes(b"one")
+    watcher, _journal = _watcher(root)
+    watcher.checkpoint()
+    (root / "fred.txt").write_bytes(b"changed while Humbug was closed")
+
+    reopened, _reopened_journal = _watcher(root)
+
+    assert reopened.checkpoint().difference.changed == {"fred.txt"}
+
+
+def test_a_restart_after_a_scanned_path_was_pruned_reports_nothing(tmp_path):
+    root = _mindspace(tmp_path)
+    (root / "generated").mkdir()
+    (root / "generated" / "report.html").write_bytes(b"one")
+    (root / "keep.txt").write_bytes(b"two")
+    watcher, _journal = _watcher(root)
+    watcher.checkpoint()
+
+    pruned, pruned_journal = _watcher(root, pruned=frozenset({".humbug", "generated"}))
+    checkpoint = pruned.checkpoint()
+
+    assert checkpoint.difference.is_empty()
+    assert checkpoint.unrecorded() == set()
+    assert pruned_journal.all_entries() == []
+
+
+def test_reporting_resumes_after_a_scanned_path_change_re_establishes_the_baseline(tmp_path):
+    root = _mindspace(tmp_path)
+    (root / "generated").mkdir()
+    (root / "generated" / "report.html").write_bytes(b"one")
+    (root / "keep.txt").write_bytes(b"two")
+    watcher, _journal = _watcher(root)
+    watcher.checkpoint()
+
+    pruned, _pruned_journal = _watcher(root, pruned=frozenset({".humbug", "generated"}))
+    pruned.checkpoint()
+    (root / "keep.txt").write_bytes(b"changed afterwards")
+
+    assert pruned.checkpoint().unrecorded() == {"keep.txt"}
+
+
+def test_a_baseline_written_before_the_scanned_paths_were_recorded_is_kept(tmp_path):
+    root = _mindspace(tmp_path)
+    (root / "fred.txt").write_bytes(b"one")
+    watcher, _journal = _watcher(root)
+    watcher.checkpoint()
+
+    baseline_path = root / ".humbug" / "watch" / "baseline.json"
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    del baseline["pruned"]
+    baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+    (root / "fred.txt").write_bytes(b"changed while Humbug was closed")
+
+    reopened, _reopened_journal = _watcher(root)
+
+    assert reopened.checkpoint().difference.changed == {"fred.txt"}

@@ -270,6 +270,17 @@ def get_english_strings() -> LanguageStrings:
         settings_terminal="Terminal",
         settings_conversation="Conversation",
         settings_tabs="Tabs",
+        settings_changes="Changes",
+
+        changes_settings="Changes",
+        changes_checkpoint_interval="Checkpoint Interval (seconds)",
+        changes_scan_section="Watched Tree",
+        changes_scan_section_description=(
+            "Changes under an ignored directory are not recorded. An entry is a directory name, "
+            "which matches at any depth, or a path from the mindspace root, which matches that "
+            "path and everything below it. .humbug and .git are always ignored."
+        ),
+        changes_pruned_paths="Ignored Directories and Paths",
 
         # Conversation settings
         model_info="Model Information",

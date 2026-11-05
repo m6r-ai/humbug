@@ -70,6 +70,16 @@ as an ordinary journalled change and can be reversed with the rest.  It records 
 changed and when and never why: the change is unattributed because attributing it would
 be recording a guess.  See ADR-0020.
 
+What that walk covers is the mindspace's own setting rather than a fixed list, because
+which directories are generated output and which are content differs from one mindspace
+to the next.  The paths a mindspace excludes are a silent boundary — a change under one
+is reported nowhere — so they are the user's to state and the interface shows them.
+
+What that walk covers is the mindspace's own setting rather than a fixed list, because
+which directories are generated output and which are content differs from one mindspace
+to the next.  The paths a mindspace excludes are a silent boundary — a change under one
+is reported nowhere — so they are the user's to state and the interface shows them.
+
 ### Minimal dependencies, maximum understandability
 Humbug follows the pattern of an OS kernel: simple, largely self-contained, and
 comprehensible from a single repository.

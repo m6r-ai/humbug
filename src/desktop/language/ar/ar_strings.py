@@ -271,6 +271,17 @@ def get_arabic_strings() -> LanguageStrings:
         settings_terminal="الطرفية",
         settings_conversation="المحادثة",
         settings_tabs="علامات التبويب",
+        settings_changes="التغييرات",
+
+        changes_settings="التغييرات",
+        changes_checkpoint_interval="الفاصل الزمني لنقاط التحقق (ثوانٍ)",
+        changes_scan_section="الشجرة المراقَبة",
+        changes_scan_section_description=(
+            "لا تُسجَّل التغييرات الواقعة تحت مجلد متجاهَل. كل سطر هو اسم مجلد، ويطابق أي "
+            "مستوى، أو مسار من جذر مساحة العمل، ويطابق ذلك المسار وكل ما تحته. يُتجاهَل "
+            "دائمًا المجلد ‎.humbug‎ و‎.git‎."
+        ),
+        changes_pruned_paths="المجلدات والمسارات المتجاهَلة",
 
         # Conversation settings
         model_info="معلومات النموذج",

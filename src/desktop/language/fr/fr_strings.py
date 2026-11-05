@@ -271,6 +271,18 @@ def get_french_strings() -> LanguageStrings:
         settings_terminal="Terminal",
         settings_conversation="Conversation",
         settings_tabs="Tabulations",
+        settings_changes="Modifications",
+
+        changes_settings="Modifications",
+        changes_checkpoint_interval="Intervalle des points de contrôle (secondes)",
+        changes_scan_section="Arborescence surveillée",
+        changes_scan_section_description=(
+            "Les modifications sous un répertoire ignoré ne sont pas enregistrées. Une entrée est "
+            "un nom de répertoire, qui correspond à n'importe quelle profondeur, ou un chemin "
+            "depuis la racine du mindspace, qui correspond à ce chemin et à tout ce qu'il "
+            "contient. .humbug et .git sont toujours ignorés."
+        ),
+        changes_pruned_paths="Répertoires et chemins ignorés",
 
         # Conversation settings
         model_info="Informations sur le modèle",

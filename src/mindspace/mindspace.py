@@ -20,7 +20,7 @@ from mindspace.mindspace_error import MindspaceError, MindspaceExistsError, Mind
 from mindspace.mindspace_interactions import MindspaceInteractions
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_message import MindspaceMessage
-from mindspace.mindspace_scan_pruned_dirs import SCAN_PRUNED_DIRS
+from mindspace.mindspace_scan_pruned_paths import scan_pruned_paths
 from mindspace.mindspace_settings import MindspaceSettings
 from mindspace.mindspace_tree_scanner import TreeSnapshot
 from mindspace.mindspace_usage import MindspaceUsage
@@ -66,7 +66,7 @@ class Mindspace:
         self._settings: MindspaceSettings | None = None
         self._interactions = MindspaceInteractions()
         self._file_journal = FileJournal()
-        self._change_watcher = MindspaceChangeWatcher("", self._file_journal, SCAN_PRUNED_DIRS, 5.0)
+        self._change_watcher = MindspaceChangeWatcher("", self._file_journal, frozenset(), 5.0)
         self._usage = MindspaceUsage()
         self._context_registry = ContextRegistry()
         self._tool_manager = AIToolManager()
@@ -195,7 +195,10 @@ class Mindspace:
             self._load_usage()
             self._file_journal.open(self.journal_dir())
             self._change_watcher = MindspaceChangeWatcher(
-                path, self._file_journal, SCAN_PRUNED_DIRS, settings.changes_checkpoint_interval
+                path,
+                self._file_journal,
+                scan_pruned_paths(settings.changes_pruned_paths),
+                settings.changes_checkpoint_interval,
             )
             self._change_watcher.open()
             self._apply_tool_settings(settings)
@@ -235,7 +238,10 @@ class Mindspace:
             self._settings = new_settings
             self._apply_tool_settings(new_settings)
             self._change_watcher = MindspaceChangeWatcher(
-                self._path, self._file_journal, SCAN_PRUNED_DIRS, new_settings.changes_checkpoint_interval
+                self._path,
+                self._file_journal,
+                scan_pruned_paths(new_settings.changes_pruned_paths),
+                new_settings.changes_checkpoint_interval,
             )
             self._change_watcher.open()
             self._on_settings_changed()

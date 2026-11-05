@@ -256,6 +256,14 @@ class LanguageStrings:
     settings_terminal: str
     settings_tabs: str
     settings_conversation: str
+    settings_changes: str
+
+    # Changes settings
+    changes_settings: str
+    changes_checkpoint_interval: str
+    changes_scan_section: str
+    changes_scan_section_description: str
+    changes_pruned_paths: str
 
     # Conversation settings
     model_info: str

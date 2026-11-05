@@ -314,11 +314,17 @@ Humbug was closed reportable at the next open, and it is written on the assumpti
 only one instance has a mindspace open.  A checkpoint never names a command, an actor
 or a process as the cause of a change.
 
-A view that lists entries should hold them and ask `entries_from(sequence, limit)` for
-what has been added since, rather than calling `all_entries()` again: the index skips
-segments older than the requested sequence and reads only the tail of the newest one,
-which is the difference between a listing that can stay open and one that cannot.  A
-purge or a cancellation invalidates what the view holds, so both must reload.
+What the walk covers is a per-mindspace setting (`changes.prunedPaths`, edited on the
+Changes page of the settings dialog) rather than a constant.  An entry is a directory
+name, matched at any depth, or a mindspace-relative path, matched together with
+everything below it; `mindspace_scan_pruned_paths.scan_pruned_paths()` turns a
+mindspace's list into the effective set and always adds `.git` and `.humbug`, because
+scanning `.humbug` would record the act of watching as a change.
+`DEFAULT_SCAN_PRUNED_PATHS` is only the default a new mindspace starts from.  Because a
+walk with a different set sees different files, the baseline records the set it was
+taken with, and a baseline whose set no longer matches is discarded rather than read:
+otherwise a newly pruned directory's files would be reported as removals that never
+happened.
 
 A view that lists entries should hold them and ask `entries_from(sequence, limit)` for
 what has been added since, rather than calling `all_entries()` again: the index skips

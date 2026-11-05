@@ -61,6 +61,44 @@ def test_does_not_descend_a_pruned_directory(tmp_path):
     assert set(snapshot.entries) == {"keep.txt"}
 
 
+def test_a_pruned_name_matches_a_directory_at_any_depth(tmp_path):
+    (tmp_path / "keep.txt").write_bytes(b"one")
+    (tmp_path / "sub").mkdir()
+    (tmp_path / "sub" / "keep.txt").write_bytes(b"two")
+    (tmp_path / "sub" / "build").mkdir()
+    (tmp_path / "sub" / "build" / "object.o").write_bytes(b"three")
+
+    snapshot = _scanner(tmp_path, frozenset({"build"})).scan()
+
+    assert set(snapshot.entries) == {"keep.txt", os.path.join("sub", "keep.txt")}
+
+
+def test_a_pruned_path_matches_only_that_directory(tmp_path):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "keep.txt").write_bytes(b"one")
+    (tmp_path / "src" / "generated").mkdir()
+    (tmp_path / "src" / "generated" / "skip.txt").write_bytes(b"two")
+
+    snapshot = _scanner(tmp_path, frozenset({"src/generated"})).scan()
+
+    assert set(snapshot.entries) == {os.path.join("src", "keep.txt")}
+
+
+def test_a_pruned_path_does_not_prune_a_same_named_directory_elsewhere(tmp_path):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "generated").mkdir()
+    (tmp_path / "src" / "generated" / "skip.txt").write_bytes(b"one")
+    (tmp_path / "vendored").mkdir()
+    (tmp_path / "vendored" / "generated").mkdir()
+    (tmp_path / "vendored" / "generated" / "keep.txt").write_bytes(b"two")
+
+    scanner = _scanner(tmp_path, frozenset({"src/generated"}))
+    snapshot = scanner.scan()
+
+    assert scanner.pruned_paths() == frozenset({"src/generated"})
+    assert set(snapshot.entries) == {os.path.join("vendored", "generated", "keep.txt")}
+
+
 def test_does_not_follow_a_symlink_to_a_file(tmp_path):
     target = tmp_path / "target.txt"
     target.write_bytes(b"content")

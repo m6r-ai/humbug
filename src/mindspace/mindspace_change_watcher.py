@@ -129,7 +129,7 @@ class MindspaceChangeWatcher:
         self,
         mindspace_path: str,
         journal: FileJournal,
-        pruned_dirs: frozenset[str],
+        pruned_paths: frozenset[str],
         interval_seconds: float,
     ) -> None:
         """
@@ -138,13 +138,13 @@ class MindspaceChangeWatcher:
         Args:
             mindspace_path: Absolute path to the mindspace root.
             journal: The journal, consulted to attribute a change it recorded.
-            pruned_dirs: Directory names not to descend.
+            pruned_paths: Directory names and mindspace-relative paths not to descend.
             interval_seconds: The configured interval between checkpoints.
         """
         self._logger = logging.getLogger("MindspaceChangeWatcher")
         self._directory = os.path.join(mindspace_path, ".humbug", self.WATCH_DIR)
         self._journal = journal
-        self._scanner = MindspaceTreeScanner(mindspace_path, pruned_dirs)
+        self._scanner = MindspaceTreeScanner(mindspace_path, pruned_paths)
         self._interval_seconds = interval_seconds
         self._baseline: dict[str, TreeEntry] = {}
         self._baseline_digests: dict[str, str] = {}
@@ -161,6 +161,12 @@ class MindspaceChangeWatcher:
         A baseline that cannot be read is treated as absent, which makes the next
         checkpoint a first one that reports nothing: a damaged baseline must not
         turn every file in the mindspace into a reported change.
+
+        A baseline taken with a different set of scanned paths is discarded for the
+        same reason.  A directory that has just been pruned disappears from the next
+        walk, and every file under it would otherwise be reported as a removal that
+        never happened; the reverse would report a directory's whole contents as
+        additions.  Neither is a change, so the baseline is re-established silently.
         """
         self._baseline = {}
         self._baseline_digests = {}
@@ -187,6 +193,16 @@ class MindspaceChangeWatcher:
             sequence = data["sequence"]
             if not isinstance(entries, dict) or not isinstance(sequence, int):
                 raise ValueError("baseline is malformed")
+
+            recorded_paths = self._recorded_pruned_paths(data)
+            if recorded_paths is not None and recorded_paths != self._scanner.pruned_paths():
+                self._logger.info(
+                    "Discarding the change baseline at %s: it was taken with a different set "
+                    "of scanned paths, so the next checkpoint re-establishes it and reports "
+                    "nothing",
+                    path,
+                )
+                return
 
             self._baseline = {
                 path: TreeEntry.from_list(values) for path, values in entries.items()
@@ -233,6 +249,32 @@ class MindspaceChangeWatcher:
         self._sequence = 0
         self._checkpoints_this_session = 0
         self._has_baseline = False
+
+    def _recorded_pruned_paths(self, data: dict) -> frozenset[str] | None:
+        """
+        Return the scanned paths a baseline was taken with, or None if it did not say.
+
+        A baseline written before the scanned paths were recorded must keep working:
+        it was taken with the defaults, and discarding it would lose the report of
+        everything that changed while Humbug was closed.
+
+        Args:
+            data: The baseline as read from disk.
+
+        Returns:
+            The paths the baseline covers, or None when the baseline does not say.
+
+        Raises:
+            ValueError: The recorded paths are not a list of strings.
+        """
+        recorded = data.get("pruned")
+        if recorded is None:
+            return None
+
+        if not isinstance(recorded, list) or not all(isinstance(path, str) for path in recorded):
+            raise ValueError("baseline pruned paths must be a list of strings")
+
+        return frozenset(recorded)
 
     def checkpoint(self, snapshot: TreeSnapshot | None = None) -> ChangeCheckpoint:
         """
@@ -615,6 +657,7 @@ class MindspaceChangeWatcher:
             "sequence": sequence,
             "journal_sequence": self._journal_sequence,
             "timestamp": datetime.now(timezone.utc).isoformat(),
+            "pruned": sorted(self._scanner.pruned_paths()),
             "entries": {
                 entry_path: entry.to_list() for entry_path, entry in entries.items()
             },

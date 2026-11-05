@@ -155,20 +155,47 @@ class MindspaceTreeScanner:
     tree being written to while it is walked is normal, not exceptional.
     """
 
-    def __init__(self, root: str, pruned_dirs: frozenset[str]) -> None:
+    def __init__(self, root: str, pruned_paths: frozenset[str]) -> None:
         """
         Initialise a scanner rooted at a mindspace.
 
         Args:
             root: Absolute path to the mindspace root.
-            pruned_dirs: Directory names not to descend.
+            pruned_paths: Directory names and mindspace-relative paths not to descend.
+                A name matches a directory at any depth; a path matches only the
+                directory it names and what is below it.
         """
         self._root = root
-        self._pruned_dirs = pruned_dirs
+        self._pruned_paths = pruned_paths
+        self._pruned_names = frozenset(path for path in pruned_paths if "/" not in path)
+        self._pruned_trees = tuple(path + "/" for path in pruned_paths if "/" in path)
 
     def root(self) -> str:
         """Return the absolute path the scanner walks."""
         return self._root
+
+    def pruned_paths(self) -> frozenset[str]:
+        """Return the names and paths the scanner does not descend."""
+        return self._pruned_paths
+
+    def _is_pruned(self, name: str, relative_path: str) -> bool:
+        """
+        Return True if a directory is not to be descended.
+
+        A configured name matches at any depth; a configured path matches itself
+        and everything below it.  The ancestors of a configured path are still
+        walked, which is the difference between ignoring src/generated and
+        ignoring src.
+
+        Args:
+            name: The directory's own name.
+            relative_path: The directory's path from the mindspace root.
+        """
+        if name in self._pruned_names:
+            return True
+
+        normalised = relative_path.replace(os.sep, "/")
+        return normalised in self._pruned_paths or normalised.startswith(self._pruned_trees)
 
     def scan(self) -> TreeSnapshot:
         """
@@ -207,7 +234,8 @@ class MindspaceTreeScanner:
                         continue
 
                     if stat.S_ISDIR(mode):
-                        if entry.name in self._pruned_dirs:
+                        relative = entry.path[len(self._root):].lstrip(os.sep)
+                        if self._is_pruned(entry.name, relative):
                             continue
 
                         pending.append(entry.path)
