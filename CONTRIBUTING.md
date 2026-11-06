@@ -68,6 +68,14 @@ Only implement one specific improvement or feature per contribution.  If there a
 more you will be asked to split them into two or more contributions.  Patches are carefully
 reviewed and it's really hard to review something that tries to do more than one thing.
 
+## Documentation
+
+User-visible changes carry a documentation obligation, and the documentation is part of the
+change rather than a follow-up to it. A change that alters what the user sees or can do updates
+the matching chapter of the [user manual](./docs/user-manual/index.md), and a change that
+invalidates something `README.md` states updates the README. `AGENTS.md` gives the full rules and
+a list of the README sections that go stale fastest.
+
 ## Verifying your changes
 
 Before submitting any change, run the full suite of static analysis tools:

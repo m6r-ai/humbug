@@ -51,8 +51,11 @@ Consult it before proposing changes that touch established decisions.
 
 ## Documentation
 
-`docs/user-manual/` is the user's only explanation of the interface. A capability the manual does
-not mention is one the user has to discover by accident, so document it.
+Humbug has two user-facing documents. `docs/user-manual/` explains the interface, and `README.md`
+explains what the project offers. A capability either one fails to describe is one the user has to
+discover by accident, so document it.
+
+### User manual
 
 - A change that alters what the user sees or can do — a new sidebar panel, tab type, menu action,
   keyboard shortcut, settings page or setting, approval behaviour, AI tool, or storage location —
@@ -66,7 +69,30 @@ not mention is one the user has to discover by accident, so document it.
   model names, releases, or other facts that change without the manual changing.
 - Where a feature has limits, say so plainly. Humbug's users are asked to trust it with their
   work; documentation that overstates what a feature can do is worse than documentation that is
-  unflattering. The Changes and Trash chapters are the pattern to follow.
+  unflattering. The Journal and Trash chapters are the pattern to follow.
+
+### `README.md`
+
+`README.md` is the project's front page: the first thing a prospective user or contributor reads,
+and the only description of Humbug many of them will see. It is an overview rather than a changelog,
+so most changes leave it untouched, but a change that alters something the README states updates it
+in the same change that invalidates it. The rule above about not overstating what a feature can do
+applies here too: the README argues for Humbug, and its argument has to be true.
+
+What goes stale fastest:
+
+- **The capability list.** The bullets describing what Humbug's tools enable — git queries, HTTP
+  access under allow and deny lists, document conversion, UI orchestration and the rest — mirror the
+  registered AI tools. A new tool, or a new operation on an existing one, belongs there.
+- **The AI backends.** The provider list is stated in `README.md` and again in `blueprint.md`, and
+  `src/ai/` decides it. Adding or dropping a backend means editing both.
+- **The desktop description.** The sidebar panels and tab types are enumerated in "The desktop GUI"
+  and named again in "Rich user interactions"; `src/desktop/sidebar_manager/` and
+  `src/desktop/tab_manager/` decide them.
+- **The dependency counts.** "Only 3 third party runtime dependencies" appears twice, beside the
+  named list (PySide6, qasync, certifi). A change to `pyproject.toml` invalidates both.
+- **The installation steps.** They quote the `pip install` command, the launch command, and the
+  supported Python versions, all of which come from `pyproject.toml`.
 
 ## Code generation
 
@@ -440,6 +466,7 @@ helpers from other test modules via their full path (e.g.
 
 ## Key Documentation Files
 
-- `README.md` - Project overview
+- `README.md` - Project overview, and the project's front page (see Documentation above)
 - `CHANGELOG.md` - Version history
+- `blueprint.md` - Purpose and intent of the repository
 - Component-specific README.md files in subdirectories
