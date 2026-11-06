@@ -36,9 +36,8 @@ terminal widget and the AI's terminal tool, and every byte returned passes throu
 the tab's read loop. Neither is a command boundary.
 
 **A metadata walk is cheap and a content read is not.** Measured on a mindspace of about a thousand
-files (`docs/mindspace-tree-scan-measurement.md`): 6.7 ms for a pruned metadata walk, 242 ms to read
-and hash every file. Roughly 4.8 µs per entry, so a mindspace ten times larger walks in about half a
-second.
+files: 6.7 ms for a pruned metadata walk, 242 ms to read and hash every file. Roughly 4.8 µs per
+entry, so a mindspace ten times larger walks in about half a second.
 
 ## Decision
 

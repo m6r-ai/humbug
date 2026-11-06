@@ -81,7 +81,8 @@ The left side of the Humbug window is the **mindspace panel**. It shows the cont
 your current mindspace, and is where you navigate, open, and manage files and conversations.
 
 The panel shows one view at a time. You switch between views using the small icon buttons on the
-left rail of the panel:
+left rail of the panel. Resting the pointer on an icon shows what it opens, so an icon you don't
+recognise can be identified without clicking it:
 
 ### Conversations view
 
