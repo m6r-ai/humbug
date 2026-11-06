@@ -35,7 +35,24 @@ which then continues.
 ## Interacting with a child AI
 
 The child conversation's input area remains active while it is working. You can type a
-message and submit it to provide feedback, redirect the child AI, or ask it to stop.
+message and submit it to provide feedback, redirect the child AI, or ask it to stop. Submitting
+while the child is waiting on a tool approval cancels that request first, so your message is not
+left queued behind a prompt you are no longer interested in — the same rule that applies to the AI
+you are talking to directly.
+
+---
+
+## What a child AI can and cannot do
+
+Delegation is deliberately narrow, so that spawning a helper cannot become a way around the limits
+you set:
+
+- A child conversation may only be opened by the conversation that delegated it. No other
+  conversation can resume it, so one conversation cannot reach into another's history
+- The delegation tool can only reach the child it created: it cannot open or resume any other
+  conversation
+- Everything else works as it does for you: the child uses the same tools, in the same mindspace,
+  under the same approvals
 
 ---
 
@@ -58,6 +75,10 @@ AI is created.
 Child conversations are saved alongside parent conversations in your mindspace. Their
 relationship to the parent is preserved, so you can review the full picture of what
 happened — both the parent's reasoning and the child's work — even after the session ends.
+
+In the Conversations view the child appears beneath its parent, and the relationship survives
+renaming and moving: the link is recorded in the conversations themselves, not in the folder
+layout.
 
 ---
 

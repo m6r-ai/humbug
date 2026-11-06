@@ -9,11 +9,11 @@ from PySide6.QtGui import QKeyEvent, QResizeEvent
 
 from diff import DiffParser, DiffParseError
 from diff.diff_types import DiffHunk
-
-from git import GitCommandError, GitNotFoundError, GitRepository, find_repo_root
-
 from syntax import ProgrammingLanguageUtils
 
+from desktop.diff_tab.diff_source import (
+    DiffSourceError, GitWorkingTreeDiffSource, JournalDiffSource,
+)
 from desktop.style_manager import StyleManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.language.language_manager import LanguageManager
@@ -47,7 +47,13 @@ class DiffWidget(QWidget):
     open_in_editor_requested = Signal(int, int)
     open_in_preview_requested = Signal()
 
-    def __init__(self, path: str, parent: QWidget | None = None, mode: DiffViewMode = DiffViewMode.INLINE) -> None:
+    def __init__(
+        self,
+        path: str,
+        parent: QWidget | None = None,
+        mode: DiffViewMode = DiffViewMode.INLINE,
+        journal_sequence: int | None = None,
+    ) -> None:
         """
         Initialise the diff widget for the given file path.
 
@@ -55,11 +61,14 @@ class DiffWidget(QWidget):
             path: Absolute path to the file to diff.
             parent: Optional parent widget.
             mode: Initial layout mode — INLINE (narrow, default) or SIDE_BY_SIDE.
+            journal_sequence: When set, the old side is the version the journal
+                recorded for that entry rather than the file at HEAD.
         """
         super().__init__(parent)
         self._logger = logging.getLogger("DiffWidget")
         self._path = path
         self._mode = mode
+        self._source = self._build_source(journal_sequence)
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
         self.setObjectName("DiffWidget")
@@ -551,46 +560,35 @@ class DiffWidget(QWidget):
         assert self._inline_pane is not None
         return [self._inline_pane]
 
+    def _build_source(
+        self, journal_sequence: int | None
+    ) -> GitWorkingTreeDiffSource | JournalDiffSource:
+        """
+        Choose what this view compares against.
+
+        Args:
+            journal_sequence: The journal entry whose earlier version is the old
+                side, or None to compare the working tree against HEAD.
+        """
+        mindspace_manager = MindspaceManager()
+        if journal_sequence is None:
+            return GitWorkingTreeDiffSource(self._path, mindspace_manager.mindspace_path())
+
+        return JournalDiffSource(self._path, journal_sequence, mindspace_manager.mindspace())
+
     def _fetch_content(self) -> tuple[list[str], list[str], str] | None:
         """
-        Retrieve the HEAD content, working-tree content, and diff text.
+        Retrieve the old content, new content, and diff text from this view's source.
 
         Returns a tuple of (old_lines, new_lines, diff_text), or None if an
         error occurred that has already been surfaced via the message label.
-        Old lines are empty for untracked files (no HEAD version exists).
         """
         try:
-            mindspace_manager = MindspaceManager()
-            mindspace_path = mindspace_manager.mindspace_path()
-            repo_root = find_repo_root(self._path, mindspace_path)
+            return self._source.fetch()
 
-            if repo_root is None:
-                self._show_message("This file is not inside a git repository.")
-                return None
-
-            repo = GitRepository(repo_root)
-            diff_text = repo.get_file_diff(self._path)
-
-            head_content = repo.get_file_at_head(self._path)
-            old_lines = head_content.splitlines() if head_content is not None else []
-
-            with open(self._path, encoding="utf-8", errors="replace") as f:
-                new_lines = f.read().splitlines()
-
-            return old_lines, new_lines, diff_text
-
-        except GitNotFoundError:
-            self._show_message("git is not available on this system.")
-            return None
-
-        except GitCommandError as e:
-            self._logger.error("git error for '%s': %s", self._path, e)
-            self._show_message(f"git error: {e}")
-            return None
-
-        except OSError as e:
-            self._logger.error("OS error reading '%s': %s", self._path, e)
-            self._show_message(f"Could not read file: {e}")
+        except DiffSourceError as e:
+            self._logger.error("Could not build a diff for '%s': %s", self._path, e)
+            self._show_message(str(e))
             return None
 
     def _parse_diff(self, diff_text: str) -> list[DiffHunk] | None:

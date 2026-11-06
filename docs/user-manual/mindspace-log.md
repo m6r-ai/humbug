@@ -24,11 +24,21 @@ shown in a colour-coded label alongside a timestamp. The types of activity recor
 
 - **AI tool calls** — every tool the AI invokes (filesystem reads and writes, terminal commands,
   editor operations, delegation, etc.)
+- **Prompts, reasoning, and responses** — each message you submit, and each reasoning step and
+  answer the AI produces
 - **Human actions** — files you save, rename, move, or delete; settings you change
 - **Approvals and denials** — when you approve or reject an AI action that requires authorisation
 - **Conversation events** — messages submitted, responses received, conversations created or
   deleted
 - **System events** — errors, warnings, and internal status changes
+
+### Reading the log conversation by conversation
+
+Entries that belong to a conversation carry that conversation's identity as structured context,
+rather than having it woven into the text. The identity is the conversation's own, and stays with
+it when the conversation is renamed or moved, so the log can be read conversation by
+conversation — every prompt, every tool call it caused, every answer — instead of as a single
+stream of unrelated lines.
 
 ---
 

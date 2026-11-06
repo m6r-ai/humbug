@@ -7,6 +7,8 @@ from typing import Any
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
 from editor_context.editor_context_document import EditorContextDocument
 
+from mindspace.journal_entry import JournalActor
+
 
 class EditorContext:
     """
@@ -30,7 +32,7 @@ class EditorContext:
         get_cursor_info_cb: Callable[[], dict[str, Any]] | None = None,
         get_selected_text_cb: Callable[[], str] | None = None,
         get_editor_info_cb: Callable[[], dict[str, Any]] | None = None,
-        save_cb: Callable[[], bool] | None = None,
+        save_cb: Callable[[JournalActor, str], bool] | None = None,
         on_goto_line: Callable[[int, int], None] | None = None,
         on_apply_diff: Callable[[str], dict[str, Any]] | None = None,
     ) -> None:
@@ -49,9 +51,11 @@ class EditorContext:
             get_editor_info_cb: Optional callable returning editor metadata
                 (language, untitled_number, etc.).  Provided by the front end.
                 When ``None``, a minimal dict is built from the document.
-            save_cb: Optional callable that saves the document to disk and
-                returns ``True`` on success.  When ``None``, the document's
-                ``save_to_disk`` is used directly.
+            save_cb: Optional callable that takes the actor performing the save
+                and the conversation it belongs to, writes the document to disk,
+                and returns ``True`` on success.  When ``None``, the document's
+                ``save_to_disk`` is used directly, with no record of who made the
+                change.
             on_goto_line: Optional callable(line, column) that scrolls the
                 viewport to the target position.  A headless backend leaves
                 this ``None`` and the method validates only.
@@ -253,18 +257,24 @@ class EditorContext:
             'error_details': result.error_details,
         }
 
-    def save(self) -> bool:
+    def save(self, actor: JournalActor = JournalActor.HUMAN, conversation: str = "") -> bool:
         """
         Save the current editor content to file.
 
         Delegates to the frontend save callback if supplied.  In headless
         mode, saves directly via ``EditorContextDocument.save_to_disk``.
 
+        Args:
+            actor: Who is performing the save, recorded by the frontend so the
+                change can be attributed.
+            conversation: Identifier of the conversation the save belongs to, or
+                an empty string when it was not made on a conversation's behalf.
+
         Returns:
             True if the save was successful.
         """
         if self._save_cb is not None:
-            return self._save_cb()
+            return self._save_cb(actor, conversation)
 
         try:
             self._document.save_to_disk()

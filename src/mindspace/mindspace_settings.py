@@ -5,6 +5,7 @@ import logging
 from ai import AIConversationSettings, AIReasoningCapability
 from ai.ai_model import AIReasoningEffort
 from ai_tool import AIToolManager
+from mindspace.mindspace_scan_pruned_paths import DEFAULT_SCAN_PRUNED_PATHS
 
 
 @dataclass
@@ -33,6 +34,10 @@ class MindspaceSettings:
     terminal_scrollback_lines: int = 10000  # Default 10000 lines
     terminal_close_on_exit: bool = True  # Default to native terminal behavior
     prompt_markers_visible: bool = False
+    changes_checkpoint_interval: float = 5.0  # Seconds between change checkpoints
+    changes_pruned_paths: list[str] = field(
+        default_factory=lambda: sorted(DEFAULT_SCAN_PRUNED_PATHS)
+    )  # Directories and paths the change scanner does not descend
     pinned_paths: list[str] = field(default_factory=list)
 
     @classmethod
@@ -126,6 +131,7 @@ class MindspaceSettings:
         conversation = cls._safe_get_dict(data, "conversation")
         tools = cls._safe_get_dict(data, "tools")
         terminal = cls._safe_get_dict(data, "terminal")
+        changes = cls._safe_get_dict(data, "changes")
 
         # Get defaults
         default_model, default_provider = AIConversationSettings.get_default_model({})
@@ -350,6 +356,40 @@ class MindspaceSettings:
             prompt_markers_visible = False
 
         pinned_paths_raw = conversation.get("pinned", [])
+
+        checkpoint_interval = changes.get("checkpointIntervalSeconds", 5.0)
+        if isinstance(checkpoint_interval, bool) or not isinstance(checkpoint_interval, (int, float)):
+            cls._logger.warning(
+                "Invalid checkpointIntervalSeconds type in %s: expected number, got %s. Using default.",
+                path, type(checkpoint_interval).__name__
+            )
+            checkpoint_interval = 5.0
+
+        elif checkpoint_interval < 1.0 or checkpoint_interval > 600.0:
+            cls._logger.warning(
+                "Invalid checkpointIntervalSeconds value in %s: %s (must be 1.0-600.0). Using default.",
+                path, checkpoint_interval
+            )
+            checkpoint_interval = 5.0
+
+        changes_checkpoint_interval = float(checkpoint_interval)
+
+        pruned_paths_raw = changes.get("prunedPaths")
+        if pruned_paths_raw is None:
+            changes_pruned_paths = sorted(DEFAULT_SCAN_PRUNED_PATHS)
+
+        elif not isinstance(pruned_paths_raw, list):
+            cls._logger.warning(
+                "Invalid prunedPaths type in %s: expected list, got %s. Using default.",
+                path, type(pruned_paths_raw).__name__
+            )
+            changes_pruned_paths = sorted(DEFAULT_SCAN_PRUNED_PATHS)
+
+        else:
+            changes_pruned_paths = [
+                entry for entry in pruned_paths_raw if isinstance(entry, str) and entry.strip()
+            ]
+
         if not isinstance(pinned_paths_raw, list):
             cls._logger.warning(
                 "Invalid pinned type in %s: expected list, got %s. Using default.",
@@ -376,6 +416,8 @@ class MindspaceSettings:
             terminal_scrollback_lines=terminal_scrollback_lines,
             terminal_close_on_exit=terminal_close_on_exit,
             prompt_markers_visible=prompt_markers_visible,
+            changes_checkpoint_interval=changes_checkpoint_interval,
+            changes_pruned_paths=changes_pruned_paths,
             enabled_tools=enabled_tools,
             pinned_paths=pinned_paths
         )
@@ -408,6 +450,10 @@ class MindspaceSettings:
             },
             "tools": {
                 "enabled": self.enabled_tools,
+            },
+            "changes": {
+                "checkpointIntervalSeconds": self.changes_checkpoint_interval,
+                "prunedPaths": self.changes_pruned_paths,
             },
         }
         with open(path, 'w', encoding='utf-8') as f:

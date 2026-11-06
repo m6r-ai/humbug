@@ -3,10 +3,10 @@
 from datetime import datetime, timezone
 import os
 
-from PySide6.QtCore import QFileInfo, QMimeData, QModelIndex, QPersistentModelIndex, QPoint, QSize, Qt, Signal
+from PySide6.QtCore import QFileInfo, QMimeData, QPoint, QSize, Qt, Signal
 from PySide6.QtGui import QDrag, QMouseEvent
 from PySide6.QtWidgets import (
-    QApplication, QFrame, QLabel, QSizePolicy, QSpacerItem, QStyledItemDelegate, QStyleOptionViewItem,
+    QApplication, QFrame, QLabel, QSizePolicy, QSpacerItem,
     QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
 )
 
@@ -20,6 +20,7 @@ from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar.sidebar_pane_style import build_tree_pane_stylesheet
+from desktop.sidebar.sidebar_row_spacing_delegate import SidebarRowSpacingDelegate
 from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 from desktop.sidebar.sidebar_tree_icon_provider import SidebarTreeIconProvider
 from desktop.sidebar.sidebar_tree_style import SidebarTreeStyle
@@ -74,7 +75,7 @@ class TrashSidebar(SidebarBase):
         self._tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._tree.customContextMenuRequested.connect(self._show_context_menu)
 
-        self._delegate = TrashTreeDelegate(self._tree, self._style_manager)
+        self._delegate = SidebarRowSpacingDelegate(self._tree, self._style_manager)
         self._tree.setItemDelegate(self._delegate)
 
         self._tree.itemClicked.connect(self._on_item_clicked)
@@ -134,6 +135,24 @@ class TrashSidebar(SidebarBase):
         item.setToolTip(0, entry.original_path or strings.trash_unknown_location)
         item.setIcon(0, self._icon_provider.icon(QFileInfo(trash_path)))
         return item
+
+    def _refresh_row_icons(self) -> None:
+        """
+        Re-request every row's icon at the current zoom factor.
+
+        Qt does not enlarge an icon beyond the pixmap it already holds, so a row
+        that keeps the icon handed to it when the listing was built stays at the
+        size it was drawn then.  The icon provider's cache is cleared before this
+        runs, so each icon is rebuilt at the zoom factor in force.
+        """
+        for index in range(self._tree.topLevelItemCount()):
+            item = self._tree.topLevelItem(index)
+            if item is None:
+                continue
+
+            trash_path = self._trash_path_for_item(item)
+            if trash_path:
+                item.setIcon(0, self._icon_provider.icon(QFileInfo(trash_path)))
 
     def _format_deleted_at(self, deleted_at: str) -> str:
         """Format an ISO 8601 timestamp as a short relative time string."""
@@ -261,7 +280,6 @@ class TrashSidebar(SidebarBase):
         base_font_size = self._style_manager.base_font_size()
 
         self._header.apply_style()
-        self._icon_provider.update_icons()
 
         font = self.font()
         font.setPointSizeF(base_font_size * zoom_factor)
@@ -270,8 +288,12 @@ class TrashSidebar(SidebarBase):
         self._tree.setFont(font)
         icon_size = round(16 * zoom_factor)
         self._tree.setIconSize(QSize(icon_size, icon_size))
+        self._icon_provider.update_icons()
+        self._refresh_row_icons()
 
         subtle_text = self._style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
+        inset = self._style_manager.scale(SidebarSectionHeader.TITLE_INSET)
+        tree_inset = self._style_manager.scale(SidebarSectionHeader.TITLE_INSET - 4)
 
         self.setStyleSheet(
             build_tree_pane_stylesheet(
@@ -284,13 +306,17 @@ class TrashSidebar(SidebarBase):
             + f"""
             QLabel#_status_label {{
                 color: {subtle_text};
-                padding: {round(12 * zoom_factor)}px {round(6 * zoom_factor)}px;
+                padding: {round(12 * zoom_factor)}px {inset}px;
             }}
             QTreeWidget#TrashSidebarTree {{
                 border: none;
             }}
+            QTreeWidget#TrashSidebarTree::item {{
+                padding-left: {tree_inset}px;
+            }}
             """
         )
+
 
 
 class TrashTreeWidget(QTreeWidget):
@@ -340,22 +366,6 @@ class TrashTreeWidget(QTreeWidget):
         drag.exec_(Qt.DropAction.MoveAction | Qt.DropAction.CopyAction)
 
         self._drag_start_pos = None
-
-
-class TrashTreeDelegate(QStyledItemDelegate):
-    """Item delegate for the trash tree widget, providing consistent row spacing."""
-
-    def __init__(self, tree: QTreeWidget, style_manager: StyleManager) -> None:
-        super().__init__(tree)
-        self._style_manager = style_manager
-
-    def sizeHint(self, option: QStyleOptionViewItem, _index: QModelIndex | QPersistentModelIndex) -> QSize:
-        """Return a consistent, zoom-scaled row height matching the conversation sidebar."""
-        zoom = self._style_manager.zoom_factor()
-        fm = option.fontMetrics  # type: ignore
-        line_height = fm.height()
-        row_height = max(line_height + round(10 * zoom), round(24 * zoom))
-        return QSize(super().sizeHint(option, _index).width(), row_height)
 
 
 def _display_name(trash_name: str) -> str:

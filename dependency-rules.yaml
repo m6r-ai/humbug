@@ -147,6 +147,11 @@ modules:
   editor_context:
     internal_dependencies:
       - diff
+      # The editor model forwards the actor performing a save so the change can be
+      # attributed, which needs the journal's actor vocabulary.  Only
+      # mindspace.journal_entry is touched; nothing here reaches the mindspace
+      # model, and mindspace does not depend on editor_context, so there is no cycle.
+      - mindspace
     external_dependencies:
       - "standard_library"
 

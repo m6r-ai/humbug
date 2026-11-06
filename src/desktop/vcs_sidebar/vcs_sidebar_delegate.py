@@ -8,13 +8,21 @@ from desktop.color_role import ColorRole
 from desktop.style_manager import StyleManager
 
 
+_HEADER_ROLE = Qt.ItemDataRole.UserRole + 1
+
+
 class VCSSidebarDelegate(QStyledItemDelegate):
     """
     Delegate that renders each VCS status entry as two visual columns.
 
     The left column shows the single-character status badge in the status
-    colour for that entry.  The right column shows the file path in the
+    colour for that entry.  The right column shows the file name in the
     normal text colour.
+
+    Rows marked with _HEADER_ROLE are the directory labels that introduce each
+    group of entries.  They have no badge column, are painted in the subtle text
+    colour, and are never shown as selected or hovered because they cannot be
+    selected.
 
     The badge column width is fixed at a small multiple of the current
     character width so it remains proportional across zoom levels.
@@ -28,13 +36,42 @@ class VCSSidebarDelegate(QStyledItemDelegate):
         """Return the pixel width reserved for the badge column."""
         return round(self._style_manager.get_space_width() * 3)
 
+    def _paint_header(
+        self,
+        painter: QPainter,
+        text_rect: QRect,
+        index: QModelIndex | QPersistentModelIndex,
+    ) -> None:
+        """
+        Paint a directory label in the column the file names occupy.
+
+        The label is inset to the text column of a file row rather than to the
+        edge of the row, so it lines up with the names beneath it.  It is elided
+        in the middle rather than at the end because the end of a path is the
+        part that tells two labels apart.
+
+        Args:
+            painter: Painter for the row.
+            text_rect: The text column of the row.
+            index: Model index of the header row.
+        """
+        label = str(index.data(Qt.ItemDataRole.DisplayRole) or "")
+        painter.setPen(self._style_manager.get_color(ColorRole.TEXT_INACTIVE))
+        fm = painter.fontMetrics()
+        elided = fm.elidedText(label, Qt.TextElideMode.ElideMiddle, text_rect.width())
+        painter.drawText(
+            text_rect,
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeading,
+            elided,
+        )
+
     def paint(
         self,
         painter: QPainter,
         option: QStyleOptionViewItem,
         index: QModelIndex | QPersistentModelIndex,
     ) -> None:
-        """Paint the background then the badge and path as separate columns."""
+        """Paint the background then the badge and file name as separate columns."""
         painter.save()
 
         # rect and state are valid properties but PySide6 does not expose them correctly
@@ -43,10 +80,15 @@ class VCSSidebarDelegate(QStyledItemDelegate):
 
         # Draw background manually so we never call super().paint() which
         # would also render the display-role text and cause double drawing.
+        is_header = bool(index.data(_HEADER_ROLE))
         is_selected = bool(state & QStyle.StateFlag.State_Selected)
         is_hovered = bool(state & QStyle.StateFlag.State_MouseOver)
+        pad = round(5 * self._style_manager.zoom_factor())
 
-        if is_selected:
+        if is_header:
+            bg = self._style_manager.get_color(ColorRole.MINDSPACE_BACKGROUND)
+
+        elif is_selected:
             bg = self._style_manager.get_color(ColorRole.TEXT_SELECTED)
 
         elif is_hovered:
@@ -56,9 +98,9 @@ class VCSSidebarDelegate(QStyledItemDelegate):
             bg = self._style_manager.get_color(ColorRole.MINDSPACE_BACKGROUND)
 
         painter.fillRect(rect, bg)
+        painter.setFont(option.font)  # type: ignore
 
         badge_width = self._badge_width()
-        pad = round(4 * self._style_manager.zoom_factor())
 
         if painter.layoutDirection() == Qt.LayoutDirection.LeftToRight:
             badge_rect = QRect(
@@ -67,7 +109,7 @@ class VCSSidebarDelegate(QStyledItemDelegate):
                 badge_width,
                 rect.height(),
             )
-            path_rect = QRect(
+            text_rect = QRect(
                 rect.left() + pad + badge_width,
                 rect.top(),
                 rect.width() - pad - badge_width,
@@ -81,21 +123,26 @@ class VCSSidebarDelegate(QStyledItemDelegate):
                 badge_width,
                 rect.height(),
             )
-            path_rect = QRect(
+            text_rect = QRect(
                 rect.left(),
                 rect.top(),
                 rect.width() - pad - badge_width,
                 rect.height(),
             )
 
-        # Retrieve the display text stored as "B  path/to/file".
+        if is_header:
+            self._paint_header(painter, text_rect, index)
+            painter.restore()
+            return
+
+        # Retrieve the display text stored as "B  name".
         display_text: str = index.data(Qt.ItemDataRole.DisplayRole) or ""
         if "  " in display_text:
-            badge_char, _, path_text = display_text.partition("  ")
+            badge_char, _, name_text = display_text.partition("  ")
 
         else:
             badge_char = display_text[:1]
-            path_text = display_text[2:]
+            name_text = display_text[2:]
 
         # Retrieve the badge colour from ForegroundRole, stored as a QBrush
         # by item.setForeground().
@@ -107,9 +154,7 @@ class VCSSidebarDelegate(QStyledItemDelegate):
         elif isinstance(foreground, QColor):
             badge_color = foreground
 
-        path_color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
-
-        painter.setFont(option.font)  # type: ignore
+        name_color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
 
         # Draw badge in status colour.
         painter.setPen(badge_color)
@@ -119,14 +164,14 @@ class VCSSidebarDelegate(QStyledItemDelegate):
             badge_char,
         )
 
-        # Draw path in normal text colour, elided with trailing ellipsis if too long.
-        painter.setPen(path_color)
+        # Draw the file name in normal text colour, elided with trailing ellipsis if too long.
+        painter.setPen(name_color)
         fm = painter.fontMetrics()
-        elided_path = fm.elidedText(path_text, Qt.TextElideMode.ElideRight, path_rect.width())
+        elided_name = fm.elidedText(name_text, Qt.TextElideMode.ElideRight, text_rect.width())
         painter.drawText(
-            path_rect,
+            text_rect,
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
-            elided_path,
+            elided_name,
         )
 
         painter.restore()

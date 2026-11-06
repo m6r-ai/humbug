@@ -206,6 +206,7 @@ def get_english_strings() -> LanguageStrings:
         mindspace_files="Files",
         mindspace_vcs="Changed Files",
         mindspace_vcs_no_repo="No repository found",
+        mindspace_vcs_root="Mindspace root",
         mindspace_conversations="Conversations",
         pinned_section="Pinned",
         mindspace_preview="Preview",
@@ -269,6 +270,17 @@ def get_english_strings() -> LanguageStrings:
         settings_terminal="Terminal",
         settings_conversation="Conversation",
         settings_tabs="Tabs",
+        settings_changes="Changes",
+
+        changes_settings="Changes",
+        changes_checkpoint_interval="Checkpoint Interval (seconds)",
+        changes_scan_section="Watched Tree",
+        changes_scan_section_description=(
+            "Changes under an ignored directory are not recorded. An entry is a directory name, "
+            "which matches at any depth, or a path from the mindspace root, which matches that "
+            "path and everything below it. .humbug and .git are always ignored."
+        ),
+        changes_pruned_paths="Ignored Directories and Paths",
 
         # Conversation settings
         model_info="Model Information",
@@ -325,7 +337,10 @@ def get_english_strings() -> LanguageStrings:
 
         # Messages
         confirm_delete_message="Are you sure you want to delete {0}?",
-        delete_warning_detail="Any open tab for this file will be closed without saving.",
+        delete_warning_detail=(
+            "Any open tab for it will be closed without saving. It moves to the trash, "
+            "where it can be restored."
+        ),
         error_deleting_file="Could not delete file: {0}",
         error_title_rename="Rename Error",
         error_rename_exists="A conversation named '{0}' already exists.",
@@ -440,6 +455,51 @@ def get_english_strings() -> LanguageStrings:
         trash_time_minutes_ago="{0}m ago",
         trash_time_hours_ago="{0}h ago",
         trash_time_days_ago="{0}d ago",
+
+        changes="Changes",
+        changes_no_mindspace_message="Open a mindspace to see its recent changes.",
+        changes_empty_message="No changes have been recorded yet.",
+        changes_until="Changes on or before {0}",
+        changes_since_action="Show changes on or before…",
+        changes_show_all_action="Show all changes",
+        changes_revert_file_action="Revert this change",
+        changes_restore_to_point_action="Restore the mindspace to this change",
+        changes_view_this_version_action="View the version this change produced",
+        changes_view_replaced_action="View the version this change replaced",
+        changes_compare_action="Compare the replaced version with this one",
+        changes_version_unavailable=(
+            "This version cannot be shown: its content is no longer stored, or it "
+            "is not text and the file has changed since."
+        ),
+        changes_this_version_unavailable="This change removed the file, so it has no version of its own.",
+        changes_revert_title="Revert changes",
+        changes_revert_confirm=(
+            "Revert {0} change(s)? Every affected file returns to the state it held before. "
+            "Changes made outside Humbug are not recorded, so they are not reverted."
+        ),
+        changes_revert_result="{0} path(s) reverted, {1} could not be.",
+        changes_restore_to_point_confirm=(
+            "Undo {0} change(s) recorded after this one? Every affected file returns to "
+            "the state it held at this change. Changes made outside Humbug are not "
+            "recorded, so the mindspace may not be exactly as it was."
+        ),
+        changes_bucket_today="Today",
+        changes_bucket_earlier="Earlier",
+        changes_older_not_shown="{0} older change(s) not shown",
+        changes_size_warning=(
+            "The change journal is using {0:.0f} MB. Right-click here to forget old history."
+        ),
+        changes_forget_through_action="Forget this change and everything before it",
+        changes_forget_all_action="Forget all changes",
+        changes_forget_title="Forget changes",
+        changes_forget_confirm=(
+            "Forget {0}? Those changes can no longer be reverted, and any content held "
+            "only by the journal is deleted. This cannot be undone."
+        ),
+        changes_forget_scope_through="this change and every change before it",
+        changes_forget_scope_all="every recorded change",
+        changes_forget_result="Forgot {0} change(s) and reclaimed {1:.0f} MB.",
+        editor_read_only_marker=" (earlier version)",
 
         # Tool tips
         tooltip_copy_contents="Copy all contents",

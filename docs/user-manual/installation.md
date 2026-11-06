@@ -103,6 +103,19 @@ The first time you launch Humbug, you will see the welcome screen. If you have n
 any AI providers, Humbug will let you know and guide you to the settings where you can add your
 API keys.
 
+### The guided tour
+
+On your first launch, Humbug offers a short guided tour. It dims the window and spotlights one part
+of the interface at a time, explaining what it is for: where to create or open a mindspace, where
+conversations live, where your work appears, how to send a message, how to move between the sidebar
+views, and where settings are.
+
+Use **Next** and **Back** to move through it, **Skip Tour** to end it early, and **Start Using
+Humbug** on the last step to finish. Taking the tour once is enough; it will not appear again.
+
+You can replay it at any time from **Humbug → Take a Tour**, which is useful if you come back to
+Humbug after a break or want to show someone else around.
+
 ### Setting up AI providers
 
 To have conversations with AI, you need credentials for at least one AI provider. Humbug supports

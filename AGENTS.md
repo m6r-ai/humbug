@@ -49,6 +49,25 @@ Consult it before proposing changes that touch established decisions.
   ```
   All checks must pass cleanly before the work is done.
 
+## Documentation
+
+`docs/user-manual/` is the user's only explanation of the interface. A capability the manual does
+not mention is one the user has to discover by accident, so document it.
+
+- A change that alters what the user sees or can do — a new sidebar panel, tab type, menu action,
+  keyboard shortcut, settings page or setting, approval behaviour, AI tool, or storage location —
+  must update the matching chapter in the same change that introduces it.
+- Adding a chapter means three edits: create the file, add it to the numbered list in
+  `docs/user-manual/index.md`, and update the `Previous`/`Next` footers of the chapters it now sits
+  between. The manual is a chain, and a missing link breaks navigation from both sides.
+- `docs/user-manual/README.md` maps each chapter to the code it documents. Use it to find the
+  chapter a change affects, and update it when chapters are added or removed.
+- Describe behaviour as the user experiences it, not as the code implements it. Do not enumerate
+  model names, releases, or other facts that change without the manual changing.
+- Where a feature has limits, say so plainly. Humbug's users are asked to trust it with their
+  work; documentation that overstates what a feature can do is worse than documentation that is
+  unflattering. The Changes and Trash chapters are the pattern to follow.
+
 ## Code generation
 
 - Do not write lengthy file-level docstrings.  These go stale very fast as the code evolves.
@@ -172,6 +191,8 @@ the front-end-agnostic modules (`mindspace`, the `*_context` modules, `ai`, the 
 modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 
 **Subdirectories:**
+- `changes_sidebar/` - Recent changes panel: lists the mutations recorded in the
+  change journal and reverses them
 - `conversation_sidebar/` - Conversations panel implementation
 - `conversation_tab/` - Conversation tab implementation
 - `diff_tab/` - Diff tab implementation
@@ -291,6 +312,44 @@ the `.humbug/` directory (via `Mindspace.is_humbug_path()`), resolving symlinks 
 the target and the mindspace root.  Do not re-implement this check in individual tools;
 delegate to it.  The separate `Mindspace.get_mindspace_relative_path()` is for internal
 use only and does not apply the `.humbug/` exclusion.
+
+The change journal (`file_journal.py`, `journal_entry.py`, `journal_index.py`,
+`journal_blob_store.py`, `journal_reversal.py`) records the pre-image of every file
+mutation made through Humbug so that it can be reversed; see ADR-0018.  It is a
+different store from the interaction log, with the opposite retention rule: the log is
+never truncated, while journal blobs are reclaimed by `FileJournal.purge_before()`.
+Writers record before they mutate and call `FileJournal.void_entries()` if the mutation
+then fails, so the journal never claims a change that did not happen.  A new writer
+joins by calling the same `record_*` helpers; do not give it its own capture policy.
+
+The change watcher (`mindspace_change_watcher.py`, `mindspace_tree_scanner.py`) compares
+successive metadata walks of the tree and reports the files that changed without a
+journal entry to account for them; see ADR-0020.  A detected change is recorded as an
+ordinary journal entry with the actor `unattributed`, carrying the digests before and
+after, so it is reversible by the existing reversal path and needs no separate store.
+A checkpoint's stored content is the pre-image of the interval that follows it.  The
+baseline is a file under `.humbug/watch/`, which is what makes a change made while
+Humbug was closed reportable at the next open, and it is written on the assumption that
+only one instance has a mindspace open.  A checkpoint never names a command, an actor
+or a process as the cause of a change.
+
+What the walk covers is a per-mindspace setting (`changes.prunedPaths`, edited on the
+Changes page of the settings dialog) rather than a constant.  An entry is a directory
+name, matched at any depth, or a mindspace-relative path, matched together with
+everything below it; `mindspace_scan_pruned_paths.scan_pruned_paths()` turns a
+mindspace's list into the effective set and always adds `.git` and `.humbug`, because
+scanning `.humbug` would record the act of watching as a change.
+`DEFAULT_SCAN_PRUNED_PATHS` is only the default a new mindspace starts from.  Because a
+walk with a different set sees different files, the baseline records the set it was
+taken with, and a baseline whose set no longer matches is discarded rather than read:
+otherwise a newly pruned directory's files would be reported as removals that never
+happened.
+
+A view that lists entries should hold them and ask `entries_from(sequence, limit)` for
+what has been added since, rather than calling `all_entries()` again: the index skips
+segments older than the requested sequence and reads only the tail of the newest one,
+which is the difference between a listing that can stay open and one that cannot.  A
+purge or a cancellation invalidates what the view holds, so both must reload.
 
 An outside-boundary path raises `MindspaceError`; a `.humbug/` path raises
 `MindspaceHumbugPathError` (a subclass).  The distinction matters to the filesystem

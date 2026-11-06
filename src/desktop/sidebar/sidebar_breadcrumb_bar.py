@@ -193,6 +193,10 @@ class SidebarBreadcrumbBar(QTreeView):
 
         return len(spine)
 
+    def spine_length(self) -> int:
+        """Return the number of rows the bar is currently displaying, including the "." sentinel."""
+        return len(self._current_spine)
+
     def drop_target_index(self) -> QModelIndex:
         """Return the model index currently acting as drop target, or an invalid index."""
         return self._drop_target_index

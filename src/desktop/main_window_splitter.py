@@ -83,6 +83,33 @@ class MainWindowSplitter(QSplitter):
         assert isinstance(value, int)
         super().moveSplitter(value, 1)
 
+    def apply_sidebar_width(self) -> None:
+        """
+        Resize the sidebar to the width the current zoom factor calls for.
+
+        The expanded width and the rail width are both scaled by the zoom factor,
+        so zooming has to move the splitter to keep the sidebar in proportion with
+        the text it holds.  A collapsed sidebar tracks the rail width instead.
+        """
+        if self.count() == 0 or self._animating:
+            return
+
+        widget = self.widget(0)
+        if not isinstance(widget, SidebarManager):
+            return
+
+        if widget.sidebar_collapsed():
+            target = widget.rail_width()
+
+        else:
+            target = max(widget.expanded_sidebar_width(), widget.rail_width() + widget.content_min_width())
+
+        sizes = self.sizes()
+        if sizes[0] == target:
+            return
+
+        super().setSizes([target, sum(sizes) - target])
+
     def _on_animation_finished(self) -> None:
         """Clean up after animation completes."""
         self._animating = False

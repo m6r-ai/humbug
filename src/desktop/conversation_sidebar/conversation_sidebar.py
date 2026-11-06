@@ -12,6 +12,8 @@ from PySide6.QtWidgets import (
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
+from ai_transcript_conversation import AIConversationTranscriptHandler
+
 from desktop.conversation_sidebar.conversation_sidebar_tree_delegate import ConversationSidebarTreeDelegate
 from desktop.conversation_sidebar.conversation_sidebar_tree_view import ConversationSidebarTreeView
 from desktop.conversation_sidebar.conversation_sidebar_dag_model import ConversationSidebarDAGModel
@@ -769,7 +771,14 @@ class ConversationSidebar(SidebarBase):
 
         try:
             # Copy the source file to the duplicate location
-            shutil.copy2(source_path, duplicate_path)
+            # A conversation duplicate is a fork: it must not inherit the source's
+            # identifier, or two transcripts would claim to be the same conversation.
+            if self._is_conversation_file(source_path):
+                AIConversationTranscriptHandler(source_path).duplicate(duplicate_path)
+
+            else:
+                shutil.copy2(source_path, duplicate_path)
+
             self._logger.info("Created duplicate file: '%s'", duplicate_path)
 
             self._mindspace_manager.add_interaction(
@@ -1324,6 +1333,9 @@ class ConversationSidebar(SidebarBase):
             for file_path in sorted(included, key=len, reverse=True):
                 try:
                     trash_path = self._trash_path_for(file_path)
+
+                    # Conversation transcripts live under .humbug/, which the change
+                    # journal never covers, so trashing one records nothing there.
                     self.file_deleted.emit(file_path)
                     shutil.move(file_path, trash_path)
                     self._mindspace_manager.mindspace().record_trashed(file_path, trash_path)

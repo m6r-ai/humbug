@@ -21,8 +21,9 @@ See [Tabs & Columns](tabs-and-columns.md) for an explanation of ephemeral vs per
 The editor automatically applies syntax highlighting based on the file extension. Supported
 languages include:
 
-C, C++, C#, CSS, Diff, Go, HTML, Java, JavaScript, JSON, Kotlin, Lua, Markdown, Menai,
-Move (Sui), Pascal, Python, Rust, Scheme, Solidity, Swift, TypeScript, XML, and plain text.
+Bash, Batch, C, C++, C#, CSS, Diff, Go, HTML, Java, JavaScript, JSON, Kotlin, Lua, Markdown,
+Menai, Metaphor, Move (Sui), Pascal, Python, Rust, Scheme, Solidity, Swift, TOML, TypeScript,
+XML, YAML, and plain text.
 
 ---
 
@@ -36,6 +37,12 @@ indicator when you have unsaved changes.
 - **Tab size** — how many spaces a tab represents (default 4)
 
 Block indentation and de-indentation work on selected text using **Tab** and **Shift+Tab**.
+
+### Bracket matching
+
+When the cursor sits next to a bracket — `(`, `)`, `[`, `]`, `{`, or `}` — the matching one is
+highlighted, so you can see at a glance where a nested block begins or ends. This is especially
+useful in languages where nesting carries the meaning, such as Lisp-family code and Menai.
 
 ---
 
@@ -72,7 +79,7 @@ buttons. It has a history of recent searches accessible with the up and down arr
 
 ## Go to line
 
-Press **Ctrl+G** to open the Go to Line dialog. Type a line number and press
+Press **Cmd+G** (macOS) / **Ctrl+G** to open the Go to Line dialog. Type a line number and press
 **Enter** to jump directly to that line.
 
 ---
@@ -103,13 +110,20 @@ remains in the editor until you close the tab.
 The AI can interact with editor tabs directly as part of its work. It can:
 
 - Read file contents and navigate to specific lines
-- Apply changes using unified diffs (shown in the tool approval widget before being applied)
-- Save files (requires your approval)
+- Search the open buffer and read a selected range of lines
+- Apply changes using unified diffs
+- Rewrite the buffer with a Menai program, which is useful for changes that are tedious or risky
+  to express as a diff
+- Save files, which requires your approval
 
-When the AI applies a diff to an editor tab, the cursor moves to the last edited line so you
-can see what changed. If the tab being edited is not currently visible, its label turns a
-distinct colour to let you know something has happened.
+Changes to a buffer — whether a diff or a Menai transform — do not require approval, and do not
+reach your disk until they are saved. Saving is the moment Humbug asks you, and the save itself is
+recorded in the [Changes panel](changes.md) like any other file mutation.
+
+When the AI applies a diff to an editor tab, the cursor moves to the last edited line so you can
+see what changed. If the tab being edited is not currently visible, its label turns a distinct
+colour to let you know something has happened.
 
 ---
 
-*[Index](index.md) · Previous: [Managing Files & Folders](managing-files.md) · Next: [Using the Terminal](terminal.md)*
+*[Index](index.md) · Previous: [Undoing Changes](changes.md) · Next: [Using the Terminal](terminal.md)*

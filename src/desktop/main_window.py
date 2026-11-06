@@ -22,6 +22,7 @@ from clock_ai_tool.clock_ai_tool import ClockAITool
 from context.context_info import ContextInfo
 from context.context_registry import ContextRegistry
 from conversation_ai_tool.conversation_ai_tool import ConversationAITool
+from diff_context.diff_context import JournalDiffTarget
 from delegate_ai_tool import DelegateAITool
 from document_converter_ai_tool.document_converter_ai_tool import DocumentConverterAITool
 from editor_ai_tool.editor_ai_tool import EditorAITool
@@ -55,6 +56,7 @@ from desktop.log_tab.log_tab import LogTab
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_folders_dialog import MindspaceFoldersDialog
 from desktop.mindspace.mindspace_manager import MindspaceManager
+from desktop.mindspace.mindspace_change_poller import MindspaceChangePoller
 from desktop.main_window_splitter import MainWindowSplitter
 from desktop.preview_sidebar.preview_sidebar import PreviewSidebar
 from desktop.preview_tab.preview_tab import PreviewTab
@@ -85,6 +87,7 @@ from desktop.terminal_tab.terminal_tab import TerminalTab
 from desktop.title_bar import MenuBarDragFilter, WindowControlsWidget
 from desktop.tour.tour_controller import TourController
 from desktop.trash_sidebar.trash_sidebar import TrashSidebar
+from desktop.changes_sidebar.changes_sidebar import ChangesSidebar
 from desktop.update_checker import UpdateChecker
 from desktop.update_dialog import UpdateDialog
 from desktop.user.user_manager import UserManager, UserError
@@ -115,7 +118,13 @@ def _create_editor_tab(
     info: ContextInfo, registry: ContextRegistry, parent: QWidget
 ) -> EditorTab:
     """Context factory for EditorTab."""
-    tab = EditorTab(info.context_id, info.path, None, parent)
+    historical_content = registry.get_model(info.context_id, str)
+    tab = EditorTab(
+        info.context_id, info.path, None, parent, read_only=info.read_only
+    )
+    if historical_content is not None:
+        tab.set_content(historical_content)
+
     goto = registry.get_model(info.context_id, tuple)
     if goto is not None:
         # Zero-delay timer deferring the jump until the tab is laid out. Parented to
@@ -157,7 +166,11 @@ def _create_diff_tab(
     info: ContextInfo, _registry: ContextRegistry, parent: QWidget
 ) -> DiffTab:
     """Context factory for DiffTab."""
-    tab = DiffTab(info.context_id, info.path, parent)
+    target = _registry.get_model(info.context_id, JournalDiffTarget)
+    tab = DiffTab(
+        info.context_id, info.path, parent,
+        journal_sequence=target.sequence if target is not None else None,
+    )
     line = _registry.get_model(info.context_id, int)
     if line is not None:
         # Zero-delay timer deferring the jump until the tab is laid out. Parented to
@@ -265,6 +278,18 @@ def _wire_trash_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
 def _activate_trash_sidebar(panel: SidebarBase) -> None:
     """Refresh the trash listing each time the panel is activated."""
     assert isinstance(panel, TrashSidebar)
+    panel.refresh()
+
+
+def _wire_changes_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
+    """Wire ChangesSidebar signals to SidebarManager."""
+    assert isinstance(panel, ChangesSidebar)
+    panel.file_opened_in_preview.connect(mgr.file_opened_in_preview)
+
+
+def _activate_changes_sidebar(panel: SidebarBase) -> None:
+    """Refresh the change listing each time the panel is activated."""
+    assert isinstance(panel, ChangesSidebar)
     panel.refresh()
 
 
@@ -663,7 +688,6 @@ class MainWindow(QMainWindow):
 
         self._sidebar_manager = SidebarManager(self)
         self._sidebar_manager.register_panel("conversations", "conversation", ConversationSidebar, _wire_conversation_sidebar)
-        self._sidebar_manager.register_panel("vcs", "diff", VCSSidebar, _wire_vcs_sidebar, visibility_signal="repo_available")
         self._sidebar_manager.register_panel("files", "files", FileSidebar, _wire_file_sidebar)
         self._sidebar_manager.register_panel("preview", "preview", PreviewSidebar, _wire_preview_sidebar)
         self._sidebar_manager.register_panel(
@@ -672,6 +696,11 @@ class MainWindow(QMainWindow):
         self._sidebar_manager.register_panel(
             "trash", "trash", TrashSidebar, _wire_trash_sidebar,
             on_activated=_activate_trash_sidebar, place_at_bottom=True
+        )
+        self._sidebar_manager.register_panel("vcs", "diff", VCSSidebar, _wire_vcs_sidebar, visibility_signal="repo_available")
+        self._sidebar_manager.register_panel(
+            "changes", "changes", ChangesSidebar, _wire_changes_sidebar,
+            on_activated=_activate_changes_sidebar
         )
         self._sidebar_manager.file_clicked.connect(self._on_sidebar_file_clicked)
         self._sidebar_manager.file_deleted.connect(self._on_sidebar_file_deleted)
@@ -713,7 +742,8 @@ class MainWindow(QMainWindow):
         tab_manager.register_context_factory("usage", _create_usage_tab)
 
         # Set initial sidebar width
-        self._splitter.setSizes([300, self.width() - 300])
+        sidebar_width = self._sidebar_manager.expanded_sidebar_width()
+        self._splitter.setSizes([sidebar_width, self.width() - sidebar_width])
 
         # Set the stretch factors: 0 for sidebar (no stretch) and 1 for tabs (stretch to fill)
         self._splitter.setStretchFactor(0, 0)
@@ -1423,6 +1453,7 @@ class MainWindow(QMainWindow):
             # has one open, making it invisible to other instances' deduplication checks.
             self._update_instance_registry()
             self._sidebar_manager.set_mindspace(mindspace_path)
+            MindspaceChangePoller().start()
             self._restore_mindspace_state()
             self._restore_prompt_marker_setting()
 
@@ -1744,6 +1775,7 @@ class MainWindow(QMainWindow):
             # has one open, making it invisible to other instances' deduplication checks.
             self._update_instance_registry()
             self._sidebar_manager.set_mindspace(path)
+            MindspaceChangePoller().start()
 
         except MindspaceAlreadyOpenError:
             strings = self._language_manager.strings()
@@ -1779,6 +1811,7 @@ class MainWindow(QMainWindow):
         if not self._close_all_tabs():
             return
 
+        MindspaceChangePoller().stop()
         self._sidebar_manager.set_mindspace("")
 
         self._mindspace_manager.close_mindspace()
@@ -2683,11 +2716,13 @@ class MainWindow(QMainWindow):
         if self._window_controls is not None:
             self._window_controls.apply_style()
 
-        self._apply_splitter_style()
-
         # Apply styles to the sidebar manager and column manager
         self._sidebar_manager.apply_style()
         self._tab_manager.apply_style()
+
+        # The sidebar's metrics are updated by its own apply_style, so the splitter
+        # has to be told where the sidebar now belongs afterwards.
+        self._apply_splitter_style()
 
     def _apply_main_surface_style(self) -> None:
         """Apply the app-level background surface."""
@@ -2776,9 +2811,10 @@ class MainWindow(QMainWindow):
         self._status_message_label.setFont(status_font)
 
     def _apply_splitter_style(self) -> None:
-        """Trigger repaint of main window splitter handle."""
+        """Repaint the splitter handle and keep the sidebar in proportion with the zoom factor."""
         # The main window splitter uses custom painted handles, so we just need to trigger a repaint
         self._splitter.update()
+        self._splitter.apply_sidebar_width()
 
     def _generate_conversation_path(self, relative_folder: str | None = None) -> tuple[str, str]:
         """

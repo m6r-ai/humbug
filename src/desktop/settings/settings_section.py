@@ -25,30 +25,54 @@ class SettingsSection(SettingsItem):
 
         Args:
             title: Text to display in the section header
+            description: Optional text shown under the title
             parent: Parent widget
         """
         super().__init__(parent)
 
-        layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        self._layout = QVBoxLayout()
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(0)
 
         self._title_label = QLabel(title)
         self._title_label.setIndent(0)
-        layout.addWidget(self._title_label)
+        self._layout.addWidget(self._title_label)
 
         self._description_label: QLabel | None = None
-        if description:
-            self._description_label = QLabel(description)
-            self._description_label.setIndent(0)
-            layout.addWidget(self._description_label)
+        self.setLayout(self._layout)
 
-        self.setLayout(layout)
+        if description:
+            self.set_description(description)
+
         self._on_style_changed()
 
     def set_label(self, text: str) -> None:
         """Set the header label text."""
         self._title_label.setText(text)
+
+    def set_description(self, text: str) -> None:
+        """
+        Set the description shown under the title.
+
+        The description is word-wrapped: a label that is not wrapped reports the width
+        of its whole text as its minimum, which inside a scroll area widens the page
+        to fit the longest sentence rather than the dialog.
+
+        Args:
+            text: The description, or an empty string to clear it.
+        """
+        if self._description_label is None:
+            if not text:
+                return
+
+            self._description_label = QLabel()
+            self._description_label.setIndent(0)
+            self._description_label.setWordWrap(True)
+            self._layout.addWidget(self._description_label)
+
+        self._description_label.setText(text)
+
+        self._on_style_changed()
 
     def _on_style_changed(self) -> None:
         """Update section header styling."""

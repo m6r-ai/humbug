@@ -909,6 +909,10 @@ class TabManager(QWidget):
         if tool_tip:
             tool_tip = self._mindspace_manager.get_relative_path(tool_tip)
 
+        if tab.is_read_only():
+            marker = self._language_manager.strings().editor_read_only_marker.strip()
+            tool_tip = f"{tool_tip}\n{marker}" if tool_tip else marker
+
         tab_id = tab.tab_id()
         tab.activated.connect(lambda: self._on_tab_activated(tab))
         tab.updated_state_changed.connect(self._on_tab_updated_state_changed)

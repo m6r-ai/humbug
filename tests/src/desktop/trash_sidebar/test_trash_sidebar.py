@@ -12,7 +12,9 @@ import pytest
 from desktop.message_box import MessageBox, MessageBoxButton
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.style_manager import StyleManager
-from desktop.trash_sidebar.trash_sidebar import TrashSidebar, TrashTreeDelegate, _TRASH_NAME_ROLE
+from desktop.sidebar.sidebar_row_spacing_delegate import SidebarRowSpacingDelegate
+from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
+from desktop.trash_sidebar.trash_sidebar import TrashSidebar, _TRASH_NAME_ROLE
 
 
 def _write_conv_file(path: str) -> None:
@@ -169,13 +171,35 @@ class TestTrashSidebarClickToOpen:
         assert emitted[0][2] is False  # non-ephemeral on double click
 
 
-class TestTrashTreeDelegateSpacing:
-    """The delegate provides consistent, zoom-scaled row height matching the conversation sidebar."""
+class TestTrashRowIcons:
+    """A row's icon is rendered at the size the current zoom factor asks for."""
+
+    def test_icons_are_rebuilt_when_the_zoom_factor_changes(self, sidebar_env, panel):
+        mgr, _ms_path, conv_dir = sidebar_env
+        _trash_a_file(mgr, conv_dir)
+        panel.refresh()
+        style_manager = StyleManager()
+        original_zoom = style_manager.zoom_factor()
+        row = panel._tree.topLevelItem(0)  # pylint: disable=protected-access
+
+        try:
+            assert row.icon(0).availableSizes()[0].width() == round(16 * original_zoom)
+
+            style_manager.set_zoom(2.0)
+            panel.apply_style()
+
+            assert row.icon(0).availableSizes()[0].width() == round(16 * 2.0)
+        finally:
+            style_manager.set_zoom(original_zoom)
+
+
+class TestSidebarRowSpacingDelegate:
+    """The shared delegate provides consistent, zoom-scaled row heights for tree panels."""
 
     def test_size_hint_matches_conversation_sidebar_formula(self, qapp):  # pylint: disable=unused-argument
         style_manager = StyleManager()
         zoom = style_manager.zoom_factor()
-        delegate = TrashTreeDelegate(None, style_manager)  # type: ignore[arg-type]
+        delegate = SidebarRowSpacingDelegate(None, style_manager)  # type: ignore[arg-type]
 
         option = QStyleOptionViewItem()
         font = QFont()

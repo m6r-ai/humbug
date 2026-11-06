@@ -14,6 +14,7 @@ from PySide6.QtGui import (
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
 from diff_context.diff_context import DiffContext
 from editor_context.editor_context_document import EditorContextDocument
+from mindspace.journal_entry import JournalActor
 from mindspace.mindspace_settings import MindspaceSettings
 from preview_context.preview_context import PreviewContext
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils, Token, TokenType
@@ -38,7 +39,13 @@ class EditorWidget(QPlainTextEdit):
     status_updated = Signal()        # Request status bar update
     file_saved = Signal(str)         # File path saved
 
-    def __init__(self, path: str = "", untitled_number: int | None = None, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        path: str = "",
+        untitled_number: int | None = None,
+        parent: QWidget | None = None,
+        read_only: bool = False,
+    ) -> None:
         """
         Initialize the editor widget.
 
@@ -46,6 +53,8 @@ class EditorWidget(QPlainTextEdit):
             path: Optional file path to load
             untitled_number: Optional untitled file number for new files
             parent: Optional parent widget
+            read_only: Whether the content is a view of something that must not be
+                written back, such as an earlier version of a file
         """
         super().__init__(parent)
         self._logger = logging.getLogger("EditorWidget")
@@ -54,11 +63,12 @@ class EditorWidget(QPlainTextEdit):
         # File state
         self._path = path
         self._untitled_number = untitled_number
+        self._read_only = read_only
         self._last_save_content = ""
         self._is_modified = False
 
         # Plain-Python model (source of truth for the backend)
-        self._editor_document = EditorContextDocument(path=path)
+        self._editor_document = EditorContextDocument(path=path, read_only=read_only)
 
         # Editor settings
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)  # No word wrap for code
@@ -67,6 +77,7 @@ class EditorWidget(QPlainTextEdit):
         # Enable standard scrollbars
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.setReadOnly(read_only)
 
         self._style_manager = StyleManager()
         self._last_highlights_version = self._style_manager.highlights_version()
@@ -474,19 +485,65 @@ class EditorWidget(QPlainTextEdit):
         if self._auto_backup_timer.isActive():
             self._cleanup_backup_files()
 
-    def save_file(self) -> bool:
+    def set_content(self, content: str) -> None:
+        """
+        Show content that did not come from the file at the path.
+
+        Used for a read-only view of an earlier version of a file, where the text
+        exists only in the change journal.  The document is marked saved so the
+        view does not claim unsaved changes.
+
+        Args:
+            content: The text to display.
+        """
+        self.setPlainText(content)
+        self._editor_document.set_text(content)
+        self._last_save_content = content
+        self._is_modified = False
+        self._set_modified(False)
+
+    def save_file(self, actor: JournalActor = JournalActor.HUMAN, conversation: str = "") -> bool:
         """
         Save the current file.
+
+        Args:
+            actor: Who is performing the save, recorded in the change journal.
+            conversation: Identifier of the conversation the save belongs to, or
+                an empty string when it was not made on a conversation's behalf.
 
         Returns:
             bool: True if save was successful
         """
+        if self._read_only:
+            return False
+
         if not self._path:
             return self.save_file_as()
 
         content = self.toPlainText()
-        with open(self._path, 'w', encoding='utf-8') as f:
-            f.write(content)
+
+        mindspace = self._mindspace_manager.mindspace()
+        journal = mindspace.journal_target(self._path)
+        journal_entry = None
+        if journal is not None:
+            file_journal, relative_path = journal
+            journal_entry = file_journal.record_write(
+                self._path,
+                relative_path,
+                content.encode('utf-8'),
+                actor,
+                conversation,
+            )
+
+        try:
+            with open(self._path, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+        except OSError:
+            if journal_entry is not None:
+                mindspace.file_journal().void_entries([journal_entry])
+
+            raise
 
         self._editor_document.set_text(content)
         self._editor_document.mark_saved()
@@ -512,6 +569,9 @@ class EditorWidget(QPlainTextEdit):
         Returns:
             bool: True if save was successful
         """
+        if self._read_only:
+            return False
+
         strings = self._language_manager.strings()
         export_dialog = QFileDialog()
         export_dialog.setWindowTitle(strings.file_dialog_save_file)
@@ -1973,7 +2033,8 @@ class EditorWidget(QPlainTextEdit):
             'encoding': 'UTF-8',
             'is_modified': self._is_modified,
             'file_path': self._path,
-            'untitled_number': self._untitled_number
+            'untitled_number': self._untitled_number,
+            'read_only': self._read_only,
         }
 
     def goto_line(self, line: int, column: int = 1) -> None:

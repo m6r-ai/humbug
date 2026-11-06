@@ -180,23 +180,41 @@ class AIConversation:
 
     def set_conversation_id(self, conversation_id: str) -> None:
         """
-        Set the stable identifier for this conversation.
+        Set the location this conversation is stored at.
 
         Args:
-            conversation_id: Identifier used to attribute log entries to this
-                conversation, typically the transcript file path.
+            conversation_id: Where the conversation's transcript lives, typically a
+                mindspace-relative path.  It changes when the conversation is
+                renamed or moved, so it is not the conversation's identity; the
+                identifier in the transcript is, and `conversation_uuid` returns
+                that.  This value is the fallback attribution for a transcript that
+                carries no identifier yet.
         """
         self._conversation_id = conversation_id
 
     def conversation_id(self) -> str:
         """
-        Get the stable identifier for this conversation.
+        Get the location this conversation is stored at.
 
         Returns:
-            The conversation identifier, typically the transcript file path,
-            or an empty string if none has been set.
+            The transcript path, or an empty string if none has been set.  Use
+            `conversation_uuid` for the conversation's identity.
         """
         return self._conversation_id
+
+    def conversation_uuid(self) -> str:
+        """
+        Get the identifier that names this conversation independently of its file.
+
+        The value lives in the transcript and survives renaming, so it is what
+        activity should be attributed to.  The transcript path remains the
+        conversation's location and is still what opens it.
+
+        Returns:
+            The conversation identifier, or an empty string when the transcript
+            has not supplied one.
+        """
+        return self._conversation.conversation_uuid()
 
     def get_conversation_history(self) -> AIConversationHistory:
         """

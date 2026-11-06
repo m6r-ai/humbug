@@ -29,14 +29,38 @@ It enables your LLMs to:
 
 - Delegate tasks
 - Read, write, modify, and search your mindspace filesystem
+- Query git repositories — status, diffs, history, and file contents at a commit
+- Fetch URLs and call HTTP APIs, under allow and deny lists you control
 - Check the time, wait for time to pass
 - Apply complex logic with a custom pure functional programming language (Menai)
 - Interact with local shells (Linux and MacOS) and command prompts (Windows)
 - Convert documents between different formats
+- Read and search rendered previews and conversation histories
 - Get detailed help if it runs into any problems with tools
 - Orchestrate its own UI.
 
 Humbug's tool system is flexible, secure, and designed to make it easy to add new capabilities.
+
+### Nothing is lost, and nothing is hidden
+
+Humbug keeps two separate records of what happens in a mindspace, because they answer two
+different questions.
+
+The **interaction log** is an append-only witness: every prompt, every reasoning step, every
+answer, every tool call and its result, every approval and denial, and every file the AI read or
+wrote. It is never trimmed and it is not accessible to the AI, so it can be read as an independent
+account of what took place. Entries carry the identity of the conversation they belong to, so the
+trail can be followed conversation by conversation.
+
+The **change journal** is what makes work reversible. Every file mutation made through Humbug
+records the content it replaced, so any change can be traced and undone — individually, or back to
+the state the mindspace held at any recorded moment. Files you delete go to a per-mindspace
+**trash** rather than vanishing. Both are visible in the desktop app, in the Changes and Trash
+panels.
+
+Reversal is deliberately honest about its limits: it covers the mindspace, it covers what was
+recorded, and it puts files back rather than undoing effects that have already happened elsewhere.
+The interface reports what it actually reverted, per file, instead of claiming success.
 
 ### Human-in-the-loop
 
@@ -97,8 +121,10 @@ Humbug is identical on all three platforms, other than minor OS-specific require
 ### Rich user interactions
 
 Humbug's UI supports simultaneous conversations, file editing with syntax highlights, markdown preview pages, terminal emulators, a system shell, and a system log.
-It also features git version control integration with a sidebar and side-by-side diff tabs so your work need never be lost.
+It also features git version control integration with a sidebar and side-by-side diff tabs, a per-mindspace token usage dashboard, and the Changes and Trash panels that make recent work reversible.
 UI orchestration means your AI can drive these tools the same way you do, enabling a fully agentic experience.
+
+The interface speaks English, French, and Arabic (right to left), and its colours can be themed, including a colour-blind-safe palette and a fully custom scheme.
 
 ### Menai: a programming language designed for AIs
 
@@ -141,14 +167,19 @@ This prevents unwanted third party libraries from being used, but also ensures i
 Humbug has a clean backend/frontend separation, so it should be possible to build both new front ends, but also to build a headless version.
 Both of these are under investigation.
 
-As of v49, AIs no longer route requests through the UI infrastructure.
-Instead, AI tools are registered with a context registry and the UI aspects are attached to that context registry.
-This means the UI now responds to what the AI wants do, without the AI having to be deeply embedded within it.
+AIs do not route requests through the UI infrastructure.
+AI tools are registered with a context registry, and the UI aspects are attached to that context registry.
+This means the UI responds to what the AI wants to do, without the AI having to be deeply embedded within it.
+The same mechanism keeps the mindspace's layout state outside the desktop app, so a different front end — or
+a headless one — can project the same state.
 
 ### The "desktop" GUI
 
-The desktop GUI supports sidebar panels and desktop tabs.
-Most of the real work happens in the tabs.
+The desktop GUI supports sidebar panels and desktop tabs. Most of the real work happens in the
+tabs: conversations, editors, previews, terminals, diffs, the mindspace log, and token usage.
+
+The sidebar panels are the mindspace seen from different angles — Conversations, Files, Preview,
+Search, Changed Files, Changes (the recent mutation record, and how to reverse it), and Trash.
 
 Both use a plugin registry/manager approach making it easy to design new visualizations of your project mindspace.
 
@@ -160,7 +191,7 @@ This isn't just "vibe-coded", however!
 Using each ever more capable version of Humbug to help design and build its successor has freed up huge amounts of human time to think about bigger design problems.
 The tireless ability of LLMs to morph software into new forms also means the software has a clean, highly modular architecture.
 
-The `conversations` directory in the Humbug git repository includes a lot of discussions with AIs about improvements to itself.
+The [`docs/saved-conversations`](docs/saved-conversations) directory in the Humbug git repository includes a lot of discussions with AIs about improvements to itself.
 
 ## What Humbug is NOT
 

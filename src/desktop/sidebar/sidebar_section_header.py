@@ -13,6 +13,9 @@ from desktop.style_manager import StyleManager
 class SidebarSectionHeader(QWidget):
     """A titled header for sidebar panes, with optional trailing icon action buttons."""
 
+    TITLE_INSET = 10
+    VERTICAL_INSET = 4
+
     def __init__(self, title: str, parent: QWidget | None = None) -> None:
         """Initialize the section header."""
         super().__init__(parent)
@@ -22,10 +25,8 @@ class SidebarSectionHeader(QWidget):
         self._action_buttons: list[QToolButton] = []
 
         self._layout = QHBoxLayout(self)
-        spacing = 4
-        inset = 8
-        self._layout.setSpacing(spacing)
-        self._layout.setContentsMargins(inset, spacing, inset, spacing)
+        self._layout.setSpacing(self.VERTICAL_INSET)
+        self._apply_insets()
 
         self._title_label = QLabel(title, self)
         self._title_label.setIndent(0)
@@ -74,6 +75,8 @@ class SidebarSectionHeader(QWidget):
         font.setPointSizeF(base_font_size * zoom_factor)
         self._title_label.setFont(font)
 
+        self._apply_insets()
+
         for button in self._action_buttons:
             self._style_button(button)
 
@@ -102,6 +105,17 @@ class SidebarSectionHeader(QWidget):
                 background-color: transparent;
             }}
         """)
+
+    def _apply_insets(self) -> None:
+        """
+        Set the header's margins to the zoom-scaled title inset.
+
+        The left inset is what lines the title up with the pane's rows and status
+        text, so it has to follow the zoom factor like they do.
+        """
+        inset = self._style_manager.scale(self.TITLE_INSET)
+        vertical = self._style_manager.scale(self.VERTICAL_INSET)
+        self._layout.setContentsMargins(inset, vertical, inset, vertical)
 
     def _style_button(self, button: QToolButton) -> None:
         """Set one action button's icon (normal and disabled variants) and size."""

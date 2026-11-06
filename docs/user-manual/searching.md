@@ -47,6 +47,7 @@ across your entire mindspace simultaneously.
 | **Match case** | Only return results that match the exact capitalisation of your query |
 | **Whole word** | Only match the query when it appears as a complete word |
 | **Regular expression** | Treat the query as a regular expression |
+| **Include hidden directories** | Also search directories whose name starts with a dot, such as `.vscode`. Off by default |
 
 ### How results are shown
 
@@ -78,6 +79,9 @@ The following directories are excluded from search automatically:
 `.git`, `.humbug`, `.venv`, `venv`, `__pycache__`, `node_modules`, `dist`, `build`
 
 Binary files are also skipped automatically.
+
+`.humbug` stays excluded even with **Include hidden directories** on: it holds conversations,
+settings, the log, and the change journal, none of which are content you edit.
 
 ---
 

@@ -51,6 +51,18 @@ Previewing a conversation file shows the conversation's message history in a rea
 
 ---
 
+## Jumping to the place you are reading
+
+Right-click anywhere in a preview and choose **Open In Editor** to open the same file in an editor
+tab, scrolled to the line you clicked — so you can go from reading to changing without finding your
+place again.
+
+For source files the mapping is exact. For rendered Markdown it is best-effort: the editor opens at
+the source line of the block you were looking at, which is usually the heading or paragraph you
+meant but may be a line or two off inside a long one.
+
+---
+
 ## Finding text
 
 Press **Cmd+F** / **Ctrl+F** to open the find bar. It supports case-sensitive search, regular

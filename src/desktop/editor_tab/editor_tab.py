@@ -32,7 +32,14 @@ class EditorTab(TabBase):
         cls._untitled_counter += 1
         return f"Untitled-{cls._untitled_counter}"
 
-    def __init__(self, tab_id: str, path: str, untitled_number: int | None = None, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        tab_id: str,
+        path: str,
+        untitled_number: int | None = None,
+        parent: QWidget | None = None,
+        read_only: bool = False,
+    ) -> None:
         """
         Initialize editor tab.
 
@@ -41,11 +48,14 @@ class EditorTab(TabBase):
             path: File path to edit, or empty string for new file
             untitled_number: Untitled file number for pathless tabs; only passed when restoring from state
             parent: Optional parent widget
+            read_only: True when the tab shows content that must not be written back,
+                such as an earlier version of a file
         """
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("EditorTab")
         self._path = path
         self._untitled_number = untitled_number
+        self._read_only = read_only
 
         self._language_manager = LanguageManager()
 
@@ -57,7 +67,9 @@ class EditorTab(TabBase):
         # Add find widget at top (initially hidden)
         self._find_widget = FindWidget(self)
         self._find_widget.hide()
-        self._find_widget.enable_replace_row()
+        if not read_only:
+            self._find_widget.enable_replace_row()
+
         self._find_widget.closed.connect(self._close_find)
         self._find_widget.search_changed.connect(self._on_search_changed)
         self._find_widget.find_next.connect(lambda: self._find_next(True))
@@ -67,7 +79,7 @@ class EditorTab(TabBase):
         layout.addWidget(self._find_widget)
 
         # Create editor widget
-        self._editor_widget = EditorWidget(path, untitled_number, self)
+        self._editor_widget = EditorWidget(path, untitled_number, self, read_only=read_only)
         self._editor_widget.content_modified.connect(self._on_content_modified)
         self._editor_widget.text_changed.connect(self._on_text_changed)
         self._editor_widget.status_updated.connect(self.update_status)
@@ -100,8 +112,10 @@ class EditorTab(TabBase):
         self._search_update_timer.timeout.connect(self._update_search_after_edit)
         self._search_update_debounce_ms = 100
 
-        # Start file watching if we have a path
-        if self._path:
+        # Start file watching if we have a path.  A read-only tab shows content
+        # that did not come from the file, so watching it would let the file on
+        # disk overwrite the version being shown.
+        if self._path and not read_only:
             self._start_file_watching(self._path)
 
         self.apply_style()
@@ -118,6 +132,28 @@ class EditorTab(TabBase):
     def on_modified_changed(self, modified: bool) -> None:
         """Update the tab bar label to show or hide the unsaved-changes marker."""
         self._update_tab_label()
+
+    def set_content(self, content: str) -> None:
+        """
+        Show content that did not come from the file at the path.
+
+        Args:
+            content: The text to display, for a read-only view of an earlier
+                version of the file.
+        """
+        self._editor_widget.set_content(content)
+        self._update_tab_label()
+
+    def is_read_only(self) -> bool:
+        """Check whether this tab shows content that cannot be written back."""
+        return self._read_only
+
+    def tab_icon(self) -> str:
+        """Return the icon name for this tab, which marks a read-only version."""
+        if self._read_only:
+            return "read-only"
+
+        return super().tab_icon()
 
     def on_path_renamed(self, new_path: str) -> None:
         """Update path and emit a new tab bar label after a file rename."""
@@ -213,6 +249,10 @@ class EditorTab(TabBase):
         Args:
             changed_path: Path of the file that changed
         """
+        if self._read_only:
+            self._logger.debug("Ignoring a change to a read-only view: %s", changed_path)
+            return
+
         # First, let the parent handle file existence checking
         super()._handle_file_changed(changed_path)
 
@@ -325,6 +365,9 @@ class EditorTab(TabBase):
 
     def can_save(self) -> bool:
         """Check if the file can be saved."""
+        if self._read_only:
+            return False
+
         return self._editor_widget.is_modified()
 
     def save(self) -> bool:
@@ -342,6 +385,9 @@ class EditorTab(TabBase):
 
     def can_save_as(self) -> bool:
         """Check if the file can be saved as."""
+        if self._read_only:
+            return False
+
         return True
 
     def save_as(self) -> bool:

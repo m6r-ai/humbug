@@ -53,6 +53,40 @@ Merkle-tree-based cryptographic verification of the log's integrity — that all
 organisations in regulated environments to demonstrate that AI actions were sanctioned,
 traceable, and consistent with stated intent.
 
+The interaction log witnesses that an action happened.  It does not make the action
+undoable, so a second store sits alongside it: the file change journal records the
+pre-image of every file mutation made through Humbug, by either actor, so that the
+mutation can be reversed.  See ADR-0018.  The two stores have deliberately opposite
+retention rules — the log is never truncated, while journalled content is reclaimed
+when the user asks — and are kept separate for that reason.  Reversing a file is not
+reversing an effect: journal coverage stops at the mindspace boundary, at changes made
+since the most recent checkpoint, at content too large to capture, and at anything
+already read, executed or committed, and the interface says so rather than implying a
+guarantee it cannot keep.
+
+Deletion follows the same principle rather than escaping it.  A deleted file or empty folder
+moves to a per-mindspace trash, where it can be restored to the place it came from, so a
+mistaken delete is recoverable on its own terms rather than only through the journal.  Emptying
+the trash is the point at which the change genuinely becomes unrevertable, and the journal then
+reports the deletion as a change it cannot reverse instead of restoring something that is no
+longer what was deleted.
+
+Beside the journal a change watcher compares successive metadata walks of the mindspace,
+so a file changed by a terminal command, or by anything else outside Humbug, is recorded
+as an ordinary journalled change and can be reversed with the rest.  It records what
+changed and when and never why: the change is unattributed because attributing it would
+be recording a guess.  See ADR-0020.
+
+What that walk covers is the mindspace's own setting rather than a fixed list, because
+which directories are generated output and which are content differs from one mindspace
+to the next.  The paths a mindspace excludes are a silent boundary — a change under one
+is reported nowhere — so they are the user's to state and the interface shows them.
+
+What that walk covers is the mindspace's own setting rather than a fixed list, because
+which directories are generated output and which are content differs from one mindspace
+to the next.  The paths a mindspace excludes are a silent boundary — a change under one
+is reported nowhere — so they are the user's to state and the interface shows them.
+
 ### Minimal dependencies, maximum understandability
 Humbug follows the pattern of an OS kernel: simple, largely self-contained, and
 comprehensible from a single repository.
@@ -141,9 +175,12 @@ before a mistake becomes expensive.
 
 **Bounded outputs.** Tools that can produce large outputs — file contents, search results,
 git logs, diffs — must enforce a size limit (currently 64KB). If output exceeds the limit, it
-is truncated with a notice indicating how much was omitted. This prevents a single tool call
-from flooding the AI's context window with content it cannot use, which would waste tokens
-and crowd out relevant information. The AI can always make a more targeted follow-up request.
+is reported as an error naming the limit and how to narrow the request, rather than returned
+partially: content the AI believes is whole but is not is worse than content it has to ask for
+again. Tools that can write their result elsewhere — a diff to a file in the mindspace, a
+download straight to disk — offer that instead. This prevents a single tool call from flooding
+the AI's context window with content it cannot use, which would waste tokens and crowd out
+relevant information. The AI can always make a more targeted follow-up request.
 
 ### Two levels of version control
 Humbug recognises two fundamentally different kinds of content within a mindspace, each

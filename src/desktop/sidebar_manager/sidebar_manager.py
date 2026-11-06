@@ -20,6 +20,7 @@ from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.user.instance_registry import InstanceRegistry
 from desktop.sidebar.sidebar_base import SidebarBase
+from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 from desktop.style_manager import StyleManager
 from desktop.url_opener import open_url
 
@@ -68,7 +69,7 @@ class SidebarManager(QWidget):
         self._active_panel_id: str = ""
         self._sidebar_collapsed = False
         self._update_release_url: str | None = None
-        self._expanded_sidebar_width = 320
+        self._expanded_sidebar_width = 320  # unscaled: multiplied by the zoom factor when used
         self._rail_collapsed_width = 48
         self._content_min_width = 240
 
@@ -368,17 +369,20 @@ class SidebarManager(QWidget):
         return self._sidebar_collapsed
 
     def expanded_sidebar_width(self) -> int:
-        """Return the last recorded expanded width of the sidebar."""
-        return self._expanded_sidebar_width
+        """Return the expanded width of the sidebar in pixels at the current zoom factor."""
+        return self._style_manager.scale(self._expanded_sidebar_width)
 
     def set_expanded_sidebar_width(self, width: int) -> None:
         """
         Record the expanded sidebar width.
 
+        The width is stored unscaled so that it follows the zoom factor when the
+        application is zoomed in or out.
+
         Args:
-            width: Width in pixels.
+            width: Width in pixels at the current zoom factor.
         """
-        self._expanded_sidebar_width = width
+        self._expanded_sidebar_width = round(width / self._style_manager.zoom_factor())
 
     def content_min_width(self) -> int:
         """Return the minimum width of the sidebar content pane."""
@@ -670,6 +674,9 @@ class SidebarManager(QWidget):
         rail_padding = round(6 * zoom_factor)
         rail_indicator = 2
         content_radius = round(8 * zoom_factor)
+        header_padding_top = round(10 * zoom_factor)
+        header_padding_side = self._style_manager.scale(SidebarSectionHeader.TITLE_INSET)
+        header_padding_bottom = round(6 * zoom_factor)
         panel_background = style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
         rail_background = style_manager.get_color_str(ColorRole.MINDSPACE_TOOL_RAIL_BACKGROUND)
         rail_hover = style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)
@@ -722,7 +729,7 @@ class SidebarManager(QWidget):
                 background-color: {panel_background};
                 border: none;
                 color: {subtle_text};
-                padding: 10px 8px 6px 8px;
+                padding: {header_padding_top}px {header_padding_side}px {header_padding_bottom}px {header_padding_side}px;
                 text-align: left;
                 text-transform: uppercase;
             }}

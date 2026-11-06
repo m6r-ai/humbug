@@ -15,6 +15,17 @@ Attached files appear as labelled chips between the text input and the submit bu
 attach multiple files to a single message. To remove an attachment before sending, click the
 **×** button on its chip.
 
+### Large attachments
+
+Attachments are sent whole, so a large file consumes a large part of the model's context window
+before you have said anything. If a file is over about **100KB**, Humbug warns you before attaching
+it and tells you its size, then lets you decide. A source file or a note is rarely a problem; a
+generated data file or a bundle usually is.
+
+If what you actually need is for the AI to inspect a large file selectively, attaching it is the
+wrong tool — ask it to read the file with its filesystem tool instead, where it can search and read
+only the parts that matter.
+
 ---
 
 ## What the AI receives

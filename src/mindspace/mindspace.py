@@ -12,11 +12,17 @@ from ai_tool import AIToolManager
 from context.context_registry import ContextRegistry
 from conversation_context.conversation_context import ConversationContext
 
+from mindspace.file_journal import FileJournal, JournalPurgeResult
+from mindspace.journal_entry import JournalActor, JournalEntry
+from mindspace.journal_reversal import JournalRevertResult, JournalReverser
+from mindspace.mindspace_change_watcher import ChangeCheckpoint, MindspaceChangeWatcher
 from mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceHumbugPathError, MindspaceNotFoundError
 from mindspace.mindspace_interactions import MindspaceInteractions
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace_message import MindspaceMessage
+from mindspace.mindspace_scan_pruned_paths import scan_pruned_paths
 from mindspace.mindspace_settings import MindspaceSettings
+from mindspace.mindspace_tree_scanner import TreeSnapshot
 from mindspace.mindspace_usage import MindspaceUsage
 from mindspace.trash_manifest import TrashEntry, TrashManifest, strip_trash_prefix
 
@@ -36,6 +42,7 @@ class Mindspace:
     GITIGNORE_FILE = ".gitignore"
     CONVERSATIONS_DIR = "conversations"
     TRASH_DIR = "trash"
+    JOURNAL_DIR = "journal"
 
     def __init__(
         self,
@@ -58,6 +65,8 @@ class Mindspace:
         self._path: str = ""
         self._settings: MindspaceSettings | None = None
         self._interactions = MindspaceInteractions()
+        self._file_journal = FileJournal()
+        self._change_watcher = MindspaceChangeWatcher("", self._file_journal, frozenset(), 5.0)
         self._usage = MindspaceUsage()
         self._context_registry = ContextRegistry()
         self._tool_manager = AIToolManager()
@@ -184,6 +193,14 @@ class Mindspace:
             self._settings = settings
             self._open_interactions()
             self._load_usage()
+            self._file_journal.open(self.journal_dir())
+            self._change_watcher = MindspaceChangeWatcher(
+                path,
+                self._file_journal,
+                scan_pruned_paths(settings.changes_pruned_paths),
+                settings.changes_checkpoint_interval,
+            )
+            self._change_watcher.open()
             self._apply_tool_settings(settings)
             self._on_settings_changed()
 
@@ -197,6 +214,8 @@ class Mindspace:
             self._path = ""
             self._settings = None
             self._interactions.close()
+            self._file_journal.close()
+            self._change_watcher.close()
             self._usage = MindspaceUsage()
             self._context_registry.clear()
             self._reset_tool_manager()
@@ -218,6 +237,13 @@ class Mindspace:
             new_settings.save(settings_path)
             self._settings = new_settings
             self._apply_tool_settings(new_settings)
+            self._change_watcher = MindspaceChangeWatcher(
+                self._path,
+                self._file_journal,
+                scan_pruned_paths(new_settings.changes_pruned_paths),
+                new_settings.changes_checkpoint_interval,
+            )
+            self._change_watcher.open()
             self._on_settings_changed()
 
         except OSError as e:
@@ -281,6 +307,250 @@ class Mindspace:
         """
         return os.path.join(self.MINDSPACE_DIR, self.CONVERSATIONS_DIR)
 
+    def journal_dir(self) -> str:
+        """
+        Return the absolute path to the change journal directory, creating it if needed.
+
+        The journal lives inside .humbug so that the AI can neither read it nor
+        invoke a reversal: every tool path resolver refuses .humbug/ paths.
+
+        Returns:
+            Absolute path to the journal directory.
+
+        Raises:
+            MindspaceError: No mindspace is open or directory could not be created.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        path = os.path.join(self._path, self.MINDSPACE_DIR, self.JOURNAL_DIR)
+        try:
+            os.makedirs(path, exist_ok=True)
+
+        except OSError as e:
+            raise MindspaceError(f"Failed to create journal directory: {str(e)}") from e
+
+        return path
+
+    def file_journal(self) -> FileJournal:
+        """
+        Return the change journal for the open mindspace.
+
+        Returns:
+            The file journal.
+
+        Raises:
+            MindspaceError: No mindspace is open.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        return self._file_journal
+
+    def change_watcher(self) -> MindspaceChangeWatcher:
+        """
+        Return the change watcher for the open mindspace.
+
+        The watcher reports file changes that no journal entry accounts for.  It
+        does not make them revertable: a checkpoint holds metadata and no content.
+
+        Returns:
+            The change watcher.
+
+        Raises:
+            MindspaceError: No mindspace is open.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        return self._change_watcher
+
+    def checkpoint_changes(self) -> ChangeCheckpoint:
+        """
+        Walk the mindspace and record what changed since the previous checkpoint.
+
+        Recording never raises into the caller's work beyond a write failure: a
+        scan that cannot complete reports nothing rather than failing the action
+        that triggered it, on the same terms as the journal's own recording.
+
+        Returns:
+            The checkpoint that was recorded.
+
+        Raises:
+            MindspaceError: No mindspace is open.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        return self._change_watcher.checkpoint()
+
+    def scan_tree(self) -> TreeSnapshot:
+        """
+        Walk the mindspace tree without recording anything.
+
+        This is the half of a checkpoint that must not run on the thread that owns
+        the interface, so a caller with one takes the walk there and hands it back.
+
+        Returns:
+            The walk.
+
+        Raises:
+            MindspaceError: No mindspace is open.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        return self._change_watcher.scan()
+
+    def checkpoint_change_snapshot(self, snapshot: TreeSnapshot) -> ChangeCheckpoint:
+        """
+        Record the changes a walk found.
+
+        Args:
+            snapshot: A walk taken by ``scan_tree``.
+
+        Returns:
+            The checkpoint that was recorded.
+
+        Raises:
+            MindspaceError: No mindspace is open.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        return self._change_watcher.checkpoint(snapshot)
+
+    def journal_target(self, absolute_path: str) -> tuple[FileJournal, str] | None:
+        """
+        Return the journal and the relative path for a path the journal can record.
+
+        A path outside the mindspace, or inside a .humbug/ directory, is outside the
+        journal's scope and yields None.  Every front end that records a mutation
+        asks this rather than repeating the two checks, so the scope cannot drift
+        between the tool layer and the panels.
+
+        Args:
+            absolute_path: Path about to be mutated.
+
+        Returns:
+            The journal and the path relative to the mindspace root, or None when the
+            path is outside the journal's scope.
+        """
+        if not self.has_mindspace():
+            return None
+
+        relative_path = self.get_mindspace_relative_path(absolute_path)
+        if relative_path is None or self.is_humbug_path(absolute_path):
+            return None
+
+        return self._file_journal, relative_path
+
+    def purge_journal(self, before: datetime) -> JournalPurgeResult:
+        """
+        Discard recorded file mutations older than a point in time.
+
+        This is destructive and irreversible: the caller must have told the user
+        so before asking.  Content the trash still holds is untouched, because
+        the journal does not own it.
+
+        Args:
+            before: The earliest recorded mutation to keep.
+
+        Returns:
+            What was removed.
+
+        Raises:
+            MindspaceError: No mindspace is open.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        result = self._file_journal.purge_before(before)
+        self._change_watcher.redeclare_retained()
+        return result
+
+    def purge_journal_through(self, sequence: int) -> JournalPurgeResult:
+        """
+        Discard recorded file mutations up to and including a sequence number.
+
+        Destructive and irreversible, like ``purge_journal``, but addressed to a
+        record rather than a clock: the caller has chosen the last change worth
+        keeping.
+
+        Args:
+            sequence: The last sequence number to discard.
+
+        Returns:
+            What was removed.
+
+        Raises:
+            MindspaceError: No mindspace is open.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        result = self._file_journal.purge_through(sequence)
+        self._change_watcher.redeclare_retained()
+        return result
+
+    def purge_whole_journal(self) -> JournalPurgeResult:
+        """
+        Discard every recorded file mutation.
+
+        Returns:
+            What was removed.
+
+        Raises:
+            MindspaceError: No mindspace is open.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        result = self._file_journal.purge_all()
+        self._change_watcher.redeclare_retained()
+        return result
+
+    def revert_journal_entries(
+        self,
+        entries: list[JournalEntry],
+        actor: JournalActor = JournalActor.HUMAN,
+        conversation: str = "",
+    ) -> JournalRevertResult:
+        """
+        Reverse recorded file mutations, restoring each path to its earlier state.
+
+        Args:
+            entries: The journal entries to reverse.
+            actor: Who is asking for the reversal, recorded against the changes
+                the reversal itself makes.
+            conversation: Identifier of the conversation that asked for the
+                reversal, empty when no conversation is involved.
+
+        Returns:
+            The outcome for each affected path.
+
+        Raises:
+            MindspaceError: No mindspace is open.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        return JournalReverser(
+            self._file_journal,
+            self._path,
+            self.trash_dir(),
+            self.restore_trashed,
+            actor,
+            conversation,
+        ).revert(entries)
+
+    def journal_pre_image(self, entry: JournalEntry) -> bytes | None:
+        """
+        Return the content a path held before a recorded mutation.
+
+        Content the trash kept is read from the trash entry, and content the
+        journal kept is read from its own store, so a caller does not have to
+        know which kind of removal it is looking at.
+
+        Args:
+            entry: The entry whose earlier content is wanted.
+
+        Returns:
+            The earlier content, or None when it was not captured or no longer
+            exists.
+        """
+        assert self.has_mindspace(), "No mindspace is currently open"
+        if entry.pre_image_trash is not None:
+            trashed_path = os.path.join(self.trash_dir(), entry.pre_image_trash)
+            try:
+                with open(trashed_path, 'rb') as f:
+                    return f.read()
+
+            except OSError:
+                return None
+
+        return self._file_journal.pre_image(entry)
+
     def trash_dir(self) -> str:
         """
         Return the absolute path to the trash directory, creating it if needed.
@@ -338,6 +608,58 @@ class Mindspace:
             os.path.isdir(trash_path),
         )
         manifest.save(self._trash_manifest_path())
+
+    def trash_file(self, absolute_path: str, actor: JournalActor, conversation: str = "") -> str:
+        """
+        Move a file or an empty directory into the trash and record the removal.
+
+        The trash is the cheapest possible capture for a removal, and the right
+        home for content someone deliberately discarded, so the journal records
+        where the content went instead of copying it.  Reversal consults that
+        record and delegates restoration to ``restore_trashed``, which means
+        emptying the trash makes the removal unrevertable rather than restoring
+        something else.
+
+        A directory is recorded as having existed with no content captured, because
+        there is no content to capture; the trash entry is what reversal restores.
+
+        Args:
+            absolute_path: File or empty directory to move into the trash.
+            actor: Who is removing the file.
+            conversation: Identifier of the conversation responsible, empty when
+                no conversation is involved.
+
+        Returns:
+            The absolute path within trash_dir() the file now lives at.
+
+        Raises:
+            MindspaceError: The path is outside the mindspace, inside .humbug/, or
+                could not be moved.
+        """
+        relative_path = self.get_mindspace_relative_path(absolute_path)
+        if relative_path is None or self.is_humbug_path(absolute_path):
+            raise MindspaceError(f"Cannot trash '{absolute_path}': it is outside the journalled mindspace")
+
+        is_directory = os.path.isdir(absolute_path)
+        trash_path = self.new_trash_path(absolute_path)
+        self._file_journal.record_removal(
+            absolute_path,
+            relative_path,
+            actor,
+            conversation,
+            trash_name=os.path.basename(trash_path),
+            pre_image_is_directory=is_directory,
+        )
+
+        try:
+            os.makedirs(self.trash_dir(), exist_ok=True)
+            shutil.move(absolute_path, trash_path)
+
+        except OSError as e:
+            raise MindspaceError(f"Failed to trash '{absolute_path}': {str(e)}") from e
+
+        self.record_trashed(absolute_path, trash_path)
+        return trash_path
 
     def forget_trashed(self, trash_path: str) -> None:
         """Remove trash_path's manifest entry, e.g. once it has been restored."""
@@ -1098,8 +1420,10 @@ class Mindspace:
         """
         Return log context that attributes an interaction to a conversation.
 
-        The conversation is identified by its transcript path made mindspace-relative,
-        so the log stays readable and portable across machines.
+        The conversation is identified by the identifier its transcript carries,
+        which survives renaming, so an entry stays attributable after the file is
+        renamed or moved.  Entries written before transcripts carried identifiers
+        hold a mindspace-relative path instead, and readers must tolerate both.
 
         Args:
             requester: The requester of the interaction.  Anything exposing a
@@ -1107,19 +1431,43 @@ class Mindspace:
                 conversation; anything else does not, and logging continues unattributed.
 
         Returns:
-            Context mapping the conversation to its transcript path, or None when the
+            Context mapping the conversation to its identifier, or None when the
             requester does not identify a conversation.
         """
         assert self.has_mindspace(), "No mindspace is currently open"
-        conversation_id = getattr(requester, "conversation_id", None)
-        if not callable(conversation_id):
+        identifier = self.conversation_identifier(requester)
+        if not identifier:
             return None
 
-        path = conversation_id()
-        if not path:
-            return None
+        if os.path.isabs(identifier):
+            identifier = self.get_relative_path(identifier)
 
-        return {MindspaceMessage.CONVERSATION_CONTEXT: self.get_relative_path(path)}
+        return {MindspaceMessage.CONVERSATION_CONTEXT: identifier}
+
+    def conversation_identifier(self, requester: Any) -> str:
+        """
+        Return the identifier of the conversation making a request.
+
+        Prefers the identifier the transcript carries, which survives renaming,
+        and falls back to the transcript path for conversations whose transcript
+        has none yet and for requesters that name no conversation at all.  Both
+        forms are opaque to callers, which must not assume either.
+
+        Args:
+            requester: The requester of the interaction.
+
+        Returns:
+            The conversation identifier, or an empty string when the requester
+            does not identify a conversation.
+        """
+        for name in ("conversation_uuid", "conversation_id"):
+            accessor = getattr(requester, name, None)
+            if callable(accessor):
+                value = accessor()
+                if value:
+                    return str(value)
+
+        return ""
 
     def interactions(self) -> MindspaceInteractions:
         """

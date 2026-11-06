@@ -197,6 +197,7 @@ class LanguageStrings:
     mindspace_files: str
     mindspace_vcs: str
     mindspace_vcs_no_repo: str
+    mindspace_vcs_root: str
     mindspace_conversations: str
     pinned_section: str
     mindspace_preview: str
@@ -255,6 +256,14 @@ class LanguageStrings:
     settings_terminal: str
     settings_tabs: str
     settings_conversation: str
+    settings_changes: str
+
+    # Changes settings
+    changes_settings: str
+    changes_checkpoint_interval: str
+    changes_scan_section: str
+    changes_scan_section_description: str
+    changes_pruned_paths: str
 
     # Conversation settings
     model_info: str
@@ -405,6 +414,37 @@ class LanguageStrings:
     trash_time_minutes_ago: str
     trash_time_hours_ago: str
     trash_time_days_ago: str
+
+    # Recent changes panel
+    changes: str
+    changes_no_mindspace_message: str
+    changes_empty_message: str
+    changes_until: str
+    changes_since_action: str
+    changes_show_all_action: str
+    changes_revert_file_action: str
+    changes_restore_to_point_action: str
+    changes_view_this_version_action: str
+    changes_view_replaced_action: str
+    changes_compare_action: str
+    changes_version_unavailable: str
+    changes_this_version_unavailable: str
+    changes_revert_title: str
+    changes_revert_confirm: str
+    changes_revert_result: str
+    changes_restore_to_point_confirm: str
+    changes_bucket_today: str
+    changes_bucket_earlier: str
+    changes_older_not_shown: str
+    changes_size_warning: str
+    changes_forget_through_action: str
+    changes_forget_all_action: str
+    changes_forget_title: str
+    changes_forget_confirm: str
+    changes_forget_scope_through: str
+    changes_forget_scope_all: str
+    changes_forget_result: str
+    editor_read_only_marker: str
 
     # Tool tips
     tooltip_copy_contents: str

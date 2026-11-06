@@ -207,6 +207,7 @@ def get_arabic_strings() -> LanguageStrings:
         mindspace_files="ملفات",
         mindspace_vcs="الملفات المتغيرة",
         mindspace_vcs_no_repo="لم يتم العثور على مستودع",
+        mindspace_vcs_root="جذر المساحة الذهنية",
         mindspace_conversations="محادثات",
         pinned_section="مثبت",
         mindspace_preview="معاينة",
@@ -270,6 +271,17 @@ def get_arabic_strings() -> LanguageStrings:
         settings_terminal="الطرفية",
         settings_conversation="المحادثة",
         settings_tabs="علامات التبويب",
+        settings_changes="التغييرات",
+
+        changes_settings="التغييرات",
+        changes_checkpoint_interval="الفاصل الزمني لنقاط التحقق (ثوانٍ)",
+        changes_scan_section="الشجرة المراقَبة",
+        changes_scan_section_description=(
+            "لا تُسجَّل التغييرات الواقعة تحت مجلد متجاهَل. كل سطر هو اسم مجلد، ويطابق أي "
+            "مستوى، أو مسار من جذر مساحة العمل، ويطابق ذلك المسار وكل ما تحته. يُتجاهَل "
+            "دائمًا المجلد ‎.humbug‎ و‎.git‎."
+        ),
+        changes_pruned_paths="المجلدات والمسارات المتجاهَلة",
 
         # Conversation settings
         model_info="معلومات النموذج",
@@ -325,7 +337,10 @@ def get_arabic_strings() -> LanguageStrings:
 
         # Messages
         confirm_delete_message="هل أنت متأكد من حذف {0}؟",
-        delete_warning_detail="سيتم إغلاق أي تبويب مفتوح لهذا الملف دون حفظ.",
+        delete_warning_detail=(
+            "سيتم إغلاق أي تبويب مفتوح دون حفظ. يُنقل العنصر إلى سلة المحذوفات، "
+            "حيث يمكن استعادته."
+        ),
         error_deleting_file="تعذر حذف الملف: {0}",
         error_title_rename="خطأ في إعادة التسمية",
         error_rename_exists="توجد محادثة باسم '{0}' بالفعل.",
@@ -436,6 +451,53 @@ def get_arabic_strings() -> LanguageStrings:
         trash_time_minutes_ago="منذ {0} د",
         trash_time_hours_ago="منذ {0} س",
         trash_time_days_ago="منذ {0} ي",
+
+        changes="التغييرات",
+        changes_no_mindspace_message="افتح مساحة عمل لعرض تغييراتها الأخيرة.",
+        changes_empty_message="لم يتم تسجيل أي تغيير بعد.",
+        changes_until="التغييرات في {0} أو قبله",
+        changes_since_action="عرض التغييرات حتى تاريخ محدد…",
+        changes_show_all_action="عرض كل التغييرات",
+        changes_revert_file_action="تراجع عن هذا التغيير",
+        changes_restore_to_point_action="استعادة مساحة العمل إلى هذا التغيير",
+        changes_revert_title="التراجع عن التغييرات",
+        changes_view_replaced_action="عرض النسخة التي استبدلها هذا التغيير",
+        changes_view_this_version_action="عرض النسخة التي أنتجها هذا التغيير",
+        changes_compare_action="مقارنة النسخة المستبدلة بهذه النسخة",
+        changes_version_unavailable=(
+            "لا يمكن عرض هذه النسخة: محتواها لم يعد محفوظًا، أو أنها ليست نصًا وقد "
+            "تغير الملف منذ ذلك الحين."
+        ),
+        changes_this_version_unavailable="حذف هذا التغيير الملف، لذا ليس له نسخة خاصة به.",
+        changes_revert_confirm=(
+            "هل تريد التراجع عن {0} تغيير؟ سيعود كل ملف متأثر إلى الحالة التي كان "
+            "عليها من قبل. التغييرات التي تُجرى خارج Humbug لا تُسجَّل، لذلك لا "
+            "يُتراجع عنها."
+        ),
+        changes_revert_result="تم التراجع عن {0} مسار، وتعذر التراجع عن {1}.",
+        changes_restore_to_point_confirm=(
+            "هل تريد التراجع عن {0} تغيير مسجل بعد هذا التغيير؟ سيعود كل ملف متأثر إلى "
+            "الحالة التي كان عليها عند هذا التغيير. التغييرات التي تُجرى خارج Humbug "
+            "لا تُسجَّل، لذا قد لا يعود كل شيء تمامًا كما كان."
+        ),
+        changes_bucket_today="اليوم",
+        changes_bucket_earlier="في وقت سابق",
+        changes_older_not_shown="{0} من التغييرات الأقدم غير معروضة",
+        changes_size_warning=(
+            "يستخدم سجل التغييرات {0:.0f} ميغابايت. انقر بزر الفأرة الأيمن هنا لنسيان "
+            "السجل القديم."
+        ),
+        changes_forget_through_action="نسيان هذا التغيير وكل ما قبله",
+        changes_forget_all_action="نسيان كل التغييرات",
+        changes_forget_title="نسيان التغييرات",
+        changes_forget_confirm=(
+            "هل تريد نسيان {0}؟ لن يكون بالإمكان التراجع عن هذه التغييرات، وسيُحذف أي "
+            "محتوى يحتفظ به السجل وحده. لا يمكن التراجع عن هذا الإجراء."
+        ),
+        changes_forget_scope_through="هذا التغيير وكل ما قبله",
+        changes_forget_scope_all="كل تغيير مسجل",
+        changes_forget_result="تم نسيان {0} تغيير واستعادة {1:.0f} ميغابايت.",
+        editor_read_only_marker=" (نسخة سابقة)",
 
         # Tool tips
         tooltip_copy_contents="نسخ جميع المحتويات",

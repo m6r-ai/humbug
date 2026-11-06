@@ -47,7 +47,7 @@ differences and are noted in their rows.
 | Paste | Cmd+V | Ctrl+V |
 | Find | Cmd+F | Ctrl+F |
 | Find and Replace | Ctrl+Alt+F | Ctrl+H |
-| Go to Line | Ctrl+G | Ctrl+G |
+| Go to Line | Cmd+G | Ctrl+G |
 | Conversation Settings | Cmd+Shift+, | Ctrl+Shift+, |
 
 ## View
@@ -105,7 +105,7 @@ tab context menu and the View menu.
 | Action | macOS | Windows/Linux |
 |:---|:---|:---|
 | Find and Replace | Ctrl+Alt+F | Ctrl+H |
-| Go to Line | Ctrl+G | Ctrl+G |
+| Go to Line | Cmd+G | Ctrl+G |
 | Save | Cmd+S | Ctrl+S |
 | Save As | Cmd+Shift+S | Ctrl+Shift+S |
 | Indent selection | Tab | Tab |

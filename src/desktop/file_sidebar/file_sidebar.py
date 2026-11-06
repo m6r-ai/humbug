@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 from typing import cast
+import uuid
 
 from PySide6.QtCore import Signal, QModelIndex, Qt, QPoint, QDir, QTimer
 from PySide6.QtWidgets import (
@@ -11,6 +12,8 @@ from PySide6.QtWidgets import (
 )
 
 from mindspace.mindspace_log_level import MindspaceLogLevel
+from mindspace.file_journal import FileJournal
+from mindspace.journal_entry import JournalActor, JournalEntry
 
 from desktop.file_sidebar.file_sidebar_model import FileSidebarModel
 from desktop.file_sidebar.file_sidebar_tree_view import FileSidebarTreeView
@@ -22,6 +25,7 @@ from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
 from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar.sidebar_breadcrumb_bar import SidebarBreadcrumbBar
 from desktop.sidebar.sidebar_breadcrumb_container import SidebarBreadcrumbContainer
+from desktop.sidebar.sidebar_file_delete import confirm_and_trash_file
 from desktop.sidebar.sidebar_pane_style import build_tree_pane_stylesheet
 from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 from desktop.sidebar.sidebar_tree_delegate import SidebarTreeDelegate
@@ -225,6 +229,97 @@ class FileSidebar(SidebarBase):
                 strings.move_error_failed.format(str(e))
             )
 
+    def _journal_target(self, path: str) -> tuple[FileJournal, str] | None:
+        """
+        Return the change journal and the path relative to the mindspace.
+
+        Args:
+            path: Absolute path about to be mutated.
+
+        Returns:
+            The journal and the relative path, or None when the path is outside
+            the mindspace and so outside the journal's scope.
+        """
+        return self._mindspace_manager.mindspace().journal_target(path)
+
+    def _record_replacement(self, path: str, content_path: str) -> list[JournalEntry]:
+        """
+        Record that a path is about to be replaced by a copy of another file.
+
+        Args:
+            path: Path about to be written.
+            content_path: File the written content comes from.
+
+        Returns:
+            The records made, for the caller to cancel if the write fails.
+        """
+        target = self._journal_target(path)
+        if target is None:
+            return []
+
+        journal, relative_path = target
+        entry = journal.record_write_from_path(
+            path, relative_path, content_path, JournalActor.HUMAN, ""
+        )
+        return [] if entry is None else [entry]
+
+    def _record_rename(self, source_path: str, destination_path: str) -> list[JournalEntry]:
+        """
+        Record a rename as a write of the destination and a removal of the source.
+
+        The two entries share a group so that a reversal cannot apply one without
+        the other, which would leave the content in neither place or in both.
+        When only one of the paths is inside the mindspace the surviving entry is
+        recorded ungrouped, because a group whose second half can never be
+        recorded would be permanently incomplete.
+
+        Args:
+            source_path: Path the content is moving from.
+            destination_path: Path the content is moving to.
+
+        Returns:
+            The records made, for the caller to cancel if the move fails.
+        """
+        destination_target = self._journal_target(destination_path)
+        source_target = self._journal_target(source_path)
+        records: list[JournalEntry | None] = []
+
+        if destination_target is not None and source_target is not None:
+            journal, relative_destination = destination_target
+            group = uuid.uuid4().hex
+            records.append(journal.record_write_from_path(
+                destination_path, relative_destination, source_path, JournalActor.HUMAN, "", group
+            ))
+            records.append(journal.record_removal(
+                source_path, source_target[1], JournalActor.HUMAN, "", group
+            ))
+
+        elif destination_target is not None:
+            journal, relative_destination = destination_target
+            records.append(journal.record_write_from_path(
+                destination_path, relative_destination, source_path, JournalActor.HUMAN, ""
+            ))
+
+        elif source_target is not None:
+            journal, relative_source = source_target
+            records.append(journal.record_removal(source_path, relative_source, JournalActor.HUMAN, ""))
+
+        return [entry for entry in records if entry is not None]
+
+    def _void_journal_entries(self, entries: list[JournalEntry]) -> None:
+        """
+        Cancel journal records for an operation that did not happen.
+
+        Args:
+            entries: The records the failed operation made.
+        """
+        if not entries:
+            return
+
+        mindspace = self._mindspace_manager.mindspace()
+        if mindspace.has_mindspace():
+            mindspace.file_journal().void_entries(list(entries))
+
     def _perform_move_operation(self, source_path: str, destination_path: str) -> None:
         """
         Perform the actual file/folder move operation.
@@ -236,14 +331,19 @@ class FileSidebar(SidebarBase):
         Raises:
             OSError: If the move operation fails
         """
+        recorded: list[JournalEntry] = []
         try:
             # Perform the actual move first, then notify on success
+            if os.path.isfile(source_path):
+                recorded = self._record_rename(source_path, destination_path)
+
             shutil.move(source_path, destination_path)
 
             self.file_moved.emit(source_path, destination_path)
             self._logger.info("Successfully moved '%s' to '%s'", source_path, destination_path)
 
         except OSError as e:
+            self._void_journal_entries(recorded)
             self._logger.error("Failed to move '%s' to '%s': %s", source_path, destination_path, str(e))
             raise
 
@@ -393,6 +493,9 @@ class FileSidebar(SidebarBase):
 
         try:
             # Perform the rename
+            if os.path.isfile(current_path):
+                self._record_rename(current_path, new_path)
+
             os.rename(current_path, new_path)
             self.file_renamed.emit(current_path, new_path)
 
@@ -419,8 +522,12 @@ class FileSidebar(SidebarBase):
         duplicate_name = self._get_duplicate_file_name(source_path)
         duplicate_path = os.path.join(parent_path, duplicate_name)
 
+        recorded: list[JournalEntry] = []
         try:
             # Copy the source file to the duplicate location
+            if os.path.isfile(source_path):
+                recorded = self._record_replacement(duplicate_path, source_path)
+
             shutil.copy2(source_path, duplicate_path)
             self._logger.info("Created duplicate file: '%s'", duplicate_path)
 
@@ -436,6 +543,7 @@ class FileSidebar(SidebarBase):
             self._ensure_item_visible_and_edit(duplicate_path, select_extension=False)
 
         except (OSError, shutil.Error) as e:
+            self._void_journal_entries(recorded)
             self._logger.error("Failed to duplicate file '%s': %s", source_path, str(e))
             strings = self._language_manager.strings()
             MessageBox.show_message(
@@ -925,56 +1033,29 @@ class FileSidebar(SidebarBase):
         """
         Handle request to delete a file.
 
+        The file is moved into the trash, which is also where the change journal
+        looks when it is asked to reverse the removal.
+
         Args:
             path: Path to the file to delete
         """
-        # Show confirmation dialog using MessageBox
-        strings = self._language_manager.strings()
-        result = MessageBox.show_message(
-            self,
-            MessageBoxType.WARNING,
-            strings.confirm_delete_title,
-            strings.confirm_delete_item_message.format(os.path.basename(path)) + "\n\n" + strings.delete_warning_detail,
-            [MessageBoxButton.YES, MessageBoxButton.NO],
-            True
+        confirm_and_trash_file(
+            self, path, os.path.basename(path), self.file_deleted.emit
         )
-
-        if result == MessageBoxButton.YES:
-            try:
-                # First emit signal so tabs can be closed
-                self.file_deleted.emit(path)
-
-                # Then delete the file
-                os.remove(path)
-                self._mindspace_manager.add_interaction(
-                    MindspaceLogLevel.INFO,
-                    f"User deleted file '{path}'"
-                )
-
-            except FileNotFoundError:
-                # This can happen if the file gets auto-deleted before we get to it - ignore!
-                pass
-
-            except OSError as e:
-                self._logger.error("Failed to delete file '%s': %s", path, str(e))
-                MessageBox.show_message(
-                    self,
-                    MessageBoxType.CRITICAL,
-                    strings.file_error_title,
-                    strings.error_deleting_file.format(str(e)),
-                    [MessageBoxButton.OK]
-                )
 
     def _handle_delete_folder(self, path: str) -> None:
         """
         Handle request to delete a folder.
+
+        Only an empty folder can be deleted here, and it is moved into the trash
+        rather than unlinked, so the folder can be restored the same way a file
+        can.  The confirmation says so.
 
         Args:
             path: Path to the folder to delete
         """
         strings = self._language_manager.strings()
 
-        # Check if folder is empty
         try:
             if os.listdir(path):
                 MessageBox.show_message(
@@ -997,34 +1078,9 @@ class FileSidebar(SidebarBase):
             )
             return
 
-        # Show confirmation dialog
-        result = MessageBox.show_message(
-            self,
-            MessageBoxType.WARNING,
-            strings.confirm_delete_title,
-            strings.confirm_delete_item_message.format(os.path.basename(path)),
-            [MessageBoxButton.YES, MessageBoxButton.NO],
-            True
+        confirm_and_trash_file(
+            self, path, os.path.basename(path), self.file_deleted.emit
         )
-
-        if result == MessageBoxButton.YES:
-            try:
-                # Delete the empty folder
-                os.rmdir(path)
-                self._mindspace_manager.add_interaction(
-                    MindspaceLogLevel.INFO,
-                    f"User deleted empty folder '{path}'"
-                )
-
-            except OSError as e:
-                self._logger.error("Failed to delete folder '%s': %s", path, str(e))
-                MessageBox.show_message(
-                    self,
-                    MessageBoxType.CRITICAL,
-                    strings.file_error_title,
-                    strings.error_deleting_file.format(str(e)),
-                    [MessageBoxButton.OK]
-                )
 
     def _on_delete_requested(self) -> None:
         """Handle delete request from the tree view."""
