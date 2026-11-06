@@ -197,8 +197,8 @@ class Mindspace:
             self._change_watcher = MindspaceChangeWatcher(
                 path,
                 self._file_journal,
-                scan_pruned_paths(settings.changes_pruned_paths),
-                settings.changes_checkpoint_interval,
+                scan_pruned_paths(settings.journal_pruned_paths),
+                settings.journal_checkpoint_interval,
             )
             self._change_watcher.open()
             self._apply_tool_settings(settings)
@@ -240,8 +240,8 @@ class Mindspace:
             self._change_watcher = MindspaceChangeWatcher(
                 self._path,
                 self._file_journal,
-                scan_pruned_paths(new_settings.changes_pruned_paths),
-                new_settings.changes_checkpoint_interval,
+                scan_pruned_paths(new_settings.journal_pruned_paths),
+                new_settings.journal_checkpoint_interval,
             )
             self._change_watcher.open()
             self._on_settings_changed()

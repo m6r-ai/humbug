@@ -1,4 +1,4 @@
-"""Recent changes panel: lists the mutations recorded in the change journal."""
+"""Journal panel: lists the mutations recorded in the change journal."""
 
 from collections.abc import Callable
 from datetime import date, datetime, timezone
@@ -33,7 +33,7 @@ from desktop.color_role import ColorRole
 _ENTRY_ROLE = Qt.ItemDataRole.UserRole + 1
 _MAX_ROWS = 500
 
-class ChangesSidebar(SidebarBase):
+class JournalSidebar(SidebarBase):
     """
     Lists recent file mutations and reverses them.
 
@@ -76,7 +76,7 @@ class ChangesSidebar(SidebarBase):
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.setSpacing(0)
 
-        self._header = SidebarSectionHeader(self._language_manager.strings().changes, self)
+        self._header = SidebarSectionHeader(self._language_manager.strings().journal, self)
         self._layout.addWidget(self._header)
 
         window_bar = QWidget(self)
@@ -122,7 +122,7 @@ class ChangesSidebar(SidebarBase):
         self._layout.addWidget(self._status_label)
 
         self._tree = QTreeWidget(self)
-        self._tree.setObjectName("ChangesSidebarTree")
+        self._tree.setObjectName("JournalSidebarTree")
         self._tree.setStyle(SidebarTreeStyle())
         self._tree.setFrameShape(QFrame.Shape.NoFrame)
         self._tree.setHeaderHidden(True)
@@ -1029,7 +1029,7 @@ class ChangesSidebar(SidebarBase):
     def _on_language_changed(self) -> None:
         """Retranslate the static labels and rebuild the listing."""
         strings = self._language_manager.strings()
-        self._header.set_title(strings.changes)
+        self._header.set_title(strings.journal)
         self.refresh()
         self.apply_style()
 
@@ -1071,8 +1071,8 @@ class ChangesSidebar(SidebarBase):
         self.setStyleSheet(
             build_tree_pane_stylesheet(
                 self._style_manager,
-                "ChangesSidebar",
-                "QTreeWidget#ChangesSidebarTree",
+                "JournalSidebar",
+                "QTreeWidget#JournalSidebarTree",
                 self.layoutDirection(),
                 zoom_factor,
             )
@@ -1103,10 +1103,10 @@ class ChangesSidebar(SidebarBase):
                 color: {subtle_text};
                 padding: {round(12 * zoom_factor)}px {inset}px;
             }}
-            QTreeWidget#ChangesSidebarTree::item {{
+            QTreeWidget#JournalSidebarTree::item {{
                 padding-left: {tree_inset}px;
             }}
-            QTreeWidget#ChangesSidebarTree {{
+            QTreeWidget#JournalSidebarTree {{
                 border: none;
             }}
             """

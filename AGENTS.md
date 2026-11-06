@@ -191,8 +191,8 @@ the front-end-agnostic modules (`mindspace`, the `*_context` modules, `ai`, the 
 modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 
 **Subdirectories:**
-- `changes_sidebar/` - Recent changes panel: lists the mutations recorded in the
-  change journal and reverses them
+- `journal_sidebar/` - Journal panel: lists the mutations recorded in the change
+  journal and reverses them
 - `conversation_sidebar/` - Conversations panel implementation
 - `conversation_tab/` - Conversation tab implementation
 - `diff_tab/` - Diff tab implementation

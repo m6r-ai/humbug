@@ -95,9 +95,9 @@ opening settings.
 
 ---
 
-## Changes
+## Journal
 
-Two settings control the [change journal](changes.md).
+Two settings control the [change journal](journal.md).
 
 - **Checkpoint interval** — how often, in seconds, Humbug compares the mindspace tree against a
   checkpoint so that changes made outside Humbug are recorded. Default is 5 seconds. A larger

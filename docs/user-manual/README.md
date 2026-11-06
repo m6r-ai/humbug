@@ -27,7 +27,7 @@ three, in reverse.
 | `ai-models-and-backends.md` | `src/ai/ai_model.py`, `src/ai/ai_conversation_settings.py`, `src/ai/<backend>/`, the AI Backends settings page |
 | `managing-files.md` | `src/desktop/file_sidebar/`, `src/desktop/file_watcher/` |
 | `trash.md` | `src/desktop/trash_sidebar/`, `Mindspace.trash_dir()`, `trash_file()`, `restore_trashed()`, `src/mindspace/trash_manifest.py` |
-| `changes.md` | `src/desktop/changes_sidebar/`, `src/mindspace/file_journal.py`, `journal_reversal.py`, `mindspace_change_watcher.py`, `mindspace_scan_pruned_paths.py` (ADR-0018, ADR-0020) |
+| `journal.md` | `src/desktop/journal_sidebar/`, `src/mindspace/file_journal.py`, `journal_reversal.py`, `mindspace_change_watcher.py`, `mindspace_scan_pruned_paths.py`, `src/path_matching/` (ADR-0018, ADR-0020) |
 | `editing-files.md` | `src/desktop/editor_tab/`, `src/editor_context/`, `src/syntax/` |
 | `terminal.md` | `src/desktop/terminal_tab/`, `src/terminal/` |
 | `preview.md` | `src/desktop/preview_tab/`, `src/markdown_/`, `src/html_/`, `src/pdf/`, `src/docx/` |

@@ -91,7 +91,7 @@ trash holds what you put in it until you say otherwise.
 
 ## The trash and the change journal
 
-The trash and the [Changes panel](changes.md) work together, and it is worth knowing how.
+The trash and the [Journal panel](journal.md) work together, and it is worth knowing how.
 
 A deletion is a recorded change like any other. Because the deleted content is still available in
 the trash, a deletion can be reverted from the Changes panel — the file is put back from the trash,
@@ -118,4 +118,4 @@ not something Humbug can intercept, and does not go through this trash.
 
 ---
 
-*[Index](index.md) · Previous: [Managing Files & Folders](managing-files.md) · Next: [Undoing Changes](changes.md)*
+*[Index](index.md) · Previous: [Managing Files & Folders](managing-files.md) · Next: [Undoing Changes](journal.md)*

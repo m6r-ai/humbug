@@ -256,14 +256,14 @@ class LanguageStrings:
     settings_terminal: str
     settings_tabs: str
     settings_conversation: str
-    settings_changes: str
+    settings_journal: str
 
-    # Changes settings
-    changes_settings: str
-    changes_checkpoint_interval: str
-    changes_scan_section: str
-    changes_scan_section_description: str
-    changes_pruned_paths: str
+    # Journal settings
+    journal_settings: str
+    journal_checkpoint_interval: str
+    journal_watched_section: str
+    journal_watched_section_description: str
+    journal_pruned_paths: str
 
     # Conversation settings
     model_info: str
@@ -415,8 +415,8 @@ class LanguageStrings:
     trash_time_hours_ago: str
     trash_time_days_ago: str
 
-    # Recent changes panel
-    changes: str
+    # Journal panel
+    journal: str
     changes_no_mindspace_message: str
     changes_empty_message: str
     changes_until: str

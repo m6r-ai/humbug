@@ -87,7 +87,7 @@ from desktop.terminal_tab.terminal_tab import TerminalTab
 from desktop.title_bar import MenuBarDragFilter, WindowControlsWidget
 from desktop.tour.tour_controller import TourController
 from desktop.trash_sidebar.trash_sidebar import TrashSidebar
-from desktop.changes_sidebar.changes_sidebar import ChangesSidebar
+from desktop.journal_sidebar.journal_sidebar import JournalSidebar
 from desktop.update_checker import UpdateChecker
 from desktop.update_dialog import UpdateDialog
 from desktop.user.user_manager import UserManager, UserError
@@ -281,15 +281,15 @@ def _activate_trash_sidebar(panel: SidebarBase) -> None:
     panel.refresh()
 
 
-def _wire_changes_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
-    """Wire ChangesSidebar signals to SidebarManager."""
-    assert isinstance(panel, ChangesSidebar)
+def _wire_journal_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
+    """Wire JournalSidebar signals to SidebarManager."""
+    assert isinstance(panel, JournalSidebar)
     panel.file_opened_in_preview.connect(mgr.file_opened_in_preview)
 
 
-def _activate_changes_sidebar(panel: SidebarBase) -> None:
-    """Refresh the change listing each time the panel is activated."""
-    assert isinstance(panel, ChangesSidebar)
+def _activate_journal_sidebar(panel: SidebarBase) -> None:
+    """Refresh the journal listing each time the panel is activated."""
+    assert isinstance(panel, JournalSidebar)
     panel.refresh()
 
 
@@ -699,8 +699,8 @@ class MainWindow(QMainWindow):
         )
         self._sidebar_manager.register_panel("vcs", "diff", VCSSidebar, _wire_vcs_sidebar, visibility_signal="repo_available")
         self._sidebar_manager.register_panel(
-            "changes", "changes", ChangesSidebar, _wire_changes_sidebar,
-            on_activated=_activate_changes_sidebar
+            "journal", "changes", JournalSidebar, _wire_journal_sidebar,
+            on_activated=_activate_journal_sidebar
         )
         self._sidebar_manager.file_clicked.connect(self._on_sidebar_file_clicked)
         self._sidebar_manager.file_deleted.connect(self._on_sidebar_file_deleted)

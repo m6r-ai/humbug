@@ -87,7 +87,7 @@ def get_french_strings() -> LanguageStrings:
         zoom_in="Zoom avant",
         zoom_out="Zoom arrière",
         reset_zoom="Réinitialiser le zoom",
-        open_mindspace_log="Journal de l'espace mental",
+        open_mindspace_log="Registre de l'espace mental",
         open_humbug_shell="Shell Humbug",
         open_token_usage="Utilisation des tokens",
         show_tab_overview="Afficher les onglets ouverts",
@@ -271,12 +271,12 @@ def get_french_strings() -> LanguageStrings:
         settings_terminal="Terminal",
         settings_conversation="Conversation",
         settings_tabs="Tabulations",
-        settings_changes="Modifications",
+        settings_journal="Journal",
 
-        changes_settings="Modifications",
-        changes_checkpoint_interval="Intervalle des points de contrôle (secondes)",
-        changes_scan_section="Arborescence surveillée",
-        changes_scan_section_description=(
+        journal_settings="Journal",
+        journal_checkpoint_interval="Intervalle des points de contrôle (secondes)",
+        journal_watched_section="Arborescence surveillée",
+        journal_watched_section_description=(
             "Les modifications sous une entrée ignorée ne sont pas enregistrées. Les entrées "
             "sont des motifs glob, mis en correspondance comme les listes d'accès aux fichiers : "
             "un nom correspond à ce nom entier n'importe où dans l'arborescence, jamais à un nom "
@@ -284,7 +284,7 @@ def get_french_strings() -> LanguageStrings:
             "pour inclure tout ce qui se trouve sous un chemin. .humbug et .git sont toujours "
             "ignorés."
         ),
-        changes_pruned_paths="Fichiers, répertoires et chemins ignorés",
+        journal_pruned_paths="Fichiers, répertoires et chemins ignorés",
 
         # Conversation settings
         model_info="Informations sur le modèle",
@@ -404,8 +404,8 @@ def get_french_strings() -> LanguageStrings:
         conversation_status_rate_limited="Limite de requêtes atteinte — nouvelle tentative dans {delay}s…",
         terminal_status="Terminal : {name} ({columns}x{rows})",
         system_status="Statut du système",
-        log_status="Journal",
-        log_status_entries="Journal : entrées {first:,}-{last:,} sur {total:,}",
+        log_status="Registre",
+        log_status_entries="Registre : entrées {first:,}-{last:,} sur {total:,}",
         preview_status="Aperçu : {path}",
         diff_status="Diff : {path} | {rows} lignes modifiées",
 
@@ -461,7 +461,7 @@ def get_french_strings() -> LanguageStrings:
         trash_time_hours_ago="il y a {0} h",
         trash_time_days_ago="il y a {0} j",
 
-        changes="Modifications",
+        journal="Journal",
         changes_no_mindspace_message="Ouvrez un mindspace pour voir ses modifications r\u00e9centes.",
         changes_empty_message="Aucune modification n'a encore \u00e9t\u00e9 enregistr\u00e9e.",
         changes_until="Modifications jusqu'à {0} inclus",

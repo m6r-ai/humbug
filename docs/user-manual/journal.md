@@ -1,7 +1,7 @@
 # Undoing Changes
 
 Humbug keeps a record of every change made to the files in your mindspace, by you or by an AI. The
-**Changes** panel shows that record, newest first, and lets you put a file back the way it was.
+**Journal** panel shows that record, newest first, and lets you put a file back the way it was.
 
 The record behind the panel is the **change journal**. It is the counterpart to the
 [Mindspace Log](mindspace-log.md): the log is a witness to what happened, and the journal is what
@@ -27,9 +27,9 @@ watching it would record the act of watching.
 
 ---
 
-## Opening the Changes panel
+## Opening the Journal panel
 
-Click the **Changes** icon in the left icon rail of the mindspace sidebar. The panel reloads each
+Click the **Journal** icon in the left icon rail of the mindspace sidebar. The panel reloads each
 time you switch to it, so the list always reflects the journal as it stands.
 
 There is no menu item or keyboard shortcut for the panel: it reports on the mindspace you are
@@ -185,7 +185,7 @@ is ever discarded without you asking.
 
 ## Settings
 
-Two aspects of the journal are configured per mindspace, in **Mindspace Settings → Changes**:
+Two aspects of the journal are configured per mindspace, in **Mindspace Settings → Journal**:
 
 - **Checkpoint interval** — how often, in seconds, Humbug compares the tree against a checkpoint to
   detect changes made outside it. The default is 5 seconds; a larger value costs less work and
