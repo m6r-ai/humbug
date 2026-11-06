@@ -10,8 +10,8 @@ development environment before making any changes.
 
 ## Coding standards
 
-Consistency is more better than better. A change that makes one part of the
-codebase "better" but leaves it inconsistent with the rest will be rejected. If you
+Consistency is better than "better". A change that makes one part of the
+codebase better but leaves it inconsistent with the rest will be rejected. If you
 want to improve a pattern or convention, that improvement must be applied uniformly
 across the entire codebase — not just in the files you happen to be touching. The
 burden for identifying and resolving any inconsistency a change introduces rests
@@ -44,10 +44,11 @@ entirely with the contributor.
 ## Dependency rules
 
 Humbug has only 3 external runtime dependencies beyond the Python standard library
-(PySide6, qasync, certifi). This is a core design principle and the bar for
-adding a new one is extremely high. If you think a new external dependency is genuinely
-necessary, raise it for discussion on GitHub discussions before writing any code that relies
-on it. You will not be able to add new external dependencies without explicit agreement.
+(PySide6, qasync, certifi), plus menai, a sibling project under the Humbug umbrella. This
+is a core design principle and the bar for adding a new one is extremely high. If you
+think a new external dependency is genuinely necessary, raise it for discussion on GitHub
+discussions before writing any code that relies on it. You will not be able to add new
+external dependencies without explicit agreement.
 
 The dependency graph between modules must remain acyclic. When adding a new import:
 
@@ -78,7 +79,8 @@ a list of the README sections that go stale fastest.
 
 ## Verifying your changes
 
-Before submitting any change, run the full suite of static analysis tools:
+Before submitting any change, run the full suite of static analysis tools with the
+virtual environment from the developer installation activated:
 
 ```bash
 python -m tools.code_checker
@@ -89,9 +91,9 @@ All checks must pass cleanly. This runs:
 - **Dependency checker** — enforces the acyclic inter-module dependency graph defined in
   `dependency-rules.yaml`. No module may import from another that is not explicitly listed
   as a dependency, and no circular dependencies are permitted.
-- **mypy** — full static type checking across `src/`. All code must be fully typed.
-- **pylint** — linting across `src/`. The codebase is held to a 10.00/10 rating.  Humbug
-  has custom style checker rules to enforce the coding standard wherever it can.
+- **mypy** — full static type checking across `src/` and `tools/`. All code must be fully typed.
+- **pylint** — linting across `src/` and `tools/`. The codebase is held to a 10.00/10 rating.
+  Humbug has custom style checker rules to enforce the coding standard wherever it can.
 
 ## Getting involved
 
