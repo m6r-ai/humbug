@@ -31,13 +31,18 @@ _TRASH_NAME_ROLE = Qt.ItemDataRole.UserRole + 1
 
 class TrashSidebar(SidebarBase):
     """
-    Durable browser for trashed chats/folders, independent of the undo/redo stack.
+    Durable browser for trashed conversations, independent of the undo/redo stack.
 
     Undo/redo (Ctrl+Z) is purely in-memory and lost on restart, so anything
     still sitting in the trash directory once that history is gone would
     otherwise be unrecoverable through the UI. This panel reads the trash
     directory (and its manifest of original locations) directly, so items
     remain visible and restorable across restarts.
+
+    Conversations are the only thing that goes into the trash, because they are
+    the only thing the change journal cannot cover: a transcript lives under
+    .humbug/, which is outside the journal's scope.  Anything else a user or the
+    AI removes is recorded there instead and is reverted from the Changes panel.
     """
 
     file_clicked = Signal(str, str, bool)  # panel_id, path, ephemeral

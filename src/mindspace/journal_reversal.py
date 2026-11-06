@@ -94,10 +94,10 @@ class JournalReverser:
         Args:
             journal: The journal holding the entries and their pre-images.
             mindspace_path: Root of the mindspace the paths are relative to.
-            trash_dir: Directory holding trash entries, for removals whose content
-                the trash kept instead of the journal.
+            trash_dir: Directory holding trash entries, for records made before the
+                journal became the sole capture and still naming a trash entry.
             restore_trashed: Restores a trash entry to its original location and
-                returns the path it was restored to.
+                returns the path it was restored to.  Only reached by such records.
             actor: Who is asking for the reversal, recorded against the mutations
                 the reversal itself makes.
             conversation: Identifier of the conversation that asked for the
@@ -218,6 +218,9 @@ class JournalReverser:
         absolute_path = os.path.join(self._mindspace_path, path)
 
         if os.path.isdir(absolute_path):
+            if entries[0].pre_image_is_directory:
+                return JournalRevertOutcome(path, JournalRevertStatus.REVERTED, "already present")
+
             return JournalRevertOutcome(path, JournalRevertStatus.CONFLICT, "a directory now occupies this path")
 
         earliest = entries[0]
@@ -235,6 +238,9 @@ class JournalReverser:
 
         if earliest.pre_image_trash is not None:
             return self._restore_from_trash(earliest.pre_image_trash, absolute_path, path)
+
+        if earliest.pre_image_is_directory:
+            return self._recreate_directory(absolute_path, path)
 
         if earliest.pre_image_hash is None:
             return JournalRevertOutcome(
@@ -285,6 +291,27 @@ class JournalReverser:
 
         return outcome
 
+    def _recreate_directory(self, absolute_path: str, path: str) -> JournalRevertOutcome:
+        """
+        Recreate a directory whose removal is being reversed.
+
+        A directory has no content, so there is nothing to restore and nothing to
+        record: the removal this reverses is already in the index, and reversing
+        it again reports the directory as already present once it is back in
+        place.
+
+        Args:
+            absolute_path: Directory to create.
+            path: The path as recorded, for the outcome.
+        """
+        try:
+            os.makedirs(absolute_path, exist_ok=True)
+
+        except OSError as e:
+            return JournalRevertOutcome(path, JournalRevertStatus.FAILED, str(e))
+
+        return JournalRevertOutcome(path, JournalRevertStatus.REVERTED, "directory recreated")
+
     def _restore_from_trash(
         self,
         trash_name: str,
@@ -292,11 +319,15 @@ class JournalReverser:
         path: str,
     ) -> JournalRevertOutcome:
         """
-        Restore a removal whose content the trash kept.
+        Restore a removal recorded before the journal became the sole capture.
 
-        The journal holds no copy of this content, so the trash entry is the only
-        source.  Emptying the trash therefore makes the removal unrevertable,
-        which is reported rather than discovered half way through.
+        Such a record names the trash entry that held its content instead of
+        storing the content itself, because the trash was then where a user's
+        removal went.  The journal holds no copy, so the trash entry is the only
+        source, and a record whose entry has since been emptied is reported as
+        unrevertable rather than discovered half way through.
+
+        No new record names a trash entry, so nothing but history reaches this.
 
         Args:
             trash_name: The trash entry holding the content.

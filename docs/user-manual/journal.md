@@ -25,6 +25,10 @@ because Humbug cannot see who made it and will not guess.
 Nothing outside the mindspace is watched, and `.humbug` itself never is: it holds the journal, so
 watching it would record the act of watching.
 
+Deleting a file or an empty folder is recorded here, by either actor: the content is kept so the
+deletion can be reverted, and the file does not appear in the [Trash](trash.md).  The trash holds
+conversations, whose transcripts live under `.humbug` and so fall outside the journal.
+
 ---
 
 ## Opening the Journal panel
@@ -100,7 +104,7 @@ Two of these actions are not always available, and the panel says so rather than
 misleading:
 
 - A change that **removed** a file produced no version of its own, so only the version it replaced
-  can be shown — and only while the trash still holds it
+  can be shown — and only while the journal still holds it
 - Content that is **not text** can only be previewed from a file on disk, so it is shown only while
   the file still holds exactly that version
 

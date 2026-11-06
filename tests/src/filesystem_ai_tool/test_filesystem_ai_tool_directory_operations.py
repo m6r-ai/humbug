@@ -13,6 +13,8 @@ import pytest
 from ai_tool import AIToolExecutionError, AIToolAuthorizationDenied
 from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
 from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
+from mindspace.journal_entry import JournalActor
+from mindspace.mindspace_error import MindspaceError
 
 
 def _make_tool_for_sandbox(sandbox: str) -> FileSystemAITool:
@@ -319,10 +321,13 @@ class TestFileSystemAIToolRemoveDirectory:
 
     def test_remove_directory_success(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test successful directory removal."""
+        mindspace = filesystem_tool._mindspace
+        mindspace.conversation_identifier.return_value = ""
+
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.iterdir') as mock_iterdir, \
-             patch('pathlib.Path.rmdir') as mock_rmdir:
+             patch.object(mindspace, 'remove_path') as mock_remove:
 
             mock_exists.return_value = True
             mock_is_dir.return_value = True
@@ -332,7 +337,7 @@ class TestFileSystemAIToolRemoveDirectory:
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "Directory removed successfully: empty_dir" in result.content
-            mock_rmdir.assert_called_once()
+            mock_remove.assert_called_once_with("/test/sandbox/empty_dir", JournalActor.AI, "")
             # Verify authorization was called with destructive=True
             mock_authorization.assert_called_once()
             args = mock_authorization.call_args[0]
@@ -420,36 +425,19 @@ class TestFileSystemAIToolRemoveDirectory:
             error = exc_info.value
             assert "User denied permission to remove directory: empty_dir" in str(error)
 
-    def test_remove_directory_already_removed(self, filesystem_tool, mock_authorization, make_tool_call):
-        """Test removing directory that was already removed (race condition)."""
+    def test_a_failed_removal_is_reported(self, filesystem_tool, mock_authorization, make_tool_call):
+        """Test that a removal the mindspace refuses is reported rather than ignored."""
+        mindspace = filesystem_tool._mindspace
+
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.iterdir') as mock_iterdir, \
-             patch('pathlib.Path.rmdir') as mock_rmdir:
+             patch.object(mindspace, 'remove_path') as mock_remove:
 
             mock_exists.return_value = True
             mock_is_dir.return_value = True
             mock_iterdir.return_value = []
-            mock_rmdir.side_effect = OSError("Directory not found")
-
-            tool_call = make_tool_call("filesystem", {"operation": "remove_directory", "path": "empty_dir"})
-            with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
-
-            error = exc_info.value
-            assert "Failed to remove directory" in str(error)
-
-    def test_remove_directory_os_error(self, filesystem_tool, mock_authorization, make_tool_call):
-        """Test removing directory with OS error."""
-        with patch('pathlib.Path.exists') as mock_exists, \
-             patch('pathlib.Path.is_dir') as mock_is_dir, \
-             patch('pathlib.Path.iterdir') as mock_iterdir, \
-             patch('pathlib.Path.rmdir') as mock_rmdir:
-
-            mock_exists.return_value = True
-            mock_is_dir.return_value = True
-            mock_iterdir.return_value = []
-            mock_rmdir.side_effect = OSError("I/O error")
+            mock_remove.side_effect = MindspaceError("Failed to remove '/test/sandbox/empty_dir': I/O error")
 
             tool_call = make_tool_call("filesystem", {"operation": "remove_directory", "path": "empty_dir"})
             with pytest.raises(AIToolExecutionError) as exc_info:

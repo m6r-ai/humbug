@@ -219,7 +219,6 @@ class FileJournal:
         actor: JournalActor,
         conversation: str,
         group: str = "",
-        trash_name: str | None = None,
         pre_image_is_directory: bool = False,
     ) -> JournalEntry | None:
         """
@@ -237,14 +236,10 @@ class FileJournal:
                 string when no conversation is involved.
             group: Identifier shared with the other entries of one operation, or
                 an empty string when the mutation stands alone.
-            trash_name: Name of the trash entry the content is about to be moved
-                to.  When given, the content is not copied into the journal's own
-                store, because the trash already holds it; the entry records where
-                it went instead, and reversal delegates to the trash.
             pre_image_is_directory: True when the path holds a directory.  A
                 directory has no content to capture, so the entry records that the
                 path existed without attempting to read it, and reversal recreates
-                it from wherever the removal put it.
+                it.
 
         Returns:
             The entry as recorded, or None if recording failed.
@@ -257,8 +252,6 @@ class FileJournal:
             actor,
             conversation,
             group,
-            trash_name,
-            trash_name is None,
             pre_image_is_directory,
         )
 
@@ -597,8 +590,6 @@ class FileJournal:
         actor: JournalActor,
         conversation: str,
         group: str,
-        pre_image_trash: str | None = None,
-        store_pre_image: bool = True,
         pre_image_is_directory: bool = False,
     ) -> JournalEntry | None:
         """
@@ -614,10 +605,6 @@ class FileJournal:
             conversation: Identifier of the conversation responsible.
             group: Identifier shared with the other entries of one operation, or
                 an empty string when the mutation stands alone.
-            pre_image_trash: Name of the trash entry holding the removed content,
-                when the removal parked it there.
-            store_pre_image: When False the pre-image is hashed but not copied into
-                the blob store, because another store already holds the content.
             pre_image_is_directory: True when the path holds a directory, which
                 existed but has no content to capture.
 
@@ -633,11 +620,7 @@ class FileJournal:
                 existed_before = os.path.isfile(absolute_path)
                 pre_image_hash = None
                 if existed_before:
-                    if store_pre_image:
-                        pre_image_hash = self._blobs.store_file(absolute_path)
-
-                    else:
-                        pre_image_hash = JournalBlobStore.digest_of_file(absolute_path)
+                    pre_image_hash = self._blobs.store_file(absolute_path)
 
             entry = JournalEntry(
                 sequence=0,
@@ -650,7 +633,6 @@ class FileJournal:
                 existed_before=existed_before,
                 pre_image_hash=pre_image_hash,
                 post_image_hash=post_image_hash,
-                pre_image_trash=pre_image_trash,
                 pre_image_is_directory=pre_image_is_directory,
             )
             return self._index.append(entry)

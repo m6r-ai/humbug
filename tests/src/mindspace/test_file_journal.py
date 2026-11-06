@@ -733,8 +733,8 @@ class TestFileJournalRetention:
         assert journal.size_bytes() > 0
 
 
-class TestMindspaceTrashFile:
-    """A file the user removes is moved to the trash and can be restored."""
+class TestMindspaceRemoveFile:
+    """A file removed through the mindspace is recorded and can be reverted."""
 
     def _mindspace(self, tmp_path):
         path = os.path.join(str(tmp_path), "ms")
@@ -747,39 +747,39 @@ class TestMindspaceTrashFile:
         mindspace.open_mindspace(path)
         return mindspace
 
-    def test_the_file_moves_into_the_trash(self, tmp_path):
+    def test_the_file_is_removed(self, tmp_path):
         mindspace = self._mindspace(tmp_path)
         target = tmp_path / "ms" / "notes.txt"
         target.write_bytes(b"content")
         try:
-            trash_path = mindspace.trash_file(str(target), JournalActor.HUMAN)
+            mindspace.remove_path(str(target), JournalActor.HUMAN)
 
             assert not target.exists()
-            assert os.path.isfile(trash_path)
 
         finally:
             mindspace.close_mindspace()
 
-    def test_the_removal_is_recorded_with_the_trash_entry(self, tmp_path):
+    def test_the_removal_is_recorded_with_the_captured_content(self, tmp_path):
         mindspace = self._mindspace(tmp_path)
         target = tmp_path / "ms" / "notes.txt"
         target.write_bytes(b"content")
         try:
-            trash_path = mindspace.trash_file(str(target), JournalActor.HUMAN)
+            mindspace.remove_path(str(target), JournalActor.HUMAN)
 
             entries = mindspace.file_journal().entries_for_path("notes.txt")
             assert len(entries) == 1
-            assert entries[0].pre_image_trash == os.path.basename(trash_path)
+            assert entries[0].pre_image_trash is None
+            assert entries[0].pre_image_hash == JournalBlobStore.digest_of(b"content")
 
         finally:
             mindspace.close_mindspace()
 
-    def test_the_recorded_version_can_be_read_back_from_the_trash(self, tmp_path):
+    def test_the_recorded_version_can_be_read_back(self, tmp_path):
         mindspace = self._mindspace(tmp_path)
         target = tmp_path / "ms" / "notes.txt"
         target.write_bytes(b"content")
         try:
-            mindspace.trash_file(str(target), JournalActor.HUMAN)
+            mindspace.remove_path(str(target), JournalActor.HUMAN)
 
             entry = mindspace.file_journal().entries_for_path("notes.txt")[0]
             assert mindspace.journal_pre_image(entry) == b"content"
@@ -787,12 +787,12 @@ class TestMindspaceTrashFile:
         finally:
             mindspace.close_mindspace()
 
-    def test_a_trashed_file_can_be_reverted(self, tmp_path):
+    def test_a_removed_file_can_be_reverted(self, tmp_path):
         mindspace = self._mindspace(tmp_path)
         target = tmp_path / "ms" / "notes.txt"
         target.write_bytes(b"content")
         try:
-            mindspace.trash_file(str(target), JournalActor.HUMAN)
+            mindspace.remove_path(str(target), JournalActor.HUMAN)
             entries = mindspace.file_journal().entries_for_path("notes.txt")
 
             result = mindspace.revert_journal_entries(entries)
@@ -809,7 +809,32 @@ class TestMindspaceTrashFile:
         target.write_bytes(b"content")
         try:
             with pytest.raises(MindspaceError):
-                mindspace.trash_file(str(target), JournalActor.HUMAN)
+                mindspace.remove_path(str(target), JournalActor.HUMAN)
+
+            assert target.exists()
+
+        finally:
+            mindspace.close_mindspace()
+
+    def test_a_path_outside_the_mindspace_is_refused(self, tmp_path):
+        mindspace = self._mindspace(tmp_path)
+        target = tmp_path / "outside.txt"
+        target.write_bytes(b"content")
+        try:
+            with pytest.raises(MindspaceError):
+                mindspace.remove_path(str(target), JournalActor.HUMAN)
+
+            assert target.exists()
+
+        finally:
+            mindspace.close_mindspace()
+
+    def test_a_missing_path_is_refused(self, tmp_path):
+        mindspace = self._mindspace(tmp_path)
+        target = tmp_path / "ms" / "absent.txt"
+        try:
+            with pytest.raises(MindspaceError):
+                mindspace.remove_path(str(target), JournalActor.HUMAN)
 
         finally:
             mindspace.close_mindspace()
@@ -829,7 +854,7 @@ class TestDirectoryRemoval:
         path.mkdir()
 
         entry = journal.record_removal(
-            str(path), "folder", JournalActor.HUMAN, "", trash_name="ab_folder", pre_image_is_directory=True
+            str(path), "folder", JournalActor.HUMAN, "", pre_image_is_directory=True
         )
 
         assert entry is not None
@@ -837,13 +862,13 @@ class TestDirectoryRemoval:
         assert entry.pre_image_hash is None
         assert entry.pre_image_is_directory
 
-    def test_a_directory_removal_is_revertable_through_the_trash(self, tmp_path):
+    def test_a_directory_removal_is_revertable(self, tmp_path):
         journal = self._journal(tmp_path)
         path = tmp_path / "folder"
         path.mkdir()
 
         entry = journal.record_removal(
-            str(path), "folder", JournalActor.HUMAN, "", trash_name="ab_folder", pre_image_is_directory=True
+            str(path), "folder", JournalActor.HUMAN, "", pre_image_is_directory=True
         )
 
         assert entry is not None
@@ -861,8 +886,8 @@ class TestDirectoryRemoval:
         assert journal.pre_image(entry) == b"x" * (3 * 1024 * 1024)
 
 
-class TestMindspaceTrashDirectory:
-    """An empty directory the user removes goes to the trash and can be restored."""
+class TestMindspaceRemoveDirectory:
+    """An empty directory removed through the mindspace is recorded and can be recreated."""
 
     def _mindspace(self, tmp_path):
         path = os.path.join(str(tmp_path), "ms")
@@ -875,15 +900,14 @@ class TestMindspaceTrashDirectory:
         mindspace.open_mindspace(path)
         return mindspace
 
-    def test_the_directory_moves_into_the_trash(self, tmp_path):
+    def test_the_directory_is_removed(self, tmp_path):
         mindspace = self._mindspace(tmp_path)
         target = tmp_path / "ms" / "folder"
         target.mkdir()
         try:
-            trash_path = mindspace.trash_file(str(target), JournalActor.HUMAN)
+            mindspace.remove_path(str(target), JournalActor.HUMAN)
 
             assert not target.exists()
-            assert os.path.isdir(trash_path)
 
         finally:
             mindspace.close_mindspace()
@@ -893,7 +917,7 @@ class TestMindspaceTrashDirectory:
         target = tmp_path / "ms" / "folder"
         target.mkdir()
         try:
-            mindspace.trash_file(str(target), JournalActor.HUMAN)
+            mindspace.remove_path(str(target), JournalActor.HUMAN)
 
             entry = mindspace.file_journal().entries_for_path("folder")[0]
             assert entry.pre_image_is_directory
@@ -903,12 +927,12 @@ class TestMindspaceTrashDirectory:
         finally:
             mindspace.close_mindspace()
 
-    def test_a_trashed_directory_can_be_reverted(self, tmp_path):
+    def test_a_removed_directory_can_be_reverted(self, tmp_path):
         mindspace = self._mindspace(tmp_path)
         target = tmp_path / "ms" / "folder"
         target.mkdir()
         try:
-            mindspace.trash_file(str(target), JournalActor.HUMAN)
+            mindspace.remove_path(str(target), JournalActor.HUMAN)
             entries = mindspace.file_journal().entries_for_path("folder")
 
             result = mindspace.revert_journal_entries(entries)
@@ -919,19 +943,36 @@ class TestMindspaceTrashDirectory:
         finally:
             mindspace.close_mindspace()
 
-    def test_an_emptied_trash_reports_the_removal_as_not_revertable(self, tmp_path):
+    def test_a_non_empty_directory_is_refused(self, tmp_path):
         mindspace = self._mindspace(tmp_path)
         target = tmp_path / "ms" / "folder"
         target.mkdir()
+        (target / "kept.txt").write_bytes(b"content")
         try:
-            mindspace.trash_file(str(target), JournalActor.HUMAN)
-            entries = mindspace.file_journal().entries_for_path("folder")
-            mindspace.empty_trash()
+            with pytest.raises(MindspaceError):
+                mindspace.remove_path(str(target), JournalActor.HUMAN)
 
-            result = mindspace.revert_journal_entries(entries)
+            assert (target / "kept.txt").read_bytes() == b"content"
+            assert mindspace.file_journal().entries_for_path("folder") == []
 
-            assert result.failed_outcomes()[0].status.value == "not_revertable"
-            assert not target.exists()
+        finally:
+            mindspace.close_mindspace()
+
+    def test_a_removal_that_fails_leaves_no_record(self, tmp_path, monkeypatch):
+        mindspace = self._mindspace(tmp_path)
+        target = tmp_path / "ms" / "folder"
+        target.mkdir()
+
+        def refuse(path):
+            raise OSError("read-only")
+
+        monkeypatch.setattr(os, "rmdir", refuse)
+        try:
+            with pytest.raises(MindspaceError):
+                mindspace.remove_path(str(target), JournalActor.HUMAN)
+
+            assert target.is_dir()
+            assert mindspace.file_journal().entries_for_path("folder") == []
 
         finally:
             mindspace.close_mindspace()

@@ -18,7 +18,7 @@ from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
 from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
-from desktop.sidebar.sidebar_file_delete import confirm_and_trash_file
+from desktop.sidebar.sidebar_file_delete import confirm_and_delete_path
 from desktop.sidebar.sidebar_pane_style import build_list_pane_stylesheet
 from desktop.style_manager import StyleManager
 from desktop.vcs_sidebar.vcs_sidebar_delegate import VCSSidebarDelegate, _HEADER_ROLE
@@ -297,13 +297,13 @@ class VCSSidebar(SidebarBase):
         """
         Handle request to delete a file.
 
-        The file is moved into the trash, which is also where the change journal
-        looks when it is asked to reverse the removal.
+        Its content is recorded in the change journal first, which is what makes
+        the removal reversible from the Changes panel.
 
         Args:
             path: Path to the file to delete
         """
-        confirm_and_trash_file(
+        confirm_and_delete_path(
             self, path, os.path.basename(path), self.file_deleted.emit
         )
 

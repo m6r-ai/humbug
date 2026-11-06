@@ -317,6 +317,7 @@ class LanguageStrings:
     # Messages
     confirm_delete_message: str
     delete_warning_detail: str
+    delete_recorded_warning_detail: str
     error_deleting_file: str
     error_title_rename: str
     error_rename_exists: str

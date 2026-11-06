@@ -240,6 +240,8 @@ modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 - `tab/` - Abstract tab contract, including the view-state and migration-state contracts
 - `tab_manager/` - Tab manager: generic tab container with context factory registration and session restore
 - `terminal_tab/` - Terminal tab implementation
+- `trash_sidebar/` - Trash panel: lists deleted conversations and restores or destroys
+  them
 - `user/` - User management: global settings (`UserManager`, `UserSettings`), the
   registry of running instances (`InstanceRegistry`), and launching a second instance
   with the same configuration (`LaunchContext`)
@@ -347,6 +349,13 @@ never truncated, while journal blobs are reclaimed by `FileJournal.purge_before(
 Writers record before they mutate and call `FileJournal.void_entries()` if the mutation
 then fails, so the journal never claims a change that did not happen.  A new writer
 joins by calling the same `record_*` helpers; do not give it its own capture policy.
+
+The journal is the only capture for a removal of mindspace content, and the trash is the
+only one for a conversation: a transcript lives under `.humbug/`, which the journal never
+covers.  `Mindspace.remove_path()` is the single entry point a removal takes, for the AI's
+filesystem tool and for the desktop panels alike, and it decides between the two with
+`Mindspace.journal_target()`.  Do not add a second removal path, or a second place for
+removed content to survive; see ADR-0021.
 
 The change watcher (`mindspace_change_watcher.py`, `mindspace_tree_scanner.py`) compares
 successive metadata walks of the tree and reports the files that changed without a

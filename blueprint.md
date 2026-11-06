@@ -64,12 +64,13 @@ since the most recent checkpoint, at content too large to capture, and at anythi
 already read, executed or committed, and the interface says so rather than implying a
 guarantee it cannot keep.
 
-Deletion follows the same principle rather than escaping it.  A deleted file or empty folder
-moves to a per-mindspace trash, where it can be restored to the place it came from, so a
-mistaken delete is recoverable on its own terms rather than only through the journal.  Emptying
-the trash is the point at which the change genuinely becomes unrevertable, and the journal then
-reports the deletion as a change it cannot reverse instead of restoring something that is no
-longer what was deleted.
+Deletion follows the same principle rather than escaping it, and each store serves one purpose.
+The journal is the only home for a removal of the mindspace's own content: a deleted file or empty
+folder is recorded with the content it held, by either actor, so a mistaken delete is reverted the
+same way any other change is.  The trash is the only home for a deleted conversation, because a
+transcript is Humbug's own state under `.humbug/` and the journal deliberately never covers it.
+Neither store's retention action reaches into the other, and neither promises to restore something
+that is no longer what was deleted.
 
 Beside the journal a change watcher compares successive metadata walks of the mindspace,
 so a file changed by a terminal command, or by anything else outside Humbug, is recorded

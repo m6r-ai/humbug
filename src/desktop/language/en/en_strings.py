@@ -342,6 +342,10 @@ def get_english_strings() -> LanguageStrings:
             "Any open tab for it will be closed without saving. It moves to the trash, "
             "where it can be restored."
         ),
+        delete_recorded_warning_detail=(
+            "Any open tab for it will be closed without saving. Its content is recorded first, "
+            "so the deletion can be reversed from the Changes panel."
+        ),
         error_deleting_file="Could not delete file: {0}",
         error_title_rename="Rename Error",
         error_rename_exists="A conversation named '{0}' already exists.",

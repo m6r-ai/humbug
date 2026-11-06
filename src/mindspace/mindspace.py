@@ -609,57 +609,73 @@ class Mindspace:
         )
         manifest.save(self._trash_manifest_path())
 
-    def trash_file(self, absolute_path: str, actor: JournalActor, conversation: str = "") -> str:
+    def remove_path(self, absolute_path: str, actor: JournalActor, conversation: str = "") -> None:
         """
-        Move a file or an empty directory into the trash and record the removal.
+        Remove a file or an empty directory, recording what it held first.
 
-        The trash is the cheapest possible capture for a removal, and the right
-        home for content someone deliberately discarded, so the journal records
-        where the content went instead of copying it.  Reversal consults that
-        record and delegates restoration to ``restore_trashed``, which means
-        emptying the trash makes the removal unrevertable rather than restoring
-        something else.
+        The journal is the one capture for a removal of the mindspace's own
+        content, whoever asks for it, so this is the single entry point a human
+        and an AI tool both take.  A path the journal does not cover is Humbug's
+        own state, whose removal belongs to the trash, and is refused here rather
+        than recorded against a path reversal could never reach.
 
-        A directory is recorded as having existed with no content captured, because
-        there is no content to capture; the trash entry is what reversal restores.
+        A directory has no content to capture, so its removal is recorded as the
+        path having existed and reversal recreates it.  Only an empty directory is
+        accepted, which is all the panels offer: a whole tree would need a record
+        per file to be reversable, and a record that restores some of a tree is
+        worse than one that refuses it.
+
+        Nothing is removed unless the record was made, so a removal that fails
+        leaves no change claiming to have happened.
 
         Args:
-            absolute_path: File or empty directory to move into the trash.
-            actor: Who is removing the file.
+            absolute_path: File or empty directory to remove.
+            actor: Who is removing it.
             conversation: Identifier of the conversation responsible, empty when
                 no conversation is involved.
 
-        Returns:
-            The absolute path within trash_dir() the file now lives at.
-
         Raises:
-            MindspaceError: The path is outside the mindspace, inside .humbug/, or
-                could not be moved.
+            MindspaceError: The path is outside the journal's scope, does not
+                exist, is a non-empty directory, or could not be removed.
         """
-        relative_path = self.get_mindspace_relative_path(absolute_path)
-        if relative_path is None or self.is_humbug_path(absolute_path):
-            raise MindspaceError(f"Cannot trash '{absolute_path}': it is outside the journalled mindspace")
+        target = self.journal_target(absolute_path)
+        if target is None:
+            raise MindspaceError(f"Cannot remove '{absolute_path}': it is outside the journalled mindspace")
+
+        journal, relative_path = target
+        if not os.path.exists(absolute_path):
+            raise MindspaceError(f"Cannot remove '{absolute_path}': it does not exist")
 
         is_directory = os.path.isdir(absolute_path)
-        trash_path = self.new_trash_path(absolute_path)
-        self._file_journal.record_removal(
+        if is_directory:
+            try:
+                if os.listdir(absolute_path):
+                    raise MindspaceError(f"Cannot remove '{absolute_path}': the directory is not empty")
+
+            except OSError as e:
+                raise MindspaceError(f"Failed to inspect '{absolute_path}': {str(e)}") from e
+
+        recorded = journal.record_removal(
             absolute_path,
             relative_path,
             actor,
             conversation,
-            trash_name=os.path.basename(trash_path),
             pre_image_is_directory=is_directory,
         )
+        if recorded is None:
+            raise MindspaceError(f"Failed to record the removal of '{absolute_path}', so it was not removed")
 
         try:
-            os.makedirs(self.trash_dir(), exist_ok=True)
-            shutil.move(absolute_path, trash_path)
+            if is_directory:
+                os.rmdir(absolute_path)
+
+            else:
+                os.remove(absolute_path)
 
         except OSError as e:
-            raise MindspaceError(f"Failed to trash '{absolute_path}': {str(e)}") from e
+            journal.void_entries([recorded])
+            raise MindspaceError(f"Failed to remove '{absolute_path}': {str(e)}") from e
 
-        self.record_trashed(absolute_path, trash_path)
-        return trash_path
 
     def forget_trashed(self, trash_path: str) -> None:
         """Remove trash_path's manifest entry, e.g. once it has been restored."""

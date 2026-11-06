@@ -49,10 +49,11 @@ class JournalEntry:
         existed_before: True if the path existed before the mutation.
         pre_image_hash: Digest of the stored pre-image, or None when the path did
             not exist, or when it existed but its content was not captured.
-        pre_image_trash: Name of the trash entry holding the removed content, when
-            the removal parked it there, or None otherwise.  Reversal uses the
-            stored pre-image either way; this records where the content also
-            remains, so the interface can point the user at it.
+        pre_image_trash: Name of the trash entry that held the removed content
+            instead of the journal, on a record made before the journal became the
+            sole capture of a removal.  No new record sets it.  Reversal consults
+            it before the stored pre-image, because such a record has no stored
+            pre-image to use.
         post_image_hash: Digest of the content after the mutation, or None when
             the mutation removed the path.
         pre_image_is_directory: True when the path held a directory before the
@@ -166,9 +167,12 @@ class JournalEntry:
 
         A removal whose content the trash holds is revertable even though the
         journal kept no copy of it, because the trash is where reversal looks.
+        A recorded directory is revertable because reversal recreates it, having
+        no content to restore.
         """
         return (
             (not self.existed_before)
             or self.pre_image_hash is not None
             or self.pre_image_trash is not None
+            or self.pre_image_is_directory
         )

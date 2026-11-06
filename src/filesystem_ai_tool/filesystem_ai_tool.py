@@ -25,7 +25,7 @@ from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplic
 from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
 from mindspace.mindspace import Mindspace
 from mindspace.journal_entry import JournalActor, JournalEntry
-from mindspace.mindspace_error import MindspaceHumbugPathError
+from mindspace.mindspace_error import MindspaceError, MindspaceHumbugPathError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from path_matching import PathPatterns
 from pdf import PDFError, PDFUnsupportedError, extract_text, parse as parse_pdf
@@ -1437,18 +1437,20 @@ class FileSystemAITool(AITool):
             raise AIToolExecutionError(f"Permission denied checking directory contents: {str(e)}") from e
 
         # Build authorization context
-        context = f"Remove the empty directory '{display_path}'. This directory will be permanently deleted."
+        context = f"Remove the empty directory '{display_path}'. Its removal is recorded so it can be recreated."
 
         # Request authorization
         authorized = await request_authorization("filesystem", arguments, context, None, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to remove directory: {arguments['path']}")
 
-        # Remove directory
+        # A directory has no content to capture, so the journal records that it
+        # existed and reversal recreates it.
+        conversation = self._mindspace.conversation_identifier(requester_ref)
         try:
-            path.rmdir()
+            self._mindspace.remove_path(str(path), JournalActor.AI, conversation)
 
-        except OSError as e:
+        except MindspaceError as e:
             raise AIToolExecutionError(f"Failed to remove directory: {str(e)}") from e
 
         self._mindspace.add_interaction(
@@ -1488,28 +1490,13 @@ class FileSystemAITool(AITool):
             raise AIToolAuthorizationDenied(f"User denied permission to delete file: {arguments['path']}")
 
         # The journal captures the file's content before it is removed, so the
-        # deletion can be reversed.  A recording failure does not abort the
-        # deletion; it is logged so the file can be shown as not revertable.
-        journal_entry = self._mindspace.file_journal().record_removal(
-            str(path),
-            display_path,
-            JournalActor.AI,
-            self._mindspace.conversation_identifier(requester_ref),
-        )
-        if journal_entry is None:
-            self._mindspace.add_interaction(
-                MindspaceLogLevel.WARN,
-                f"Failed to record the removal of '{display_path}' for reversal",
-            )
-
-        # Delete file
+        # deletion can be reversed.  A removal is never performed without its
+        # record, so the file cannot disappear unaccounted for.
+        conversation = self._mindspace.conversation_identifier(requester_ref)
         try:
-            path.unlink()
+            self._mindspace.remove_path(str(path), JournalActor.AI, conversation)
 
-        except PermissionError as e:
-            raise AIToolExecutionError(f"Permission denied deleting file: {str(e)}") from e
-
-        except OSError as e:
+        except MindspaceError as e:
             raise AIToolExecutionError(f"Failed to delete file: {str(e)}") from e
 
         self._mindspace.add_interaction(

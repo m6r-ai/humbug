@@ -9,10 +9,11 @@ New features:
 - Added a Changes panel listing recent mutations, showing which files changed and how far back the record reaches.
   A change can be reverted individually, or the mindspace restored to the state it held at any listed change by
   reverting everything recorded after it, and a replaced version can be viewed read-only or compared with the
-  file as it now stands.  Divergence is reported per file rather than overwritten, so a file changed outside
-  Humbug is skipped instead of losing work.
-- Deleting a file or an empty folder from the Files, Preview or VCS panel now moves it to the trash, where it can
-  be restored, instead of unlinking it permanently.
+  file as it now stands.
+- Deleting a file or an empty folder from the Files, Preview or VCS panel now records its content in the change
+  journal first, so the deletion can be reverted from the Changes panel instead of being permanent.  The trash is
+  now only for deleted conversations, which the journal cannot cover because their transcripts live under `.humbug`.
+  Emptying the trash no longer destroys a deleted file; forgetting the journalled history does.
 - Journalled history can be forgotten from the Changes panel, up to and including any listed change or in its
   entirety, and the panel reports what it reclaimed.
 - Improved the rendering of the mindspace VCS entries so they aren't as wide horizontally.

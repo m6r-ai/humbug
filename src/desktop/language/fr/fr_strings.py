@@ -345,6 +345,11 @@ def get_french_strings() -> LanguageStrings:
             "Tout onglet ouvert sera fermé sans enregistrement. L'élément est déplacé "
             "vers la corbeille, d'où il peut être restauré."
         ),
+        delete_recorded_warning_detail=(
+            "Tout onglet ouvert sera fermé sans enregistrement. Son contenu est d'abord "
+            "enregistré, de sorte que la suppression peut être annulée depuis le panneau "
+            "Modifications."
+        ),
         error_deleting_file="Impossible de supprimer le fichier : {0}",
         error_title_rename="Erreur de renommage",
         error_rename_exists="Une conversation nommée '{0}' existe déjà.",

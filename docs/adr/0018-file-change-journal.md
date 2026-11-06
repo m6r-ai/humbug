@@ -47,7 +47,7 @@ outside the mindspace boundary, git operations, or the consequences of content t
 been read, executed or committed. Reversing a file is not reversing an effect. This limitation
 is the promise, and it must be stated where users will meet it rather than implied away.
 
-**Directories are covered only where the trash already holds them.** A user removing an empty
+**Directories are covered only where a bin already holds them.** A user removing an empty
 directory moves it into the trash, and that removal is recorded as a directory: the entry says the
 path existed and had no content to capture, and reversal recreates it from the trash. Because the
 record carries no per-file detail, the same mechanism would restore a whole tree if a caller ever
@@ -56,14 +56,8 @@ trashed one. Directory moves and creations are not recorded, and neither is the 
 a directory move — one group per operation, a depth limit, and a rule for files above the capture
 threshold inside the tree — is deliberately not attempted.
 
-**Directories are covered only where the trash already holds them.** A user removing an empty
-directory moves it into the trash, and that removal is recorded as a directory: the entry says the
-path existed and had no content to capture, and reversal recreates it from the trash. Because the
-record carries no per-file detail, the same mechanism would restore a whole tree if a caller ever
-trashed one. Directory moves and creations are not recorded, and neither is the AI tool's
-`remove directory`, which unlinks an empty directory with no bin to put it in. Recursive capture of
-a directory move — one group per operation, a depth limit, and a rule for files above the capture
-threshold inside the tree — is deliberately not attempted.
+*The relation between the trash and a recorded directory removal is changed by ADR-0021; this
+paragraph records the decision as it was taken.*
 
 **Every actor is covered.** A mutation is journalled regardless of who made it. The journal is a
 record of what happened to the mindspace, not of what the AI did to it, so a window of history
@@ -128,6 +122,10 @@ The trash holds two unrelated kinds of item: content the user removed, which is 
 journal's reach, and Humbug's own state such as conversation transcripts, which the `.humbug/`
 exclusion keeps out of the journal entirely. That they share a directory and a manifest is a
 storage convenience, not a claim that they are the same thing.
+
+*Superseded by ADR-0021: the journal became the sole capture for a removal of mindspace content,
+and the trash was narrowed to conversation transcripts. This section records the decision as it
+was taken.*
 
 **Separate from the interaction log.** The log witnesses that an action happened; the journal
 makes its effect undoable. They differ in granularity — messages written for a human to read
@@ -226,6 +224,9 @@ displayed — reloads, because the alternative is a listing that quietly disagre
 browsing interface, and a user's removal continues to land there. The journal records that the
 removal happened and where the content went; it does not change how the trash behaves, and it
 does not cause agent activity to accumulate in a bin the user must learn to ignore.
+
+*Reversed by ADR-0021: a user's removal now lands in the journal rather than the trash, and the
+trash was narrowed to conversation transcripts.*
 
 ## Alternatives considered
 
