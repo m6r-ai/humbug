@@ -35,6 +35,19 @@ def _populate(widget: ConversationWidget) -> None:
     )
 
 
+def _populate_with_attachment(widget: ConversationWidget) -> None:
+    """Populate the conversation with a prompt carrying an attachment, then a plain one."""
+    history = widget._ai_conversation.get_conversation_history()  # pylint: disable=protected-access
+    guid = history.add_attachment("file contents", "notes.txt", "file")
+    history.add_message(AIMessage.create(AIMessageSource.USER, "prompt with a file", attachments=[guid]))
+    history.add_message(AIMessage.create(AIMessageSource.AI, "response"))
+    history.add_message(AIMessage.create(AIMessageSource.USER, "plain prompt"))
+    history.add_message(AIMessage.create(AIMessageSource.AI, "another response"))
+    widget._load_message_history(  # pylint: disable=protected-access
+        history.get_messages(), True, attachments=history.attachments()
+    )
+
+
 def _user_widgets(widget: ConversationWidget) -> list:
     """Return the user message widgets in the conversation."""
     return [
@@ -61,6 +74,52 @@ class TestEditFromHere:
         later = widgets[widgets.index(target) + 1:]
         assert later
         assert all(w.is_pending_removal() for w in later)
+
+    def test_begin_edit_loads_attachments(self, conv_env) -> None:
+        """Editing from a message loads its attachments into the input box."""
+        _mgr, transcript_path = conv_env
+        widget = _make_widget(transcript_path)
+        _populate_with_attachment(widget)
+
+        _user_widgets(widget)[0].edit_from_here_requested.emit()
+
+        assert widget._input.get_attachments() == [("notes.txt", "file contents")]  # pylint: disable=protected-access
+
+    def test_begin_edit_replaces_previous_edit_attachments(self, conv_env) -> None:
+        """Retargeting an edit to a message without attachments leaves none in the input box."""
+        _mgr, transcript_path = conv_env
+        widget = _make_widget(transcript_path)
+        _populate_with_attachment(widget)
+
+        users = _user_widgets(widget)
+        users[0].edit_from_here_requested.emit()
+        users[1].edit_from_here_requested.emit()
+
+        assert widget._input.get_attachments() == []  # pylint: disable=protected-access
+
+    def test_cancel_clears_attachments(self, conv_env) -> None:
+        """Cancelling an edit of a message with attachments leaves none in the input box."""
+        _mgr, transcript_path = conv_env
+        widget = _make_widget(transcript_path)
+        _populate_with_attachment(widget)
+
+        _user_widgets(widget)[0].edit_from_here_requested.emit()
+        widget._on_cancel_edit_requested()  # pylint: disable=protected-access
+
+        assert widget._input.get_attachments() == []  # pylint: disable=protected-access
+
+    def test_commit_keeps_attachments_in_input(self, conv_env) -> None:
+        """Committing an edit leaves its attachments in the input box, ready to be re-sent."""
+        _mgr, transcript_path = conv_env
+        widget = _make_widget(transcript_path)
+        _populate_with_attachment(widget)
+
+        _user_widgets(widget)[0].edit_from_here_requested.emit()
+        widget._commit_pending_edit()  # pylint: disable=protected-access
+
+        history = widget._ai_conversation.get_conversation_history()  # pylint: disable=protected-access
+        assert history.attachments() == {}
+        assert widget._input.get_attachments() == [("notes.txt", "file contents")]  # pylint: disable=protected-access
 
     def test_begin_edit_does_not_remove_messages(self, conv_env) -> None:
         """Beginning an edit leaves the transcript untouched."""

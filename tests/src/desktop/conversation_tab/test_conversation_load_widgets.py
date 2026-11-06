@@ -171,7 +171,7 @@ class TestOperationsAcrossWidgetlessMessages:
         widget = _make_widget(transcript_path)
         _pump_until_loaded(widget, qapp)
 
-        widget._begin_pending_edit(messages[0].id, "first prompt")  # pylint: disable=protected-access
+        widget._begin_pending_edit(messages[0].id, "first prompt", [])  # pylint: disable=protected-access
 
         shown = widget._ordered_widgets()  # pylint: disable=protected-access
         assert shown[0].is_being_edited()

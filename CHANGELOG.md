@@ -16,10 +16,16 @@ New features:
   Emptying the trash no longer destroys a deleted file; forgetting the journalled history does.
 - Journalled history can be forgotten from the Changes panel, up to and including any listed change or in its
   entirety, and the panel reports what it reclaimed.
+- A file dragged from a sidebar panel onto a conversation's input box is now attached to the message being
+  composed, instead of opening in a tab as a drop anywhere else in the tab area does.  The input highlights its
+  border while the file is over it.
 - Improved the rendering of the mindspace VCS entries so they aren't as wide horizontally.
 
 Bug fixes:
 
+- Editing one of your previous messages now loads the files attached to it into the input box, as chips
+  you can detach before submitting.  Previously the box showed the text alone and the files were lost
+  from the revised message.
 - Fixed issues with various sidebar panels not scaling correctly with zoom size.
 
 Internal structure changes:

@@ -123,7 +123,8 @@ From this view you can:
   a read-only preview tab instead
 - **Right-click** to access a context menu with options to create new files or folders, rename,
   duplicate, move, or delete items
-- **Drag and drop** files between folders, or drag them into the tab area to open them
+- **Drag and drop** files between folders, or drag them into the tab area to open them. Dropping
+  a file on a conversation's input box attaches it to the message being composed
 
 All file types that Humbug supports for syntax highlighting can be opened in the editor. PDF and
 DOCX files can be opened for reading.

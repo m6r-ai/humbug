@@ -326,6 +326,7 @@ class ConversationWidget(QWidget):
         self._input.stop_requested.connect(self._on_stop_requested)
         self._input.settings_requested.connect(self._on_input_settings_requested)
         self._input.attach_requested.connect(self._on_attach_requested)
+        self._input.file_dropped.connect(self._on_file_dropped)
         self._input.cancel_edit_requested.connect(self._on_cancel_edit_requested)
         self._input.modified.connect(self.conversation_modified)
 
@@ -368,11 +369,9 @@ class ConversationWidget(QWidget):
         # Tracking for spotlighted message
         self._spotlighted_message_index = -1
 
-        # Pending edit: the message the next submit will truncate to, and the text
-        # that was loaded into the input box when the edit began.  Nothing is removed
-        # from the transcript until the edit is submitted.
+        # Pending edit: the message the next submit will truncate to.  Nothing is
+        # removed from the transcript until the edit is submitted.
         self._pending_edit_message_id: str | None = None
-        self._pending_edit_original_text = ""
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
@@ -3343,9 +3342,9 @@ class ConversationWidget(QWidget):
         """
         Begin editing from a user message.
 
-        The message text is loaded into the input box and the message, along with
-        every subsequent message, is marked as pending removal.  Nothing is removed
-        from the transcript until the edit is submitted.
+        The message text and its attachments are loaded into the input box, and the
+        message, along with every subsequent message, is marked as pending removal.
+        Nothing is removed from the transcript until the edit is submitted.
         """
         sender = self.sender()
         if not isinstance(sender, ConversationMessage):
@@ -3359,14 +3358,20 @@ class ConversationWidget(QWidget):
         if sender.message_source() != AIMessageSource.USER:
             return
 
-        self._begin_pending_edit(message_id, sender.message_content())
+        self._begin_pending_edit(message_id, sender.message_content(), sender.message_attachments())
 
-    def _begin_pending_edit(self, message_id: str, content: str) -> None:
-        """Enter pending-edit mode targeting the given message."""
+    def _begin_pending_edit(self, message_id: str, content: str, attachments: list[tuple[str, str]]) -> None:
+        """
+        Enter pending-edit mode targeting the given message.
+
+        The message's attachments are loaded into the input box along with its text so
+        that submitting the edit re-sends them, and so that the user can detach any of
+        them before submitting.  Attachments recorded on the edited message are pruned
+        from the transcript when the edit is committed, so they exist nowhere else.
+        """
         self._clear_pending_edit()
 
         self._pending_edit_message_id = message_id
-        self._pending_edit_original_text = content
 
         index = self._message_index(message_id)
         editing = self._widget_at(index)
@@ -3379,6 +3384,10 @@ class ConversationWidget(QWidget):
                 message_widget.set_pending_removal(True)
 
         self._input.set_plain_text(content)
+        self._input.clear_attachments()
+        for filename, file_content in attachments:
+            self._input.add_attachment(filename, file_content)
+
         self._input.set_edit_mode(True)
         self._input.set_spotlighted(True)
         self._input.setFocus()
@@ -3389,12 +3398,12 @@ class ConversationWidget(QWidget):
             return
 
         self._pending_edit_message_id = None
-        self._pending_edit_original_text = ""
 
         for message_widget in self._ordered_widgets():
             message_widget.set_pending_removal(False)
             message_widget.set_being_edited(False)
 
+        self._input.clear_attachments()
         self._input.set_edit_mode(False)
 
     def _on_cancel_edit_requested(self) -> None:
@@ -3413,7 +3422,6 @@ class ConversationWidget(QWidget):
         """
         message_id = self._pending_edit_message_id
         self._pending_edit_message_id = None
-        self._pending_edit_original_text = ""
         self._input.set_edit_mode(False)
 
         if message_id is None:
@@ -3629,6 +3637,15 @@ class ConversationWidget(QWidget):
         if not path:
             return
 
+        self._attach_file(path)
+
+    def _on_file_dropped(self, path: str) -> None:
+        """Handle a file dropped on the input box, attaching it instead of opening it."""
+        self._attach_file(path)
+
+    def _attach_file(self, path: str) -> None:
+        """Read a file and attach it to the message being composed."""
+        strings = self._language_manager.strings()
         filename = os.path.basename(path)
 
         if path.lower().endswith(".pdf"):

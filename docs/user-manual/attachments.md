@@ -15,6 +15,16 @@ Attached files appear as labelled chips between the text input and the submit bu
 attach multiple files to a single message. To remove an attachment before sending, click the
 **×** button on its chip.
 
+### Dragging a file in
+
+You can also drag a file from the Files or Preview panel and drop it on the conversation's input
+box. The input highlights its border while you hover, and the file is attached when you let go.
+
+Where you drop matters. A file dropped anywhere else in the tab area opens in a tab, as it
+normally does; only a drop on the input box attaches it. Dropping a folder, or a conversation
+from the Conversations panel, does nothing at all, because neither has contents of its own that
+could be sent.
+
 ### Large attachments
 
 Attachments are sent whole, so a large file consumes a large part of the model's context window

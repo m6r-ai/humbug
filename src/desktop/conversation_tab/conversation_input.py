@@ -1,17 +1,43 @@
 """Input widget that matches history message styling."""
 
+import os
 import sys
 from typing import cast
 
-from PySide6.QtCore import Signal, Qt, QRect, QSize, QObject, QEvent
-from PySide6.QtGui import QFontMetrics, QTextCursor, QTextDocument, QIcon, QKeyEvent, QMouseEvent
+from PySide6.QtCore import Signal, Qt, QRect, QSize, QObject, QEvent, QMimeData
+from PySide6.QtGui import (
+    QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent, QFontMetrics, QTextCursor, QTextDocument, QIcon,
+    QKeyEvent, QMouseEvent
+)
 from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QLabel, QSizePolicy
 
 from ai import AIMessageSource
 
+from desktop.drop_payload import read_drop_payload
 from desktop.markdown import MarkdownTextEdit
 from desktop.conversation_tab.conversation_message_style import ConversationMessageStyle
 from desktop.conversation_tab.conversation_message import ConversationMessage
+from desktop.mindspace.mindspace_manager import MindspaceManager
+
+
+def _dragged_file_path(mime_data: QMimeData) -> str:
+    """
+    Return the path of the file a dragged payload names, or an empty string.
+
+    A drag that names a recorded change rather than a file, or a path inside a
+    `.humbug/` directory, yields nothing.  A recorded change stands for a version of
+    a file rather than for the file, and `.humbug/` holds Humbug's own state, which is
+    not the AI's to read.  A folder yields nothing either: only a file has content to
+    attach.
+    """
+    payload = read_drop_payload(mime_data)
+    if payload is None or not payload.path or not os.path.isfile(payload.path):
+        return ""
+
+    if MindspaceManager().mindspace().is_humbug_path(payload.path):
+        return ""
+
+    return payload.path
 
 
 class ConversationInput(ConversationMessage):
@@ -24,6 +50,7 @@ class ConversationInput(ConversationMessage):
     stop_requested = Signal()
     settings_requested = Signal()
     attach_requested = Signal()
+    file_dropped = Signal(str)  # absolute path of a file dropped on the input
     cancel_edit_requested = Signal()
     modified = Signal()
     chrome_height_changed = Signal()
@@ -43,6 +70,11 @@ class ConversationInput(ConversationMessage):
         self._attachments_layout: QHBoxLayout | None = None
 
         super().__init__(style, parent=parent, is_input=True)
+
+        # A file dragged from a sidebar is accepted here so that dropping it attaches
+        # the file rather than opening it in a tab, which is what a drop anywhere else
+        # in the tab area does.
+        self.setAcceptDrops(True)
 
         # Connect text cursor signals
         self._text_area: MarkdownTextEdit = self._sections[0].text_area()  # type: ignore[assignment]
@@ -103,14 +135,74 @@ class ConversationInput(ConversationMessage):
         self._on_language_changed()
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
-        """Intercept Ctrl+Enter in the inline editor to confirm."""
-        if obj is self._text_area and event.type() == QEvent.Type.KeyPress:
-            key_event = cast(QKeyEvent, event)
-            if (key_event.key() == Qt.Key.Key_Return and key_event.modifiers() & Qt.KeyboardModifier.ControlModifier):
-                self.submit_requested.emit()
+        """Intercept Ctrl+Enter, and file drags, in the text area."""
+        if obj is self._text_area:
+            if event.type() == QEvent.Type.KeyPress:
+                key_event = cast(QKeyEvent, event)
+                if (key_event.key() == Qt.Key.Key_Return
+                        and key_event.modifiers() & Qt.KeyboardModifier.ControlModifier):
+                    self.submit_requested.emit()
+                    return True
+
+            # The text area is a drop target in its own right, so a file dragged over
+            # it is offered to the area rather than to this widget.
+            if event.type() == QEvent.Type.DragLeave:
+                self.set_drop_target(False)
+
+            elif self._handle_file_drag(event):
                 return True
 
         return super().eventFilter(obj, event)
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        """Accept a dragged file, which dropping will attach."""
+        if self._handle_file_drag(event):
+            return
+
+        super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event: QDragMoveEvent) -> None:
+        """Keep a dragged file accepted for as long as it stays over the input."""
+        if self._handle_file_drag(event):
+            return
+
+        super().dragMoveEvent(event)
+
+    def dragLeaveEvent(self, event: QDragLeaveEvent) -> None:
+        """Clear the highlight a dragged file put on the input."""
+        self.set_drop_target(False)
+        super().dragLeaveEvent(event)
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        """Attach the dropped file rather than opening it in a tab."""
+        if self._handle_file_drag(event):
+            return
+
+        super().dropEvent(event)
+
+    def _handle_file_drag(self, event: QEvent) -> bool:
+        """
+        Accept a drag of a file over the input, and announce the drop as a file to attach.
+
+        Returns True when the event was a drag of a file and has been dealt with here.
+        """
+        if event.type() not in (QEvent.Type.DragEnter, QEvent.Type.DragMove, QEvent.Type.Drop):
+            return False
+
+        drag_event = cast(QDropEvent, event)
+        path = _dragged_file_path(drag_event.mimeData())
+        if not path:
+            return False
+
+        drag_event.acceptProposedAction()
+        if event.type() == QEvent.Type.Drop:
+            self.set_drop_target(False)
+            self.file_dropped.emit(path)
+
+        else:
+            self.set_drop_target(True)
+
+        return True
 
     def set_model(self, model: str) -> None:
         """Set the model name for the input prompt."""
