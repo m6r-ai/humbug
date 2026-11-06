@@ -687,20 +687,31 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._splitter)
 
         self._sidebar_manager = SidebarManager(self)
-        self._sidebar_manager.register_panel("conversations", "conversation", ConversationSidebar, _wire_conversation_sidebar)
-        self._sidebar_manager.register_panel("files", "files", FileSidebar, _wire_file_sidebar)
-        self._sidebar_manager.register_panel("preview", "preview", PreviewSidebar, _wire_preview_sidebar)
         self._sidebar_manager.register_panel(
-            "search", "search", SearchSidebar, _wire_search_sidebar, on_activated=_activate_search_sidebar
+            "conversations", "conversation", ConversationSidebar, _wire_conversation_sidebar,
+            tooltip_key="mindspace_conversations",
+        )
+        self._sidebar_manager.register_panel(
+            "files", "files", FileSidebar, _wire_file_sidebar, tooltip_key="mindspace_files",
+        )
+        self._sidebar_manager.register_panel(
+            "preview", "preview", PreviewSidebar, _wire_preview_sidebar, tooltip_key="mindspace_preview",
+        )
+        self._sidebar_manager.register_panel(
+            "search", "search", SearchSidebar, _wire_search_sidebar, on_activated=_activate_search_sidebar,
+            tooltip_key="mindspace_search",
         )
         self._sidebar_manager.register_panel(
             "trash", "trash", TrashSidebar, _wire_trash_sidebar,
-            on_activated=_activate_trash_sidebar, place_at_bottom=True
+            on_activated=_activate_trash_sidebar, place_at_bottom=True, tooltip_key="trash",
         )
-        self._sidebar_manager.register_panel("vcs", "diff", VCSSidebar, _wire_vcs_sidebar, visibility_signal="repo_available")
+        self._sidebar_manager.register_panel(
+            "vcs", "diff", VCSSidebar, _wire_vcs_sidebar, visibility_signal="repo_available",
+            tooltip_key="mindspace_vcs",
+        )
         self._sidebar_manager.register_panel(
             "journal", "changes", JournalSidebar, _wire_journal_sidebar,
-            on_activated=_activate_journal_sidebar
+            on_activated=_activate_journal_sidebar, tooltip_key="journal",
         )
         self._sidebar_manager.file_clicked.connect(self._on_sidebar_file_clicked)
         self._sidebar_manager.file_deleted.connect(self._on_sidebar_file_deleted)

@@ -172,6 +172,7 @@ class SidebarManager(QWidget):
         visibility_signal: str | None = None,
         on_activated: "Callable[[SidebarBase], None] | None" = None,
         place_at_bottom: bool = False,
+        tooltip_key: str = "",
     ) -> None:
         """
         Register a sidebar panel.
@@ -193,11 +194,13 @@ class SidebarManager(QWidget):
             place_at_bottom: Place the rail button in the bottom group of the
                 rail (below the tab overview and carousel buttons, above the
                 settings button) instead of the panel group at the top.
+            tooltip_key: Name of the ``LanguageStrings`` field holding the rail
+                button's tooltip, so hovering the icon names the panel.
         """
         panel = factory(self)
         assert isinstance(panel, SidebarBase)
 
-        button = self._create_panel_button(panel_id, icon_name)
+        button = self._create_panel_button(panel_id, icon_name, tooltip_key)
 
         if visibility_signal is not None:
             sig = getattr(panel, visibility_signal, None)
@@ -234,24 +237,38 @@ class SidebarManager(QWidget):
         if len(self._panel_widgets) == 1:
             self._set_active_panel(panel_id)
 
-    def _create_panel_button(self, panel_id: str, icon_name: str) -> QToolButton:
+    def _create_panel_button(self, panel_id: str, icon_name: str, tooltip_key: str) -> QToolButton:
         """
         Create a rail button for a panel without connecting its click signal.
 
         Args:
             panel_id: The panel identifier string.
             icon_name: Base icon name for the button.
+            tooltip_key: Name of the ``LanguageStrings`` field holding the button's tooltip.
         """
         button = QToolButton(self._rail_widget)
         button.setObjectName(f"_panel_button_{panel_id}")
         button.setProperty("panel_id", panel_id)
         button.setProperty("icon_name", icon_name)
+        button.setProperty("tooltip_key", tooltip_key)
         button.setCheckable(True)
         button.setAutoRaise(False)
         button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         button.installEventFilter(self)
+        self._apply_button_tooltip(button)
         self._view_button_group.addButton(button)
         return button
+
+    def _apply_button_tooltip(self, button: QToolButton) -> None:
+        """
+        Set a rail button's tooltip from the localised string named by its tooltip_key property.
+
+        Args:
+            button: The rail button to update.
+        """
+        tooltip_key = button.property("tooltip_key")
+        if isinstance(tooltip_key, str) and tooltip_key:
+            button.setToolTip(getattr(self._language_manager.strings(), tooltip_key))
 
     def _on_panel_button_clicked(
         self,
@@ -553,13 +570,15 @@ class SidebarManager(QWidget):
 
         strings = self._language_manager.strings()
         self._header_widget.setToolTip(strings.mindspace_name_tooltip)
-        self._settings_button.setToolTip(strings.mindspace_settings)
         self._settings_button.setToolTip(strings.settings)
         self._tab_overview_button.setToolTip(strings.tab_overview_tooltip)
         self._tab_carousel_button.setToolTip(strings.tab_carousel_tooltip)
         self._sidebar_toggle_button.setToolTip(
             strings.mindspace_collapse_sidebar if not self._sidebar_collapsed else strings.mindspace_expand_sidebar
         )
+
+        for button in self._panel_buttons.values():
+            self._apply_button_tooltip(button)
 
         self.apply_style()
 
