@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QTabWidget, QWidget
 from PySide6.QtCore import Signal, QEvent, QObject, QPoint
 from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent
 
+from desktop.drop_payload import read_drop_payload
 from desktop.tab_manager.tab_bar import TabBar
 
 
@@ -10,7 +11,7 @@ class ColumnWidget(QTabWidget):
 
     column_activated = Signal(QTabWidget)
     tab_dropped = Signal(str, QTabWidget, int)  # tab_id, target_column, target_index
-    path_dropped = Signal(str, str, QTabWidget, int)  # source_type, path, target_column, target_index
+    payload_dropped = Signal(object, QTabWidget, int)  # DropPayload, target_column, target_index
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the tab widget."""
@@ -72,7 +73,7 @@ class ColumnWidget(QTabWidget):
             tab_bar.set_drop_index(self._drop_insertion_index(event.pos()))
             return
 
-        if event.mimeData().hasFormat("application/x-humbug-path"):
+        if read_drop_payload(event.mimeData()) is not None:
             event.acceptProposedAction()
             tab_bar = self.tabBar()
             assert isinstance(tab_bar, TabBar)
@@ -84,7 +85,7 @@ class ColumnWidget(QTabWidget):
     def dragMoveEvent(self, event: QDragMoveEvent) -> None:
         """Handle drag move events, updating the insertion indicator."""
         if (event.mimeData().hasFormat("application/x-humbug-tab") or
-                event.mimeData().hasFormat("application/x-humbug-path")):
+                read_drop_payload(event.mimeData()) is not None):
             event.acceptProposedAction()
             tab_bar = self.tabBar()
             assert isinstance(tab_bar, TabBar)
@@ -131,31 +132,12 @@ class ColumnWidget(QTabWidget):
             event.acceptProposedAction()
             return
 
-        if event.mimeData().hasFormat("application/x-humbug-path"):
-            # Extract path from mime data
-            mime_data = event.mimeData().data("application/x-humbug-path").data()
-
-            # Convert to bytes first if it's not already bytes
-            if not isinstance(mime_data, bytes):
-                mime_data = bytes(mime_data)
-
-            path = mime_data.decode()
-
-            # Extract source type if available
-            source_type = None
-            if event.mimeData().hasFormat("application/x-humbug-source"):
-                source_data = event.mimeData().data("application/x-humbug-source").data()
-
-                # Convert to bytes first if it's not already bytes
-                if not isinstance(source_data, bytes):
-                    source_data = bytes(source_data)
-
-                source_type = source_data.decode()
-
+        payload = read_drop_payload(event.mimeData())
+        if payload is not None:
             target_index = self._drop_insertion_index(event.pos())
 
-            # Emit signal with path info for column manager to handle
-            self.path_dropped.emit(source_type, path, self, target_index)
+            # Emit signal with what was dropped for column manager to handle
+            self.payload_dropped.emit(payload, self, target_index)
             event.acceptProposedAction()
             return
 

@@ -47,6 +47,7 @@ from desktop.color_role import ColorRole
 from desktop.conversation_sidebar.conversation_sidebar import ConversationSidebar
 from desktop.conversation_tab.conversation_tab import ConversationTab
 from desktop.diff_tab.diff_tab import DiffTab
+from desktop.drop_payload import DropPayload
 from desktop.editor_tab.editor_tab import EditorTab
 from desktop.exception_notifier import get_exception_notifier
 from desktop.file_sidebar.file_sidebar import FileSidebar
@@ -88,6 +89,7 @@ from desktop.title_bar import MenuBarDragFilter, WindowControlsWidget
 from desktop.tour.tour_controller import TourController
 from desktop.trash_sidebar.trash_sidebar import TrashSidebar
 from desktop.journal_sidebar.journal_sidebar import JournalSidebar
+from desktop.journal_sidebar.recorded_version import open_recorded_version
 from desktop.update_checker import UpdateChecker
 from desktop.update_dialog import UpdateDialog
 from desktop.user.user_manager import UserManager, UserError
@@ -2293,18 +2295,23 @@ class MainWindow(QMainWindow):
             if tab is not None:
                 tab.navigate_to_search_match(search_text, line_number, message_id, case_sensitive=case_sensitive, regexp=regexp)
 
-    def _open_path_from_drop(self, source_type: str, path: str) -> str | None:
+    def _open_path_from_drop(self, payload: DropPayload) -> str | None:
         """
-        Adapter for TabManager's open_path callable: maps drag-drop source strings to panel IDs.
+        Adapter for TabManager's open_path callable, opening what a drop names.
+
+        A drop is a deliberate action rather than a passing look, so the tab it
+        opens stays open.
 
         Args:
-            source_type: Source view type string from mime data ('conversations', 'vcs', 'preview', 'files').
-            path: File path to open.
+            payload: What was dropped.
 
         Returns:
             The context_id of the opened or focused tab, or None if skipped/failed.
         """
-        return self._open_by_panel_id(source_type, path, ephemeral=False)
+        if payload.journal_sequence is not None:
+            return open_recorded_version(payload.journal_sequence, ephemeral=False)
+
+        return self._open_by_panel_id(payload.source_type, payload.path, ephemeral=False)
 
     def _open_by_panel_id(self, panel_id: str, path: str, ephemeral: bool) -> str | None:
         """

@@ -87,6 +87,21 @@ This is the fastest way to answer "what changed during that session?" without le
 
 ## Looking at a recorded version
 
+A change is about a file's history, not about the file as it stands now, so clicking one shows the
+version it produced rather than opening the file. The file may have been rewritten — or deleted —
+since the change was recorded, and opening it would answer a different question from the one the
+row asks.
+
+- **Single click** a change to show the version it produced, in a tab that closes as soon as you
+  open something else beside it
+- **Double click** it to open the same tab and keep it
+- **Drag** it onto a column, or onto the strip either side of the columns, to open it in that
+  column and keep it
+
+A change that produced no version of its own — a removal — opens nothing when clicked, and cannot
+be dragged. The version a change produced is also not always still held (see below), and a change
+whose version is gone likewise opens nothing.
+
 Right-click a change to see the versions around it:
 
 | Action | What it shows |
@@ -107,6 +122,11 @@ misleading:
   can be shown — and only while the journal still holds it
 - Content that is **not text** can only be previewed from a file on disk, so it is shown only while
   the file still holds exactly that version
+
+The journal holds the content a change *replaced*. A change's own version therefore becomes
+available only once something has replaced it in turn, which for the newest change to a file it
+usually has not. Clicking such a change does nothing rather than showing you the current file as if
+it were that version, and the only way to see that state is to look at the file itself.
 
 ---
 
