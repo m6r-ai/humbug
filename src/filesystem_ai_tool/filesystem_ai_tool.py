@@ -27,6 +27,7 @@ from mindspace.mindspace import Mindspace
 from mindspace.journal_entry import JournalActor, JournalEntry
 from mindspace.mindspace_error import MindspaceHumbugPathError
 from mindspace.mindspace_log_level import MindspaceLogLevel
+from path_matching import PathPatterns
 from pdf import PDFError, PDFUnsupportedError, extract_text, parse as parse_pdf
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 
@@ -582,39 +583,13 @@ class FileSystemAITool(AITool):
         Returns:
             True if path matches any pattern, False otherwise
         """
-        if not patterns:
-            return False
-
-        # Expand ~ in path and normalise to forward slashes for consistent matching
-        expanded_path = os.path.expanduser(path_str).replace(os.sep, "/")
-
-        for pattern in patterns:
-            if not pattern:  # Skip empty patterns
-                continue
-
-            # Expand ~ in pattern and normalise to forward slashes
-            expanded_pattern = os.path.expanduser(pattern).replace(os.sep, "/")
-
-            # If pattern ends with /**, also check if path matches the base directory
-            if expanded_pattern.endswith('/**'):
-                base_pattern = expanded_pattern[:-3]  # Remove the /**
-                if expanded_path == base_pattern or expanded_path.startswith(base_pattern + "/"):
-                    return True
-
-            # Use fnmatch for glob pattern matching
-            if fnmatch.fnmatch(expanded_path, expanded_pattern):
-                return True
-
-            # Also try matching with Path.match() for ** patterns
-            try:
-                if Path(expanded_path).match(expanded_pattern):
-                    return True
-
-            except (ValueError, Exception):
-                # Invalid pattern, skip
-                pass
-
-        return False
+        # The rule itself lives in path_matching, which the change scanner uses too:
+        # one implementation so that an entry in an access list and an entry in a
+        # mindspace's scanned tree cannot mean two different things.
+        matcher = PathPatterns(
+            os.path.expanduser(pattern).replace(os.sep, "/") for pattern in patterns
+        )
+        return matcher.matches(os.path.expanduser(path_str).replace(os.sep, "/"))
 
     def _is_external_candidate_allowed(self, path: Path, base_path: Path) -> bool:
         """

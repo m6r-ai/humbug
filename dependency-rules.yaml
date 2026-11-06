@@ -161,6 +161,7 @@ modules:
       - diff
       - docx
       - mindspace
+      - path_matching
       - pdf
       - syntax
     external_dependencies:
@@ -228,6 +229,12 @@ modules:
       - ai_tool
       - context
       - conversation_context
+      - path_matching
+    external_dependencies:
+      - "standard_library"
+
+  path_matching:
+    internal_dependencies: []
     external_dependencies:
       - "standard_library"
 

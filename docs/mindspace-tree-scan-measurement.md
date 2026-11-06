@@ -92,6 +92,29 @@ files — and changed the number of paths a scanner would read by 234, all of th
 and all appearing in the two intervals that straddled a coverage report being rewritten. After
 those intervals the extended and unextended sets flagged identically.
 
+## What a wildcard costs
+
+An entry may be a shell pattern, so a mindspace can exclude a file type rather than a directory —
+`*.swp`, `*~`, `.#*`. The matching is per entry of every walk, so the shape it takes is a design
+choice rather than an implementation detail.
+
+Method: take one metadata walk of this tree unpruned (18,375 files, so the whole tree is matched
+rather than the 1,400 entries a pruned walk sees), then match seven patterns against every path
+five times and take the minimum. The patterns were `*.swp`, `*~`, `.#*`, `*.tmp`, `*.log`,
+`.DS_Store` and `4913`. Matching was measured alone, without the walk.
+
+| Matching | Time |
+|---|---|
+| Set membership, no patterns (the shape used today) | 0.27 ms |
+| Seven patterns as one compiled expression, one match per path | 5.18 ms |
+| Seven patterns through `fnmatch.fnmatchcase`, one call per pattern | 23.06 ms |
+
+Joining the translated patterns into a single expression is 4.5× faster than calling `fnmatch`
+per pattern, and is what the scanner does: 5 ms against the 500 ms a 5 s interval budget allows a
+walk (ADR-0020 keeps a walk to a tenth of its interval). The same seven patterns over a normally
+pruned tree — about 1,400 entries — are a fifth of this by proportion. A mindspace with no
+wildcard entries compiles nothing and pays nothing, which is the case for the default set.
+
 ## Conclusions
 
 - A metadata scan is cheap enough to run around every terminal command rather than only at task

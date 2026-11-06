@@ -277,12 +277,14 @@ def get_french_strings() -> LanguageStrings:
         changes_checkpoint_interval="Intervalle des points de contrôle (secondes)",
         changes_scan_section="Arborescence surveillée",
         changes_scan_section_description=(
-            "Les modifications sous un répertoire ignoré ne sont pas enregistrées. Une entrée est "
-            "un nom de répertoire, qui correspond à n'importe quelle profondeur, ou un chemin "
-            "depuis la racine du mindspace, qui correspond à ce chemin et à tout ce qu'il "
-            "contient. .humbug et .git sont toujours ignorés."
+            "Les modifications sous une entrée ignorée ne sont pas enregistrées. Les entrées "
+            "sont des motifs glob, mis en correspondance comme les listes d'accès aux fichiers : "
+            "un nom correspond à ce nom entier n'importe où dans l'arborescence, jamais à un nom "
+            "plus long, donc venv ne correspond pas à venvity, et terminez une entrée par /** "
+            "pour inclure tout ce qui se trouve sous un chemin. .humbug et .git sont toujours "
+            "ignorés."
         ),
-        changes_pruned_paths="Répertoires et chemins ignorés",
+        changes_pruned_paths="Fichiers, répertoires et chemins ignorés",
 
         # Conversation settings
         model_info="Informations sur le modèle",

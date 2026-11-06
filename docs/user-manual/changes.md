@@ -190,9 +190,14 @@ Two aspects of the journal are configured per mindspace, in **Mindspace Settings
 - **Checkpoint interval** — how often, in seconds, Humbug compares the tree against a checkpoint to
   detect changes made outside it. The default is 5 seconds; a larger value costs less work and
   reports external changes in coarser batches
-- **Watched tree → ignored directories and paths** — what the comparison does not descend into.
-  Entries are directory names, which match at any depth, or paths from the mindspace root, which
-  match that path and everything below it. `.git` and `.humbug` are always ignored
+- **Watched tree → ignored files, directories and paths** — what the comparison leaves out.
+  Entries are glob patterns, matched in exactly the terms the
+  [File Access](user-settings.md#file-access) allow and deny lists use, which means: a single
+  name matches that whole name anywhere in the tree and never a longer one, so `venv` does not
+  match `venvity`, and `*.swp` excludes an editor's swap files wherever they appear. A path
+  matches when it ends with those components, so `src/generated` does not match
+  `src/generatedly`; add `/**` to the end to include everything below it. `.git` and `.humbug`
+  are always ignored
 
 The defaults ignore caches, virtual environments, and generated output. A test run or a build
 rewrites hundreds of files that no one would ever want to revert, and the source change that

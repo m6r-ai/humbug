@@ -5,6 +5,8 @@ import os
 import stat
 import time
 
+from path_matching import PathPatterns
+
 
 @dataclass(frozen=True)
 class TreeEntry:
@@ -149,10 +151,11 @@ class MindspaceTreeScanner:
     """
     Walks a mindspace tree collecting file metadata, following no symlinks.
 
-    Pruned directories are not descended, which is what makes a walk cheap, and
-    the cost is reported so a caller can lengthen its interval rather than block.
-    A path that cannot be inspected is skipped rather than failing the walk: a
-    tree being written to while it is walked is normal, not exceptional.
+    A pruned directory is not descended and a pruned file is not recorded, which is
+    what makes a walk cheap, and the cost is reported so a caller can lengthen its
+    interval rather than block.  A path that cannot be inspected is skipped rather
+    than failing the walk: a tree being written to while it is walked is normal, not
+    exceptional.
     """
 
     def __init__(self, root: str, pruned_paths: frozenset[str]) -> None:
@@ -161,41 +164,33 @@ class MindspaceTreeScanner:
 
         Args:
             root: Absolute path to the mindspace root.
-            pruned_paths: Directory names and mindspace-relative paths not to descend.
-                A name matches a directory at any depth; a path matches only the
-                directory it names and what is below it.
+            pruned_paths: The entries the scan does not cover, as normalised by
+                ``mindspace_scan_pruned_paths.scan_pruned_paths``.
         """
         self._root = root
         self._pruned_paths = pruned_paths
-        self._pruned_names = frozenset(path for path in pruned_paths if "/" not in path)
-        self._pruned_trees = tuple(path + "/" for path in pruned_paths if "/" in path)
+        self._pruner = PathPatterns(pruned_paths)
 
     def root(self) -> str:
         """Return the absolute path the scanner walks."""
         return self._root
 
     def pruned_paths(self) -> frozenset[str]:
-        """Return the names and paths the scanner does not descend."""
+        """Return the entries the scan does not cover."""
         return self._pruned_paths
 
-    def _is_pruned(self, name: str, relative_path: str) -> bool:
+    def _is_pruned(self, relative_path: str) -> bool:
         """
-        Return True if a directory is not to be descended.
+        Return True if the file or directory at this position is outside the scan.
 
-        A configured name matches at any depth; a configured path matches itself
-        and everything below it.  The ancestors of a configured path are still
-        walked, which is the difference between ignoring src/generated and
-        ignoring src.
+        The entry matching is ``path_matching``'s, shared with the filesystem tool's
+        access lists.  It is applied to the path alone, because a name is what a
+        single-component entry already matches by that rule's own terms.
 
         Args:
-            name: The directory's own name.
-            relative_path: The directory's path from the mindspace root.
+            relative_path: Its path from the mindspace root.
         """
-        if name in self._pruned_names:
-            return True
-
-        normalised = relative_path.replace(os.sep, "/")
-        return normalised in self._pruned_paths or normalised.startswith(self._pruned_trees)
+        return self._pruner.matches(relative_path.replace(os.sep, "/"))
 
     def scan(self) -> TreeSnapshot:
         """
@@ -235,7 +230,7 @@ class MindspaceTreeScanner:
 
                     if stat.S_ISDIR(mode):
                         relative = entry.path[len(self._root):].lstrip(os.sep)
-                        if self._is_pruned(entry.name, relative):
+                        if self._is_pruned(relative):
                             continue
 
                         pending.append(entry.path)
@@ -244,7 +239,11 @@ class MindspaceTreeScanner:
                     if not stat.S_ISREG(mode):
                         continue
 
-                    entries[entry.path[len(self._root):].lstrip(os.sep)] = TreeEntry(
+                    relative = entry.path[len(self._root):].lstrip(os.sep)
+                    if self._is_pruned(relative):
+                        continue
+
+                    entries[relative] = TreeEntry(
                         stat_result.st_ino,
                         stat_result.st_size,
                         stat_result.st_mtime_ns,

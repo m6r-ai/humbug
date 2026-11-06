@@ -78,14 +78,10 @@ changed and when and never why: the change is unattributed because attributing i
 be recording a guess.  See ADR-0020.
 
 What that walk covers is the mindspace's own setting rather than a fixed list, because
-which directories are generated output and which are content differs from one mindspace
-to the next.  The paths a mindspace excludes are a silent boundary — a change under one
-is reported nowhere — so they are the user's to state and the interface shows them.
-
-What that walk covers is the mindspace's own setting rather than a fixed list, because
-which directories are generated output and which are content differs from one mindspace
-to the next.  The paths a mindspace excludes are a silent boundary — a change under one
-is reported nowhere — so they are the user's to state and the interface shows them.
+which directories are generated output, and which files are an editor's working state
+rather than content, differs from one mindspace to the next.  What a mindspace excludes
+is a silent boundary — a change under one is reported nowhere — so it is the user's to
+state and the interface shows it.
 
 ### Minimal dependencies, maximum understandability
 Humbug follows the pattern of an OS kernel: simple, largely self-contained, and

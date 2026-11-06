@@ -334,15 +334,18 @@ only one instance has a mindspace open.  A checkpoint never names a command, an 
 or a process as the cause of a change.
 
 What the walk covers is a per-mindspace setting (`changes.prunedPaths`, edited on the
-Changes page of the settings dialog) rather than a constant.  An entry is a directory
-name, matched at any depth, or a mindspace-relative path, matched together with
-everything below it; `mindspace_scan_pruned_paths.scan_pruned_paths()` turns a
-mindspace's list into the effective set and always adds `.git` and `.humbug`, because
-scanning `.humbug` would record the act of watching as a change.
+Changes page of the settings dialog) rather than a constant.
+`mindspace_scan_pruned_paths.scan_pruned_paths()` normalises a mindspace's list and
+always adds `.git` and `.humbug`, because scanning `.humbug` would record the act of
+watching as a change; it also refuses an entry that matches everything (`*`, `**`),
+which the shared rule would accept and which would silently leave the change list
+empty.  What an entry *means* is not decided here: it is
+`path_matching.PathPatterns`, the same rule the filesystem tool's access lists use, so
+an entry cannot mean two things in two places.  Do not re-test entries anywhere else.
 `DEFAULT_SCAN_PRUNED_PATHS` is only the default a new mindspace starts from.  Because a
 walk with a different set sees different files, the baseline records the set it was
 taken with, and a baseline whose set no longer matches is discarded rather than read:
-otherwise a newly pruned directory's files would be reported as removals that never
+otherwise the files under a newly ignored path would be reported as removals that never
 happened.
 
 A view that lists entries should hold them and ask `entries_from(sequence, limit)` for
@@ -357,6 +360,17 @@ tool, which offers outside-boundary paths to the user for external approval but 
 reject `.humbug/` paths outright.  As defence in depth, `_get_filesystem_access_settings`
 also appends the current mindspace's `.humbug/**` to the effective denylist, so such a
 path is denied by the same always-deny mechanism as `~/.ssh/**`.
+
+### `src/path_matching/`
+Matching of a path against a list of glob entries, shared by the filesystem tool's file
+access lists and the change scanner (`PathPatterns`).  One implementation, deliberately:
+an entry the user writes must not mean one thing in an access list and another in the
+tree being watched.  The rule is the access lists' existing one — `fnmatch` over the
+whole path, `Path.match` over trailing components, and `/**` extending an entry to the
+base and what is below it — and the module's own docstring states its consequences.  A
+literal entry is matched by comparing components rather than by running the glob tests,
+which is the same answer worked out in advance and is what keeps a scan of every file
+affordable; an entry containing a wildcard goes through the tests themselves.
 
 ### `src/pdf/`
 Pure-Python PDF text extraction (stdlib only). Parses PDF structure, decodes streams

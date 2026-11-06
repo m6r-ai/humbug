@@ -276,11 +276,12 @@ def get_english_strings() -> LanguageStrings:
         changes_checkpoint_interval="Checkpoint Interval (seconds)",
         changes_scan_section="Watched Tree",
         changes_scan_section_description=(
-            "Changes under an ignored directory are not recorded. An entry is a directory name, "
-            "which matches at any depth, or a path from the mindspace root, which matches that "
-            "path and everything below it. .humbug and .git are always ignored."
+            "Changes under an ignored entry are not recorded. Entries are glob patterns, "
+            "matched as the File Access lists are: a name matches that whole name anywhere in "
+            "the tree and never a longer one, so venv does not match venvity, and end an entry "
+            "with /** to include everything below a path. .humbug and .git are always ignored."
         ),
-        changes_pruned_paths="Ignored Directories and Paths",
+        changes_pruned_paths="Ignored Files, Directories and Paths",
 
         # Conversation settings
         model_info="Model Information",
