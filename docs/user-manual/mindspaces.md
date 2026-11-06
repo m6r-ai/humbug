@@ -52,6 +52,22 @@ If the folder you choose is not a mindspace yet, Humbug asks whether to initiali
 works the same way when opening a mindspace in a new window. Nothing is created unless you choose
 **Yes**.
 
+### Recent mindspaces
+
+The mindspace name button keeps a list of the mindspaces you have open or have used recently.
+Clicking it shows them directly, so switching projects takes two clicks rather than a folder
+navigation. The same list is on the **Mindspace → Open Recent Mindspace** submenu.
+
+### Working on two mindspaces at once
+
+**Mindspace → Open Mindspace in New Window…** opens a mindspace in its own Humbug window, so two
+projects can be on screen at the same time. Each window has its own tabs, sidebar, and session.
+
+A mindspace can only be open in one window at a time. If you try to open one that another window
+already holds, Humbug tells you and points you at that window instead. Two windows sharing one
+mindspace would each overwrite the other's session, usage figures, and log, so this is refused
+rather than warned about.
+
 The `.humbug` directory ignores itself in git, so if your mindspace is also a git repository,
 Humbug's settings, conversations and logs are never committed with your work. A mindspace can sit
 inside another one: each mindspace's AI tools are kept out of every `.humbug` directory within it,
@@ -81,6 +97,17 @@ From this view you can:
 - **Double-click** a conversation to open it in a persistent tab
 - **Right-click** to access a context menu with options to create a new conversation, rename,
   duplicate, delete, or open conversations in a preview view
+- **Pin** a conversation to keep it at the top of the view, in the **Pinned** section, however the
+  rest of the list changes
+
+Conversations can be organised into **folders**: the new-folder action in the context menu creates
+one, and a new conversation started inside a folder is created in that folder. Folders keep a long
+list manageable without renaming everything to sort it.
+
+Deleting, renaming, or moving a conversation can be undone: **Edit → Undo** reverses the last such
+action, and **Edit → Redo** reapplies it — so long as the Conversations view has focus, since with
+a tab focused these act on that tab's own history instead. Deletions go to the [trash](trash.md)
+in the meantime, so undo is a convenience rather than the only way back.
 
 ### Files view
 

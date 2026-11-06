@@ -49,6 +49,25 @@ Consult it before proposing changes that touch established decisions.
   ```
   All checks must pass cleanly before the work is done.
 
+## Documentation
+
+`docs/user-manual/` is the user's only explanation of the interface. A capability the manual does
+not mention is one the user has to discover by accident, so document it.
+
+- A change that alters what the user sees or can do — a new sidebar panel, tab type, menu action,
+  keyboard shortcut, settings page or setting, approval behaviour, AI tool, or storage location —
+  must update the matching chapter in the same change that introduces it.
+- Adding a chapter means three edits: create the file, add it to the numbered list in
+  `docs/user-manual/index.md`, and update the `Previous`/`Next` footers of the chapters it now sits
+  between. The manual is a chain, and a missing link breaks navigation from both sides.
+- `docs/user-manual/README.md` maps each chapter to the code it documents. Use it to find the
+  chapter a change affects, and update it when chapters are added or removed.
+- Describe behaviour as the user experiences it, not as the code implements it. Do not enumerate
+  model names, releases, or other facts that change without the manual changing.
+- Where a feature has limits, say so plainly. Humbug's users are asked to trust it with their
+  work; documentation that overstates what a feature can do is worse than documentation that is
+  unflattering. The Changes and Trash chapters are the pattern to follow.
+
 ## Code generation
 
 - Do not write lengthy file-level docstrings.  These go stale very fast as the code evolves.

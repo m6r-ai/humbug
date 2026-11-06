@@ -74,9 +74,14 @@ readable.
 
 ## Where conversations are stored
 
-Conversations are saved automatically as `.conv` files in the `conversations` folder inside
-your mindspace. You do not need to save them manually. They persist across sessions and are
+Conversations are saved automatically as `.conv` files in the `.humbug/conversations` folder
+inside your mindspace. You do not need to save them manually. They persist across sessions and are
 restored when you reopen a mindspace.
+
+Being inside `.humbug` means they are not listed in the Files view, cannot be read or modified by
+the AI, and are never committed to your git repository. Conversations saved in the older top-level
+`conversations` folder are moved into `.humbug` automatically the next time the mindspace is
+opened.
 
 ---
 

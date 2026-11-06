@@ -18,6 +18,7 @@ Humbug supports the following backends:
 | **Google** | Google | Gemini models. Requires an API key |
 | **Mistral** | Mistral AI | Requires an API key |
 | **Ollama** | Local | Runs models locally on your machine. No API key required |
+| **Ollama Cloud** | Ollama | Ollama's hosted service, for models too large to run locally. Requires an API key |
 | **OpenAI** | OpenAI | GPT models. Requires an API key |
 | **vLLM** | Self-hosted | For running your own vLLM server. Requires a custom URL |
 | **xAI** | xAI | Grok models. Requires an API key |
@@ -33,14 +34,35 @@ you can enable just the Anthropic backend and ignore the rest.
 Backend settings are in the **Settings** dialog, accessible from the settings icon in the
 mindspace panel or from the application menu.
 
-For each backend you can:
+Each backend appears as a collapsible section containing:
 
-- **Enable or disable** the backend with a checkbox
-- **Enter an API key** for cloud-based providers
-- **Set a custom URL** for backends that support non-standard endpoints (useful for self-hosted
-  setups, proxies, or compatible third-party APIs)
+- **Enable Backend** — the switch that makes the backend's models available in conversations
+- **API Key** — for cloud-based providers
+- **API URL** — an optional override for backends that support non-standard endpoints, useful for
+  self-hosted setups, proxies, or compatible third-party APIs. The field shows the address that
+  will be used if you leave it blank
+- **Test Connection** — checks that Humbug can reach the backend with the settings as they stand,
+  and reports either success or what went wrong (a rejected key, an unreachable URL, a timeout)
+- **Update Models** — asks the provider for its current model list and adds any models Humbug does
+  not already know about. For local Ollama this reads the models you have installed
+- **Remove Fetched Models…** — opens a list of the models that came from a fetch, with a **Remove**
+  button for each, so a model that appears in the list but is no longer usable can be cleared away
 
 Changes take effect immediately — you do not need to restart Humbug.
+
+### Model lists
+
+Humbug ships with a curated list of models for each provider: their context windows, output
+limits, and which of reasoning, temperature, and tool calling they support. A provider adds models
+more often than Humbug releases, so **Update Models** fills the gap by fetching the provider's own
+catalogue.
+
+A fetched model is added to the model list for that provider with the metadata the provider
+reports. Fetched models are kept separately from the built-in ones, which is what makes them
+removable again: **Remove Fetched Models…** lists only what came from a fetch, so clearing a stale
+entry can never remove a model Humbug knows about. If a fetched model's capabilities matter to you,
+you can still describe it by hand in
+[the custom model file](#adding-custom-models) described below.
 
 ### API keys via environment variables
 
@@ -59,7 +81,8 @@ variables before launching Humbug. The variable names are:
 | Z.ai | `ZAI_API_KEY` |
 
 If a key is present in the environment when Humbug starts, the corresponding backend is
-automatically enabled.
+automatically enabled. Ollama Cloud and vLLM have no environment variable; configure them in the
+settings dialog.
 
 ---
 
@@ -72,12 +95,29 @@ open models without API costs.
 To use Ollama:
 
 1. Install [Ollama](https://ollama.com) on your machine
-2. Pull the models you want to use (e.g. `ollama pull llama3.2` in a terminal)
+2. Pull the models you want to use — either with `ollama pull` in a terminal, or from Humbug's
+   settings, using the **Pull Model** field in the Ollama backend section and pressing **Pull**
 3. Enable the Ollama backend in Humbug's settings — no API key is needed
 
 Ollama must be running on your machine for the backend to work. The default URL that Humbug uses
 to connect to Ollama is `http://localhost:11434`. If you run Ollama on a different host or port,
 you can change the URL in the backend settings.
+
+Pulling from Humbug reports progress as it goes, and tells you why if it cannot: an unknown model
+name, an unreachable server, or a failed download. Once the pull finishes, **Update Local Models**
+adds the newly installed models to the list available in conversations.
+
+---
+
+## Ollama Cloud: hosted Ollama models
+
+Ollama Cloud is Ollama's hosted service. It runs the same families of models without needing the
+hardware to hold them, which is what makes the larger ones usable from a laptop. Configure it as
+you would any other cloud provider: enable the backend and enter an API key.
+
+Ollama Cloud is a separate backend from local Ollama, and is enabled separately. Having both on is
+perfectly normal: small models run on your machine and large ones run in the cloud, and both appear
+in the model list.
 
 ---
 
@@ -138,8 +178,8 @@ You can choose the reasoning mode in conversation settings for models that suppo
 
 Some models let you control how much reasoning they do, from a light pass to an exhaustive
 analysis. The effort levels, from lowest to highest, are: **none**, **minimal**, **low**,
-**medium**, **high**, and **extra high**. Not every model supports every level — the conversation
-settings dialog only shows the levels available for the currently selected model.
+**medium**, **high**, **extra high**, and **maximum**. Not every model supports every level — the
+conversation settings dialog only shows the levels available for the currently selected model.
 
 Higher effort generally means better results on complex problems, but slower responses and more
 tokens used.

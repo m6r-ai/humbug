@@ -74,6 +74,17 @@ that is currently streaming a response, you will be asked to confirm cancellatio
 
 When a tab closes, the tab that was most recently active in that column becomes the new active tab.
 
+### Closing several tabs at once
+
+Right-click a tab label for a menu that closes groups of tabs in one step:
+
+| Action | What it closes |
+|---|---|
+| **Close Other Tabs** | Every tab in the column except this one |
+| **Close Tabs to the Left** | Every tab before this one in the column |
+| **Close Tabs to the Right** | Every tab after this one in the column |
+| **Close Column** | Every tab in the column, which removes the column |
+
 ### Moving tabs
 
 You can **drag a tab label** to move it. Drop it:

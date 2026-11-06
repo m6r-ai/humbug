@@ -98,7 +98,8 @@ is blocked and you are told why.
 
 ## Deleting
 
-To delete a file, right-click it and choose **Delete**. You will be asked to confirm.
+To delete a file, right-click it and choose **Delete**. You will be asked to confirm, and the file
+moves to the [trash](trash.md), where it can be restored.
 
 Folders can only be deleted if they are **empty**. If you try to delete a non-empty folder,
 Humbug will tell you it cannot proceed. Remove or move the contents first.
@@ -120,4 +121,4 @@ content if needed.
 
 ---
 
-*[Index](index.md) · Previous: [AI Models & Backends](ai-models-and-backends.md) · Next: [Editing Files](editing-files.md)*
+*[Index](index.md) · Previous: [AI Models & Backends](ai-models-and-backends.md) · Next: [The Trash](trash.md)*

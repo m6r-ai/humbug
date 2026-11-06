@@ -64,6 +64,13 @@ since the most recent checkpoint, at content too large to capture, and at anythi
 already read, executed or committed, and the interface says so rather than implying a
 guarantee it cannot keep.
 
+Deletion follows the same principle rather than escaping it.  A deleted file or empty folder
+moves to a per-mindspace trash, where it can be restored to the place it came from, so a
+mistaken delete is recoverable on its own terms rather than only through the journal.  Emptying
+the trash is the point at which the change genuinely becomes unrevertable, and the journal then
+reports the deletion as a change it cannot reverse instead of restoring something that is no
+longer what was deleted.
+
 Beside the journal a change watcher compares successive metadata walks of the mindspace,
 so a file changed by a terminal command, or by anything else outside Humbug, is recorded
 as an ordinary journalled change and can be reversed with the rest.  It records what
@@ -168,9 +175,12 @@ before a mistake becomes expensive.
 
 **Bounded outputs.** Tools that can produce large outputs — file contents, search results,
 git logs, diffs — must enforce a size limit (currently 64KB). If output exceeds the limit, it
-is truncated with a notice indicating how much was omitted. This prevents a single tool call
-from flooding the AI's context window with content it cannot use, which would waste tokens
-and crowd out relevant information. The AI can always make a more targeted follow-up request.
+is reported as an error naming the limit and how to narrow the request, rather than returned
+partially: content the AI believes is whole but is not is worse than content it has to ask for
+again. Tools that can write their result elsewhere — a diff to a file in the mindspace, a
+download straight to disk — offer that instead. This prevents a single tool call from flooding
+the AI's context window with content it cannot use, which would waste tokens and crowd out
+relevant information. The AI can always make a more targeted follow-up request.
 
 ### Two levels of version control
 Humbug recognises two fundamentally different kinds of content within a mindspace, each

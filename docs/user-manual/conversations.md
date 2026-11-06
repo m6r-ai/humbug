@@ -58,13 +58,17 @@ AI response and reasoning messages have two buttons:
 
 ## Editing messages
 
-To edit one of your previous messages, click the **Edit** button in its banner. The message text
-becomes an editable area. Make your changes, then confirm with the **Confirm** button, or cancel
-with **Cancel**.
+To edit one of your previous messages, click the **Edit** button in its banner. The message text is
+loaded back into the input area, where you change it with the same editor, attachments, and
+shortcuts you use for a new message — there is no second-class editing mode.
 
-When you confirm an edit, everything after that message in the conversation is discarded and the
-edited message is re-submitted to the AI. This lets you correct a question or rephrase a prompt
-without starting a new conversation.
+While you are editing, the messages below the one being edited are **faded out**. Submitting
+replaces the edited message with your new text and removes everything after it, so the fading
+shows you exactly what will be lost before you commit to it. The label above the input area says
+the same thing, and gives the submit shortcut.
+
+To abandon the edit and leave the conversation untouched, click the **×** button in the input
+area, or press **Esc**.
 
 ---
 
@@ -85,12 +89,34 @@ already on.
 
 ## Deleting messages
 
-Clicking the **Delete** button on one of your messages removes that message and every message
-after it from the conversation. The text of the deleted message is placed back into the input
-area, so you can revise and resubmit without retyping.
+Clicking the **Delete** button on one of your messages asks you to confirm, then removes that
+message and every message after it from the conversation. If the AI is still working, the response
+is cancelled first.
 
-This is useful when an AI response has gone off track and you want to back up and try again with
-a different prompt.
+Deleting really deletes: the messages are gone from the transcript, and your text is not placed
+back into the input area. Use it when a branch of the conversation has gone wrong and you want it
+out of the record rather than rewritten.
+
+If you want to change what you asked rather than remove it, use [Edit](#editing-messages) instead —
+that keeps your text, shows you what will be lost, and lets you commit or abandon the change.
+
+---
+
+## The prompt mini-map
+
+Long conversations are easier to navigate with **prompt markers**. When they are on, a narrow strip
+appears down the right edge of the conversation with one marker for each of your messages, placed
+in proportion to where that message sits in the history.
+
+- **Hover** a marker to see the beginning of the prompt it belongs to
+- **Click** a marker to jump to that prompt
+- The marker for the prompt you are currently reading is enlarged and highlighted
+
+This gives you a scrollbar-like sense of where your own questions are in a long session, and a way
+back to one without hunting.
+
+Turn them on or off from **View → Prompt Markers**, or with **Prompt markers** in
+[Mindspace Settings → Conversation](mindspace-settings.md). They are off by default.
 
 ---
 
@@ -150,13 +176,16 @@ has the same shared understanding of what has been discussed.
 While a conversation tab is active, the status bar at the bottom of the window shows:
 
 - The current model name
+- The provider the model belongs to
+- The reasoning mode or effort level in force, where the model supports reasoning
 - The temperature setting
 - Input token count for the current turn, and the context window limit
 - Output token count for the current turn, and the maximum output token limit
 - Running totals of input and output tokens across the whole conversation
 
 This lets you keep an eye on how much context has been used and how close you are to the model's
-limits.
+limits. If a provider rate-limits a request, the status bar says so and shows how long Humbug will
+wait before retrying.
 
 For a mindspace-wide breakdown of token usage across all conversations and models, see
 [Token Usage](token-usage.md).
@@ -165,8 +194,18 @@ For a mindspace-wide breakdown of token usage across all conversations and model
 
 ## Conversation files
 
-Every conversation is automatically saved to a `.conv` file in your mindspace's conversations
-folder as it progresses. You do not need to save manually.
+Every conversation is automatically saved as a `.conv` file as it progresses. You do not need to
+save manually.
+
+Conversations live in the `.humbug/conversations` folder inside your mindspace, alongside the rest
+of Humbug's own state. That means they are not listed in the Files view, cannot be read or modified
+by the AI, and are never committed to your git repository — while still travelling with the
+mindspace.
+
+Each conversation also carries an identifier that stays with it when it is renamed or moved, so
+the activity recorded for it in the [Mindspace Log](mindspace-log.md) always refers to the same
+conversation. A duplicated conversation is the exception: it is a new conversation, so it receives
+a new identifier and records the conversation it came from.
 
 Conversations can be renamed by double-clicking their label in the Conversations panel. You can
 also duplicate or delete them from the right-click context menu.

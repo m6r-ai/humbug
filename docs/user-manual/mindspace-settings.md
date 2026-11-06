@@ -3,9 +3,13 @@
 Mindspace settings apply only to the current mindspace. Open them from **Mindspace → Mindspace
 Settings**, the **settings icon** at the bottom of the left rail, or with **Ctrl+Alt+,**.
 
+They appear in the **This Mindspace** group of the settings dialog, below the user-wide
+**All Mindspaces** pages described in [User Settings](user-settings.md). If no mindspace is open,
+these pages are unavailable.
+
 ---
 
-## Conversation defaults
+## AI Model
 
 These settings are used as the starting values for every new conversation opened in this
 mindspace. You can override them per-conversation at any time.
@@ -18,6 +22,34 @@ mindspace. You can override them per-conversation at any time.
 - **Reasoning effort** — the default effort level for models that support variable reasoning
   depth
 - **Temperature** — the default temperature setting (where supported by the model)
+
+---
+
+## AI Tools
+
+Enables or disables individual AI tools for this mindspace. Tools that are disabled will not
+be offered to the AI, even if they are globally available.
+
+| Tool | What it does |
+|---|---|
+| **Filesystem** | Read, write, search, and manage files in the mindspace |
+| **Terminal** | Send keystrokes to and read output from terminal tabs |
+| **Editor** | Read, search, modify, and save files in editor tabs |
+| **Preview** | Search and navigate the content of preview tabs |
+| **Conversation** | Read, search, and navigate conversation history |
+| **Git** | Read-only repository queries: status, diff, log, branches, and file contents at a ref |
+| **DocumentConverter** | Convert documents between Markdown, DOCX, and HTML |
+| **HTTP** | Fetch URLs, make API requests, and download files |
+| **Menai** | Execute Menai programs for safe algorithmic processing |
+| **Clock** | Read the current date and time, wait, and set alarms |
+| **Help** | Retrieve detailed documentation about available tools |
+| **Delegate** | Spawn a child AI conversation to handle a sub-task |
+| **System** | Open, close, and organise tabs (conversations, editors, previews, terminals) |
+
+Disabling tools you do not need can simplify the AI's context and reduce the chance of
+unwanted side effects. Disabling **HTTP** is the way to stop the AI reaching the network
+altogether, since the [Network access](user-settings.md#network-access) allowlist controls only
+which requests skip approval.
 
 ---
 
@@ -53,27 +85,30 @@ mindspace. You can override them per-conversation at any time.
 
 ---
 
-## AI Tools
+## Conversation
 
-Enables or disables individual AI tools for this mindspace. Tools that are disabled will not
-be offered to the AI, even if they are globally available.
+- **Prompt markers** — show a narrow marker beside each of your messages in a conversation, so you
+  can see and jump to your prompts while scrolling through a long session. Off by default
 
-The available tools are:
+The same switch is available as **Prompt Markers** in the **View** menu, for switching it without
+opening settings.
 
-| Tool | What it does |
-|---|---|
-| **Filesystem** | Read, write, and search files in the mindspace |
-| **Terminal** | Send keystrokes to and read output from terminal tabs |
-| **Editor** | Read, modify, and save files in editor tabs |
-| **Clock** | Read the current date and time |
-| **Menai** | Execute Menai programs for safe algorithmic processing |
-| **Help** | Retrieve detailed documentation about available tools |
-| **Delegate** | Spawn a child AI conversation to handle a sub-task |
-| **System** | Open and interact with tabs (conversations, editors, previews, terminals) |
-| **Conversation** | Read and navigate the current conversation |
+---
 
-Disabling tools you do not need can simplify the AI's context and reduce the chance of
-unwanted side effects.
+## Changes
+
+Two settings control the [change journal](changes.md).
+
+- **Checkpoint interval** — how often, in seconds, Humbug compares the mindspace tree against a
+  checkpoint so that changes made outside Humbug are recorded. Default is 5 seconds. A larger
+  value does less work and reports external changes in coarser batches
+- **Watched tree → ignored directories and paths** — what that comparison does not descend into.
+  An entry is a directory name, which matches at any depth, or a path from the mindspace root,
+  which matches that path and everything below it. `.git` and `.humbug` are always ignored
+
+The defaults ignore caches, virtual environments, and generated output — a build or a test run
+rewrites hundreds of files that no one would ever want to revert. The list you save replaces the
+defaults rather than adding to them, so a mindspace can prune less as well as more.
 
 ---
 

@@ -41,7 +41,7 @@ only support one mode.
 
 For models that support variable reasoning depth, this sets how thoroughly the model reasons
 before answering. Options from lowest to highest are: **None**, **Minimal**, **Low**,
-**Medium**, **High**, and **Extra High**.
+**Medium**, **High**, **Extra High**, and **Maximum**.
 
 Higher effort generally produces better results on complex problems but uses more tokens and
 takes longer. Only the effort levels supported by the selected model are shown.
@@ -68,6 +68,20 @@ These values are read-only and shown for reference:
 
 The token counts in the status bar let you monitor how close you are to these limits as
 the conversation grows.
+
+---
+
+## Applying settings to other conversations
+
+At the bottom of the dialog is **Set as default for this and all open conversations**. It applies
+the model, provider, temperature, and reasoning settings to every conversation that is currently
+open, and makes them the defaults for new conversations in this mindspace.
+
+You are asked to confirm first, because the change cannot be undone: each open conversation adopts
+the settings from its next message onwards, and any choices it had of its own are replaced.
+
+This is the quick way to move a whole session onto a different model, rather than opening each
+conversation's settings in turn.
 
 ---
 
