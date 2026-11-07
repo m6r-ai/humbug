@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from collections.abc import Callable
 import os
+from pathlib import Path
 import tempfile
 
 from mindspace.file_journal import FileJournal
@@ -126,7 +127,12 @@ class JournalReverser:
         live = self._live_entries(entries)
         incomplete = self._incomplete_groups(live)
 
-        for path, path_entries in self._group_by_path(live).items():
+        # A directory can only be removed once nothing is inside it, so a path is
+        # reverted before any path beneath it.  Reversing a parent first would make
+        # its removal fail on content this reversal is about to undo.
+        grouped = self._group_by_path(live)
+        for path in sorted(grouped, key=lambda selected: len(Path(selected).parts), reverse=True):
+            path_entries = grouped[path]
             if any(entry.group in incomplete for entry in path_entries):
                 result.outcomes.append(
                     JournalRevertOutcome(
@@ -221,6 +227,9 @@ class JournalReverser:
             if entries[0].pre_image_is_directory:
                 return JournalRevertOutcome(path, JournalRevertStatus.REVERTED, "already present")
 
+            if not entries[0].existed_before and entries[0].post_image_is_directory:
+                return self._remove_created(absolute_path, path, is_directory=True)
+
             return JournalRevertOutcome(path, JournalRevertStatus.CONFLICT, "a directory now occupies this path")
 
         earliest = entries[0]
@@ -234,7 +243,7 @@ class JournalReverser:
             return JournalRevertOutcome(path, JournalRevertStatus.CONFLICT, conflict)
 
         if not earliest.existed_before:
-            return self._remove_created(absolute_path, path)
+            return self._remove_created(absolute_path, path, is_directory=earliest.post_image_is_directory)
 
         if earliest.pre_image_trash is not None:
             return self._restore_from_trash(earliest.pre_image_trash, absolute_path, path)
@@ -276,16 +285,21 @@ class JournalReverser:
 
         return outcome
 
-    def _remove_created(self, absolute_path: str, path: str) -> JournalRevertOutcome:
+    def _remove_created(self, absolute_path: str, path: str, is_directory: bool = False) -> JournalRevertOutcome:
         """
-        Remove a file whose creation is being reversed.
+        Remove what a creation put at a path, as part of reversing it.
 
         Args:
             absolute_path: Path to remove.
             path: The path as recorded, for the outcome.
+            is_directory: True when the creation being reversed was a directory,
+                which has to be removed with rmdir so that a non-empty one is
+                reported rather than emptied.
         """
-        recorded = self._journal.record_removal(absolute_path, path, self._actor, self._conversation)
-        outcome = self._remove(absolute_path, path)
+        recorded = self._journal.record_removal(
+            absolute_path, path, self._actor, self._conversation, pre_image_is_directory=is_directory
+        )
+        outcome = self._remove(absolute_path, path, is_directory)
         if outcome.status != JournalRevertStatus.REVERTED:
             self._journal.void_entries([recorded])
 
@@ -427,10 +441,25 @@ class JournalReverser:
             return None
 
     @staticmethod
-    def _remove(absolute_path: str, path: str) -> JournalRevertOutcome:
-        """Remove a file whose creation is being reversed."""
+    def _remove(absolute_path: str, path: str, is_directory: bool = False) -> JournalRevertOutcome:
+        """
+        Remove a path whose creation is being reversed.
+
+        A directory is removed with rmdir rather than recursively.  Everything
+        inside it was put there by later mutations, which this reversal has not
+        undone; emptying it would discard work the journal is not reversing.
+
+        Args:
+            absolute_path: Path to remove.
+            path: The path as recorded, for the outcome.
+            is_directory: True when the path holds a directory.
+        """
         try:
-            os.remove(absolute_path)
+            if is_directory:
+                os.rmdir(absolute_path)
+
+            else:
+                os.remove(absolute_path)
 
         except FileNotFoundError:
             return JournalRevertOutcome(path, JournalRevertStatus.REVERTED, "already absent")

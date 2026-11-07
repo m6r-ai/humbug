@@ -1089,6 +1089,27 @@ class FileSystemAITool(AITool):
 
         return AIToolApprovalKind.MINDSPACE_FILE_CHANGE
 
+    @staticmethod
+    def _is_empty_directory(path: Path) -> bool:
+        """
+        Return True if a directory holds nothing, which is what a move can reverse.
+
+        A directory whose contents cannot be read is reported as holding something,
+        so a move that cannot be checked is offered to the human rather than assumed
+        reversible.
+
+        Args:
+            path: The directory to inspect.
+
+        Returns:
+            True if the directory exists and is empty, False otherwise.
+        """
+        try:
+            return not any(path.iterdir())
+
+        except OSError:
+            return False
+
     async def _write_file(
         self,
         tool_call: AIToolCall,
@@ -1411,25 +1432,65 @@ class FileSystemAITool(AITool):
             context += " This will also create any missing parent directories."
 
         # Request authorization
-        # A created directory leaves no pre-image to record, so the journal cannot
-        # reverse one and a standing approval for journalled changes does not cover it.
         authorized = await request_authorization(
-            "filesystem", arguments, context, None, False, AIToolApprovalKind.STANDARD
+            "filesystem", arguments, context, None, False, self._approval_kind(path)
         )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to create directory: {arguments['path']}")
+
+        # A directory has no content to capture, so each record says only that a path
+        # did not exist and now holds a directory, which is what reversal removes.  The
+        # parents this call will create are recorded too, so that reversing it removes
+        # everything it made rather than leaving a chain of empty folders behind.
+        conversation = self._mindspace.conversation_identifier(requester_ref)
+        journal = self._mindspace.file_journal()
+        created: list[Path] = []
+        root = Path(self._mindspace.mindspace_path())
+        if create_parents:
+            candidate = path.parent
+            while candidate != root and root in candidate.parents and not candidate.exists():
+                created.insert(0, candidate)
+                candidate = candidate.parent
+
+        created.append(path)
+        journal_entries = []
+        for directory in created:
+            try:
+                _, directory_display_path = self._resolve_path(str(directory))
+
+            except Exception:
+                directory_display_path = str(directory)
+
+            journal_entries.append(
+                journal.record_creation(
+                    str(directory),
+                    directory_display_path,
+                    JournalActor.AI,
+                    conversation,
+                    is_directory=True,
+                )
+            )
+
+        if any(entry is None for entry in journal_entries):
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.WARN,
+                f"Failed to record the creation of '{display_path}' for reversal",
+            )
 
         # Create directory
         try:
             path.mkdir(parents=create_parents, exist_ok=False)
 
         except FileExistsError as e:
+            self._void_journal_entry(*journal_entries)
             raise AIToolExecutionError(f"Directory already exists: {str(path)}") from e
 
         except PermissionError as e:
+            self._void_journal_entry(*journal_entries)
             raise AIToolExecutionError(f"Permission denied creating directory: {str(e)}") from e
 
         except OSError as e:
+            self._void_journal_entry(*journal_entries)
             raise AIToolExecutionError(f"Failed to create directory: {str(e)}") from e
 
         self._mindspace.add_interaction(
@@ -1680,30 +1741,42 @@ class FileSystemAITool(AITool):
             context = f"Move the {item_type} '{source_display_path}' to '{dest_display_path}'."
 
         # Request authorization
-        # A moved directory is not journalled, so only a file move is reversible.
-        kind = (
-            self._approval_kind(destination_path, source_path)
-            if source_path.is_file()
-            else AIToolApprovalKind.STANDARD
-        )
+        # An empty directory can be journalled at both ends.  A populated one cannot:
+        # its contents are not captured, so the move is not reversible and says so.
+        reversible_directory = source_path.is_dir() and self._is_empty_directory(source_path)
+        if source_path.is_file() or reversible_directory:
+            kind = self._approval_kind(destination_path, source_path)
+
+        else:
+            kind = AIToolApprovalKind.STANDARD
+
         authorized = await request_authorization("filesystem", arguments, context, None, True, kind)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to move: {arguments['path']} -> {destination_arg}")
 
-        # A move is two mutations of a file: the destination gains the content
-        # and the source loses it.  Directories are not journalled, so their
-        # move is not reversible and the authorization text says so.
+        # A move is two mutations: the destination gains what was moved and the
+        # source loses it.  Both are recorded in one group so they are reversed
+        # together, which is the only way to reverse a move at all.
         destination_entry: JournalEntry | None = None
         source_entry: JournalEntry | None = None
-        if source_path.is_file():
+        if source_path.is_file() or reversible_directory:
             conversation = self._mindspace.conversation_identifier(requester_ref)
             journal = self._mindspace.file_journal()
             group = uuid.uuid4().hex
-            destination_entry = journal.record_write_from_path(
-                str(destination_path), dest_display_path, str(source_path), JournalActor.AI, conversation, group
-            )
+            if source_path.is_file():
+                destination_entry = journal.record_write_from_path(
+                    str(destination_path), dest_display_path, str(source_path), JournalActor.AI, conversation, group
+                )
+
+            else:
+                destination_entry = journal.record_creation(
+                    str(destination_path), dest_display_path, JournalActor.AI, conversation, group,
+                    is_directory=True,
+                )
+
             source_entry = journal.record_removal(
-                str(source_path), source_display_path, JournalActor.AI, conversation, group
+                str(source_path), source_display_path, JournalActor.AI, conversation, group,
+                pre_image_is_directory=reversible_directory,
             )
             if destination_entry is None or source_entry is None:
                 self._mindspace.add_interaction(

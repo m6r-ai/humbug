@@ -39,12 +39,13 @@ What it covers is deliberately narrow:
   can reverse. That is where the switch appears, and why it does not appear on every prompt.
 - It covers writing, appending to, overwriting, moving and copying files, applying diffs, saving
   from an editor, and downloading a file into the mindspace — including deleting files and empty
-  folders, which the journal records along with the content they held.
+  folders, which the journal records along with the content they held, and creating folders, which
+  it records so they can be removed again.
 - It never covers terminal commands, HTTP requests other than a download, delegating to a child AI,
   or anything that would reach outside the mindspace or into `.humbug/`.
-- Some writes inside the mindspace still ask, because the journal cannot reverse their whole
-  effect: creating a directory, moving a directory, converting a document to a format that also
-  writes an image folder, and writing git output to a file.
+- Converting a document is covered too, including the image folder a conversion to Markdown or HTML
+  writes beside its output. The one write that still asks is moving a folder that contains files,
+  whose contents the journal does not capture, and that prompt says the contents will be lost.
 
 Turning the switch on approves later requests, never the one you are looking at — that one still
 needs its own click — and it is never remembered. It lapses when the turn finishes, and it lapses

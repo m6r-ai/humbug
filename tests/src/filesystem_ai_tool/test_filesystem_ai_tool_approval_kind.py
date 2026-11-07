@@ -20,10 +20,32 @@ class _JournallingMindspace:
 
     def __init__(self, root: Path) -> None:
         self._root = root
+        self.created: list[str] = []
+        self.journal = MagicMock()
+        self.journal.record_creation.side_effect = self._record_creation
+
+    def _record_creation(
+        self,
+        _path: str,
+        relative_path: str,
+        _actor: Any,
+        _conversation: str,
+        _group: str = "",
+        is_directory: bool = False
+    ) -> MagicMock:
+        """Record a creation, remembering the folders a call made."""
+        if is_directory:
+            self.created.append(relative_path)
+
+        return MagicMock()
 
     def has_mindspace(self) -> bool:
         """Report that a mindspace is open."""
         return True
+
+    def mindspace_path(self) -> str:
+        """Return the mindspace root, which bounds how far a parent walk may go."""
+        return str(self._root)
 
     def add_interaction(self, *_args: Any, **_kwargs: Any) -> None:
         """Discard an interaction log entry."""
@@ -38,7 +60,7 @@ class _JournallingMindspace:
 
     def file_journal(self) -> MagicMock:
         """Return the journal the tool records through."""
-        return MagicMock()
+        return self.journal
 
     def conversation_identifier(self, _requester: Any) -> str:
         """Report no conversation, as a tool call made outside one would."""
@@ -53,7 +75,30 @@ class _JournallingMindspace:
         return True
 
 
-def _execute(root: Path, operation: str, **kwargs: Any) -> list[AIToolApprovalKind]:
+def _make_tool(root: Path, mindspace: _JournallingMindspace) -> FileSystemAITool:
+    """Create a filesystem tool rooted at a directory, recording into the given mindspace."""
+    settings = FilesystemAccessSettings(
+        allow_external_access=False,
+        external_allowlist=[],
+        external_denylist=[]
+    )
+
+    def resolve(path: str) -> tuple[Path, str]:
+        """Model the real resolver, whose display path is relative to the mindspace."""
+        candidate = Path(path)
+        if candidate.is_absolute():
+            return candidate, str(candidate.relative_to(root))
+
+        return root / path, path
+
+    return FileSystemAITool(
+        resolve_path=resolve,
+        get_access_settings=lambda: settings,
+        mindspace=mindspace  # type: ignore[arg-type]
+    )
+
+
+def _run(tool: FileSystemAITool, operation: str, **kwargs: Any) -> list[AIToolApprovalKind]:
     """Run an operation and return the classifications of its authorization requests."""
     recorded: list[AIToolApprovalKind] = []
 
@@ -68,30 +113,21 @@ def _execute(root: Path, operation: str, **kwargs: Any) -> list[AIToolApprovalKi
         recorded.append(kind)
         return True
 
-    def resolve(path: str) -> tuple[Path, str]:
-        return root / path, path
-
-    settings = FilesystemAccessSettings(
-        allow_external_access=False,
-        external_allowlist=[],
-        external_denylist=[]
-    )
-    tool = FileSystemAITool(
-        resolve_path=resolve,
-        get_access_settings=lambda: settings,
-        mindspace=_JournallingMindspace(root)  # type: ignore[arg-type]
-    )
-
     arguments: dict[str, Any] = {"operation": operation}
     arguments.update(kwargs)
     call = AIToolCall(id="test-id", name="filesystem", arguments=arguments)
 
-    async def run() -> None:
+    async def execute() -> None:
         await tool.execute(call, None, authorize)
 
-    asyncio.run(run())
+    asyncio.run(execute())
 
     return recorded
+
+
+def _execute(root: Path, operation: str, **kwargs: Any) -> list[AIToolApprovalKind]:
+    """Run an operation in a fresh mindspace and return its classifications."""
+    return _run(_make_tool(root, _JournallingMindspace(root)), operation, **kwargs)
 
 
 class TestApprovalKind:
@@ -111,9 +147,11 @@ class TestApprovalKind:
             AIToolApprovalKind.MINDSPACE_FILE_CHANGE
         ]
 
-    def test_creating_a_directory_is_not_a_journalled_change(self, tmp_path) -> None:
-        """A created directory leaves no pre-image, so the journal cannot reverse it."""
-        assert _execute(tmp_path, "create_directory", path="notes") == [AIToolApprovalKind.STANDARD]
+    def test_creating_a_directory_is_a_journalled_change(self, tmp_path) -> None:
+        """A created directory is recorded so that reversal removes it."""
+        assert _execute(tmp_path, "create_directory", path="notes") == [
+            AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+        ]
 
     def test_a_write_the_journal_does_not_cover_is_standard(self, tmp_path) -> None:
         """A path outside the journal's scope is offered to the human, not assumed."""
@@ -131,10 +169,44 @@ class TestApprovalKind:
             AIToolApprovalKind.MINDSPACE_FILE_CHANGE
         ]
 
-    def test_moving_a_directory_is_standard(self, tmp_path) -> None:
-        """A moved directory is not journalled, so its move is not offered as reversible."""
+    def test_moving_an_empty_directory_is_a_journalled_change(self, tmp_path) -> None:
+        """An empty directory is recorded at both ends, so its move is reversible."""
         (tmp_path / "notes").mkdir()
+
+        assert _execute(tmp_path, "move", path="notes", destination="archive") == [
+            AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+        ]
+
+    def test_moving_a_populated_directory_is_standard(self, tmp_path) -> None:
+        """A directory whose contents are not captured is not offered as reversible."""
+        (tmp_path / "notes").mkdir()
+        (tmp_path / "notes" / "note.txt").write_text("hello", encoding="utf-8")
 
         assert _execute(tmp_path, "move", path="notes", destination="archive") == [
             AIToolApprovalKind.STANDARD
         ]
+
+
+class TestDirectoryCreationRecording:
+    """Tests for the folders a creation records, including the ones it makes on the way."""
+
+    def test_the_folders_a_creation_makes_are_all_recorded(self, tmp_path) -> None:
+        """A creation records each missing parent as well as the folder it was asked for."""
+        mindspace = _JournallingMindspace(tmp_path)
+
+        _run(_make_tool(tmp_path, mindspace), "create_directory", path="one/two/three")
+
+        assert mindspace.created == [
+            "one",
+            str(Path("one") / "two"),
+            str(Path("one") / "two" / "three"),
+        ]
+
+    def test_the_walk_stops_at_the_mindspace_root(self, tmp_path) -> None:
+        """A root that does not exist yet does not send the walk looking above the mindspace."""
+        missing_root = tmp_path / "not-yet-there"
+        mindspace = _JournallingMindspace(missing_root)
+
+        _run(_make_tool(missing_root, mindspace), "create_directory", path="notes")
+
+        assert mindspace.created == ["notes"]

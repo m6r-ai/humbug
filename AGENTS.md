@@ -370,6 +370,12 @@ belongs to `AIToolApprovalKind.STANDARD` and keeps asking; see ADR-0022.  Unlike
 it resolves symlinks, so a path reached through a link that lands outside the mindspace is not
 reported as covered.
 
+A creation is recorded with `FileJournal.record_creation()`, which writes an entry with no
+pre-image and says whether the path will hold a directory.  That is what lets reversal remove what
+a creation made rather than unlink it, and it is why a folder creation is a journalled change like
+any other; see ADR-0023.  Reversal removes a created directory only when it is empty and orders
+paths deepest-first, so a folder created with its parents unwinds from the inside out.
+
 The change watcher (`mindspace_change_watcher.py`, `mindspace_tree_scanner.py`) compares
 successive metadata walks of the tree and reports the files that changed without a
 journal entry to account for them; see ADR-0020.  A detected change is recorded as an

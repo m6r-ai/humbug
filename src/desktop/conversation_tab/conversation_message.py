@@ -920,8 +920,8 @@ class ConversationMessage(QFrame):
             self._approval_auto_approve_label.setObjectName("_approval_auto_approve_label")
             self._approval_auto_approve_label.setFont(font)
 
-            switch_layout.addWidget(self._approval_auto_approve_label)
             switch_layout.addWidget(self._approval_auto_approve_switch)
+            switch_layout.addWidget(self._approval_auto_approve_label)
             switch_layout.addStretch()
 
             layout.addSpacing(2)

@@ -90,6 +90,7 @@ def filesystem_tool(mock_path_resolver, mock_access_settings):
     mock = MagicMock()
     mock.has_mindspace.return_value = True
     mock.add_interaction.return_value = None
+    mock.mindspace_path.return_value = "/test/sandbox"
     return FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings, mindspace=mock)
 
 

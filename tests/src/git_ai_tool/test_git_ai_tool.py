@@ -68,6 +68,25 @@ def _make_mindspace_mock(mindspace_path: str) -> MagicMock:
             return False
 
     mindspace.is_humbug_path.side_effect = _is_humbug_path
+
+    def _journalled_path(path: str) -> str | None:
+        """Model the real journal scope, which is the boundary and the .humbug/ exclusion."""
+        try:
+            _, relative_path = _resolve_tool_path(path)
+
+        except MindspaceError:
+            return None
+
+        return relative_path
+
+    journal = MagicMock()
+    journal.record_write.return_value = MagicMock()
+    mindspace.journalled_path.side_effect = _journalled_path
+    mindspace.file_journal.return_value = journal
+    mindspace.conversation_identifier.return_value = "conv"
+    mindspace.journal_target.side_effect = lambda path: (
+        (journal, _journalled_path(path)) if _journalled_path(path) is not None else None
+    )
     return mindspace
 
 
@@ -575,6 +594,42 @@ class TestOutputLimits:
             written = os.path.join(mindspace_path, "spilled", "big-at-head.txt")
             with open(written, encoding="utf-8") as f:
                 assert f.read() == payload
+
+    def test_output_path_write_is_recorded_in_the_change_journal(self) -> None:
+        """The written output file is journalled, so it can be reversed and attributed."""
+        with tempfile.TemporaryDirectory() as mindspace_path:
+            _run(["git", "init"], cwd=mindspace_path)
+            _run(["git", "config", "user.email", "t@t.com"], cwd=mindspace_path)
+            _run(["git", "config", "user.name", "T"], cwd=mindspace_path)
+
+            payload = ("line with lots of content " * 10 + "\n") * 5000
+            with open(os.path.join(mindspace_path, "big.txt"), "w", encoding="utf-8") as f:
+                f.write(payload)
+            _run(["git", "add", "."], cwd=mindspace_path)
+            _run(["git", "commit", "-m", "init"], cwd=mindspace_path)
+
+            mindspace = _make_mindspace_mock(mindspace_path)
+            journal = mindspace.file_journal.return_value
+            tool = GitAITool(mindspace)
+
+            _execute_tool(
+                tool,
+                _make_tool_call(
+                    "show",
+                    path="big.txt",
+                    ref="HEAD",
+                    output_path="spilled/big-at-head.txt",
+                ),
+            )
+
+            journal.record_write.assert_called_once()
+            arguments = journal.record_write.call_args.args
+            assert os.path.realpath(arguments[0]) == os.path.realpath(
+                os.path.join(mindspace_path, "spilled", "big-at-head.txt")
+            )
+            assert arguments[1] == os.path.join("spilled", "big-at-head.txt")
+            assert arguments[2] == payload.encode("utf-8")
+            assert arguments[4] == "conv"
 
     def test_diff_large_changes_write_denied(self) -> None:
         """Diff with output_path should raise when the user denies write approval."""

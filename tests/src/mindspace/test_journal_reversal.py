@@ -408,6 +408,71 @@ class TestRemovalRecordedWithATrashLocator:
         assert "no longer holds" in result.outcomes[0].detail
 
 
+class TestDirectoryCreation:
+    """A recorded creation is reversed by removing what it made."""
+
+    def test_reverts_a_created_directory(self, tmp_path):
+        """Reversing a directory creation removes the directory."""
+        journal = _journal(tmp_path)
+        reverser = _reverser(journal, tmp_path)
+        directory = tmp_path / "notes"
+        entry = journal.record_creation(str(directory), "notes", JournalActor.AI, "conv", is_directory=True)
+        directory.mkdir()
+        assert entry is not None
+
+        result = reverser.revert([entry])
+
+        assert result.outcomes[0].status == JournalRevertStatus.REVERTED
+        assert not directory.exists()
+
+    def test_a_created_directory_that_is_not_empty_is_left_in_place(self, tmp_path):
+        """A directory holding later work is reported rather than emptied."""
+        journal = _journal(tmp_path)
+        reverser = _reverser(journal, tmp_path)
+        directory = tmp_path / "notes"
+        entry = journal.record_creation(str(directory), "notes", JournalActor.AI, "conv", is_directory=True)
+        directory.mkdir()
+        (directory / "later.txt").write_bytes(b"work")
+        assert entry is not None
+
+        result = reverser.revert([entry])
+
+        assert result.outcomes[0].status == JournalRevertStatus.FAILED
+        assert (directory / "later.txt").read_bytes() == b"work"
+
+    def test_reverts_a_directory_created_with_its_parents(self, tmp_path):
+        """Undoing a creation that made a chain of folders removes the whole chain."""
+        journal = _journal(tmp_path)
+        reverser = _reverser(journal, tmp_path)
+        entries = []
+        for name in ("a", os.path.join("a", "b")):
+            entries.append(
+                journal.record_creation(str(tmp_path / name), name, JournalActor.AI, "conv", is_directory=True)
+            )
+
+        (tmp_path / "a" / "b").mkdir(parents=True)
+        assert all(entry is not None for entry in entries)
+
+        result = reverser.revert([entry for entry in entries if entry is not None])
+
+        assert all(outcome.status == JournalRevertStatus.REVERTED for outcome in result.outcomes)
+        assert not (tmp_path / "a").exists()
+
+    def test_reversing_a_creation_twice_reports_it_already_absent(self, tmp_path):
+        """A creation that has already been undone is not an error the second time."""
+        journal = _journal(tmp_path)
+        reverser = _reverser(journal, tmp_path)
+        directory = tmp_path / "notes"
+        entry = journal.record_creation(str(directory), "notes", JournalActor.AI, "conv", is_directory=True)
+        directory.mkdir()
+        assert entry is not None
+
+        reverser.revert([entry])
+        result = reverser.revert([entry])
+
+        assert result.outcomes[0].status == JournalRevertStatus.REVERTED
+
+
 class TestDirectoryRemoval:
     """A recorded directory holds no content, so reversal recreates it."""
 

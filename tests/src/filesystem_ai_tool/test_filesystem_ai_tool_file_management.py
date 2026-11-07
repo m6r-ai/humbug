@@ -2,11 +2,13 @@
 Tests for filesystem tool file management operations: delete_file, copy_file, move.
 """
 import asyncio
+from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 import pytest
 
 from ai_tool import AIToolExecutionError, AIToolAuthorizationDenied
+from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
 from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
 from mindspace.journal_entry import JournalActor
 from mindspace.mindspace_error import MindspaceError
@@ -648,8 +650,8 @@ class TestFileSystemAIToolCopyAndMoveJournal:
         assert write_args[5] == removal_args[4]
         assert write_args[5] != ""
 
-    def test_move_of_a_directory_is_not_journalled(self, custom_path_resolver, mock_access_settings, mock_authorization, make_tool_call):
-        """Moving a directory is not reversible, so nothing is recorded for it."""
+    def test_move_of_a_populated_directory_is_not_journalled(self, custom_path_resolver, mock_access_settings, mock_authorization, make_tool_call):
+        """A directory whose contents are not captured cannot be reversed, so nothing is recorded."""
         tool, mindspace = self._tool(custom_path_resolver, mock_access_settings)
 
         with patch('pathlib.Path.exists') as mock_exists, \
@@ -667,3 +669,43 @@ class TestFileSystemAIToolCopyAndMoveJournal:
 
         mindspace.file_journal().record_write_from_path.assert_not_called()
         mindspace.file_journal().record_removal.assert_not_called()
+
+
+class TestMoveOfAnEmptyDirectory:
+    """Tests for journalling the move of a directory that holds nothing."""
+
+    def test_an_empty_directory_records_both_ends(self, tmp_path, mock_authorization, make_tool_call):
+        """Both halves of the move are recorded, in one group, so it can be reversed."""
+        mindspace = MagicMock()
+        mindspace.mindspace_path.return_value = str(tmp_path)
+        mindspace.has_mindspace.return_value = True
+        mindspace.journalled_path.side_effect = lambda path: (
+            str(Path(path).relative_to(tmp_path)) if tmp_path in Path(path).parents else None
+        )
+
+        def resolve(path: str) -> tuple[Path, str]:
+            return tmp_path / path, path
+
+        tool = FileSystemAITool(
+            resolve_path=resolve,
+            get_access_settings=lambda: FilesystemAccessSettings(
+                allow_external_access=False, external_allowlist=[], external_denylist=[]
+            ),
+            mindspace=mindspace,
+        )
+        (tmp_path / "notes").mkdir()
+        tool_call = make_tool_call(
+            "filesystem", {"operation": "move", "path": "notes", "destination": "archive"}
+        )
+
+        asyncio.run(tool.execute(tool_call, "", mock_authorization))
+
+        journal = mindspace.file_journal()
+        creation_args = journal.record_creation.call_args
+        removal_args = journal.record_removal.call_args
+
+        assert creation_args.args[:2] == (str(tmp_path / "archive"), "archive")
+        assert creation_args.kwargs["is_directory"] is True
+        assert removal_args.args[:2] == (str(tmp_path / "notes"), "notes")
+        assert removal_args.kwargs["pre_image_is_directory"] is True
+        assert creation_args.args[4] == removal_args.args[4]

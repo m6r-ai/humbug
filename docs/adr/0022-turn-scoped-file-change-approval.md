@@ -47,11 +47,11 @@ when a mindspace's scan filters hide it, so a change there is covered — and re
 still not reversing an effect, which the documentation says rather than implies.
 
 **Operations the journal will not record are not covered**, even though they are writes and even
-though they are inside the mindspace: creating a directory, moving a directory, converting a
-document to a format with an image sidecar, and writing a git result to a file. These ask, and
-the reason is the same in each case — the journal cannot reverse the whole effect. A download
-writes a file the journal can now record, so it is covered, and it records its own write before
-writing: without that the change would be attributed to nobody.
+though they are inside the mindspace. One remains: moving a directory that holds files, whose
+contents are not captured and so cannot be reversed. It asks, and its prompt says the contents
+will be lost. Everything else that writes inside the mindspace is covered, because it records
+itself — a download, a git result written to a file, a created directory and the image folder a
+document conversion writes beside its output all record before they mutate. See ADR-0023.
 
 **The approval is turn-scoped and never remembered.** It lapses when the user sends a message,
 when the turn completes, and when the turn is cancelled, and a conversation never starts with

@@ -45,6 +45,12 @@ Internal structure changes:
   cover is never approved on the user's behalf.  See ADR-0022.
 - Downloading a file over HTTP now records the file it replaces in the change journal, like every other write
   inside the mindspace, instead of leaving the change to be reported after the fact as unattributed.
+- A journal entry now records whether a path is a directory after the mutation as well as before it, so a creation
+  can be described and reversed.  Creating a folder, and moving an empty one, are therefore recorded, reversible
+  and covered by the standing approval, which they were not before.  See ADR-0023.
+- Writing git output to a file, and the image folder a document conversion writes beside its output, are now
+  recorded in the change journal.  Both were writers the journal missed: a git diff written to a file appeared in
+  the changes list as a change nothing had made, and reversing a conversion left its images behind.
 
 ## v58 (2026-11-02)
 

@@ -15,7 +15,10 @@ A change is recorded whenever a file in the mindspace is mutated through Humbug:
 
 - Files an AI writes, edits, creates, renames, moves, or deletes
 - Files you save, rename, move, or delete from the mindspace panel
-- Documents converted from one format to another
+- Folders either of you creates, moves or removes
+- Documents converted from one format to another, together with the image folder a conversion to
+  Markdown or HTML writes beside its output
+- Git output an AI asks to be written to a file
 
 Changes made **outside** Humbug are also picked up. Humbug compares the mindspace tree against a
 checkpoint taken a few seconds earlier, so a file rewritten by a terminal command, an external
