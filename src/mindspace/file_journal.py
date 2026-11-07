@@ -219,7 +219,6 @@ class FileJournal:
         actor: JournalActor,
         conversation: str,
         group: str = "",
-        trash_name: str | None = None,
         pre_image_is_directory: bool = False,
     ) -> JournalEntry | None:
         """
@@ -237,14 +236,10 @@ class FileJournal:
                 string when no conversation is involved.
             group: Identifier shared with the other entries of one operation, or
                 an empty string when the mutation stands alone.
-            trash_name: Name of the trash entry the content is about to be moved
-                to.  When given, the content is not copied into the journal's own
-                store, because the trash already holds it; the entry records where
-                it went instead, and reversal delegates to the trash.
             pre_image_is_directory: True when the path holds a directory.  A
                 directory has no content to capture, so the entry records that the
                 path existed without attempting to read it, and reversal recreates
-                it from wherever the removal put it.
+                it.
 
         Returns:
             The entry as recorded, or None if recording failed.
@@ -257,9 +252,51 @@ class FileJournal:
             actor,
             conversation,
             group,
-            trash_name,
-            trash_name is None,
             pre_image_is_directory,
+        )
+
+    def record_creation(
+        self,
+        absolute_path: str,
+        relative_path: str,
+        actor: JournalActor,
+        conversation: str,
+        group: str = "",
+        is_directory: bool = False,
+    ) -> JournalEntry | None:
+        """
+        Record a creation that is about to happen to a path.
+
+        There is no pre-image to capture, because the path does not exist yet.  What
+        reversal needs instead is whether the path will hold a file or a directory,
+        so that it removes the right kind of thing.  The path is still inspected
+        rather than assumed: a creation recorded for a path that already exists
+        reads as a write, and reversal restores what is there rather than deleting
+        it.
+
+        Args:
+            absolute_path: Path about to be created.
+            relative_path: The same path relative to the mindspace root, for the
+                record.
+            actor: Who is performing the creation.
+            conversation: Identifier of the conversation responsible, or an empty
+                string when no conversation is involved.
+            group: Identifier shared with the other entries of one operation, or an
+                empty string when the mutation stands alone.
+            is_directory: True when a directory is being created.
+
+        Returns:
+            The entry as recorded, or None if recording failed.
+        """
+        return self._record(
+            absolute_path,
+            relative_path,
+            JournalOperation.WRITE,
+            None,
+            actor,
+            conversation,
+            group,
+            post_image_is_directory=is_directory,
         )
 
     def retain_file(self, path: str) -> str | None:
@@ -597,9 +634,8 @@ class FileJournal:
         actor: JournalActor,
         conversation: str,
         group: str,
-        pre_image_trash: str | None = None,
-        store_pre_image: bool = True,
         pre_image_is_directory: bool = False,
+        post_image_is_directory: bool = False,
     ) -> JournalEntry | None:
         """
         Record a mutation, capturing whatever the path holds beforehand.
@@ -614,12 +650,10 @@ class FileJournal:
             conversation: Identifier of the conversation responsible.
             group: Identifier shared with the other entries of one operation, or
                 an empty string when the mutation stands alone.
-            pre_image_trash: Name of the trash entry holding the removed content,
-                when the removal parked it there.
-            store_pre_image: When False the pre-image is hashed but not copied into
-                the blob store, because another store already holds the content.
             pre_image_is_directory: True when the path holds a directory, which
                 existed but has no content to capture.
+            post_image_is_directory: True when the mutation leaves a directory at
+                the path, which has no content to capture either.
 
         Returns:
             The entry as recorded, or None if recording failed.
@@ -633,11 +667,7 @@ class FileJournal:
                 existed_before = os.path.isfile(absolute_path)
                 pre_image_hash = None
                 if existed_before:
-                    if store_pre_image:
-                        pre_image_hash = self._blobs.store_file(absolute_path)
-
-                    else:
-                        pre_image_hash = JournalBlobStore.digest_of_file(absolute_path)
+                    pre_image_hash = self._blobs.store_file(absolute_path)
 
             entry = JournalEntry(
                 sequence=0,
@@ -650,8 +680,8 @@ class FileJournal:
                 existed_before=existed_before,
                 pre_image_hash=pre_image_hash,
                 post_image_hash=post_image_hash,
-                pre_image_trash=pre_image_trash,
                 pre_image_is_directory=pre_image_is_directory,
+                post_image_is_directory=post_image_is_directory,
             )
             return self._index.append(entry)
 

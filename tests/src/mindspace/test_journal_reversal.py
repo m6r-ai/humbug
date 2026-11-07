@@ -1,5 +1,6 @@
 """Tests for reversing the mutations recorded in the mindspace change journal."""
 
+import json
 import os
 
 from mindspace.file_journal import FileJournal
@@ -328,19 +329,45 @@ class TestGroupedOperations:
         assert result.reverted_paths() == ["a.txt"]
 
 
-class TestTrashBackedRemoval:
-    """A removal keeps its content in the trash, so the trash is what restores it."""
+class TestRemovalRecordedWithATrashLocator:
+    """
+    A removal recorded before the journal held removed content is restored from the trash.
+
+    Such a record names the trash entry that kept the content instead of storing
+    it, because the trash was then where a user's removal went.  Nothing writes a
+    record like that any more, so a mindspace that holds one is reproduced in the
+    index format rather than through the writer.
+    """
 
     def _removal(self, tmp_path, trash_name: str = "abc_a.txt") -> FileJournal:
-        """Record and perform a removal that parks the content in a trash directory."""
-        journal = _journal(tmp_path)
+        """Build a journal holding one removal recorded against a trash entry."""
+        journal_dir = tmp_path / "journal"
+        journal_dir.mkdir(exist_ok=True)
         trash_dir = tmp_path / "trash"
         trash_dir.mkdir(exist_ok=True)
         (tmp_path / "a.txt").write_bytes(b"payload")
-        journal.record_removal(
-            str(tmp_path / "a.txt"), "a.txt", JournalActor.HUMAN, "", trash_name=trash_name
-        )
+
+        record = {
+            "sequence": 1,
+            "timestamp": "2026-01-01T00:00:00+00:00",
+            "path": "a.txt",
+            "operation": "delete",
+            "actor": "human",
+            "conversation": "",
+            "group": "",
+            "existed_before": True,
+            "pre_image_hash": JournalBlobStore.digest_of(b"payload"),
+            "post_image_hash": None,
+            "pre_image_trash": trash_name,
+            "pre_image_is_directory": False,
+            "void_of": None,
+        }
+        segment = journal_dir / "index-00000001.jsonl"
+        segment.write_text(json.dumps(record) + "\n", encoding="utf-8")
         os.replace(tmp_path / "a.txt", trash_dir / trash_name)
+
+        journal = FileJournal()
+        journal.open(str(journal_dir))
         return journal
 
     def test_the_content_is_not_copied_into_the_journal(self, tmp_path):
@@ -379,6 +406,128 @@ class TestTrashBackedRemoval:
 
         assert result.outcomes[0].status == JournalRevertStatus.NOT_REVERTABLE
         assert "no longer holds" in result.outcomes[0].detail
+
+
+class TestDirectoryCreation:
+    """A recorded creation is reversed by removing what it made."""
+
+    def test_reverts_a_created_directory(self, tmp_path):
+        """Reversing a directory creation removes the directory."""
+        journal = _journal(tmp_path)
+        reverser = _reverser(journal, tmp_path)
+        directory = tmp_path / "notes"
+        entry = journal.record_creation(str(directory), "notes", JournalActor.AI, "conv", is_directory=True)
+        directory.mkdir()
+        assert entry is not None
+
+        result = reverser.revert([entry])
+
+        assert result.outcomes[0].status == JournalRevertStatus.REVERTED
+        assert not directory.exists()
+
+    def test_a_created_directory_that_is_not_empty_is_left_in_place(self, tmp_path):
+        """A directory holding later work is reported rather than emptied."""
+        journal = _journal(tmp_path)
+        reverser = _reverser(journal, tmp_path)
+        directory = tmp_path / "notes"
+        entry = journal.record_creation(str(directory), "notes", JournalActor.AI, "conv", is_directory=True)
+        directory.mkdir()
+        (directory / "later.txt").write_bytes(b"work")
+        assert entry is not None
+
+        result = reverser.revert([entry])
+
+        assert result.outcomes[0].status == JournalRevertStatus.FAILED
+        assert (directory / "later.txt").read_bytes() == b"work"
+
+    def test_reverts_a_directory_created_with_its_parents(self, tmp_path):
+        """Undoing a creation that made a chain of folders removes the whole chain."""
+        journal = _journal(tmp_path)
+        reverser = _reverser(journal, tmp_path)
+        entries = []
+        for name in ("a", os.path.join("a", "b")):
+            entries.append(
+                journal.record_creation(str(tmp_path / name), name, JournalActor.AI, "conv", is_directory=True)
+            )
+
+        (tmp_path / "a" / "b").mkdir(parents=True)
+        assert all(entry is not None for entry in entries)
+
+        result = reverser.revert([entry for entry in entries if entry is not None])
+
+        assert all(outcome.status == JournalRevertStatus.REVERTED for outcome in result.outcomes)
+        assert not (tmp_path / "a").exists()
+
+    def test_reversing_a_creation_twice_reports_it_already_absent(self, tmp_path):
+        """A creation that has already been undone is not an error the second time."""
+        journal = _journal(tmp_path)
+        reverser = _reverser(journal, tmp_path)
+        directory = tmp_path / "notes"
+        entry = journal.record_creation(str(directory), "notes", JournalActor.AI, "conv", is_directory=True)
+        directory.mkdir()
+        assert entry is not None
+
+        reverser.revert([entry])
+        result = reverser.revert([entry])
+
+        assert result.outcomes[0].status == JournalRevertStatus.REVERTED
+
+
+class TestDirectoryRemoval:
+    """A recorded directory holds no content, so reversal recreates it."""
+
+    def _removed_directory(self, tmp_path) -> FileJournal:
+        """Record the removal of an empty directory and perform it."""
+        journal = _journal(tmp_path)
+        path = tmp_path / "folder"
+        path.mkdir()
+        journal.record_removal(
+            str(path), "folder", JournalActor.HUMAN, "", pre_image_is_directory=True
+        )
+        os.rmdir(path)
+        return journal
+
+    def test_reverting_the_removal_recreates_the_directory(self, tmp_path):
+        journal = self._removed_directory(tmp_path)
+
+        result = _reverser(journal, tmp_path).revert(journal.entries_for_path("folder"))
+
+        assert result.reverted_paths() == ["folder"]
+        assert (tmp_path / "folder").is_dir()
+
+    def test_recreating_a_directory_records_nothing(self, tmp_path):
+        journal = self._removed_directory(tmp_path)
+
+        _reverser(journal, tmp_path).revert(journal.entries_for_path("folder"))
+
+        assert len(journal.entries_for_path("folder")) == 1
+
+    def test_a_directory_that_is_present_is_reported_as_already_reverted(self, tmp_path):
+        journal = self._removed_directory(tmp_path)
+        (tmp_path / "folder").mkdir()
+
+        result = _reverser(journal, tmp_path).revert(journal.entries_for_path("folder"))
+
+        assert result.reverted_paths() == ["folder"]
+        assert result.outcomes[0].detail == "already present"
+
+    def test_a_removal_recorded_for_a_file_still_conflicts_with_a_directory(self, tmp_path):
+        """
+        A directory only counts as already reverted when the record says it was one.
+
+        The early return for a present directory is what makes an empty folder
+        reversible and must not swallow a file removal whose path a directory has
+        since taken.
+        """
+        journal = _journal(tmp_path)
+        (tmp_path / "thing").write_bytes(b"content")
+        journal.record_removal(str(tmp_path / "thing"), "thing", JournalActor.HUMAN, "")
+        os.remove(tmp_path / "thing")
+        (tmp_path / "thing").mkdir()
+
+        result = _reverser(journal, tmp_path).revert(journal.entries_for_path("thing"))
+
+        assert result.outcomes[0].status == JournalRevertStatus.CONFLICT
 
 
 class TestUncapturedPreImage:

@@ -59,7 +59,7 @@ SECTION_EDITOR = "editor"
 SECTION_DIFF = "diff"
 SECTION_TERMINAL = "terminal"
 SECTION_CONVERSATION = "conversation"
-SECTION_CHANGES = "changes"
+SECTION_JOURNAL = "journal"
 
 _ALL_MINDSPACES_SECTIONS = [SECTION_DISPLAY, SECTION_FILE_ACCESS, SECTION_NETWORK_ACCESS, SECTION_AI_BACKENDS]
 _THIS_MINDSPACE_SECTIONS = [
@@ -69,7 +69,7 @@ _THIS_MINDSPACE_SECTIONS = [
     SECTION_DIFF,
     SECTION_TERMINAL,
     SECTION_CONVERSATION,
-    SECTION_CHANGES,
+    SECTION_JOURNAL,
 ]
 
 
@@ -195,11 +195,11 @@ class SettingsDialog(QDialog):
         self._prompt_markers_check: SettingsSwitch
         self._conversation_container: SettingsContainer
 
-        self._changes_heading: SettingsPageHeading
-        self._changes_checkpoint_interval_spin: SettingsDoubleSpinBox
-        self._changes_scan_section: SettingsSection
-        self._changes_pruned_paths_area: SettingsTextArea
-        self._changes_container: SettingsContainer
+        self._journal_heading: SettingsPageHeading
+        self._journal_checkpoint_interval_spin: SettingsDoubleSpinBox
+        self._journal_watched_section: SettingsSection
+        self._journal_pruned_paths_area: SettingsTextArea
+        self._journal_container: SettingsContainer
 
         strings = self._language_manager.strings()
         self.setWindowTitle(strings.settings)
@@ -294,7 +294,7 @@ class SettingsDialog(QDialog):
         self._build_diff_page()
         self._build_terminal_page()
         self._build_conversation_page()
-        self._build_changes_page()
+        self._build_journal_page()
 
     def _add_nav_group(self, label: str, string_key: str) -> None:
         """Add a non-selectable group header to the nav list."""
@@ -759,39 +759,39 @@ class SettingsDialog(QDialog):
         self._section_pages[SECTION_CONVERSATION] = page
         self._add_nav_section(SECTION_CONVERSATION, strings.settings_conversation)
 
-    def _build_changes_page(self) -> None:
-        """Build the Changes settings page."""
+    def _build_journal_page(self) -> None:
+        """Build the Journal settings page."""
         strings = self._language_manager.strings()
         container = SettingsContainer()
 
-        self._changes_heading = SettingsFactory.create_page_heading(strings.changes_settings)
-        container.add_setting(self._changes_heading)
+        self._journal_heading = SettingsFactory.create_page_heading(strings.journal_settings)
+        container.add_setting(self._journal_heading)
 
-        self._changes_checkpoint_interval_spin = SettingsFactory.create_double_spinbox(
-            strings.changes_checkpoint_interval, 1.0, 600.0, 1.0, 1
+        self._journal_checkpoint_interval_spin = SettingsFactory.create_double_spinbox(
+            strings.journal_checkpoint_interval, 1.0, 600.0, 1.0, 1
         )
-        container.add_setting(self._changes_checkpoint_interval_spin)
+        container.add_setting(self._journal_checkpoint_interval_spin)
 
         container.add_setting(SettingsFactory.create_spacer(24))
 
-        self._changes_scan_section = SettingsFactory.create_section(
-            strings.changes_scan_section, strings.changes_scan_section_description
+        self._journal_watched_section = SettingsFactory.create_section(
+            strings.journal_watched_section, strings.journal_watched_section_description
         )
-        container.add_setting(self._changes_scan_section)
+        container.add_setting(self._journal_watched_section)
 
-        self._changes_pruned_paths_area = SettingsFactory.create_text_area(
-            strings.changes_pruned_paths
+        self._journal_pruned_paths_area = SettingsFactory.create_text_area(
+            strings.journal_pruned_paths
         )
-        container.add_setting(self._changes_pruned_paths_area)
+        container.add_setting(self._journal_pruned_paths_area)
 
         container.add_stretch()
         container.value_changed.connect(self._on_value_changed)
 
-        self._changes_container = container
+        self._journal_container = container
         page = self._make_scroll_page(container)
         self._stack.addWidget(page)
-        self._section_pages[SECTION_CHANGES] = page
-        self._add_nav_section(SECTION_CHANGES, strings.settings_changes)
+        self._section_pages[SECTION_JOURNAL] = page
+        self._add_nav_section(SECTION_JOURNAL, strings.settings_journal)
 
     def set_settings(
         self,
@@ -901,8 +901,8 @@ class SettingsDialog(QDialog):
             reasoning=self._reasoning_combo.get_value(),
             reasoning_effort=self._effort_combo.get_value() if reasoning_options else None,
             prompt_markers_visible=self._prompt_markers_check.get_value(),
-            changes_checkpoint_interval=self._changes_checkpoint_interval_spin.get_value(),
-            changes_pruned_paths=self._changes_pruned_paths_area.get_value(),
+            journal_checkpoint_interval=self._journal_checkpoint_interval_spin.get_value(),
+            journal_pruned_paths=self._journal_pruned_paths_area.get_value(),
             enabled_tools=enabled_tools,
             pinned_paths=(
                 list(self._current_mindspace_settings.pinned_paths)
@@ -1026,8 +1026,8 @@ class SettingsDialog(QDialog):
         self._prompt_markers_check.set_value(settings.prompt_markers_visible)
 
         # Changes
-        self._changes_checkpoint_interval_spin.set_value(settings.changes_checkpoint_interval)
-        self._changes_pruned_paths_area.set_value(settings.changes_pruned_paths)
+        self._journal_checkpoint_interval_spin.set_value(settings.journal_checkpoint_interval)
+        self._journal_pruned_paths_area.set_value(settings.journal_pruned_paths)
 
     def _update_mindspace_sections_enabled(self) -> None:
         """Enable or disable 'This Mindspace' nav items based on whether a mindspace is open."""
@@ -1083,7 +1083,7 @@ class SettingsDialog(QDialog):
                 self._diff_container,
                 self._terminal_container,
                 self._conversation_container,
-                self._changes_container,
+                self._journal_container,
             ]
         )
         self.apply_button.setEnabled(modified)
@@ -1530,7 +1530,7 @@ class SettingsDialog(QDialog):
             SECTION_DIFF: strings.settings_diff,
             SECTION_TERMINAL: strings.settings_terminal,
             SECTION_CONVERSATION: strings.settings_conversation,
-            SECTION_CHANGES: strings.settings_changes,
+            SECTION_JOURNAL: strings.settings_journal,
         }
         for section_id, item in self._section_items.items():
             item.setText("  " + label_map.get(section_id, section_id))
@@ -1546,7 +1546,7 @@ class SettingsDialog(QDialog):
         self._diff_heading.set_label(strings.diff_settings)
         self._terminal_heading.set_label(strings.terminal_settings)
         self._conversation_heading.set_label(strings.settings_conversation)
-        self._changes_heading.set_label(strings.changes_settings)
+        self._journal_heading.set_label(strings.journal_settings)
 
         # Update Display page controls
         current_lang = self._language_combo.get_value()
@@ -1653,10 +1653,10 @@ class SettingsDialog(QDialog):
         self._prompt_markers_check.set_label(strings.prompt_markers)
 
         # Update Changes page controls
-        self._changes_checkpoint_interval_spin.set_label(strings.changes_checkpoint_interval)
-        self._changes_scan_section.set_label(strings.changes_scan_section)
-        self._changes_scan_section.set_description(strings.changes_scan_section_description)
-        self._changes_pruned_paths_area.set_label(strings.changes_pruned_paths)
+        self._journal_checkpoint_interval_spin.set_label(strings.journal_checkpoint_interval)
+        self._journal_watched_section.set_label(strings.journal_watched_section)
+        self._journal_watched_section.set_description(strings.journal_watched_section_description)
+        self._journal_pruned_paths_area.set_label(strings.journal_pruned_paths)
 
         self.adjustSize()
 
@@ -1737,7 +1737,7 @@ class SettingsDialog(QDialog):
             self._diff_container,
             self._terminal_container,
             self._conversation_container,
-            self._changes_container,
+            self._journal_container,
         ]:
             container.reset_modified_state()
 
@@ -1788,8 +1788,8 @@ class SettingsDialog(QDialog):
             reasoning=settings.reasoning,
             reasoning_effort=settings.reasoning_effort,
             prompt_markers_visible=settings.prompt_markers_visible,
-            changes_checkpoint_interval=settings.changes_checkpoint_interval,
-            changes_pruned_paths=list(settings.changes_pruned_paths),
+            journal_checkpoint_interval=settings.journal_checkpoint_interval,
+            journal_pruned_paths=list(settings.journal_pruned_paths),
             enabled_tools=settings.enabled_tools.copy(),
             pinned_paths=list(settings.pinned_paths),
         )

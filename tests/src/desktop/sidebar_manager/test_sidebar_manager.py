@@ -1,11 +1,22 @@
-"""Tests for the sidebar manager's zoom-aware metrics."""
+"""Tests for the sidebar manager's zoom-aware metrics and rail button tooltips."""
 
 import pytest
 
 # pylint: disable=wrong-import-position
+from desktop.language.language_code import LanguageCode
+from desktop.language.language_manager import LanguageManager
+from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar_manager.sidebar_manager import SidebarManager
 from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 from desktop.style_manager import StyleManager
+
+
+class _StubPanel(SidebarBase):
+    """A panel with no content, used to exercise panel registration."""
+
+
+def _wire_nothing(_panel: SidebarBase, _manager: SidebarManager) -> None:
+    """Register a panel without connecting any of its signals."""
 
 
 @pytest.fixture
@@ -67,3 +78,35 @@ class TestExpandedSidebarWidth:
         style_manager.set_zoom(1.0)
 
         assert sidebar.expanded_sidebar_width() == 320
+
+
+class TestRailButtonTooltips:
+    """Resting the pointer on a rail icon names the panel that icon opens."""
+
+    @pytest.fixture
+    def panel_sidebar(self, sidebar):
+        """A sidebar manager with one tooltipped panel registered."""
+        sidebar.register_panel(
+            "files", "files", _StubPanel, _wire_nothing, tooltip_key="mindspace_files",
+        )
+        yield sidebar
+
+    def test_the_tooltip_names_the_panel(self, panel_sidebar):
+        button = panel_sidebar.panel_button("files")
+
+        assert button is not None
+        assert button.toolTip() == "Files"
+
+    def test_the_tooltip_follows_a_language_change(self, panel_sidebar):
+        language_manager = LanguageManager()
+        original_language = language_manager.current_language()
+        language_manager.set_language(LanguageCode.FR)
+
+        try:
+            button = panel_sidebar.panel_button("files")
+
+            assert button is not None
+            assert button.toolTip() == "Fichiers"
+
+        finally:
+            language_manager.set_language(original_language)

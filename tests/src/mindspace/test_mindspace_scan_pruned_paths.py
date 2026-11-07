@@ -1,4 +1,4 @@
-"""Tests for the directories and paths the change scanner does not descend."""
+"""Tests for the entries a mindspace excludes from its change scan."""
 
 from mindspace.mindspace_ignored_dirs import IGNORED_DIRS
 from mindspace.mindspace_scan_pruned_paths import (
@@ -40,11 +40,11 @@ def test_a_path_from_the_mindspace_root_is_kept_whole():
     assert "src/generated" in scan_pruned_paths(["src/generated"])
 
 
-def test_a_trailing_separator_does_not_change_an_entry():
+def test_a_trailing_separator_is_dropped():
     assert scan_pruned_paths(["build/"]) == scan_pruned_paths(["build"])
 
 
-def test_a_leading_separator_does_not_change_an_entry():
+def test_a_leading_separator_is_dropped():
     assert scan_pruned_paths(["/build"]) == scan_pruned_paths(["build"])
 
 
@@ -70,3 +70,19 @@ def test_blank_entries_are_dropped():
 
 def test_surrounding_whitespace_is_ignored():
     assert scan_pruned_paths(["  build  "]) == scan_pruned_paths(["build"])
+
+
+def test_a_wildcard_entry_is_kept_as_written():
+    assert "*.swp" in scan_pruned_paths(["*.swp"])
+
+
+def test_a_wildcard_that_matches_everything_cannot_switch_the_scan_off():
+    assert scan_pruned_paths(["*"]) == MANDATORY_SCAN_PRUNED_PATHS
+
+
+def test_a_doubled_wildcard_that_matches_everything_cannot_switch_the_scan_off():
+    assert scan_pruned_paths(["**"]) == MANDATORY_SCAN_PRUNED_PATHS
+
+
+def test_a_subtree_entry_is_kept_as_written():
+    assert "src/generated/**" in scan_pruned_paths(["src/generated/**"])

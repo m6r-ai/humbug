@@ -90,6 +90,7 @@ def filesystem_tool(mock_path_resolver, mock_access_settings):
     mock = MagicMock()
     mock.has_mindspace.return_value = True
     mock.add_interaction.return_value = None
+    mock.mindspace_path.return_value = "/test/sandbox"
     return FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings, mindspace=mock)
 
 
@@ -98,7 +99,7 @@ def mock_authorization():
     """Fixture providing a mocked authorization callback."""
     mock = MagicMock()
 
-    async def mock_auth_callback(_tool_name, _arguments, _context, _requester_ref, _destructive):
+    async def mock_auth_callback(_tool_name, _arguments, _context, _requester_ref, _destructive, _kind):
         return True  # Default to authorized
 
     mock.side_effect = mock_auth_callback
@@ -110,7 +111,7 @@ def mock_authorization_denied():
     """Fixture providing a mocked authorization callback that denies requests."""
     mock = MagicMock()
 
-    async def mock_auth_callback(_tool_name, _arguments, _context, _requester_ref, _destructive):
+    async def mock_auth_callback(_tool_name, _arguments, _context, _requester_ref, _destructive, _kind):
         return False  # Always deny
 
     mock.side_effect = mock_auth_callback

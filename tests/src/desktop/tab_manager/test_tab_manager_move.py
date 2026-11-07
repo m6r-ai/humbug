@@ -33,7 +33,7 @@ def tab_manager(qapp, manager, tmp_path):
     manager._mindspace._path = path  # pylint: disable=protected-access
     manager._mindspace._settings = MindspaceSettings(enabled_tools={})  # pylint: disable=protected-access
 
-    tm = TabManager(lambda source_type, path: None, None)
+    tm = TabManager(lambda _payload: None, None)
 
     def _create_conversation_tab(info, _registry, parent):
         return ConversationTab(info.context_id, info.path, parent)

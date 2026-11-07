@@ -26,6 +26,38 @@ approved separately: the buffer is changed freely and you are asked when it is s
 
 ---
 
+## Approving file changes for the rest of a turn
+
+When you are asked to approve a change to a file in your mindspace, the prompt also offers
+**Auto-approve file changes until your next message**. Turning it on approves this kind of change
+for the rest of the current turn, so the AI can carry on working through a long task — editing a
+dozen files in a refactor, say — without stopping for you after each one.
+
+What it covers is deliberately narrow:
+
+- It covers only changes inside the mindspace that the **journal** records, which means changes it
+  can reverse. That is where the switch appears, and why it does not appear on every prompt.
+- It covers writing, appending to, overwriting, moving and copying files, applying diffs, saving
+  from an editor, and downloading a file into the mindspace — including deleting files and empty
+  folders, which the journal records along with the content they held, and creating folders, which
+  it records so they can be removed again.
+- It never covers terminal commands, HTTP requests other than a download, delegating to a child AI,
+  or anything that would reach outside the mindspace or into `.humbug/`.
+- Converting a document is covered too, including the image folder a conversion to Markdown or HTML
+  writes beside its output. The one write that still asks is moving a folder that contains files,
+  whose contents the journal does not capture, and that prompt says the contents will be lost.
+
+Turning the switch on approves later requests, never the one you are looking at — that one still
+needs its own click — and it is never remembered. It lapses when the turn finishes, and it lapses
+the moment you send your next message, so sending a message is how you take it back.
+
+While it is on, the changes happen without a prompt, so the record is what stands in their place:
+every change is listed in the [Journal](journal.md) and [Mindspace Log](mindspace-log.md) as
+usual, and the log notes that you enabled the approval and that it, rather than a prompt you read,
+is what approved each call.
+
+---
+
 ## Available tools
 
 The following tools are available to the AI in every conversation:

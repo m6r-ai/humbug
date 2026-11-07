@@ -7,7 +7,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ai_tool import AIToolCall, AIToolAuthorizationDenied, AIToolExecutionError
+from ai_tool import (
+    AIToolApprovalKind, AIToolAuthorizationDenied, AIToolCall, AIToolExecutionError
+)
 from http_ai_tool.http_ai_tool import HttpAITool
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_error import MindspaceError
@@ -42,6 +44,24 @@ def _make_mindspace_mock(mindspace_path: str = "/tmp/mindspace") -> MagicMock:
         return abs_path, os.path.relpath(abs_path, mindspace_abs)
 
     mock.resolve_tool_path.side_effect = _resolve_tool_path
+
+    def _journalled_path(path: str) -> str | None:
+        """Model the real journal scope, which is the boundary and the .humbug/ exclusion."""
+        try:
+            _, relative_path = _resolve_tool_path(path)
+
+        except MindspaceError:
+            return None
+
+        return relative_path
+
+    journal = MagicMock()
+    journal.record_write.return_value = MagicMock()
+    mock.journalled_path.side_effect = _journalled_path
+    mock.file_journal.return_value = journal
+    mock.journal_target.side_effect = lambda path: (
+        (journal, _journalled_path(path)) if _journalled_path(path) is not None else None
+    )
     return mock
 
 
@@ -80,7 +100,8 @@ def _make_auth_callback(authorized: bool = True) -> MagicMock:
         _arguments: dict[str, Any],
         _context: str,
         _requester_ref: Any,
-        _destructive: bool
+        _destructive: bool,
+        _kind: AIToolApprovalKind
     ) -> bool:
         return authorized
 
@@ -465,7 +486,8 @@ class TestHttpAIToolHead:
             _arguments: dict[str, Any],
             _context: str,
             _requester_ref: Any,
-            destructive: bool
+            destructive: bool,
+            _kind: AIToolApprovalKind
         ) -> bool:
             captured_destructive.append(destructive)
             return True
@@ -638,7 +660,8 @@ class TestHttpAIToolPost:
             _arguments: dict[str, Any],
             _context: str,
             _requester_ref: Any,
-            destructive: bool
+            destructive: bool,
+            _kind: AIToolApprovalKind
         ) -> bool:
             captured_destructive.append(destructive)
             return True
@@ -669,7 +692,8 @@ class TestHttpAIToolPost:
             _arguments: dict[str, Any],
             _context: str,
             _requester_ref: Any,
-            destructive: bool
+            destructive: bool,
+            _kind: AIToolApprovalKind
         ) -> bool:
             captured_destructive.append(destructive)
             return True
@@ -767,7 +791,8 @@ class TestHttpAIToolPut:
             _arguments: dict[str, Any],
             _context: str,
             _requester_ref: Any,
-            destructive: bool
+            destructive: bool,
+            _kind: AIToolApprovalKind
         ) -> bool:
             captured_destructive.append(destructive)
             return True
@@ -871,7 +896,8 @@ class TestHttpAIToolPatch:
             _arguments: dict[str, Any],
             _context: str,
             _requester_ref: Any,
-            destructive: bool
+            destructive: bool,
+            _kind: AIToolApprovalKind
         ) -> bool:
             captured_destructive.append(destructive)
             return True
@@ -971,7 +997,8 @@ class TestHttpAIToolDelete:
             _arguments: dict[str, Any],
             _context: str,
             _requester_ref: Any,
-            destructive: bool
+            destructive: bool,
+            _kind: AIToolApprovalKind
         ) -> bool:
             captured_destructive.append(destructive)
             return True
@@ -1907,15 +1934,18 @@ class TestHttpAIToolDownload:
             )
 
             captured_destructive: list[bool] = []
+            captured_kind: list[AIToolApprovalKind] = []
 
             async def capturing_auth(
                 _tool_name: str,
                 _arguments: dict[str, Any],
                 _context: str,
                 _requester_ref: Any,
-                destructive: bool
+                destructive: bool,
+                kind: AIToolApprovalKind
             ) -> bool:
                 captured_destructive.append(destructive)
+                captured_kind.append(kind)
                 return True
 
             auth = MagicMock(side_effect=capturing_auth)
@@ -1935,6 +1965,7 @@ class TestHttpAIToolDownload:
                 _execute_tool(tool, tool_call, auth)
 
             assert captured_destructive == [True]
+            assert captured_kind == [AIToolApprovalKind.MINDSPACE_FILE_CHANGE]
 
     def test_download_marks_non_destructive_for_new_file(self) -> None:
         """Download to a new file should be marked non-destructive."""
@@ -1956,7 +1987,8 @@ class TestHttpAIToolDownload:
                 _arguments: dict[str, Any],
                 _context: str,
                 _requester_ref: Any,
-                destructive: bool
+                destructive: bool,
+                _kind: AIToolApprovalKind
             ) -> bool:
                 captured_destructive.append(destructive)
                 return True
@@ -2808,6 +2840,7 @@ class TestHttpAIToolAuthorizationDisplay:
             reason: str,
             context: str | None,
             _destructive: bool,
+            _kind: AIToolApprovalKind,
         ) -> bool:
             captured.append((reason, context))
             return True
@@ -2851,6 +2884,7 @@ class TestHttpAIToolAuthorizationDisplay:
             _reason: str,
             context: str | None,
             _destructive: bool,
+            _kind: AIToolApprovalKind,
         ) -> bool:
             captured.append(context)
             return True
@@ -2895,6 +2929,7 @@ class TestHttpAIToolAuthorizationDisplay:
             reason: str,
             context: str | None,
             _destructive: bool,
+            _kind: AIToolApprovalKind,
         ) -> bool:
             captured.append((reason, context))
             return True

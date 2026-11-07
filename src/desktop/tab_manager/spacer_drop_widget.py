@@ -3,13 +3,14 @@ from PySide6.QtCore import Signal
 from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent, QPainter, QPaintEvent, QColor
 
 from desktop.color_role import ColorRole
+from desktop.drop_payload import read_drop_payload
 from desktop.style_manager import StyleManager
 
 
 class SpacerDropWidget(QWidget):
     """A spacer widget that accepts path drops."""
 
-    path_dropped = Signal(str, str)  # source_type, path
+    payload_dropped = Signal(object)  # DropPayload
     tab_dropped = Signal(str)  # tab_id
 
     def __init__(self, line_on_right: bool, parent: QWidget | None = None) -> None:
@@ -22,7 +23,7 @@ class SpacerDropWidget(QWidget):
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         """Accept path drops and activate the highlight."""
-        if event.mimeData().hasFormat("application/x-humbug-path"):
+        if read_drop_payload(event.mimeData()) is not None:
             event.acceptProposedAction()
             self._drag_active = True
             self.update()
@@ -38,7 +39,7 @@ class SpacerDropWidget(QWidget):
 
     def dragMoveEvent(self, event: QDragMoveEvent) -> None:
         """Accept path drops during move, keeping the highlight active."""
-        if event.mimeData().hasFormat("application/x-humbug-path"):
+        if read_drop_payload(event.mimeData()) is not None:
             event.acceptProposedAction()
             return
 
@@ -59,24 +60,9 @@ class SpacerDropWidget(QWidget):
         self._drag_active = False
         self.update()
 
-        if event.mimeData().hasFormat("application/x-humbug-path"):
-            mime_data = event.mimeData().data("application/x-humbug-path").data()
-
-            if not isinstance(mime_data, bytes):
-                mime_data = bytes(mime_data)
-
-            path = mime_data.decode()
-
-            source_type = None
-            if event.mimeData().hasFormat("application/x-humbug-source"):
-                source_data = event.mimeData().data("application/x-humbug-source").data()
-
-                if not isinstance(source_data, bytes):
-                    source_data = bytes(source_data)
-
-                source_type = source_data.decode()
-
-            self.path_dropped.emit(source_type, path)
+        payload = read_drop_payload(event.mimeData())
+        if payload is not None:
+            self.payload_dropped.emit(payload)
             event.acceptProposedAction()
             return
 

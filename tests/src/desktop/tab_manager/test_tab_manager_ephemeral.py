@@ -31,7 +31,7 @@ def tab_manager(qapp, manager):
     The TabManager is constructed before a mindspace is open, matching how the
     application builds it.
     """
-    tm = TabManager(lambda source_type, path: None, None)
+    tm = TabManager(lambda _payload: None, None)
 
     def _create_conversation_tab(info, _registry, parent):
         return ConversationTab(info.context_id, info.path, parent)

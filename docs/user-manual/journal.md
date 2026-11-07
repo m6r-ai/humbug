@@ -1,7 +1,7 @@
 # Undoing Changes
 
 Humbug keeps a record of every change made to the files in your mindspace, by you or by an AI. The
-**Changes** panel shows that record, newest first, and lets you put a file back the way it was.
+**Journal** panel shows that record, newest first, and lets you put a file back the way it was.
 
 The record behind the panel is the **change journal**. It is the counterpart to the
 [Mindspace Log](mindspace-log.md): the log is a witness to what happened, and the journal is what
@@ -15,7 +15,10 @@ A change is recorded whenever a file in the mindspace is mutated through Humbug:
 
 - Files an AI writes, edits, creates, renames, moves, or deletes
 - Files you save, rename, move, or delete from the mindspace panel
-- Documents converted from one format to another
+- Folders either of you creates, moves or removes
+- Documents converted from one format to another, together with the image folder a conversion to
+  Markdown or HTML writes beside its output
+- Git output an AI asks to be written to a file
 
 Changes made **outside** Humbug are also picked up. Humbug compares the mindspace tree against a
 checkpoint taken a few seconds earlier, so a file rewritten by a terminal command, an external
@@ -25,11 +28,15 @@ because Humbug cannot see who made it and will not guess.
 Nothing outside the mindspace is watched, and `.humbug` itself never is: it holds the journal, so
 watching it would record the act of watching.
 
+Deleting a file or an empty folder is recorded here, by either actor: the content is kept so the
+deletion can be reverted, and the file does not appear in the [Trash](trash.md).  The trash holds
+conversations, whose transcripts live under `.humbug` and so fall outside the journal.
+
 ---
 
-## Opening the Changes panel
+## Opening the Journal panel
 
-Click the **Changes** icon in the left icon rail of the mindspace sidebar. The panel reloads each
+Click the **Journal** icon in the left icon rail of the mindspace sidebar. The panel reloads each
 time you switch to it, so the list always reflects the journal as it stands.
 
 There is no menu item or keyboard shortcut for the panel: it reports on the mindspace you are
@@ -83,6 +90,21 @@ This is the fastest way to answer "what changed during that session?" without le
 
 ## Looking at a recorded version
 
+A change is about a file's history, not about the file as it stands now, so clicking one shows the
+version it produced rather than opening the file. The file may have been rewritten — or deleted —
+since the change was recorded, and opening it would answer a different question from the one the
+row asks.
+
+- **Single click** a change to show the version it produced, in a tab that closes as soon as you
+  open something else beside it
+- **Double click** it to open the same tab and keep it
+- **Drag** it onto a column, or onto the strip either side of the columns, to open it in that
+  column and keep it
+
+A change that produced no version of its own — a removal — opens nothing when clicked, and cannot
+be dragged. The version a change produced is also not always still held (see below), and a change
+whose version is gone likewise opens nothing.
+
 Right-click a change to see the versions around it:
 
 | Action | What it shows |
@@ -100,9 +122,14 @@ Two of these actions are not always available, and the panel says so rather than
 misleading:
 
 - A change that **removed** a file produced no version of its own, so only the version it replaced
-  can be shown — and only while the trash still holds it
+  can be shown — and only while the journal still holds it
 - Content that is **not text** can only be previewed from a file on disk, so it is shown only while
   the file still holds exactly that version
+
+The journal holds the content a change *replaced*. A change's own version therefore becomes
+available only once something has replaced it in turn, which for the newest change to a file it
+usually has not. Clicking such a change does nothing rather than showing you the current file as if
+it were that version, and the only way to see that state is to look at the file itself.
 
 ---
 
@@ -185,14 +212,19 @@ is ever discarded without you asking.
 
 ## Settings
 
-Two aspects of the journal are configured per mindspace, in **Mindspace Settings → Changes**:
+Two aspects of the journal are configured per mindspace, in **Mindspace Settings → Journal**:
 
 - **Checkpoint interval** — how often, in seconds, Humbug compares the tree against a checkpoint to
   detect changes made outside it. The default is 5 seconds; a larger value costs less work and
   reports external changes in coarser batches
-- **Watched tree → ignored directories and paths** — what the comparison does not descend into.
-  Entries are directory names, which match at any depth, or paths from the mindspace root, which
-  match that path and everything below it. `.git` and `.humbug` are always ignored
+- **Watched tree → ignored files, directories and paths** — what the comparison leaves out.
+  Entries are glob patterns, matched in exactly the terms the
+  [File Access](user-settings.md#file-access) allow and deny lists use, which means: a single
+  name matches that whole name anywhere in the tree and never a longer one, so `venv` does not
+  match `venvity`, and `*.swp` excludes an editor's swap files wherever they appear. A path
+  matches when it ends with those components, so `src/generated` does not match
+  `src/generatedly`; add `/**` to the end to include everything below it. `.git` and `.humbug`
+  are always ignored
 
 The defaults ignore caches, virtual environments, and generated output. A test run or a build
 rewrites hundreds of files that no one would ever want to revert, and the source change that

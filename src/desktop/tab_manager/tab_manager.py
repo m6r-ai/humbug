@@ -10,6 +10,7 @@ from PySide6.QtGui import QPixmap, QResizeEvent
 from context.context_info import ContextInfo
 from context.context_registry import ContextEvent, ContextRegistry
 
+from desktop.drop_payload import DropPayload
 from desktop.language.language_manager import LanguageManager
 from desktop.file_utils import is_binary_image_file
 from desktop.mindspace.mindspace_manager import MindspaceManager
@@ -45,7 +46,7 @@ class TabManager(QWidget):
 
     def __init__(
         self,
-        open_path: Callable[[str, str], str | None],
+        open_path: Callable[[DropPayload], str | None],
         parent: QWidget | None = None
     ) -> None:
         """Initialize the tab manager."""
@@ -78,7 +79,7 @@ class TabManager(QWidget):
 
         # Create welcome widget
         self._welcome_widget = WelcomeWidget()
-        self._welcome_widget.path_dropped.connect(self._on_welcome_widget_path_dropped)
+        self._welcome_widget.payload_dropped.connect(self._on_welcome_widget_payload_dropped)
         self._welcome_widget.user_settings_requested.connect(self.user_settings_requested.emit)
         self._stack.addWidget(self._welcome_widget)
 
@@ -97,8 +98,8 @@ class TabManager(QWidget):
         self._left_spacer.setFixedWidth(0)
         self._right_spacer = SpacerDropWidget(line_on_right=False)
         self._right_spacer.setFixedWidth(0)
-        self._left_spacer.path_dropped.connect(self._on_left_spacer_path_dropped)
-        self._right_spacer.path_dropped.connect(self._on_right_spacer_path_dropped)
+        self._left_spacer.payload_dropped.connect(self._on_left_spacer_payload_dropped)
+        self._right_spacer.payload_dropped.connect(self._on_right_spacer_payload_dropped)
         self._left_spacer.tab_dropped.connect(self._on_left_spacer_tab_dropped)
         self._right_spacer.tab_dropped.connect(self._on_right_spacer_tab_dropped)
         self._columns_layout.addWidget(self._left_spacer)
@@ -1112,25 +1113,35 @@ class TabManager(QWidget):
             source_column_index = self._tab_columns.index(source_column)
             self._remove_column_and_resize(source_column_index, source_column)
 
-    def _on_welcome_widget_path_dropped(self, source_type: str, path: str) -> None:
-        """Handle mindspace tree drops when only welcome widget is visible."""
+    def _on_welcome_widget_payload_dropped(self, payload: DropPayload) -> None:
+        """
+        Handle a drop when only the welcome widget is visible.
+
+        Args:
+            payload: What was dropped.
+        """
         if not self._tab_columns:
             self._create_column(0)
 
         self._active_column = self._tab_columns[0]
 
-        existing = self._find_existing_tab(source_type, path)
-        context_id = existing.tab_id() if existing else self._open_path(source_type, path)
+        existing = self._find_existing_tab(payload)
+        context_id = existing.tab_id() if existing else self._open_path(payload)
         if context_id is not None:
             self._stack.setCurrentWidget(self._columns_widget)
 
-    def _on_left_spacer_path_dropped(self, source_type: str, path: str) -> None:
-        """Handle a path dropped onto the left spacer, opening it in a new leftmost column."""
+    def _on_left_spacer_payload_dropped(self, payload: DropPayload) -> None:
+        """
+        Handle a drop onto the left spacer, opening it in a new leftmost column.
+
+        Args:
+            payload: What was dropped.
+        """
         new_column = self._create_column(0)
         self._active_column = new_column
         self._stack.setCurrentWidget(self._columns_widget)
 
-        existing = self._find_existing_tab(source_type, path)
+        existing = self._find_existing_tab(payload)
         if existing is not None:
             source_column = self._find_column_for_tab(existing)
             if source_column and source_column != new_column:
@@ -1139,21 +1150,26 @@ class TabManager(QWidget):
             self._update_tabs()
 
         else:
-            context_id = self._open_path(source_type, path)
+            context_id = self._open_path(payload)
             if context_id is not None:
                 self._update_tabs()
 
             elif new_column.count() == 0 and len(self._tab_columns) > 1:
                 self._remove_column_and_resize(0, new_column)
 
-    def _on_right_spacer_path_dropped(self, source_type: str, path: str) -> None:
-        """Handle a path dropped onto the right spacer, opening it in a new rightmost column."""
+    def _on_right_spacer_payload_dropped(self, payload: DropPayload) -> None:
+        """
+        Handle a drop onto the right spacer, opening it in a new rightmost column.
+
+        Args:
+            payload: What was dropped.
+        """
         new_index = len(self._tab_columns)
         new_column = self._create_column(new_index)
         self._active_column = new_column
         self._stack.setCurrentWidget(self._columns_widget)
 
-        existing = self._find_existing_tab(source_type, path)
+        existing = self._find_existing_tab(payload)
         if existing is not None:
             source_column = self._find_column_for_tab(existing)
             if source_column and source_column != new_column:
@@ -1162,7 +1178,7 @@ class TabManager(QWidget):
             self._update_tabs()
 
         else:
-            context_id = self._open_path(source_type, path)
+            context_id = self._open_path(payload)
             if context_id is not None:
                 self._update_tabs()
 
@@ -1285,27 +1301,25 @@ class TabManager(QWidget):
         self._sync_registry_layout()
         self._update_tabs()
 
-    def _on_column_widget_path_dropped(
+    def _on_column_widget_payload_dropped(
         self,
-        source_type: str,
-        path: str,
+        payload: DropPayload,
         target_column: ColumnWidget,
         target_index: int
     ) -> None:
         """
-        Handle a file being dropped into a column.
+        Handle a drop into a column.
 
         Args:
-            source_type: Source view type if available
-            path: Path dropped
+            payload: What was dropped
             target_column: Column where the file was dropped
             target_index: Target position in the column
         """
         self._active_column = target_column
 
         target_column_index = self._tab_columns.index(target_column)
-        existing = self._find_existing_tab(source_type, path)
-        context_id = existing.tab_id() if existing else self._open_path(source_type, path)
+        existing = self._find_existing_tab(payload)
+        context_id = existing.tab_id() if existing else self._open_path(payload)
         if context_id is None:
             return
 
@@ -1507,7 +1521,7 @@ class TabManager(QWidget):
         column_widget.currentChanged.connect(self._on_column_widget_current_changed)
         column_widget.column_activated.connect(self._on_column_widget_column_activated)
         column_widget.tab_dropped.connect(self._on_column_widget_tab_dropped)
-        column_widget.path_dropped.connect(self._on_column_widget_path_dropped)
+        column_widget.payload_dropped.connect(self._on_column_widget_payload_dropped)
 
         self._column_splitter.insertWidget(index, column_widget)
         self._tab_columns.insert(index, column_widget)
@@ -2251,36 +2265,44 @@ class TabManager(QWidget):
 
         return None
 
-    def _find_existing_tab(self, source_type: str, path: str) -> TabBase | None:
+    def _find_existing_tab(self, payload: DropPayload) -> TabBase | None:
         """
-        Find an already-open tab matching the given drag-drop source type and path.
+        Find an already-open tab matching a dropped payload.
 
-        Handles the source_type to tool_name mapping and any path transformation
-        needed (e.g. relative→absolute for conversations), then delegates to
-        _find_tab_by_path.  Does not open, focus, or modify anything.
+        Handles the payload's source type to tool name mapping and any path
+        transformation needed (e.g. relative→absolute for conversations), then
+        delegates to _find_tab_by_path.  Does not open, focus, or modify anything.
+
+        A drop that names a recorded change has no tab to find here: matching by
+        path would find the file as it is now, which is not the version the change
+        produced.  The open that follows resolves what is already showing that
+        version.
 
         Args:
-            source_type: Source view type string ('conversations', 'vcs', 'preview', 'files').
-            path: File path as carried in the drop mime data.
+            payload: What was dropped.
 
         Returns:
             The matching TabBase if found, None otherwise.
         """
+        if payload.journal_sequence is not None:
+            return None
+
+        source_type = payload.source_type
         if source_type == "conversations":
             return self._find_tab_by_path(
-                "conversation", self._mindspace_manager.get_absolute_path(path)
+                "conversation", self._mindspace_manager.get_absolute_path(payload.path)
             )
 
         if source_type == "vcs":
-            return self._find_tab_by_path("diff", path)
+            return self._find_tab_by_path("diff", payload.path)
 
         if source_type == "preview":
-            return self._find_tab_by_path("preview", path)
+            return self._find_tab_by_path("preview", payload.path)
 
-        if is_binary_image_file(path):
-            return self._find_tab_by_path("preview", path)
+        if is_binary_image_file(payload.path):
+            return self._find_tab_by_path("preview", payload.path)
 
-        return self._find_tab_by_path("editor", path)
+        return self._find_tab_by_path("editor", payload.path)
 
 
     def current_tab_by_column(self) -> dict[int, str]:

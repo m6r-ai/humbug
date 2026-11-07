@@ -64,12 +64,13 @@ since the most recent checkpoint, at content too large to capture, and at anythi
 already read, executed or committed, and the interface says so rather than implying a
 guarantee it cannot keep.
 
-Deletion follows the same principle rather than escaping it.  A deleted file or empty folder
-moves to a per-mindspace trash, where it can be restored to the place it came from, so a
-mistaken delete is recoverable on its own terms rather than only through the journal.  Emptying
-the trash is the point at which the change genuinely becomes unrevertable, and the journal then
-reports the deletion as a change it cannot reverse instead of restoring something that is no
-longer what was deleted.
+Deletion follows the same principle rather than escaping it, and each store serves one purpose.
+The journal is the only home for a removal of the mindspace's own content: a deleted file or empty
+folder is recorded with the content it held, by either actor, so a mistaken delete is reverted the
+same way any other change is.  The trash is the only home for a deleted conversation, because a
+transcript is Humbug's own state under `.humbug/` and the journal deliberately never covers it.
+Neither store's retention action reaches into the other, and neither promises to restore something
+that is no longer what was deleted.
 
 Beside the journal a change watcher compares successive metadata walks of the mindspace,
 so a file changed by a terminal command, or by anything else outside Humbug, is recorded
@@ -78,14 +79,10 @@ changed and when and never why: the change is unattributed because attributing i
 be recording a guess.  See ADR-0020.
 
 What that walk covers is the mindspace's own setting rather than a fixed list, because
-which directories are generated output and which are content differs from one mindspace
-to the next.  The paths a mindspace excludes are a silent boundary — a change under one
-is reported nowhere — so they are the user's to state and the interface shows them.
-
-What that walk covers is the mindspace's own setting rather than a fixed list, because
-which directories are generated output and which are content differs from one mindspace
-to the next.  The paths a mindspace excludes are a silent boundary — a change under one
-is reported nowhere — so they are the user's to state and the interface shows them.
+which directories are generated output, and which files are an editor's working state
+rather than content, differs from one mindspace to the next.  What a mindspace excludes
+is a silent boundary — a change under one is reported nowhere — so it is the user's to
+state and the interface shows it.
 
 ### Minimal dependencies, maximum understandability
 Humbug follows the pattern of an OS kernel: simple, largely self-contained, and
@@ -172,6 +169,16 @@ writing files, running terminal commands, applying diffs — require explicit us
 before each action. The user sees exactly what the AI intends to do and can approve, reject,
 or ask for clarification. This is not friction; it is the user's ability to course-correct
 before a mistake becomes expensive.
+
+There is one deliberate qualification, and it is bounded by the journal rather than by a
+judgement about risk. A user may grant a standing approval for the rest of the current turn,
+which resolves exactly those requests whose whole effect is a change the change journal records —
+inside the mindspace and outside `.humbug/`, which is to say a change that can be reversed. The
+approval is never remembered, lapses when the turn ends, and never covers terminal commands,
+network requests, or anything the journal would not record. The prompts it removes are the ones
+where the user's attention buys the least, because the record buys what the prompt was for. Every
+change made under it is still logged, and the log says a standing approval resolved it. See
+ADR-0022.
 
 **Bounded outputs.** Tools that can produce large outputs — file contents, search results,
 git logs, diffs — must enforce a size limit (currently 64KB). If output exceeds the limit, it

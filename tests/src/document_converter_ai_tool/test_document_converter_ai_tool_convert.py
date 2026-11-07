@@ -393,7 +393,7 @@ class TestConvertAuthorization:
         """When the output file already exists the destructive flag is True."""
         captured = {}
 
-        async def capture_auth(_tool_name, _arguments, _context, _requester_ref, destructive):
+        async def capture_auth(_tool_name, _arguments, _context, _requester_ref, destructive, _kind):
             captured["destructive"] = destructive
             return True
 
@@ -436,7 +436,7 @@ class TestConvertAuthorization:
         """When the output file does not exist the destructive flag is False."""
         captured = {}
 
-        async def capture_auth(_tool_name, _arguments, _context, _requester_ref, destructive):
+        async def capture_auth(_tool_name, _arguments, _context, _requester_ref, destructive, _kind):
             captured["destructive"] = destructive
             return True
 

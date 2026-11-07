@@ -298,6 +298,16 @@ class AITranscriptConversation:
         """Approve the current pending tool authorisation."""
         await self._conversation.approve_pending_tool_calls()
 
+    def set_auto_approve_file_changes(self, enabled: bool) -> None:
+        """
+        Grant or withdraw a standing approval for journalled file changes.
+
+        Args:
+            enabled: True to approve such changes without asking for the rest of the
+                current turn, False to ask again.
+        """
+        self._conversation.set_auto_approve_file_changes(enabled)
+
     async def reject_pending_tool_calls(self, reason: str = "User rejected tool call") -> None:
         """
         Reject the current pending tool authorisation.

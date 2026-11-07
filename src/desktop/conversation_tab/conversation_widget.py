@@ -19,7 +19,7 @@ from ai import (
     AIConversationEvent, AIConversationHistory, AIConversationSettings,
     AIReasoningCapability, AIMessage, AIMessageSource
 )
-from ai_tool import AIToolCall
+from ai_tool import AIToolApprovalKind, AIToolCall
 from ai_transcript_conversation import AITranscriptConversation
 from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
 from pdf import PDFUnsupportedError, PDFError, extract_text, parse as parse_pdf
@@ -326,6 +326,7 @@ class ConversationWidget(QWidget):
         self._input.stop_requested.connect(self._on_stop_requested)
         self._input.settings_requested.connect(self._on_input_settings_requested)
         self._input.attach_requested.connect(self._on_attach_requested)
+        self._input.file_dropped.connect(self._on_file_dropped)
         self._input.cancel_edit_requested.connect(self._on_cancel_edit_requested)
         self._input.modified.connect(self.conversation_modified)
 
@@ -368,11 +369,9 @@ class ConversationWidget(QWidget):
         # Tracking for spotlighted message
         self._spotlighted_message_index = -1
 
-        # Pending edit: the message the next submit will truncate to, and the text
-        # that was loaded into the input box when the edit began.  Nothing is removed
-        # from the transcript until the edit is submitted.
+        # Pending edit: the message the next submit will truncate to.  Nothing is
+        # removed from the transcript until the edit is submitted.
         self._pending_edit_message_id: str | None = None
-        self._pending_edit_original_text = ""
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
@@ -811,6 +810,7 @@ class ConversationWidget(QWidget):
         msg_widget.delete_requested.connect(self._on_message_delete_requested)
         msg_widget.expand_requested.connect(self._on_message_expand_requested)
         msg_widget.tool_call_approved.connect(self._on_tool_call_approved)
+        msg_widget.auto_approve_toggled.connect(self._on_auto_approve_toggled)
         msg_widget.tool_call_i_am_unsure.connect(self._on_tool_call_i_am_unsure)
         msg_widget.tool_call_rejected.connect(self._on_tool_call_rejected)
         msg_widget.retry_requested.connect(self._on_retry_requested)
@@ -978,6 +978,9 @@ class ConversationWidget(QWidget):
             AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._on_tool_approval_required
         )
         self._ai_conversation.unregister_callback(
+            AIConversationEvent.TOOL_APPROVAL_AUTO_APPROVED, self._on_tool_approval_auto_approved
+        )
+        self._ai_conversation.unregister_callback(
             AIConversationEvent.TOOL_INTERRUPTIBLE_WAIT_STARTED, self._on_interruptible_wait_started
         )
         self._ai_conversation.unregister_callback(
@@ -1015,6 +1018,9 @@ class ConversationWidget(QWidget):
         )
         self._ai_conversation.register_callback(
             AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._on_tool_approval_required
+        )
+        self._ai_conversation.register_callback(
+            AIConversationEvent.TOOL_APPROVAL_AUTO_APPROVED, self._on_tool_approval_auto_approved
         )
         self._ai_conversation.register_callback(
             AIConversationEvent.TOOL_INTERRUPTIBLE_WAIT_STARTED, self._on_interruptible_wait_started
@@ -1304,7 +1310,8 @@ class ConversationWidget(QWidget):
         tool_call: AIToolCall,
         reason: str,
         context: str | None,
-        destructive: bool
+        destructive: bool,
+        kind: AIToolApprovalKind
     ) -> None:
         """
         Handle tool approval requirement.
@@ -1315,15 +1322,32 @@ class ConversationWidget(QWidget):
             reason: Reason for the tool call
             context: Additional context for the tool call
             destructive: Whether the tool calls are considered destructive
+            kind: What the request would change, as the tool classified it
         """
         # Find the message widget that corresponds to this tool call message
         for msg_widget in self._ordered_widgets():
             if msg_widget.message_id() == message.id:
                 # Add approval UI to this message
                 self._pending_tool_call_approval = msg_widget
-                msg_widget.show_tool_approval_ui(tool_call, reason, context, destructive)
+                msg_widget.show_tool_approval_ui(
+                    tool_call, reason, context, destructive,
+                    kind == AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+                )
                 self.update_label.emit()
                 break
+
+    async def _on_tool_approval_auto_approved(self, message: AIMessage | None, reason: str) -> None:
+        """
+        Handle a tool call that a standing approval resolved without asking.
+
+        Args:
+            message: The tool call message that was resolved, if it was known
+            reason: The reason the tool gave for the change it is about to make
+        """
+        del message
+        self._log_conversation_interaction(
+            f"Human's standing approval authorised tool call: {reason}"
+        )
 
     async def _on_interruptible_wait_started(
         self,
@@ -1361,6 +1385,20 @@ class ConversationWidget(QWidget):
             self._pending_interruptible_wait.remove_interruptible_wait_ui()
             self._pending_interruptible_wait = None
             self.update_label.emit()
+
+    def _on_auto_approve_toggled(self, enabled: bool) -> None:
+        """Handle the user granting or withdrawing a standing approval of file changes."""
+        self._ai_conversation.set_auto_approve_file_changes(enabled)
+
+        if enabled:
+            self._log_conversation_interaction(
+                "Human enabled auto-approval of file changes for the rest of this turn"
+            )
+
+        else:
+            self._log_conversation_interaction(
+                "Human withdrew auto-approval of file changes"
+            )
 
     def _on_tool_call_approved(self, _tool_call: AIToolCall) -> None:
         """Handle user approval of tool calls."""
@@ -3351,9 +3389,9 @@ class ConversationWidget(QWidget):
         """
         Begin editing from a user message.
 
-        The message text is loaded into the input box and the message, along with
-        every subsequent message, is marked as pending removal.  Nothing is removed
-        from the transcript until the edit is submitted.
+        The message text and its attachments are loaded into the input box, and the
+        message, along with every subsequent message, is marked as pending removal.
+        Nothing is removed from the transcript until the edit is submitted.
         """
         sender = self.sender()
         if not isinstance(sender, ConversationMessage):
@@ -3367,14 +3405,20 @@ class ConversationWidget(QWidget):
         if sender.message_source() != AIMessageSource.USER:
             return
 
-        self._begin_pending_edit(message_id, sender.message_content())
+        self._begin_pending_edit(message_id, sender.message_content(), sender.message_attachments())
 
-    def _begin_pending_edit(self, message_id: str, content: str) -> None:
-        """Enter pending-edit mode targeting the given message."""
+    def _begin_pending_edit(self, message_id: str, content: str, attachments: list[tuple[str, str]]) -> None:
+        """
+        Enter pending-edit mode targeting the given message.
+
+        The message's attachments are loaded into the input box along with its text so
+        that submitting the edit re-sends them, and so that the user can detach any of
+        them before submitting.  Attachments recorded on the edited message are pruned
+        from the transcript when the edit is committed, so they exist nowhere else.
+        """
         self._clear_pending_edit()
 
         self._pending_edit_message_id = message_id
-        self._pending_edit_original_text = content
 
         index = self._message_index(message_id)
         editing = self._widget_at(index)
@@ -3387,6 +3431,10 @@ class ConversationWidget(QWidget):
                 message_widget.set_pending_removal(True)
 
         self._input.set_plain_text(content)
+        self._input.clear_attachments()
+        for filename, file_content in attachments:
+            self._input.add_attachment(filename, file_content)
+
         self._input.set_edit_mode(True)
         self._input.set_spotlighted(True)
         self._input.setFocus()
@@ -3397,12 +3445,12 @@ class ConversationWidget(QWidget):
             return
 
         self._pending_edit_message_id = None
-        self._pending_edit_original_text = ""
 
         for message_widget in self._ordered_widgets():
             message_widget.set_pending_removal(False)
             message_widget.set_being_edited(False)
 
+        self._input.clear_attachments()
         self._input.set_edit_mode(False)
 
     def _on_cancel_edit_requested(self) -> None:
@@ -3421,7 +3469,6 @@ class ConversationWidget(QWidget):
         """
         message_id = self._pending_edit_message_id
         self._pending_edit_message_id = None
-        self._pending_edit_original_text = ""
         self._input.set_edit_mode(False)
 
         if message_id is None:
@@ -3637,6 +3684,15 @@ class ConversationWidget(QWidget):
         if not path:
             return
 
+        self._attach_file(path)
+
+    def _on_file_dropped(self, path: str) -> None:
+        """Handle a file dropped on the input box, attaching it instead of opening it."""
+        self._attach_file(path)
+
+    def _attach_file(self, path: str) -> None:
+        """Read a file and attach it to the message being composed."""
+        strings = self._language_manager.strings()
         filename = os.path.basename(path)
 
         if path.lower().endswith(".pdf"):
@@ -3847,7 +3903,8 @@ class ConversationWidget(QWidget):
                     "tool_call": tool_approval_info["tool_call"].to_dict(),
                     "reason": tool_approval_info["reason"],
                     "context": tool_approval_info["context"],
-                    "destructive": tool_approval_info["destructive"]
+                    "destructive": tool_approval_info["destructive"],
+                    "approvable": tool_approval_info["approvable"]
                 }
 
                 # Clear the approval UI from the old widget
@@ -4033,7 +4090,8 @@ class ConversationWidget(QWidget):
                     tool_call,
                     approval_info["reason"],
                     approval_info["context"],
-                    approval_info["destructive"]
+                    approval_info["destructive"],
+                    approval_info["approvable"]
                 )
 
                 # Update our tracking reference

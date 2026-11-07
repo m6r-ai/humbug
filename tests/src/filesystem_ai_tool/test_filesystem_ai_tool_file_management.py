@@ -2,13 +2,16 @@
 Tests for filesystem tool file management operations: delete_file, copy_file, move.
 """
 import asyncio
+from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 import pytest
 
 from ai_tool import AIToolExecutionError, AIToolAuthorizationDenied
+from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettings
 from filesystem_ai_tool.filesystem_ai_tool import FileSystemAITool
 from mindspace.journal_entry import JournalActor
+from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
 
@@ -17,9 +20,12 @@ class TestFileSystemAIToolDeleteFile:
 
     def test_delete_file_success(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test successful file deletion."""
+        mindspace = filesystem_tool._mindspace
+        mindspace.conversation_identifier.return_value = ""
+
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
-             patch('pathlib.Path.unlink') as mock_unlink:
+             patch.object(mindspace, 'remove_path') as mock_remove:
 
             mock_exists.return_value = True
             mock_is_file.return_value = True
@@ -28,7 +34,7 @@ class TestFileSystemAIToolDeleteFile:
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "File deleted successfully: file.txt" in result.content
-            mock_unlink.assert_called_once()
+            mock_remove.assert_called_once_with("/test/sandbox/file.txt", JournalActor.AI, "")
             # Verify authorization was called with destructive=True
             mock_authorization.assert_called_once()
             args = mock_authorization.call_args[0]
@@ -76,15 +82,17 @@ class TestFileSystemAIToolDeleteFile:
             error = exc_info.value
             assert "User denied permission to delete file: file.txt" in str(error)
 
-    def test_delete_file_already_deleted(self, filesystem_tool, mock_authorization, make_tool_call):
-        """Test deleting file that was already deleted (race condition)."""
+    def test_a_failed_removal_is_reported(self, filesystem_tool, mock_authorization, make_tool_call):
+        """Test that a removal the mindspace refuses is reported rather than ignored."""
+        mindspace = filesystem_tool._mindspace
+
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
-             patch('pathlib.Path.unlink') as mock_unlink:
+             patch.object(mindspace, 'remove_path') as mock_remove:
 
             mock_exists.return_value = True
             mock_is_file.return_value = True
-            mock_unlink.side_effect = OSError("File not found")
+            mock_remove.side_effect = MindspaceError("Failed to remove '/test/sandbox/file.txt': permission denied")
 
             tool_call = make_tool_call("filesystem", {"operation": "delete_file", "path": "file.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
@@ -92,51 +100,18 @@ class TestFileSystemAIToolDeleteFile:
 
             error = exc_info.value
             assert "Failed to delete file" in str(error)
-
-    def test_delete_file_permission_error(self, filesystem_tool, mock_authorization, make_tool_call):
-        """Test deleting file with permission error."""
-        with patch('pathlib.Path.exists') as mock_exists, \
-             patch('pathlib.Path.is_file') as mock_is_file, \
-             patch('pathlib.Path.unlink') as mock_unlink:
-
-            mock_exists.return_value = True
-            mock_is_file.return_value = True
-            mock_unlink.side_effect = PermissionError("Access denied")
-
-            tool_call = make_tool_call("filesystem", {"operation": "delete_file", "path": "file.txt"})
-            with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
-
-            error = exc_info.value
-            assert "Permission denied deleting file" in str(error)
-
-    def test_delete_file_os_error(self, filesystem_tool, mock_authorization, make_tool_call):
-        """Test deleting file with OS error."""
-        with patch('pathlib.Path.exists') as mock_exists, \
-             patch('pathlib.Path.is_file') as mock_is_file, \
-             patch('pathlib.Path.unlink') as mock_unlink:
-
-            mock_exists.return_value = True
-            mock_is_file.return_value = True
-            mock_unlink.side_effect = OSError("I/O error")
-
-            tool_call = make_tool_call("filesystem", {"operation": "delete_file", "path": "file.txt"})
-            with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
-
-            error = exc_info.value
-            assert "Failed to delete file" in str(error)
+            assert "permission denied" in str(error)
 
 
-class TestFileSystemAIToolDeleteFileJournal:
-    """A deletion records the file's content so that it can be reversed."""
+class TestFileSystemAIToolDeleteFileRemoval:
+    """A deletion asks the mindspace to remove the file, so the removal is recorded."""
 
     def _tool(self, mock_path_resolver, mock_access_settings):
         """Build a tool whose mindspace records journal calls for inspection."""
         mindspace = MagicMock()
         mindspace.has_mindspace.return_value = True
         mindspace.add_interaction.return_value = None
-        mindspace.conversation_identifier.return_value = ""
+        mindspace.conversation_identifier.return_value = "conv-1"
         tool = FileSystemAITool(
             resolve_path=mock_path_resolver,
             get_access_settings=mock_access_settings,
@@ -144,14 +119,13 @@ class TestFileSystemAIToolDeleteFileJournal:
         )
         return tool, mindspace
 
-    def test_records_the_removal_before_deleting(
+    def test_the_removal_carries_the_actor_and_the_requester(
         self, mock_path_resolver, mock_access_settings, mock_authorization, make_tool_call
     ):
         tool, mindspace = self._tool(mock_path_resolver, mock_access_settings)
 
         with patch('pathlib.Path.exists') as mock_exists, \
-             patch('pathlib.Path.is_file') as mock_is_file, \
-             patch('pathlib.Path.unlink'):
+             patch('pathlib.Path.is_file') as mock_is_file:
 
             mock_exists.return_value = True
             mock_is_file.return_value = True
@@ -159,30 +133,8 @@ class TestFileSystemAIToolDeleteFileJournal:
             tool_call = make_tool_call("filesystem", {"operation": "delete_file", "path": "file.txt"})
             asyncio.run(tool.execute(tool_call, "", mock_authorization))
 
-        mindspace.file_journal().record_removal.assert_called_once_with(
-            "/test/sandbox/file.txt", "file.txt", JournalActor.AI, ""
-        )
-
-    def test_a_failed_recording_still_deletes_and_warns(
-        self, mock_path_resolver, mock_access_settings, mock_authorization, make_tool_call
-    ):
-        tool, mindspace = self._tool(mock_path_resolver, mock_access_settings)
-        mindspace.file_journal().record_removal.return_value = None
-
-        with patch('pathlib.Path.exists') as mock_exists, \
-             patch('pathlib.Path.is_file') as mock_is_file, \
-             patch('pathlib.Path.unlink') as mock_unlink:
-
-            mock_exists.return_value = True
-            mock_is_file.return_value = True
-
-            tool_call = make_tool_call("filesystem", {"operation": "delete_file", "path": "file.txt"})
-            asyncio.run(tool.execute(tool_call, "", mock_authorization))
-
-        mock_unlink.assert_called_once()
-        mindspace.add_interaction.assert_any_call(
-            MindspaceLogLevel.WARN,
-            "Failed to record the removal of 'file.txt' for reversal",
+        mindspace.remove_path.assert_called_once_with(
+            "/test/sandbox/file.txt", JournalActor.AI, "conv-1"
         )
 
 
@@ -698,8 +650,8 @@ class TestFileSystemAIToolCopyAndMoveJournal:
         assert write_args[5] == removal_args[4]
         assert write_args[5] != ""
 
-    def test_move_of_a_directory_is_not_journalled(self, custom_path_resolver, mock_access_settings, mock_authorization, make_tool_call):
-        """Moving a directory is not reversible, so nothing is recorded for it."""
+    def test_move_of_a_populated_directory_is_not_journalled(self, custom_path_resolver, mock_access_settings, mock_authorization, make_tool_call):
+        """A directory whose contents are not captured cannot be reversed, so nothing is recorded."""
         tool, mindspace = self._tool(custom_path_resolver, mock_access_settings)
 
         with patch('pathlib.Path.exists') as mock_exists, \
@@ -717,3 +669,43 @@ class TestFileSystemAIToolCopyAndMoveJournal:
 
         mindspace.file_journal().record_write_from_path.assert_not_called()
         mindspace.file_journal().record_removal.assert_not_called()
+
+
+class TestMoveOfAnEmptyDirectory:
+    """Tests for journalling the move of a directory that holds nothing."""
+
+    def test_an_empty_directory_records_both_ends(self, tmp_path, mock_authorization, make_tool_call):
+        """Both halves of the move are recorded, in one group, so it can be reversed."""
+        mindspace = MagicMock()
+        mindspace.mindspace_path.return_value = str(tmp_path)
+        mindspace.has_mindspace.return_value = True
+        mindspace.journalled_path.side_effect = lambda path: (
+            str(Path(path).relative_to(tmp_path)) if tmp_path in Path(path).parents else None
+        )
+
+        def resolve(path: str) -> tuple[Path, str]:
+            return tmp_path / path, path
+
+        tool = FileSystemAITool(
+            resolve_path=resolve,
+            get_access_settings=lambda: FilesystemAccessSettings(
+                allow_external_access=False, external_allowlist=[], external_denylist=[]
+            ),
+            mindspace=mindspace,
+        )
+        (tmp_path / "notes").mkdir()
+        tool_call = make_tool_call(
+            "filesystem", {"operation": "move", "path": "notes", "destination": "archive"}
+        )
+
+        asyncio.run(tool.execute(tool_call, "", mock_authorization))
+
+        journal = mindspace.file_journal()
+        creation_args = journal.record_creation.call_args
+        removal_args = journal.record_removal.call_args
+
+        assert creation_args.args[:2] == (str(tmp_path / "archive"), "archive")
+        assert creation_args.kwargs["is_directory"] is True
+        assert removal_args.args[:2] == (str(tmp_path / "notes"), "notes")
+        assert removal_args.kwargs["pre_image_is_directory"] is True
+        assert creation_args.args[4] == removal_args.args[4]

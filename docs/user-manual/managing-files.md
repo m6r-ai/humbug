@@ -99,10 +99,12 @@ is blocked and you are told why.
 ## Deleting
 
 To delete a file, right-click it and choose **Delete**. You will be asked to confirm, and the file
-moves to the [trash](trash.md), where it can be restored.
+is recorded in the change journal before it is removed, so the deletion can be reversed from the
+[Changes panel](journal.md).
 
 Folders can only be deleted if they are **empty**. If you try to delete a non-empty folder,
-Humbug will tell you it cannot proceed. Remove or move the contents first.
+Humbug will tell you it cannot proceed. Remove or move the contents first. An empty folder is
+removed the same way a file is, and reverting the deletion recreates it.
 
 You can also press the **Delete key** while a file or folder is selected in the tree to trigger
 deletion.

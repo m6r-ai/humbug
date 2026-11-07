@@ -95,16 +95,20 @@ opening settings.
 
 ---
 
-## Changes
+## Journal
 
-Two settings control the [change journal](changes.md).
+Two settings control the [change journal](journal.md).
 
 - **Checkpoint interval** — how often, in seconds, Humbug compares the mindspace tree against a
   checkpoint so that changes made outside Humbug are recorded. Default is 5 seconds. A larger
   value does less work and reports external changes in coarser batches
-- **Watched tree → ignored directories and paths** — what that comparison does not descend into.
-  An entry is a directory name, which matches at any depth, or a path from the mindspace root,
-  which matches that path and everything below it. `.git` and `.humbug` are always ignored
+- **Watched tree → ignored files, directories and paths** — what that comparison leaves out. An
+  entry is a glob pattern, matched in the same terms as the
+  [File Access](user-settings.md#file-access) allow and deny lists: a single name matches that
+  whole name anywhere in the tree and never a longer one, so `venv` does not match `venvity` and
+  `*.swp` excludes an editor's swap files wherever they appear; a path matches when it ends with
+  those components; and `/**` at the end of an entry includes everything below that path. `.git`
+  and `.humbug` are always ignored
 
 The defaults ignore caches, virtual environments, and generated output — a build or a test run
 rewrites hundreds of files that no one would ever want to revert. The list you save replaces the

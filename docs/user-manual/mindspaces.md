@@ -81,7 +81,8 @@ The left side of the Humbug window is the **mindspace panel**. It shows the cont
 your current mindspace, and is where you navigate, open, and manage files and conversations.
 
 The panel shows one view at a time. You switch between views using the small icon buttons on the
-left rail of the panel:
+left rail of the panel. Resting the pointer on an icon shows what it opens, so an icon you don't
+recognise can be identified without clicking it:
 
 ### Conversations view
 
@@ -122,7 +123,8 @@ From this view you can:
   a read-only preview tab instead
 - **Right-click** to access a context menu with options to create new files or folders, rename,
   duplicate, move, or delete items
-- **Drag and drop** files between folders, or drag them into the tab area to open them
+- **Drag and drop** files between folders, or drag them into the tab area to open them. Dropping
+  a file on a conversation's input box attaches it to the message being composed
 
 All file types that Humbug supports for syntax highlighting can be opened in the editor. PDF and
 DOCX files can be opened for reading.

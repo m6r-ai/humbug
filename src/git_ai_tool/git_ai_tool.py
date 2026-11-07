@@ -8,6 +8,7 @@ from typing import Any
 
 from ai_tool import (
     AITool,
+    AIToolApprovalKind,
     AIToolAuthorizationCallback,
     AIToolAuthorizationDenied,
     AIToolCall,
@@ -23,8 +24,10 @@ from git import (
     GitRepository,
     find_repo_root,
 )
+from mindspace.journal_entry import JournalActor
 from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace import Mindspace
+from mindspace.mindspace_log_level import MindspaceLogLevel
 
 
 _MAX_INLINE_RESPONSE_BYTES = 64 * 1024
@@ -369,7 +372,7 @@ class GitAITool(AITool):
     async def _diff(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Diff operation — show working-tree changes."""
@@ -391,6 +394,7 @@ class GitAITool(AITool):
                     resolved_path,
                     ref,
                     output_path,
+                    requester_ref,
                     request_authorization,
                 )
 
@@ -399,6 +403,7 @@ class GitAITool(AITool):
             repo,
             ref,
             output_path,
+            requester_ref,
             request_authorization,
         )
 
@@ -409,6 +414,7 @@ class GitAITool(AITool):
         file_path: str,
         ref: str,
         output_path: str | None,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """
@@ -456,6 +462,7 @@ class GitAITool(AITool):
             content=diff_text,
             operation_label="diff",
             output_path=output_path,
+            requester_ref=requester_ref,
             request_authorization=request_authorization,
             narrow_hint="Narrow path to a single smaller file, open a diff tab, or",
         )
@@ -466,6 +473,7 @@ class GitAITool(AITool):
         repo: GitRepository,
         ref: str,
         output_path: str | None,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """
@@ -522,6 +530,7 @@ class GitAITool(AITool):
             content=combined,
             operation_label="diff",
             output_path=output_path,
+            requester_ref=requester_ref,
             request_authorization=request_authorization,
             narrow_hint=(
                 "Diff individual files with path, open a diff tab, or"
@@ -660,7 +669,7 @@ class GitAITool(AITool):
     async def _show(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Show operation — display file content at a specific ref."""
@@ -701,6 +710,7 @@ class GitAITool(AITool):
             content=content,
             operation_label="show",
             output_path=output_path,
+            requester_ref=requester_ref,
             request_authorization=request_authorization,
             narrow_hint="Show a smaller path/ref, or",
         )
@@ -769,6 +779,7 @@ class GitAITool(AITool):
         content: str,
         operation_label: str,
         output_path: str | None,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback,
         narrow_hint: str,
     ) -> AIToolResult:
@@ -780,6 +791,8 @@ class GitAITool(AITool):
             content: Full content string for the operation.
             operation_label: Short name for error messages (e.g. 'diff').
             output_path: Optional mindspace destination for a full write.
+            requester_ref: The conversation the call is being made for, so the
+                write can be attributed in the change journal.
             request_authorization: Authorization callback for writes.
             narrow_hint: Guidance fragment for oversize errors without output_path.
 
@@ -797,6 +810,7 @@ class GitAITool(AITool):
                 content=content,
                 operation_label=operation_label,
                 output_path=output_path,
+                requester_ref=requester_ref,
                 request_authorization=request_authorization,
             )
 
@@ -822,6 +836,7 @@ class GitAITool(AITool):
         content: str,
         operation_label: str,
         output_path: str,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback,
     ) -> AIToolResult:
         """
@@ -865,12 +880,34 @@ class GitAITool(AITool):
             reason,
             None,
             destructive,
+            self._approval_kind(dest_path),
         )
 
         if not authorized:
             raise AIToolAuthorizationDenied(
                 f"User denied permission to write git {operation_label} output to: {display_path}"
             )
+
+        # The journal captures the pre-image from disk before the write, so this file is
+        # reversible on the same terms as any other mutation.  A recording failure does
+        # not abort the write; it is logged so the file can be shown as not revertable.
+        journal = self._mindspace.journal_target(str(dest_path))
+        journal_entry = None
+        if journal is not None:
+            file_journal, relative_path = journal
+            journal_entry = file_journal.record_write(
+                str(dest_path),
+                relative_path,
+                content.encode("utf-8"),
+                JournalActor.AI,
+                self._mindspace.conversation_identifier(requester_ref),
+            )
+            if journal_entry is None:
+                self._mindspace.add_interaction(
+                    MindspaceLogLevel.WARN,
+                    f"Failed to record the git {operation_label} output to "
+                    f"'{display_path}' for reversal",
+                )
 
         try:
             dest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -883,6 +920,9 @@ class GitAITool(AITool):
             os.replace(tmp_path, dest_path)
 
         except OSError as e:
+            if journal_entry is not None:
+                self._mindspace.file_journal().void_entries([journal_entry])
+
             raise AIToolExecutionError(
                 f"Failed to write file '{display_path}': {e}"
             ) from e
@@ -896,6 +936,25 @@ class GitAITool(AITool):
                 f"({size:,} bytes)"
             ),
         )
+
+    def _approval_kind(self, path: Path) -> AIToolApprovalKind:
+        """
+        Classify the output-file write by whether the journal will record it.
+
+        The write is a plain file mutation inside the mindspace, so the approval
+        policy may resolve it without asking whenever the journal can reverse it.
+
+        Args:
+            path: The file about to be written.
+
+        Returns:
+            MINDSPACE_FILE_CHANGE when the journal records a change to the path,
+            STANDARD otherwise.
+        """
+        if self._mindspace.journalled_path(str(path)) is None:
+            return AIToolApprovalKind.STANDARD
+
+        return AIToolApprovalKind.MINDSPACE_FILE_CHANGE
 
     def _would_exceed_limit(self, parts: list[str], new_part: str) -> bool:
         """

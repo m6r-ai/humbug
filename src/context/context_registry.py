@@ -500,6 +500,9 @@ class ContextRegistry:
         Convert an ephemeral context to permanent.
 
         If the context is not ephemeral or does not exist, this is a no-op.
+        Nothing else about the context changes: a read-only view of an earlier
+        version of a file that is made to stay open is still a read-only view of
+        that version.
 
         Args:
             context_id: ID of the context to make permanent.
@@ -515,6 +518,7 @@ class ContextRegistry:
             title=info.title,
             is_modified=info.is_modified,
             is_ephemeral=False,
+            read_only=info.read_only,
             column=info.column,
             position=info.position,
         )

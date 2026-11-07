@@ -5,6 +5,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent, QPainter, QPaintEvent, QPixmap
 
 from desktop.color_role import ColorRole
+from desktop.drop_payload import read_drop_payload
 from desktop.style_manager import StyleManager
 from desktop.language.language_manager import LanguageManager
 from desktop.user.user_settings import UserSettings
@@ -14,7 +15,7 @@ from desktop.widgets.gradient_label import GradientBorderLabel, GradientLabel
 
 class WelcomeWidget(QFrame):
     """Widget showing welcome message when no tabs are open."""
-    path_dropped = Signal(str, str)  # source_type, path
+    payload_dropped = Signal(object)  # DropPayload
     user_settings_requested = Signal()  # Emitted when user wants to open settings
 
     def __init__(self, parent: QWidget | None = None):
@@ -153,7 +154,7 @@ class WelcomeWidget(QFrame):
         Args:
             event: The drag enter event
         """
-        if event.mimeData().hasFormat("application/x-humbug-path"):
+        if read_drop_payload(event.mimeData()) is not None:
             event.acceptProposedAction()
             self._drag_active = True
             self.update()
@@ -180,27 +181,9 @@ class WelcomeWidget(QFrame):
         self._drag_active = False
         self.update()
 
-        if event.mimeData().hasFormat("application/x-humbug-path"):
-            mime_data = event.mimeData().data("application/x-humbug-path").data()
-
-            # Convert to bytes first if it's not already bytes
-            if not isinstance(mime_data, bytes):
-                mime_data = bytes(mime_data)
-
-            path = mime_data.decode()
-
-            # Extract source type if available
-            source_type = None
-            if event.mimeData().hasFormat("application/x-humbug-source"):
-                source_data = event.mimeData().data("application/x-humbug-source").data()
-
-                # Convert to bytes first if it's not already bytes
-                if not isinstance(source_data, bytes):
-                    source_data = bytes(source_data)
-
-                source_type = source_data.decode()
-
-            self.path_dropped.emit(source_type, path)
+        payload = read_drop_payload(event.mimeData())
+        if payload is not None:
+            self.payload_dropped.emit(payload)
             event.acceptProposedAction()
             return
 

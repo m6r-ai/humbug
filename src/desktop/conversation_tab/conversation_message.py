@@ -25,6 +25,7 @@ from desktop.style_manager import StyleManager
 from desktop.conversation_tab.conversation_message_section import ConversationMessageSection
 from desktop.conversation_tab.conversation_message_style import ConversationMessageStyle
 from desktop.widgets.elided_label import ElidedLabel
+from desktop.widgets.switch import Switch
 
 
 _APPROVAL_BUTTON_BASE_WIDTH = 220
@@ -54,6 +55,7 @@ class ConversationMessage(QFrame):
     delete_requested = Signal()
     expand_requested = Signal(bool)
     tool_call_approved = Signal(AIToolCall)
+    auto_approve_toggled = Signal(bool)
     tool_call_i_am_unsure = Signal()
     tool_call_rejected = Signal(str)
     wait_cancelled = Signal()
@@ -240,6 +242,7 @@ class ConversationMessage(QFrame):
         self._is_spotlighted = False
         self._is_pending_removal = False
         self._is_being_edited = False
+        self._is_drop_target = False
         self._pending_removal_effect: QGraphicsOpacityEffect | None = None
         self._message_style: ConversationMessageStyle | None = message_style
         self._sections_layout = QVBoxLayout(self._sections_container)
@@ -315,12 +318,15 @@ class ConversationMessage(QFrame):
         self._approval_approve_button: QPushButton | None = None
         self._approval_i_am_unsure_button: QPushButton | None = None
         self._approval_reject_button: QPushButton | None = None
+        self._approval_auto_approve_switch: Switch | None = None
+        self._approval_auto_approve_label: QLabel | None = None
 
         # Store tool approval info for potential state capture
         self._pending_tool_call: AIToolCall | None = None
         self._pending_tool_reason: str | None = None
         self._pending_tool_context: str | None = None
         self._pending_tool_destructive: bool | None = None
+        self._pending_tool_approvable: bool = False
 
         # Interruptible wait widgets (shown inside the executing tool-call message)
         self._wait_widget: QWidget | None = None
@@ -437,6 +443,10 @@ class ConversationMessage(QFrame):
             border_color = self._style_manager.get_color_str(ColorRole.MESSAGE_EDITING)
             border_width = _BORDER_WIDTH_ACTIVE
 
+        elif self._is_drop_target:
+            border_color = self._style_manager.get_color_str(ColorRole.DROP_TARGET_HIGHLIGHT)
+            border_width = _BORDER_WIDTH_ACTIVE
+
         elif self._is_spotlighted and self._has_focus_in_hierarchy():
             border_color = self._style_manager.get_color_str(ColorRole.MESSAGE_SPOTLIGHTED)
             border_width = _BORDER_WIDTH_ACTIVE
@@ -517,6 +527,19 @@ class ConversationMessage(QFrame):
             return
 
         self._is_being_edited = being_edited
+        self._update_border_style()
+
+    def set_drop_target(self, drop_target: bool) -> None:
+        """
+        Mark this message as the one a dragged file would be dropped on.
+
+        Only the conversation input uses this, to show that a file dropped here
+        will be attached to the message rather than opened in a tab.
+        """
+        if self._is_drop_target == drop_target:
+            return
+
+        self._is_drop_target = drop_target
         self._update_border_style()
 
     def set_pending_removal(self, pending: bool) -> None:
@@ -782,7 +805,14 @@ class ConversationMessage(QFrame):
         self._section_with_selection = section
         self.selection_changed.emit(has_selection)
 
-    def show_tool_approval_ui(self, tool_call: AIToolCall, reason: str, context: str | None, destructive: bool) -> None:
+    def show_tool_approval_ui(
+        self,
+        tool_call: AIToolCall,
+        reason: str,
+        context: str | None,
+        destructive: bool,
+        approvable: bool
+    ) -> None:
         """
         Show tool approval UI for the given tool calls.
 
@@ -791,6 +821,8 @@ class ConversationMessage(QFrame):
             reason: Reason for the tool call
             context: Additional context for the tool call
             destructive: Whether the tool calls are destructive
+            approvable: Whether a standing approval of file changes may resolve this
+                request, which decides whether the switch to grant one is offered
         """
         assert self._approval_widget is None, "Approval widget already exists"
 
@@ -799,6 +831,7 @@ class ConversationMessage(QFrame):
         self._pending_tool_reason = reason
         self._pending_tool_context = context
         self._pending_tool_destructive = destructive
+        self._pending_tool_approvable = approvable
 
         style_manager = self._style_manager
         spacing = int(style_manager.message_bubble_spacing())
@@ -874,6 +907,26 @@ class ConversationMessage(QFrame):
         layout.addSpacing(2)
         layout.addLayout(button_layout)
 
+        if approvable:
+            switch_layout = QHBoxLayout()
+            switch_layout.setSpacing(spacing)
+            switch_layout.addStretch()
+
+            self._approval_auto_approve_switch = Switch()
+            self._approval_auto_approve_switch.setObjectName("_approval_auto_approve_switch")
+            self._approval_auto_approve_switch.toggled.connect(self.auto_approve_toggled)
+
+            self._approval_auto_approve_label = QLabel(strings.auto_approve_file_changes)
+            self._approval_auto_approve_label.setObjectName("_approval_auto_approve_label")
+            self._approval_auto_approve_label.setFont(font)
+
+            switch_layout.addWidget(self._approval_auto_approve_switch)
+            switch_layout.addWidget(self._approval_auto_approve_label)
+            switch_layout.addStretch()
+
+            layout.addSpacing(2)
+            layout.addLayout(switch_layout)
+
         self._layout.addWidget(self._approval_widget)
 
         # Expand the message for context when showing the approval UI
@@ -909,12 +962,15 @@ class ConversationMessage(QFrame):
             self._approval_approve_button = None
             self._approval_i_am_unsure_button = None
             self._approval_reject_button = None
+            self._approval_auto_approve_switch = None
+            self._approval_auto_approve_label = None
 
         # Clear stored tool approval info
         self._pending_tool_call = None
         self._pending_tool_reason = None
         self._pending_tool_context = None
         self._pending_tool_destructive = None
+        self._pending_tool_approvable = False
 
     def get_tool_approval_info(self) -> dict[str, Any] | None:
         """
@@ -930,7 +986,8 @@ class ConversationMessage(QFrame):
             "tool_call": self._pending_tool_call,
             "reason": self._pending_tool_reason,
             "context": self._pending_tool_context,
-            "destructive": self._pending_tool_destructive
+            "destructive": self._pending_tool_destructive,
+            "approvable": self._pending_tool_approvable
         }
 
     def show_interruptible_wait_ui(self, duration: float) -> None:
@@ -1165,6 +1222,10 @@ class ConversationMessage(QFrame):
     def message_content(self) -> str:
         """Get the message content text."""
         return self._message_content
+
+    def message_attachments(self) -> list[tuple[str, str]]:
+        """Get the message's attachments as (filename, content) pairs."""
+        return list(self._attachments)
 
     def _copy_message(self) -> None:
         """Copy the entire message content to clipboard."""

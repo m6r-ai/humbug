@@ -99,6 +99,51 @@ def test_a_pruned_path_does_not_prune_a_same_named_directory_elsewhere(tmp_path)
     assert set(snapshot.entries) == {os.path.join("vendored", "generated", "keep.txt")}
 
 
+def test_a_pruned_file_is_not_recorded(tmp_path):
+    (tmp_path / "keep.txt").write_bytes(b"one")
+    (tmp_path / "notes.txt").write_bytes(b"two")
+
+    snapshot = _scanner(tmp_path, frozenset({"notes.txt"})).scan()
+
+    assert set(snapshot.entries) == {"keep.txt"}
+
+
+def test_a_wildcard_skips_matching_files_at_any_depth(tmp_path):
+    (tmp_path / "keep.txt").write_bytes(b"one")
+    (tmp_path / ".keep.txt.swp").write_bytes(b"two")
+    (tmp_path / "sub").mkdir()
+    (tmp_path / "sub" / ".other.txt.swp").write_bytes(b"three")
+    (tmp_path / "sub" / "keep.txt").write_bytes(b"four")
+
+    snapshot = _scanner(tmp_path, frozenset({"*.swp"})).scan()
+
+    assert set(snapshot.entries) == {"keep.txt", os.path.join("sub", "keep.txt")}
+
+
+def test_a_wildcard_skips_a_matching_directory(tmp_path):
+    (tmp_path / "keep.txt").write_bytes(b"one")
+    (tmp_path / "build").mkdir()
+    (tmp_path / "build" / "object.o").write_bytes(b"two")
+    (tmp_path / "build-tmp").mkdir()
+    (tmp_path / "build-tmp" / "object.o").write_bytes(b"three")
+    (tmp_path / "built").mkdir()
+    (tmp_path / "built" / "keep.txt").write_bytes(b"four")
+
+    snapshot = _scanner(tmp_path, frozenset({"build*"})).scan()
+
+    assert set(snapshot.entries) == {"keep.txt", os.path.join("built", "keep.txt")}
+
+
+def test_a_wildcard_matches_a_name_that_extends_its_stem(tmp_path):
+    (tmp_path / "builds").mkdir()
+    (tmp_path / "builds" / "object.o").write_bytes(b"one")
+    (tmp_path / "keep.txt").write_bytes(b"two")
+
+    snapshot = _scanner(tmp_path, frozenset({"build*"})).scan()
+
+    assert set(snapshot.entries) == {"keep.txt"}
+
+
 def test_does_not_follow_a_symlink_to_a_file(tmp_path):
     target = tmp_path / "target.txt"
     target.write_bytes(b"content")

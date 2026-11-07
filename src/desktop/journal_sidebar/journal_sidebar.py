@@ -1,24 +1,25 @@
-"""Recent changes panel: lists the mutations recorded in the change journal."""
+"""Journal panel: lists the mutations recorded in the change journal."""
 
 from collections.abc import Callable
 from datetime import date, datetime, timezone
 import os
 
 from PySide6.QtCore import QDateTime, QFileInfo, QPoint, QSize, Qt, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QDrag, QIcon, QMouseEvent
 from PySide6.QtWidgets import (
-    QFrame, QLabel, QSpacerItem, QSizePolicy, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
-    QDateTimeEdit, QHBoxLayout, QToolButton,
+    QApplication, QFrame, QLabel, QSpacerItem, QSizePolicy, QTreeWidget, QTreeWidgetItem,
+    QVBoxLayout, QWidget, QDateTimeEdit, QHBoxLayout, QToolButton,
 )
 
 from mindspace.file_journal import FileJournal, JournalPurgeResult
 from mindspace.journal_entry import JournalEntry, JournalActor
-from mindspace.journal_blob_store import JournalBlobStore
 from mindspace.journal_reversal import JournalRevertOutcome
 
 from diff_context.diff_context import JournalDiffTarget
+from desktop.drop_payload import journal_mime_data
 from desktop.language.language_manager import LanguageManager
 from desktop.file_watcher.file_watcher import FileWatcher
+from desktop.journal_sidebar.recorded_version import open_recorded_version
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.sidebar.sidebar_base import SidebarBase
@@ -33,7 +34,7 @@ from desktop.color_role import ColorRole
 _ENTRY_ROLE = Qt.ItemDataRole.UserRole + 1
 _MAX_ROWS = 500
 
-class ChangesSidebar(SidebarBase):
+class JournalSidebar(SidebarBase):
     """
     Lists recent file mutations and reverses them.
 
@@ -76,7 +77,7 @@ class ChangesSidebar(SidebarBase):
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.setSpacing(0)
 
-        self._header = SidebarSectionHeader(self._language_manager.strings().changes, self)
+        self._header = SidebarSectionHeader(self._language_manager.strings().journal, self)
         self._layout.addWidget(self._header)
 
         window_bar = QWidget(self)
@@ -121,14 +122,16 @@ class ChangesSidebar(SidebarBase):
         self._status_label.setWordWrap(True)
         self._layout.addWidget(self._status_label)
 
-        self._tree = QTreeWidget(self)
-        self._tree.setObjectName("ChangesSidebarTree")
+        self._tree = JournalTreeWidget(self._drag_sequence_for, self)
+        self._tree.setObjectName("JournalSidebarTree")
         self._tree.setStyle(SidebarTreeStyle())
         self._tree.setFrameShape(QFrame.Shape.NoFrame)
         self._tree.setHeaderHidden(True)
         self._tree.setRootIsDecorated(False)
         self._tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._tree.customContextMenuRequested.connect(self._show_context_menu)
+        self._tree.itemClicked.connect(self._on_item_clicked)
+        self._tree.itemDoubleClicked.connect(self._on_item_double_clicked)
         self._tree.setItemDelegate(SidebarRowSpacingDelegate(self._tree, self._style_manager))
         self._layout.addWidget(self._tree)
 
@@ -515,6 +518,52 @@ class ChangesSidebar(SidebarBase):
 
         return self._by_sequence.get(sequence)
 
+    def _on_item_clicked(self, item: QTreeWidgetItem) -> None:
+        """
+        Show the version the clicked change produced, beside whatever is open.
+
+        Clicking a row asks about that change, so it shows the change and not the
+        file: the two are the same only while nothing has rewritten the file since.
+
+        Args:
+            item: The row that was clicked.
+        """
+        entry = self._entry_for_item(item)
+        if entry is not None:
+            open_recorded_version(entry.sequence, ephemeral=True)
+
+    def _on_item_double_clicked(self, item: QTreeWidgetItem) -> None:
+        """
+        Show the version the double-clicked change produced, and keep the tab open.
+
+        The first click of the pair has already opened the version ephemerally, so
+        this promotes that tab rather than opening a second one.
+
+        Args:
+            item: The row that was double-clicked.
+        """
+        entry = self._entry_for_item(item)
+        if entry is not None:
+            open_recorded_version(entry.sequence, ephemeral=False)
+
+    def _drag_sequence_for(self, item: QTreeWidgetItem) -> int | None:
+        """
+        Return the change a row can be dragged as, or None when it names none.
+
+        A change that produced no version at all - a removal, or a directory - cannot
+        be shown wherever it is dropped, so the drag does not start.  Whether the
+        journal still holds the content is a question about a blob rather than about
+        the row, and is left to the drop, which reads it once instead of on every
+        mouse move.
+
+        Args:
+            item: The row being dragged.
+        """
+        entry = self._entry_for_item(item)
+        if entry is None or not self._this_version_available(entry):
+            return None
+
+        return entry.sequence
 
     def _show_context_menu(self, position: QPoint) -> None:
         """
@@ -734,20 +783,6 @@ class ChangesSidebar(SidebarBase):
         """
         return not entry.pre_image_is_directory and entry.post_image_hash is not None
 
-    @staticmethod
-    def _current_digest(absolute_path: str) -> str | None:
-        """
-        Return the digest of a path's current content, or None if it cannot be read.
-
-        Args:
-            absolute_path: The path to inspect.
-        """
-        try:
-            return JournalBlobStore.digest_of_file(absolute_path)
-
-        except OSError:
-            return None
-
     def _view_this_version(self, entry: JournalEntry) -> None:
         """
         Show the version this change produced, as the change recorded it.
@@ -758,84 +793,14 @@ class ChangesSidebar(SidebarBase):
         answer a different question from the one the row asks.
 
         The tab is ephemeral and read-only: the panel is a history, and editing from it
-        would be an edit dressed up as inspection.
+        would be an edit dressed up as inspection.  A change with nothing to show is
+        reported as such, because this asks for it by name.
 
         Args:
             entry: The entry whose produced version should be shown.
         """
-        mindspace = self._mindspace_manager.mindspace()
-        if not mindspace.has_mindspace():
-            return
-
-        if entry.pre_image_is_directory:
+        if open_recorded_version(entry.sequence, ephemeral=True) is None:
             self._report_this_version_unavailable()
-            return
-
-        content = self._post_image(entry)
-        if content is None:
-            self._report_this_version_unavailable()
-            return
-
-        try:
-            text = content.decode("utf-8")
-
-        except UnicodeDecodeError:
-            self._preview_current(entry)
-            return
-
-        mindspace.contexts().open(
-            context_type="editor",
-            path=os.path.join(mindspace.mindspace_path(), entry.path),
-            title=os.path.basename(entry.path) or entry.path,
-            is_ephemeral=True,
-            read_only=True,
-            initial_model=text,
-        )
-
-    def _post_image(self, entry: JournalEntry) -> bytes | None:
-        """
-        Return the content this change produced, if the journal still holds it.
-
-        Args:
-            entry: The entry whose produced version is wanted.
-        """
-        mindspace = self._mindspace_manager.mindspace()
-        if not mindspace.has_mindspace():
-            return None
-
-        try:
-            return mindspace.file_journal().post_image(entry)
-
-        except OSError:
-            return None
-
-    def _preview_current(self, entry: JournalEntry) -> None:
-        """
-        Show a produced version that is not text, when the file still holds it.
-
-        Content that cannot be rendered from bytes has to be previewed from a file,
-        and the only file is the one on disk.  That is only the version this change
-        produced while nothing has rewritten it since, so a file that has moved on is
-        reported as unavailable rather than shown as if it were the recorded state.
-
-        Args:
-            entry: The entry whose produced version should be previewed.
-        """
-        mindspace = self._mindspace_manager.mindspace()
-        if not mindspace.has_mindspace():
-            return
-
-        absolute_path = os.path.join(mindspace.mindspace_path(), entry.path)
-        if self._current_digest(absolute_path) != entry.post_image_hash:
-            self._report_this_version_unavailable()
-            return
-
-        mindspace.contexts().open(
-            context_type="preview",
-            path=absolute_path,
-            title=os.path.basename(entry.path) or entry.path,
-            is_ephemeral=True,
-        )
 
     @staticmethod
     def _replaced_version_available(entry: JournalEntry) -> bool:
@@ -1029,7 +994,7 @@ class ChangesSidebar(SidebarBase):
     def _on_language_changed(self) -> None:
         """Retranslate the static labels and rebuild the listing."""
         strings = self._language_manager.strings()
-        self._header.set_title(strings.changes)
+        self._header.set_title(strings.journal)
         self.refresh()
         self.apply_style()
 
@@ -1071,8 +1036,8 @@ class ChangesSidebar(SidebarBase):
         self.setStyleSheet(
             build_tree_pane_stylesheet(
                 self._style_manager,
-                "ChangesSidebar",
-                "QTreeWidget#ChangesSidebarTree",
+                "JournalSidebar",
+                "QTreeWidget#JournalSidebarTree",
                 self.layoutDirection(),
                 zoom_factor,
             )
@@ -1103,11 +1068,79 @@ class ChangesSidebar(SidebarBase):
                 color: {subtle_text};
                 padding: {round(12 * zoom_factor)}px {inset}px;
             }}
-            QTreeWidget#ChangesSidebarTree::item {{
+            QTreeWidget#JournalSidebarTree::item {{
                 padding-left: {tree_inset}px;
             }}
-            QTreeWidget#ChangesSidebarTree {{
+            QTreeWidget#JournalSidebarTree {{
                 border: none;
             }}
             """
         )
+
+
+class JournalTreeWidget(QTreeWidget):
+    """QTreeWidget subclass that can be dragged from, carrying the change a row names."""
+
+    def __init__(
+        self,
+        sequence_for: Callable[[QTreeWidgetItem], int | None],
+        parent: QWidget | None = None,
+    ) -> None:
+        """
+        Build the tree.
+
+        Args:
+            sequence_for: Returns the change a row names, or None when the row stands
+                for no change or for one with nothing to show.
+            parent: The panel the tree belongs to.
+        """
+        super().__init__(parent)
+        self._sequence_for = sequence_for
+        self._drag_start_pos: QPoint | None = None
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        """
+        Record the position a drag would start from.
+
+        Args:
+            event: The mouse press event.
+        """
+        if event.button() & Qt.MouseButton.LeftButton:
+            self._drag_start_pos = event.pos()
+
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        """
+        Begin a drag once the cursor has moved far enough from the press point.
+
+        The drag carries the change and nothing else, so a drop target that would
+        open or move the file itself does not accept it.
+
+        Args:
+            event: The mouse move event.
+        """
+        if not event.buttons() & Qt.MouseButton.LeftButton:
+            return
+
+        if self._drag_start_pos is None:
+            return
+
+        if (event.pos() - self._drag_start_pos).manhattanLength() < QApplication.startDragDistance():
+            return
+
+        item = self.itemAt(self._drag_start_pos)
+        if item is None:
+            return
+
+        sequence = self._sequence_for(item)
+        if sequence is None:
+            return
+
+        drag = QDrag(self)
+        drag.setMimeData(journal_mime_data(sequence))
+        drag.setPixmap(self.viewport().grab(self.visualItemRect(item)))
+        drag.setHotSpot(event.pos() - self._drag_start_pos)
+        drag.exec_(Qt.DropAction.MoveAction | Qt.DropAction.CopyAction)
+
+        self._drag_start_pos = None

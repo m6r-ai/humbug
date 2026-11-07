@@ -49,15 +49,19 @@ class JournalEntry:
         existed_before: True if the path existed before the mutation.
         pre_image_hash: Digest of the stored pre-image, or None when the path did
             not exist, or when it existed but its content was not captured.
-        pre_image_trash: Name of the trash entry holding the removed content, when
-            the removal parked it there, or None otherwise.  Reversal uses the
-            stored pre-image either way; this records where the content also
-            remains, so the interface can point the user at it.
+        pre_image_trash: Name of the trash entry that held the removed content
+            instead of the journal, on a record made before the journal became the
+            sole capture of a removal.  No new record sets it.  Reversal consults
+            it before the stored pre-image, because such a record has no stored
+            pre-image to use.
         post_image_hash: Digest of the content after the mutation, or None when
             the mutation removed the path.
         pre_image_is_directory: True when the path held a directory before the
             mutation.  A directory has no content to capture, so a captured
             pre-image would be meaningless; this records that the path existed.
+        post_image_is_directory: True when the path holds a directory after the
+            mutation.  A creation has no content to capture either, so this is
+            what tells reversal to remove a directory rather than unlink a file.
         void_of: Sequence number of an earlier entry this record cancels, or None
             for a record that describes a mutation.  A mutation that was recorded
             but then did not happen is cancelled rather than deleted, because the
@@ -78,6 +82,7 @@ class JournalEntry:
     post_image_hash: str | None
     pre_image_trash: str | None = None
     pre_image_is_directory: bool = False
+    post_image_is_directory: bool = False
     void_of: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -95,6 +100,7 @@ class JournalEntry:
             "post_image_hash": self.post_image_hash,
             "pre_image_trash": self.pre_image_trash,
             "pre_image_is_directory": self.pre_image_is_directory,
+            "post_image_is_directory": self.post_image_is_directory,
             "void_of": self.void_of,
         }
 
@@ -133,6 +139,10 @@ class JournalEntry:
             if not isinstance(pre_image_is_directory, bool):
                 raise ValueError("pre_image_is_directory must be a boolean")
 
+            post_image_is_directory = data.get("post_image_is_directory", False)
+            if not isinstance(post_image_is_directory, bool):
+                raise ValueError("post_image_is_directory must be a boolean")
+
             return JournalEntry(
                 sequence=int(data["sequence"]),
                 timestamp=str(data["timestamp"]),
@@ -146,6 +156,7 @@ class JournalEntry:
                 post_image_hash=post_image_hash,
                 pre_image_trash=pre_image_trash,
                 pre_image_is_directory=pre_image_is_directory,
+                post_image_is_directory=post_image_is_directory,
                 void_of=void_of,
             )
 
@@ -160,15 +171,19 @@ class JournalEntry:
         """
         Return True if this mutation's effect can be undone.
 
-        A creation is revertable by removing the file, and an overwrite is
+        A creation is revertable by removing what it created, and an overwrite is
         revertable when its pre-image was captured.  A mutation whose pre-image
         was too large to store is recorded but cannot be reversed.
 
         A removal whose content the trash holds is revertable even though the
         journal kept no copy of it, because the trash is where reversal looks.
+        A recorded directory is revertable because reversal recreates it, having
+        no content to restore.  A created directory is revertable on the same
+        terms as a created file: reversal removes it.
         """
         return (
             (not self.existed_before)
             or self.pre_image_hash is not None
             or self.pre_image_trash is not None
+            or self.pre_image_is_directory
         )

@@ -270,17 +270,18 @@ def get_english_strings() -> LanguageStrings:
         settings_terminal="Terminal",
         settings_conversation="Conversation",
         settings_tabs="Tabs",
-        settings_changes="Changes",
+        settings_journal="Journal",
 
-        changes_settings="Changes",
-        changes_checkpoint_interval="Checkpoint Interval (seconds)",
-        changes_scan_section="Watched Tree",
-        changes_scan_section_description=(
-            "Changes under an ignored directory are not recorded. An entry is a directory name, "
-            "which matches at any depth, or a path from the mindspace root, which matches that "
-            "path and everything below it. .humbug and .git are always ignored."
+        journal_settings="Journal",
+        journal_checkpoint_interval="Checkpoint Interval (seconds)",
+        journal_watched_section="Watched Tree",
+        journal_watched_section_description=(
+            "Changes under an ignored entry are not recorded. Entries are glob patterns, "
+            "matched as the File Access lists are: a name matches that whole name anywhere in "
+            "the tree and never a longer one, so venv does not match venvity, and end an entry "
+            "with /** to include everything below a path. .humbug and .git are always ignored."
         ),
-        changes_pruned_paths="Ignored Directories and Paths",
+        journal_pruned_paths="Ignored Files, Directories and Paths",
 
         # Conversation settings
         model_info="Model Information",
@@ -340,6 +341,10 @@ def get_english_strings() -> LanguageStrings:
         delete_warning_detail=(
             "Any open tab for it will be closed without saving. It moves to the trash, "
             "where it can be restored."
+        ),
+        delete_recorded_warning_detail=(
+            "Any open tab for it will be closed without saving. Its content is recorded first, "
+            "so the deletion can be reversed from the Changes panel."
         ),
         error_deleting_file="Could not delete file: {0}",
         error_title_rename="Rename Error",
@@ -456,7 +461,7 @@ def get_english_strings() -> LanguageStrings:
         trash_time_hours_ago="{0}h ago",
         trash_time_days_ago="{0}d ago",
 
-        changes="Changes",
+        journal="Journal",
         changes_no_mindspace_message="Open a mindspace to see its recent changes.",
         changes_empty_message="No changes have been recorded yet.",
         changes_until="Changes on or before {0}",
@@ -572,6 +577,7 @@ def get_english_strings() -> LanguageStrings:
         approve_tool_call="Approve",
         i_am_unsure_about_tool_call="I'm Unsure About This",
         reject_tool_call="Reject",
+        auto_approve_file_changes="Auto-approve file changes until your next message",
         interruptible_wait_message="Waiting for {duration} seconds \u2014 {remaining} remaining...",
         finish_waiting_now="Finish Waiting Now",
         retry_error="Retry",

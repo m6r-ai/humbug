@@ -8,7 +8,7 @@ from typing import Any
 from ai_tool import (
     AITool, AIToolAuthorizationCallback, AIToolAuthorizationDenied,
     AIToolCall, AIToolDefinition, AIToolExecutionError,
-    AIToolOperationDefinition, AIToolParameter, AIToolResult
+    AIToolOperationDefinition, AIToolParameter, AIToolResult, AIToolApprovalKind
 )
 from html_ import (
     HtmlError, HtmlParseError, document_ir_to_html, html_ast_to_document_ir, parse_html
@@ -342,6 +342,60 @@ class DocumentConverterAITool(AITool):
         """Return the default output path: input stem + target extension, same directory."""
         return input_path.with_suffix(_FORMAT_EXTENSIONS[to_format])
 
+    def _approval_kind(self, output_path: Path) -> AIToolApprovalKind:
+        """
+        Classify the conversion by whether the journal will record its writes.
+
+        The output file and, for formats that carry one, the image folder beside it
+        are both recorded before they are written, so the approval policy may resolve
+        the conversion without asking whenever the journal covers the output path.
+
+        Args:
+            output_path: The file the conversion will write.
+
+        Returns:
+            MINDSPACE_FILE_CHANGE when the journal records a change to the path,
+            STANDARD otherwise.
+        """
+        if self._mindspace.journalled_path(str(output_path)) is None:
+            return AIToolApprovalKind.STANDARD
+
+        return AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+
+    def _record_sidecar_write(self, path: Path, data: bytes | None, requester_ref: Any) -> None:
+        """
+        Record a sidecar folder or image the conversion is about to write.
+
+        The folder is recorded as a creation and each image as a write, both before
+        they happen, so reversing the conversion removes the files it made and leaves
+        anything it replaced.
+
+        Args:
+            path: The folder or file about to be written.
+            data: The image bytes about to be written, or None when the folder is
+                about to be created.
+            requester_ref: The conversation the conversion is being made for.
+        """
+        relative_path = self._mindspace.journalled_path(str(path))
+        if relative_path is None:
+            return
+
+        journal = self._mindspace.file_journal()
+        conversation = self._mindspace.conversation_identifier(requester_ref)
+        if data is None:
+            entry = journal.record_creation(
+                str(path), relative_path, JournalActor.AI, conversation, is_directory=True
+            )
+
+        else:
+            entry = journal.record_write(str(path), relative_path, data, JournalActor.AI, conversation)
+
+        if entry is None:
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.WARN,
+                f"Failed to record '{relative_path}' for reversal",
+            )
+
     def _write_output(self, output_path: Path, content: bytes | str) -> int:
         """
         Write output content atomically via a temporary file.
@@ -441,7 +495,8 @@ class DocumentConverterAITool(AITool):
             destructive = False
 
         authorized = await request_authorization(
-            "document_converter", arguments, auth_context, None, destructive
+            "document_converter", arguments, auth_context, None, destructive,
+            self._approval_kind(output_path)
         )
         if not authorized:
             raise AIToolAuthorizationDenied(
@@ -456,6 +511,7 @@ class DocumentConverterAITool(AITool):
                 extract_images_to_sidecar(
                     document_ir,
                     sidecar_dir,
+                    before_write=lambda path, data: self._record_sidecar_write(path, data, requester_ref),
                 )
 
             content = _EXPORTERS[to_format](document_ir)

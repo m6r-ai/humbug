@@ -22,7 +22,7 @@ to get started and to make the most of working with Humbug day to day.
 
 8. [Managing Files & Folders](managing-files.md)
 9. [The Trash](trash.md)
-10. [Undoing Changes](changes.md)
+10. [Undoing Changes](journal.md)
 11. [Editing Files](editing-files.md)
 12. [Using the Terminal](terminal.md)
 13. [Previewing Content](preview.md)

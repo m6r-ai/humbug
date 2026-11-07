@@ -1,4 +1,4 @@
-"""The directories and paths the change scanner does not descend."""
+"""The entries a mindspace excludes from its change scan."""
 
 from collections.abc import Iterable
 
@@ -38,16 +38,25 @@ DEFAULT_SCAN_PRUNED_PATHS = IGNORED_DIRS | frozenset({
 # is a worse outcome than not reporting the change at all.
 MANDATORY_SCAN_PRUNED_PATHS = frozenset({".git", ".humbug"})
 
+# Entries that match everything.  The rule shared with the file access lists has no
+# objection to them, but there the cost is a denied request and here it is a change
+# list that silently reports nothing for the whole mindspace.  So a scan refuses
+# them, which is the one place its entries are stricter than an access list.
+_MATCH_EVERYTHING = frozenset({"*", "**"})
+
 
 def scan_pruned_paths(configured: Iterable[str]) -> frozenset[str]:
     """
-    Return the paths a scan must not descend, given a mindspace's own list.
+    Return the entries a mindspace excludes from its scan, normalised.
 
-    An entry is a directory name, which matches a directory at any depth, or a
-    path from the mindspace root, which matches only that directory and what is
-    below it.  A leading or trailing separator is ignored, as are entries that
-    cannot name a directory inside the mindspace: an absolute path is read as a
-    relative one, and any entry containing a '..' segment is dropped.
+    How an entry matches a path is not decided here: entries are handed to
+    ``path_matching.PathPatterns``, the same rule the filesystem tool's access lists
+    use, so an entry means the same thing in both.  This function only cleans up what
+    a user typed and adds what is not negotiable.
+
+    A leading or trailing separator is ignored, an absolute path is read as a relative
+    one, and an entry containing a '..' segment is dropped because it cannot name
+    anything inside the mindspace.
 
     Args:
         configured: The entries a user saved for the mindspace.
@@ -63,17 +72,17 @@ def scan_pruned_paths(configured: Iterable[str]) -> frozenset[str]:
 
 def _normalise_scan_pruned_path(configured: str) -> str:
     """
-    Return a configured entry in the form the scanner compares against.
+    Return a configured entry in the form the matcher compares against.
 
     Args:
         configured: One line as the user typed it.
 
     Returns:
-        The entry with separators normalised, or an empty string when the entry
-        cannot name a directory inside the mindspace.
+        The entry with separators normalised, or an empty string when the entry cannot
+        name something inside the mindspace or would match everything in it.
     """
     path = configured.strip().replace("\\", "/").strip("/")
-    if not path or path == ".":
+    if not path or path == "." or path in _MATCH_EVERYTHING:
         return ""
 
     if any(segment in ("", ".", "..") for segment in path.split("/")):

@@ -9,16 +9,30 @@ New features:
 - Added a Changes panel listing recent mutations, showing which files changed and how far back the record reaches.
   A change can be reverted individually, or the mindspace restored to the state it held at any listed change by
   reverting everything recorded after it, and a replaced version can be viewed read-only or compared with the
-  file as it now stands.  Divergence is reported per file rather than overwritten, so a file changed outside
-  Humbug is skipped instead of losing work.
-- Deleting a file or an empty folder from the Files, Preview or VCS panel now moves it to the trash, where it can
-  be restored, instead of unlinking it permanently.
+  file as it now stands.
+- Deleting a file or an empty folder from the Files, Preview or VCS panel now records its content in the change
+  journal first, so the deletion can be reverted from the Changes panel instead of being permanent.  The trash is
+  now only for deleted conversations, which the journal cannot cover because their transcripts live under `.humbug`.
+  Emptying the trash no longer destroys a deleted file; forgetting the journalled history does.
 - Journalled history can be forgotten from the Changes panel, up to and including any listed change or in its
   entirety, and the panel reports what it reclaimed.
-- Improved the rendering of the mindspace VCS entries so they aren't as horizontally wide.
+- A file dragged from a sidebar panel onto a conversation's input box is now attached to the message being
+  composed, instead of opening in a tab as a drop anywhere else in the tab area does.  The input highlights its
+  border while the file is over it.
+- A file change in your mindspace can now be approved for the rest of the current turn: the approval prompt
+  offers "Auto-approve file changes until your next message", and the AI then works through a long task without
+  stopping for each write.  Only changes the change journal records are covered, so terminal commands, network
+  requests and anything outside the mindspace still ask every time, and sending a message takes the approval back.
+  Every change made under it is logged as before, and the log records that a standing approval resolved it.
+- Improved the rendering of the mindspace VCS entries so they aren't as wide horizontally.
+- As we now have journalling, filesystem writes within a single conversation turn can now be set to auto-approve on
+  the first approval call.
 
 Bug fixes:
 
+- Editing one of your previous messages now loads the files attached to it into the input box, as chips
+  you can detach before submitting.  Previously the box showed the text alone and the files were lost
+  from the revised message.
 - Fixed issues with various sidebar panels not scaling correctly with zoom size.
 
 Internal structure changes:
@@ -26,6 +40,17 @@ Internal structure changes:
 - Conversations gained an identifier that lives in the transcript and survives renaming, duplicating and moving, so
   activity attributed to a conversation stays attributed to it.  A duplicated conversation receives a new identifier
   and records the conversation it came from.  See ADR-0019.
+- An authorization request now states what it would change, and the approval policy decides whether a standing
+  approval can resolve it.  The classification is the journal's own scope rule, so a change no journal entry could
+  cover is never approved on the user's behalf.  See ADR-0022.
+- Downloading a file over HTTP now records the file it replaces in the change journal, like every other write
+  inside the mindspace, instead of leaving the change to be reported after the fact as unattributed.
+- A journal entry now records whether a path is a directory after the mutation as well as before it, so a creation
+  can be described and reversed.  Creating a folder, and moving an empty one, are therefore recorded, reversible
+  and covered by the standing approval, which they were not before.  See ADR-0023.
+- Writing git output to a file, and the image folder a document conversion writes beside its output, are now
+  recorded in the change journal.  Both were writers the journal missed: a git diff written to a file appeared in
+  the changes list as a change nothing had made, and reversing a conversion left its images behind.
 
 ## v58 (2026-11-02)
 

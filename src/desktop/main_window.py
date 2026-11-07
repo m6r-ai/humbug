@@ -47,6 +47,7 @@ from desktop.color_role import ColorRole
 from desktop.conversation_sidebar.conversation_sidebar import ConversationSidebar
 from desktop.conversation_tab.conversation_tab import ConversationTab
 from desktop.diff_tab.diff_tab import DiffTab
+from desktop.drop_payload import DropPayload
 from desktop.editor_tab.editor_tab import EditorTab
 from desktop.exception_notifier import get_exception_notifier
 from desktop.file_sidebar.file_sidebar import FileSidebar
@@ -90,7 +91,8 @@ from desktop.terminal_tab.terminal_tab import TerminalTab
 from desktop.title_bar import MenuBarDragFilter, WindowControlsWidget
 from desktop.tour.tour_controller import TourController
 from desktop.trash_sidebar.trash_sidebar import TrashSidebar
-from desktop.changes_sidebar.changes_sidebar import ChangesSidebar
+from desktop.journal_sidebar.journal_sidebar import JournalSidebar
+from desktop.journal_sidebar.recorded_version import open_recorded_version
 from desktop.update_checker import UpdateChecker
 from desktop.update_dialog import UpdateDialog
 from desktop.user.user_manager import UserManager, UserError
@@ -291,15 +293,15 @@ def _activate_trash_sidebar(panel: SidebarBase) -> None:
     panel.refresh()
 
 
-def _wire_changes_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
-    """Wire ChangesSidebar signals to SidebarManager."""
-    assert isinstance(panel, ChangesSidebar)
+def _wire_journal_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
+    """Wire JournalSidebar signals to SidebarManager."""
+    assert isinstance(panel, JournalSidebar)
     panel.file_opened_in_preview.connect(mgr.file_opened_in_preview)
 
 
-def _activate_changes_sidebar(panel: SidebarBase) -> None:
-    """Refresh the change listing each time the panel is activated."""
-    assert isinstance(panel, ChangesSidebar)
+def _activate_journal_sidebar(panel: SidebarBase) -> None:
+    """Refresh the journal listing each time the panel is activated."""
+    assert isinstance(panel, JournalSidebar)
     panel.refresh()
 
 
@@ -702,20 +704,31 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._splitter)
 
         self._sidebar_manager = SidebarManager(self)
-        self._sidebar_manager.register_panel("conversations", "conversation", ConversationSidebar, _wire_conversation_sidebar)
-        self._sidebar_manager.register_panel("files", "files", FileSidebar, _wire_file_sidebar)
-        self._sidebar_manager.register_panel("preview", "preview", PreviewSidebar, _wire_preview_sidebar)
         self._sidebar_manager.register_panel(
-            "search", "search", SearchSidebar, _wire_search_sidebar, on_activated=_activate_search_sidebar
+            "conversations", "conversation", ConversationSidebar, _wire_conversation_sidebar,
+            tooltip_key="mindspace_conversations",
+        )
+        self._sidebar_manager.register_panel(
+            "files", "files", FileSidebar, _wire_file_sidebar, tooltip_key="mindspace_files",
+        )
+        self._sidebar_manager.register_panel(
+            "preview", "preview", PreviewSidebar, _wire_preview_sidebar, tooltip_key="mindspace_preview",
+        )
+        self._sidebar_manager.register_panel(
+            "search", "search", SearchSidebar, _wire_search_sidebar, on_activated=_activate_search_sidebar,
+            tooltip_key="mindspace_search",
         )
         self._sidebar_manager.register_panel(
             "trash", "trash", TrashSidebar, _wire_trash_sidebar,
-            on_activated=_activate_trash_sidebar, place_at_bottom=True
+            on_activated=_activate_trash_sidebar, place_at_bottom=True, tooltip_key="trash",
         )
-        self._sidebar_manager.register_panel("vcs", "diff", VCSSidebar, _wire_vcs_sidebar, visibility_signal="repo_available")
         self._sidebar_manager.register_panel(
-            "changes", "changes", ChangesSidebar, _wire_changes_sidebar,
-            on_activated=_activate_changes_sidebar
+            "vcs", "diff", VCSSidebar, _wire_vcs_sidebar, visibility_signal="repo_available",
+            tooltip_key="mindspace_vcs",
+        )
+        self._sidebar_manager.register_panel(
+            "journal", "changes", JournalSidebar, _wire_journal_sidebar,
+            on_activated=_activate_journal_sidebar, tooltip_key="journal",
         )
         self._sidebar_manager.file_clicked.connect(self._on_sidebar_file_clicked)
         self._sidebar_manager.file_deleted.connect(self._on_sidebar_file_deleted)
@@ -2322,18 +2335,23 @@ class MainWindow(QMainWindow):
             if tab is not None:
                 tab.navigate_to_search_match(search_text, line_number, message_id, case_sensitive=case_sensitive, regexp=regexp)
 
-    def _open_path_from_drop(self, source_type: str, path: str) -> str | None:
+    def _open_path_from_drop(self, payload: DropPayload) -> str | None:
         """
-        Adapter for TabManager's open_path callable: maps drag-drop source strings to panel IDs.
+        Adapter for TabManager's open_path callable, opening what a drop names.
+
+        A drop is a deliberate action rather than a passing look, so the tab it
+        opens stays open.
 
         Args:
-            source_type: Source view type string from mime data ('conversations', 'vcs', 'preview', 'files').
-            path: File path to open.
+            payload: What was dropped.
 
         Returns:
             The context_id of the opened or focused tab, or None if skipped/failed.
         """
-        return self._open_by_panel_id(source_type, path, ephemeral=False)
+        if payload.journal_sequence is not None:
+            return open_recorded_version(payload.journal_sequence, ephemeral=False)
+
+        return self._open_by_panel_id(payload.source_type, payload.path, ephemeral=False)
 
     def _open_by_panel_id(self, panel_id: str, path: str, ephemeral: bool) -> str | None:
         """

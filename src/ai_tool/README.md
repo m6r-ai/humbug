@@ -17,6 +17,7 @@ This module provides a comprehensive framework for creating, managing, and execu
 ### Tool Execution System
 - **`ai_tool_call.py`** - Represents a tool call request from an AI model with arguments and metadata
 - **`ai_tool_result.py`** - Encapsulates the result of tool execution, including success/error states
+- **`ai_tool_approval_kind.py`** - Classifies an authorization request by what it would change, which is what the approval policy reads
 - **`ai_tool_config.py`** - Configuration settings for individual tools, including display names and default states
 - **`ai_tool_registered.py`** - Internal representation of registered tools with their metadata
 
@@ -259,11 +260,8 @@ async def _dangerous_operation(
 
     # Request authorization before proceeding
     authorized = await request_authorization(
-        tool_name="my_tool",
-        arguments=tool_call.arguments,
-        operation="dangerous_operation",
-        context="This will delete files",
-        auto_approve=False  # Force user approval
+        "my_tool", tool_call.arguments, "This will delete files", None, True,
+        AIToolApprovalKind.STANDARD
     )
 
     if not authorized:
@@ -272,6 +270,16 @@ async def _dangerous_operation(
     # Proceed with operation...
     return AIToolResult(...)
 ```
+
+The sixth argument classifies what the request would change, and decides whether a standing
+approval the user granted for the current turn can resolve it. Pass `STANDARD` unless every path
+the operation is about to mutate is one the change journal records, which
+`Mindspace.journalled_path()` answers: inside the mindspace and outside any `.humbug/` directory.
+Pass `MINDSPACE_FILE_CHANGE` only for a request whose whole effect is such a change, and decide it
+after resolving the paths rather than from the operation's name. The classification is a claim
+about the change, not permission to proceed: the policy in the conversation decides whether the
+claim matters, so a wrong `STANDARD` costs a prompt and a wrong `MINDSPACE_FILE_CHANGE` on a
+journalled path costs nothing worse than a prompt nobody was shown.
 
 ### Legacy Pattern (Non-Operation-Based Tools)
 

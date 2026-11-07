@@ -14,6 +14,7 @@ from urllib.parse import urljoin, urlsplit
 
 from ai_tool import (
     AITool,
+    AIToolApprovalKind,
     AIToolAuthorizationCallback,
     AIToolAuthorizationDenied,
     AIToolCall,
@@ -24,8 +25,10 @@ from ai_tool import (
     AIToolResult,
 )
 from http_ai_tool.http_access_settings import HttpAccessSettings
+from mindspace.journal_entry import JournalActor
 from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace import Mindspace
+from mindspace.mindspace_log_level import MindspaceLogLevel
 from html_ import html_ast_to_document_ir, parse_html
 from http_client import (
     ClientConnectorError,
@@ -535,7 +538,7 @@ class HttpAITool(AITool):
 
         reason = f"The AI is requesting to {action} {url}"
         return await request_authorization(
-            "http", arguments, reason, auth_context, False
+            "http", arguments, reason, auth_context, False, AIToolApprovalKind.STANDARD
         )
 
     async def _get_following_checked_redirects(
@@ -734,7 +737,7 @@ class HttpAITool(AITool):
         reason = f"The AI is requesting to DELETE {url}"
         auth_context = self._build_authorization_context_block(headers)
         authorized = await request_authorization(
-            "http", arguments, reason, auth_context, True
+            "http", arguments, reason, auth_context, True, AIToolApprovalKind.STANDARD
         )
 
         if not authorized:
@@ -791,7 +794,7 @@ class HttpAITool(AITool):
             multipart_parts=multipart_parts if isinstance(multipart_parts, list) else None,
         )
         authorized = await request_authorization(
-            "http", arguments, reason, auth_context, True
+            "http", arguments, reason, auth_context, True, AIToolApprovalKind.STANDARD
         )
 
         if not authorized:
@@ -835,7 +838,7 @@ class HttpAITool(AITool):
     async def _download(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Download operation — fetch a URL and write it to a file in the mindspace."""
@@ -868,8 +871,13 @@ class HttpAITool(AITool):
             destructive = False
 
         auth_context = self._build_authorization_context_block(headers)
+        kind = (
+            AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+            if self._mindspace.journalled_path(str(dest_path)) is not None
+            else AIToolApprovalKind.STANDARD
+        )
         authorized = await request_authorization(
-            "http", arguments, reason, auth_context, destructive
+            "http", arguments, reason, auth_context, destructive, kind
         )
 
         if not authorized:
@@ -903,6 +911,27 @@ class HttpAITool(AITool):
             self._logger.error("Unexpected error in download %s: %s", url, str(e), exc_info=True)
             raise AIToolExecutionError(f"HTTP request failed: {e}") from e
 
+        # The journal captures the pre-image from disk before the write, so the
+        # download is reversible on the same terms as any other file mutation.  A
+        # recording failure does not abort the write; it is logged so the file can
+        # be shown as not revertable.
+        journal = self._mindspace.journal_target(str(dest_path))
+        journal_entry = None
+        if journal is not None:
+            file_journal, relative_path = journal
+            journal_entry = file_journal.record_write(
+                str(dest_path),
+                relative_path,
+                data,
+                JournalActor.AI,
+                self._mindspace.conversation_identifier(requester_ref),
+            )
+            if journal_entry is None:
+                self._mindspace.add_interaction(
+                    MindspaceLogLevel.WARN,
+                    f"Failed to record the download to '{display_path}' for reversal",
+                )
+
         try:
             dest_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -914,6 +943,9 @@ class HttpAITool(AITool):
             os.replace(tmp_path, dest_path)
 
         except OSError as e:
+            if journal_entry is not None:
+                self._mindspace.file_journal().void_entries([journal_entry])
+
             raise AIToolExecutionError(f"Failed to write file '{display_path}': {e}") from e
 
         size = len(data)

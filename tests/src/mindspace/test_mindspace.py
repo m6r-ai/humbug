@@ -352,6 +352,61 @@ class TestNestedHumbugExclusion:
         assert mindspace.is_humbug_path(os.path.join(path, "src", "file.py")) is False
 
 
+class TestJournalledPath:
+    """Tests for the predicate that decides which changes the journal can reverse."""
+
+    def test_a_file_inside_the_mindspace_is_journalled(self, tmp_path, monkeypatch) -> None:
+        """A path in the mindspace is reported relative to its root."""
+        mindspace = _make_mindspace(tmp_path, monkeypatch)
+        target = os.path.join(mindspace.mindspace_path(), "src", "file.py")
+
+        assert mindspace.journalled_path(target) == os.path.join("src", "file.py")
+
+    def test_a_path_outside_the_mindspace_is_not_journalled(self, tmp_path, monkeypatch) -> None:
+        """A path beyond the boundary is outside the journal's scope."""
+        mindspace = _make_mindspace(tmp_path, monkeypatch)
+        outside = os.path.join(str(tmp_path), "elsewhere", "file.py")
+
+        assert mindspace.journalled_path(outside) is None
+
+    def test_a_humbug_path_is_not_journalled(self, tmp_path, monkeypatch) -> None:
+        """Humbug's own state is never journalled, so it is never a covered change."""
+        mindspace = _make_mindspace(tmp_path, monkeypatch)
+        own_state = os.path.join(mindspace.mindspace_path(), ".humbug", "settings.json")
+
+        assert mindspace.journalled_path(own_state) is None
+
+    def test_a_symlink_escaping_the_mindspace_is_not_journalled(self, tmp_path, monkeypatch) -> None:
+        """A link inside the mindspace that lands outside it is not a change the journal records."""
+        mindspace = _make_mindspace(tmp_path, monkeypatch)
+        outside = os.path.join(str(tmp_path), "elsewhere", "file.py")
+        os.makedirs(os.path.dirname(outside))
+        with open(outside, "w", encoding="utf-8") as f:
+            f.write("content")
+
+        link = os.path.join(mindspace.mindspace_path(), "link.py")
+        os.symlink(outside, link)
+
+        assert mindspace.journalled_path(link) is None
+
+    def test_a_symlink_into_the_mindspace_is_journalled(self, tmp_path, monkeypatch) -> None:
+        """A link that stays inside the mindspace names a path the journal records."""
+        mindspace = _make_mindspace(tmp_path, monkeypatch)
+        target = os.path.join(mindspace.mindspace_path(), "src", "file.py")
+        os.makedirs(os.path.dirname(target))
+        with open(target, "w", encoding="utf-8") as f:
+            f.write("content")
+
+        link = os.path.join(mindspace.mindspace_path(), "link.py")
+        os.symlink(target, link)
+
+        assert mindspace.journalled_path(link) == os.path.join("src", "file.py")
+
+    def test_no_mindspace_means_nothing_is_journalled(self) -> None:
+        """With no mindspace open there is no journal and no path it records."""
+        assert _new_mindspace().journalled_path("/tmp/file.py") is None
+
+
 class TestKeepingHumbugOutOfGit:
     """Tests that .humbug/ ignores itself in any git repository it sits in."""
 

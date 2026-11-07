@@ -14,30 +14,34 @@ from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
 
 
-def confirm_and_trash_file(
+def confirm_and_delete_path(
     parent: QWidget,
     path: str,
     display_name: str,
     on_deleted: Callable[[str], None],
 ) -> None:
     """
-    Ask the user, then move a file into the trash and close its tabs.
+    Ask the user, then remove a file or empty folder and close its tabs.
 
-    The file goes to the trash rather than being unlinked, so a delete the user
-    did not mean can be undone from the trash panel or from the changes panel.
-    The tabs holding the file are closed before it moves, because a tab watching
-    a missing file would otherwise report a change the user did not make.
+    The removal is recorded in the change journal before the path is removed, so
+    a delete the user did not mean can be reverted from the Changes panel.  The
+    journal is the only place a removal of mindspace content is captured, whether
+    the user or the AI asked for it, so the panel does not choose where to put the
+    content.
+
+    The tabs holding the path are closed before it is removed, because a tab
+    watching a missing file would otherwise report a change the user did not make.
 
     This is shared by every panel that lists mindspace files: they differ only in
     how they name a file, and a second implementation of the confirmation or of
-    the trashing rules would eventually disagree with this one.
+    the removal rules would eventually disagree with this one.
 
     Args:
         parent: Widget the confirmation and any error message is shown against.
-        path: Absolute path to the file to delete.
-        display_name: How the panel names the file in its messages.
-        on_deleted: Called with the path before it is moved, so the panel can close
-            the tabs and drop the file from its listing.
+        path: Absolute path to the file or empty folder to delete.
+        display_name: How the panel names the path in its messages.
+        on_deleted: Called with the path before it is removed, so the panel can
+            close the tabs and drop it from its listing.
     """
     strings = LanguageManager().strings()
     mindspace_manager = MindspaceManager()
@@ -47,7 +51,7 @@ def confirm_and_trash_file(
         parent,
         MessageBoxType.WARNING,
         strings.confirm_delete_title,
-        strings.confirm_delete_item_message.format(display_name) + "\n\n" + strings.delete_warning_detail,
+        strings.confirm_delete_item_message.format(display_name) + "\n\n" + strings.delete_recorded_warning_detail,
         [MessageBoxButton.YES, MessageBoxButton.NO],
         True,
     )
@@ -59,7 +63,7 @@ def confirm_and_trash_file(
         return
 
     try:
-        mindspace.trash_file(path, JournalActor.HUMAN)
+        mindspace.remove_path(path, JournalActor.HUMAN)
 
     except MindspaceError as e:
         MessageBox.show_message(
@@ -73,5 +77,5 @@ def confirm_and_trash_file(
 
     mindspace_manager.add_interaction(
         MindspaceLogLevel.INFO,
-        f"User deleted file '{path}'",
+        f"User deleted '{path}'",
     )

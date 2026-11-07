@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from pathlib import Path
 
 from document_ir.document_ir_node import DocumentIRImageNode, DocumentIRNode
@@ -60,6 +61,7 @@ def extension_for_mime_type(mime_type: str) -> str:
 def extract_images_to_sidecar(
     document: DocumentIRNode,
     sidecar_dir: Path,
+    before_write: Callable[[Path, bytes | None], None] | None = None,
 ) -> int:
     """
     Walk a document IR tree and write embedded image data to a sidecar directory.
@@ -75,6 +77,10 @@ def extract_images_to_sidecar(
     Args:
         document: The root IR node to walk (modified in place).
         sidecar_dir: Directory to write image files into (created if absent).
+        before_write: Called immediately before each mutation, so a caller can record
+            what it replaces.  The second argument is the bytes about to be written,
+            or None when the call is reporting that the directory itself is about to
+            be created.
     Returns:
         The number of image files written.
     """
@@ -84,6 +90,9 @@ def extract_images_to_sidecar(
     if not nodes_with_data:
         return 0
 
+    if before_write is not None and not sidecar_dir.exists():
+        before_write(sidecar_dir, None)
+
     sidecar_dir.mkdir(parents=True, exist_ok=True)
     dir_name = sidecar_dir.name
 
@@ -91,6 +100,9 @@ def extract_images_to_sidecar(
         assert node.data is not None
         ext = extension_for_mime_type(node.mime_type or "")
         filename = f"image{index}.{ext}"
+        if before_write is not None:
+            before_write(sidecar_dir / filename, node.data)
+
         (sidecar_dir / filename).write_bytes(node.data)
         node.url = f"{dir_name}/{filename}"
         node.data = None

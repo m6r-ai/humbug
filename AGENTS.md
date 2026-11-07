@@ -51,8 +51,11 @@ Consult it before proposing changes that touch established decisions.
 
 ## Documentation
 
-`docs/user-manual/` is the user's only explanation of the interface. A capability the manual does
-not mention is one the user has to discover by accident, so document it.
+Humbug has two user-facing documents. `docs/user-manual/` explains the interface, and `README.md`
+explains what the project offers. A capability either one fails to describe is one the user has to
+discover by accident, so document it.
+
+### User manual
 
 - A change that alters what the user sees or can do — a new sidebar panel, tab type, menu action,
   keyboard shortcut, settings page or setting, approval behaviour, AI tool, or storage location —
@@ -66,7 +69,30 @@ not mention is one the user has to discover by accident, so document it.
   model names, releases, or other facts that change without the manual changing.
 - Where a feature has limits, say so plainly. Humbug's users are asked to trust it with their
   work; documentation that overstates what a feature can do is worse than documentation that is
-  unflattering. The Changes and Trash chapters are the pattern to follow.
+  unflattering. The Journal and Trash chapters are the pattern to follow.
+
+### `README.md`
+
+`README.md` is the project's front page: the first thing a prospective user or contributor reads,
+and the only description of Humbug many of them will see. It is an overview rather than a changelog,
+so most changes leave it untouched, but a change that alters something the README states updates it
+in the same change that invalidates it. The rule above about not overstating what a feature can do
+applies here too: the README argues for Humbug, and its argument has to be true.
+
+What goes stale fastest:
+
+- **The capability list.** The bullets describing what Humbug's tools enable — git queries, HTTP
+  access under allow and deny lists, document conversion, UI orchestration and the rest — mirror the
+  registered AI tools. A new tool, or a new operation on an existing one, belongs there.
+- **The AI backends.** The provider list is stated in `README.md` and again in `blueprint.md`, and
+  `src/ai/` decides it. Adding or dropping a backend means editing both.
+- **The desktop description.** The sidebar panels and tab types are enumerated in "The desktop GUI"
+  and named again in "Rich user interactions"; `src/desktop/sidebar_manager/` and
+  `src/desktop/tab_manager/` decide them.
+- **The dependency counts.** "Only 3 third party runtime dependencies" appears twice, beside the
+  named list (PySide6, qasync, certifi). A change to `pyproject.toml` invalidates both.
+- **The installation steps.** They quote the `pip install` command, the launch command, and the
+  supported Python versions, all of which come from `pyproject.toml`.
 
 ## Code generation
 
@@ -152,6 +178,12 @@ Multi-backend AI conversation system.
 ### `src/ai_tool/`
 Core framework for AI tools and capabilities (base classes, manager, definitions, exceptions).
 
+Every authorization request carries an `AIToolApprovalKind` saying what the request would change:
+`STANDARD`, or `MINDSPACE_FILE_CHANGE` for one whose whole effect the change journal records.  A
+tool classifies its own requests, because only it knows the paths it resolved, but it never decides
+whether the classification matters: `AIConversation` holds the user's turn-scoped standing
+approval and is the only thing that can resolve a request without asking.  See ADR-0022.
+
 ### `src/ai_transcript_conversation/`
 AI transcript and conversation support.
 
@@ -191,8 +223,8 @@ the front-end-agnostic modules (`mindspace`, the `*_context` modules, `ai`, the 
 modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 
 **Subdirectories:**
-- `changes_sidebar/` - Recent changes panel: lists the mutations recorded in the
-  change journal and reverses them
+- `journal_sidebar/` - Journal panel: lists the mutations recorded in the change
+  journal and reverses them
 - `conversation_sidebar/` - Conversations panel implementation
 - `conversation_tab/` - Conversation tab implementation
 - `diff_tab/` - Diff tab implementation
@@ -214,6 +246,8 @@ modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 - `tab/` - Abstract tab contract, including the view-state and migration-state contracts
 - `tab_manager/` - Tab manager: generic tab container with context factory registration and session restore
 - `terminal_tab/` - Terminal tab implementation
+- `trash_sidebar/` - Trash panel: lists deleted conversations and restores or destroys
+  them
 - `user/` - User management: global settings (`UserManager`, `UserSettings`), the
   registry of running instances (`InstanceRegistry`), and launching a second instance
   with the same configuration (`LaunchContext`)
@@ -322,6 +356,26 @@ Writers record before they mutate and call `FileJournal.void_entries()` if the m
 then fails, so the journal never claims a change that did not happen.  A new writer
 joins by calling the same `record_*` helpers; do not give it its own capture policy.
 
+The journal is the only capture for a removal of mindspace content, and the trash is the
+only one for a conversation: a transcript lives under `.humbug/`, which the journal never
+covers.  `Mindspace.remove_path()` is the single entry point a removal takes, for the AI's
+filesystem tool and for the desktop panels alike, and it decides between the two with
+`Mindspace.journal_target()`.  Do not add a second removal path, or a second place for
+removed content to survive; see ADR-0021.
+
+`Mindspace.journalled_path()` is the same scope test without the journal itself, and it is what
+an AI tool calls to classify a request as a change the journal will record.  That classification
+is what a user's turn-scoped standing approval covers, so a write the journal will not record
+belongs to `AIToolApprovalKind.STANDARD` and keeps asking; see ADR-0022.  Unlike `journal_target`,
+it resolves symlinks, so a path reached through a link that lands outside the mindspace is not
+reported as covered.
+
+A creation is recorded with `FileJournal.record_creation()`, which writes an entry with no
+pre-image and says whether the path will hold a directory.  That is what lets reversal remove what
+a creation made rather than unlink it, and it is why a folder creation is a journalled change like
+any other; see ADR-0023.  Reversal removes a created directory only when it is empty and orders
+paths deepest-first, so a folder created with its parents unwinds from the inside out.
+
 The change watcher (`mindspace_change_watcher.py`, `mindspace_tree_scanner.py`) compares
 successive metadata walks of the tree and reports the files that changed without a
 journal entry to account for them; see ADR-0020.  A detected change is recorded as an
@@ -334,15 +388,18 @@ only one instance has a mindspace open.  A checkpoint never names a command, an 
 or a process as the cause of a change.
 
 What the walk covers is a per-mindspace setting (`changes.prunedPaths`, edited on the
-Changes page of the settings dialog) rather than a constant.  An entry is a directory
-name, matched at any depth, or a mindspace-relative path, matched together with
-everything below it; `mindspace_scan_pruned_paths.scan_pruned_paths()` turns a
-mindspace's list into the effective set and always adds `.git` and `.humbug`, because
-scanning `.humbug` would record the act of watching as a change.
+Changes page of the settings dialog) rather than a constant.
+`mindspace_scan_pruned_paths.scan_pruned_paths()` normalises a mindspace's list and
+always adds `.git` and `.humbug`, because scanning `.humbug` would record the act of
+watching as a change; it also refuses an entry that matches everything (`*`, `**`),
+which the shared rule would accept and which would silently leave the change list
+empty.  What an entry *means* is not decided here: it is
+`path_matching.PathPatterns`, the same rule the filesystem tool's access lists use, so
+an entry cannot mean two things in two places.  Do not re-test entries anywhere else.
 `DEFAULT_SCAN_PRUNED_PATHS` is only the default a new mindspace starts from.  Because a
 walk with a different set sees different files, the baseline records the set it was
 taken with, and a baseline whose set no longer matches is discarded rather than read:
-otherwise a newly pruned directory's files would be reported as removals that never
+otherwise the files under a newly ignored path would be reported as removals that never
 happened.
 
 A view that lists entries should hold them and ask `entries_from(sequence, limit)` for
@@ -357,6 +414,17 @@ tool, which offers outside-boundary paths to the user for external approval but 
 reject `.humbug/` paths outright.  As defence in depth, `_get_filesystem_access_settings`
 also appends the current mindspace's `.humbug/**` to the effective denylist, so such a
 path is denied by the same always-deny mechanism as `~/.ssh/**`.
+
+### `src/path_matching/`
+Matching of a path against a list of glob entries, shared by the filesystem tool's file
+access lists and the change scanner (`PathPatterns`).  One implementation, deliberately:
+an entry the user writes must not mean one thing in an access list and another in the
+tree being watched.  The rule is the access lists' existing one — `fnmatch` over the
+whole path, `Path.match` over trailing components, and `/**` extending an entry to the
+base and what is below it — and the module's own docstring states its consequences.  A
+literal entry is matched by comparing components rather than by running the glob tests,
+which is the same answer worked out in advance and is what keeps a scan of every file
+affordable; an entry containing a wildcard goes through the tests themselves.
 
 ### `src/pdf/`
 Pure-Python PDF text extraction (stdlib only). Parses PDF structure, decodes streams
@@ -426,6 +494,7 @@ helpers from other test modules via their full path (e.g.
 
 ## Key Documentation Files
 
-- `README.md` - Project overview
+- `README.md` - Project overview, and the project's front page (see Documentation above)
 - `CHANGELOG.md` - Version history
+- `blueprint.md` - Purpose and intent of the repository
 - Component-specific README.md files in subdirectories

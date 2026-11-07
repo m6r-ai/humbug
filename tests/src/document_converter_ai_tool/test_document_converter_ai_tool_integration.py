@@ -72,7 +72,7 @@ def real_authorization():
     """Authorization callback that always approves."""
     mock = MagicMock()
 
-    async def _approve(_tool_name, _arguments, _context, _requester_ref, _destructive):
+    async def _approve(_tool_name, _arguments, _context, _requester_ref, _destructive, _kind):
         return True
 
     mock.side_effect = _approve

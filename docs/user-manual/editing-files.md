@@ -118,7 +118,7 @@ The AI can interact with editor tabs directly as part of its work. It can:
 
 Changes to a buffer — whether a diff or a Menai transform — do not require approval, and do not
 reach your disk until they are saved. Saving is the moment Humbug asks you, and the save itself is
-recorded in the [Changes panel](changes.md) like any other file mutation.
+recorded in the [Journal panel](journal.md) like any other file mutation.
 
 When the AI applies a diff to an editor tab, the cursor moves to the last edited line so you can
 see what changed. If the tab being edited is not currently visible, its label turns a distinct
@@ -126,4 +126,4 @@ colour to let you know something has happened.
 
 ---
 
-*[Index](index.md) · Previous: [Undoing Changes](changes.md) · Next: [Using the Terminal](terminal.md)*
+*[Index](index.md) · Previous: [Undoing Changes](journal.md) · Next: [Using the Terminal](terminal.md)*

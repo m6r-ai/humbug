@@ -19,14 +19,15 @@ from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, Menai
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition,
-    AIToolResult, AIToolCall, AIToolTimeoutError
+    AIToolResult, AIToolCall, AIToolTimeoutError, AIToolApprovalKind
 )
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
 from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
 from mindspace.mindspace import Mindspace
 from mindspace.journal_entry import JournalActor, JournalEntry
-from mindspace.mindspace_error import MindspaceHumbugPathError
+from mindspace.mindspace_error import MindspaceError, MindspaceHumbugPathError
 from mindspace.mindspace_log_level import MindspaceLogLevel
+from path_matching import PathPatterns
 from pdf import PDFError, PDFUnsupportedError, extract_text, parse as parse_pdf
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 
@@ -582,39 +583,13 @@ class FileSystemAITool(AITool):
         Returns:
             True if path matches any pattern, False otherwise
         """
-        if not patterns:
-            return False
-
-        # Expand ~ in path and normalise to forward slashes for consistent matching
-        expanded_path = os.path.expanduser(path_str).replace(os.sep, "/")
-
-        for pattern in patterns:
-            if not pattern:  # Skip empty patterns
-                continue
-
-            # Expand ~ in pattern and normalise to forward slashes
-            expanded_pattern = os.path.expanduser(pattern).replace(os.sep, "/")
-
-            # If pattern ends with /**, also check if path matches the base directory
-            if expanded_pattern.endswith('/**'):
-                base_pattern = expanded_pattern[:-3]  # Remove the /**
-                if expanded_path == base_pattern or expanded_path.startswith(base_pattern + "/"):
-                    return True
-
-            # Use fnmatch for glob pattern matching
-            if fnmatch.fnmatch(expanded_path, expanded_pattern):
-                return True
-
-            # Also try matching with Path.match() for ** patterns
-            try:
-                if Path(expanded_path).match(expanded_pattern):
-                    return True
-
-            except (ValueError, Exception):
-                # Invalid pattern, skip
-                pass
-
-        return False
+        # The rule itself lives in path_matching, which the change scanner uses too:
+        # one implementation so that an entry in an access list and an entry in a
+        # mindspace's scanned tree cannot mean two different things.
+        matcher = PathPatterns(
+            os.path.expanduser(pattern).replace(os.sep, "/") for pattern in patterns
+        )
+        return matcher.matches(os.path.expanduser(path_str).replace(os.sep, "/"))
 
     def _is_external_candidate_allowed(self, path: Path, base_path: Path) -> bool:
         """
@@ -754,7 +729,8 @@ class FileSystemAITool(AITool):
             tool_call.arguments,
             context,
             None,
-            False
+            False,
+            AIToolApprovalKind.STANDARD
         )
 
         if not authorized:
@@ -1087,6 +1063,53 @@ class FileSystemAITool(AITool):
         """
         self._mindspace.file_journal().void_entries(list(entries))
 
+    def _approval_kind(self, *paths: Path) -> AIToolApprovalKind:
+        """
+        Classify a request by whether the journal records a change to every path.
+
+        The approval policy may grant a standing approval for a request the change
+        journal can reverse and for nothing else, so the classification is the
+        journal's own scope test rather than this tool's opinion of its operations.
+
+        Scope is necessary but not sufficient: an operation the journal will not
+        record must be classified STANDARD even when its paths are in scope.  A
+        directory is recorded when it is removed and not when it is created or moved,
+        so those callers decide for themselves.
+
+        Args:
+            paths: Every path the request will mutate.
+
+        Returns:
+            MINDSPACE_FILE_CHANGE when the journal records a change to all of them,
+            STANDARD otherwise.
+        """
+        for path in paths:
+            if self._mindspace.journalled_path(str(path)) is None:
+                return AIToolApprovalKind.STANDARD
+
+        return AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+
+    @staticmethod
+    def _is_empty_directory(path: Path) -> bool:
+        """
+        Return True if a directory holds nothing, which is what a move can reverse.
+
+        A directory whose contents cannot be read is reported as holding something,
+        so a move that cannot be checked is offered to the human rather than assumed
+        reversible.
+
+        Args:
+            path: The directory to inspect.
+
+        Returns:
+            True if the directory exists and is empty, False otherwise.
+        """
+        try:
+            return not any(path.iterdir())
+
+        except OSError:
+            return False
+
     async def _write_file(
         self,
         tool_call: AIToolCall,
@@ -1134,7 +1157,9 @@ class FileSystemAITool(AITool):
             destructive = False
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, None, destructive)
+        authorized = await request_authorization(
+            "filesystem", arguments, context, None, destructive, self._approval_kind(path)
+        )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to write file: {arguments['path']}")
 
@@ -1265,7 +1290,9 @@ class FileSystemAITool(AITool):
         context = f"This will append content to the end of '{display_path}'. It will modify the existing file."
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, None, True)
+        authorized = await request_authorization(
+            "filesystem", arguments, context, None, True, self._approval_kind(path)
+        )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to append to file: {arguments['path']}")
 
@@ -1405,21 +1432,65 @@ class FileSystemAITool(AITool):
             context += " This will also create any missing parent directories."
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, None, False)
+        authorized = await request_authorization(
+            "filesystem", arguments, context, None, False, self._approval_kind(path)
+        )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to create directory: {arguments['path']}")
+
+        # A directory has no content to capture, so each record says only that a path
+        # did not exist and now holds a directory, which is what reversal removes.  The
+        # parents this call will create are recorded too, so that reversing it removes
+        # everything it made rather than leaving a chain of empty folders behind.
+        conversation = self._mindspace.conversation_identifier(requester_ref)
+        journal = self._mindspace.file_journal()
+        created: list[Path] = []
+        root = Path(self._mindspace.mindspace_path())
+        if create_parents:
+            candidate = path.parent
+            while candidate != root and root in candidate.parents and not candidate.exists():
+                created.insert(0, candidate)
+                candidate = candidate.parent
+
+        created.append(path)
+        journal_entries = []
+        for directory in created:
+            try:
+                _, directory_display_path = self._resolve_path(str(directory))
+
+            except Exception:
+                directory_display_path = str(directory)
+
+            journal_entries.append(
+                journal.record_creation(
+                    str(directory),
+                    directory_display_path,
+                    JournalActor.AI,
+                    conversation,
+                    is_directory=True,
+                )
+            )
+
+        if any(entry is None for entry in journal_entries):
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.WARN,
+                f"Failed to record the creation of '{display_path}' for reversal",
+            )
 
         # Create directory
         try:
             path.mkdir(parents=create_parents, exist_ok=False)
 
         except FileExistsError as e:
+            self._void_journal_entry(*journal_entries)
             raise AIToolExecutionError(f"Directory already exists: {str(path)}") from e
 
         except PermissionError as e:
+            self._void_journal_entry(*journal_entries)
             raise AIToolExecutionError(f"Permission denied creating directory: {str(e)}") from e
 
         except OSError as e:
+            self._void_journal_entry(*journal_entries)
             raise AIToolExecutionError(f"Failed to create directory: {str(e)}") from e
 
         self._mindspace.add_interaction(
@@ -1462,18 +1533,22 @@ class FileSystemAITool(AITool):
             raise AIToolExecutionError(f"Permission denied checking directory contents: {str(e)}") from e
 
         # Build authorization context
-        context = f"Remove the empty directory '{display_path}'. This directory will be permanently deleted."
+        context = f"Remove the empty directory '{display_path}'. Its removal is recorded so it can be recreated."
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, None, True)
+        authorized = await request_authorization(
+            "filesystem", arguments, context, None, True, self._approval_kind(path)
+        )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to remove directory: {arguments['path']}")
 
-        # Remove directory
+        # A directory has no content to capture, so the journal records that it
+        # existed and reversal recreates it.
+        conversation = self._mindspace.conversation_identifier(requester_ref)
         try:
-            path.rmdir()
+            self._mindspace.remove_path(str(path), JournalActor.AI, conversation)
 
-        except OSError as e:
+        except MindspaceError as e:
             raise AIToolExecutionError(f"Failed to remove directory: {str(e)}") from e
 
         self._mindspace.add_interaction(
@@ -1508,33 +1583,20 @@ class FileSystemAITool(AITool):
         context = f"Delete the file '{display_path}'. Its content is recorded so the deletion can be reversed."
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, None, True)
+        authorized = await request_authorization(
+            "filesystem", arguments, context, None, True, self._approval_kind(path)
+        )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to delete file: {arguments['path']}")
 
         # The journal captures the file's content before it is removed, so the
-        # deletion can be reversed.  A recording failure does not abort the
-        # deletion; it is logged so the file can be shown as not revertable.
-        journal_entry = self._mindspace.file_journal().record_removal(
-            str(path),
-            display_path,
-            JournalActor.AI,
-            self._mindspace.conversation_identifier(requester_ref),
-        )
-        if journal_entry is None:
-            self._mindspace.add_interaction(
-                MindspaceLogLevel.WARN,
-                f"Failed to record the removal of '{display_path}' for reversal",
-            )
-
-        # Delete file
+        # deletion can be reversed.  A removal is never performed without its
+        # record, so the file cannot disappear unaccounted for.
+        conversation = self._mindspace.conversation_identifier(requester_ref)
         try:
-            path.unlink()
+            self._mindspace.remove_path(str(path), JournalActor.AI, conversation)
 
-        except PermissionError as e:
-            raise AIToolExecutionError(f"Permission denied deleting file: {str(e)}") from e
-
-        except OSError as e:
+        except MindspaceError as e:
             raise AIToolExecutionError(f"Failed to delete file: {str(e)}") from e
 
         self._mindspace.add_interaction(
@@ -1591,7 +1653,9 @@ class FileSystemAITool(AITool):
             destructive = False
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, None, destructive)
+        authorized = await request_authorization(
+            "filesystem", arguments, context, None, destructive, self._approval_kind(destination_path)
+        )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to copy file: {arguments['path']} -> {destination_arg}")
 
@@ -1677,24 +1741,42 @@ class FileSystemAITool(AITool):
             context = f"Move the {item_type} '{source_display_path}' to '{dest_display_path}'."
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, None, True)
+        # An empty directory can be journalled at both ends.  A populated one cannot:
+        # its contents are not captured, so the move is not reversible and says so.
+        reversible_directory = source_path.is_dir() and self._is_empty_directory(source_path)
+        if source_path.is_file() or reversible_directory:
+            kind = self._approval_kind(destination_path, source_path)
+
+        else:
+            kind = AIToolApprovalKind.STANDARD
+
+        authorized = await request_authorization("filesystem", arguments, context, None, True, kind)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to move: {arguments['path']} -> {destination_arg}")
 
-        # A move is two mutations of a file: the destination gains the content
-        # and the source loses it.  Directories are not journalled, so their
-        # move is not reversible and the authorization text says so.
+        # A move is two mutations: the destination gains what was moved and the
+        # source loses it.  Both are recorded in one group so they are reversed
+        # together, which is the only way to reverse a move at all.
         destination_entry: JournalEntry | None = None
         source_entry: JournalEntry | None = None
-        if source_path.is_file():
+        if source_path.is_file() or reversible_directory:
             conversation = self._mindspace.conversation_identifier(requester_ref)
             journal = self._mindspace.file_journal()
             group = uuid.uuid4().hex
-            destination_entry = journal.record_write_from_path(
-                str(destination_path), dest_display_path, str(source_path), JournalActor.AI, conversation, group
-            )
+            if source_path.is_file():
+                destination_entry = journal.record_write_from_path(
+                    str(destination_path), dest_display_path, str(source_path), JournalActor.AI, conversation, group
+                )
+
+            else:
+                destination_entry = journal.record_creation(
+                    str(destination_path), dest_display_path, JournalActor.AI, conversation, group,
+                    is_directory=True,
+                )
+
             source_entry = journal.record_removal(
-                str(source_path), source_display_path, JournalActor.AI, conversation, group
+                str(source_path), source_display_path, JournalActor.AI, conversation, group,
+                pre_image_is_directory=reversible_directory,
             )
             if destination_entry is None or source_entry is None:
                 self._mindspace.add_interaction(
@@ -2604,7 +2686,9 @@ class FileSystemAITool(AITool):
         context = f"This will apply a diff to file '{display_path}' ({result.hunks_applied} hunk(s)). " \
             "This will overwrite the existing file."
 
-        authorized = await request_authorization("filesystem", arguments, context, None, True)
+        authorized = await request_authorization(
+            "filesystem", arguments, context, None, True, self._approval_kind(path)
+        )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to apply diff to file: {arguments['path']}")
 
@@ -3015,7 +3099,9 @@ class FileSystemAITool(AITool):
                 f"'{out_display_path}'. The source file is left unchanged."
             )
 
-        authorized = await request_authorization("filesystem", arguments, context_str, diff_str, True)
+        authorized = await request_authorization(
+            "filesystem", arguments, context_str, diff_str, True, self._approval_kind(out_path)
+        )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to transform file: {path_arg}")
 

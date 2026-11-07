@@ -22,7 +22,7 @@ from desktop.preview_sidebar.preview_sidebar_tree_view import PreviewSidebarTree
 from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar.sidebar_breadcrumb_bar import SidebarBreadcrumbBar
 from desktop.sidebar.sidebar_breadcrumb_container import SidebarBreadcrumbContainer
-from desktop.sidebar.sidebar_file_delete import confirm_and_trash_file
+from desktop.sidebar.sidebar_file_delete import confirm_and_delete_path
 from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 from desktop.sidebar.sidebar_pane_style import build_tree_pane_stylesheet
 from desktop.sidebar.sidebar_tree_delegate import SidebarTreeDelegate
@@ -900,13 +900,13 @@ class PreviewSidebar(SidebarBase):
         """
         Handle request to delete a file.
 
-        The file is moved into the trash, which is also where the change journal
-        looks when it is asked to reverse the removal.
+        Its content is recorded in the change journal first, which is what makes
+        the removal reversible from the Changes panel.
 
         Args:
             path: Path to the file to delete
         """
-        confirm_and_trash_file(
+        confirm_and_delete_path(
             self, path, os.path.basename(path), self.file_deleted.emit
         )
 
@@ -914,9 +914,9 @@ class PreviewSidebar(SidebarBase):
         """
         Handle request to delete a folder.
 
-        Only an empty folder can be deleted here, and it is moved into the trash
-        rather than unlinked, so the folder can be restored the same way a file
-        can.  The confirmation says so.
+        Only an empty folder can be deleted here.  Its removal is recorded, so the
+        folder can be recreated the same way a file can be restored.  The
+        confirmation says so.
 
         Args:
             path: Path to the folder to delete
@@ -945,7 +945,7 @@ class PreviewSidebar(SidebarBase):
             )
             return
 
-        confirm_and_trash_file(
+        confirm_and_delete_path(
             self, path, os.path.basename(path), self.file_deleted.emit
         )
 

@@ -74,6 +74,11 @@ Human oversight is also a key mitigation against AIs doing strange and dangerous
 If an AI wants to do something that might have dangerous consequences it has to seek approval first.
 If you say no, or aren't sure then that operation will not happen (no need to hope the AI will do the right thing).
 
+Approval friction is reduced where the journal makes it unnecessary rather than where it would be convenient.
+A prompt offering to approve changes to files in your mindspace also offers to auto-approve them until your
+next message, covering only changes the journal records and so can reverse, never a terminal command, a network
+request, or anything outside the mindspace. It is never remembered, and sending a message takes it back.
+
 ### LLMs, lots of LLMs
 
 Humbug lets you work with multiple large language models (LLMs) simultaneously, supporting local, cloud-based, or hybrids of both.

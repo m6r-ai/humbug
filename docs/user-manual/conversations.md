@@ -58,9 +58,11 @@ AI response and reasoning messages have two buttons:
 
 ## Editing messages
 
-To edit one of your previous messages, click the **Edit** button in its banner. The message text is
-loaded back into the input area, where you change it with the same editor, attachments, and
-shortcuts you use for a new message — there is no second-class editing mode.
+To edit one of your previous messages, click the **Edit** button in its banner. The message text and
+any files attached to it are loaded back into the input area, where you change them with the same
+editor, attachment chips, and shortcuts you use for a new message — there is no second-class editing
+mode. Detach a file by clicking the **×** on its chip; a file you leave attached is sent again with
+the revised message.
 
 While you are editing, the messages below the one being edited are **faded out**. Submitting
 replaces the edited message with your new text and removes everything after it, so the fading

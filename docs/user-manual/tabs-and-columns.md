@@ -61,7 +61,9 @@ You can resize columns by dragging the splitter handles between them.
 Tabs are opened by:
 
 - Clicking or double-clicking items in the mindspace panel
-- Dragging files or conversations from the mindspace panel into the tab area
+- Dragging files or conversations from the mindspace panel into the tab area (a file dropped on
+  a conversation's input box is attached to the message instead; see
+  [Attaching Files to Conversations](attachments.md))
 - The AI opening a tab as part of its work (it will open a new column automatically if the tab
   would otherwise obscure your current view)
 

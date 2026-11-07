@@ -550,3 +550,19 @@ def test_a_baseline_written_before_the_scanned_paths_were_recorded_is_kept(tmp_p
     reopened, _reopened_journal = _watcher(root)
 
     assert reopened.checkpoint().difference.changed == {"fred.txt"}
+
+
+def test_a_swap_file_appearing_and_going_is_not_reported(tmp_path):
+    root = _mindspace(tmp_path)
+    (root / "fred.txt").write_bytes(b"one")
+    watcher, journal = _watcher(root, pruned=frozenset({".humbug", "*.swp"}))
+    watcher.checkpoint()
+
+    (root / ".fred.txt.swp").write_bytes(b"vim buffer")
+    appeared = watcher.checkpoint()
+    (root / ".fred.txt.swp").unlink()
+    went = watcher.checkpoint()
+
+    assert appeared.difference.is_empty()
+    assert went.difference.is_empty()
+    assert journal.all_entries() == []

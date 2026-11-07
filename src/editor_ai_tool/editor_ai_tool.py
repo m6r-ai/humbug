@@ -19,6 +19,7 @@ from ai_tool import (
     AIToolParameter,
     AIToolResult,
     AIToolTimeoutError,
+    AIToolApprovalKind,
 )
 from editor_context.editor_context import EditorContext
 from mindspace.journal_entry import JournalActor
@@ -660,7 +661,14 @@ class EditorAITool(AITool):
         context_str = f"Save editor content to file: {file_path} (tab {context_id})"
         diff = context.get_diff(3)
 
-        authorized = await request_authorization("editor", arguments, context_str, diff, True)
+        # A tab may show a file outside the mindspace, which the journal does not
+        # record, so the classification is the file's rather than the operation's.
+        kind = (
+            AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+            if self._mindspace.journalled_path(file_path) is not None
+            else AIToolApprovalKind.STANDARD
+        )
+        authorized = await request_authorization("editor", arguments, context_str, diff, True, kind)
         if not authorized:
             raise AIToolAuthorizationDenied("User denied permission to save file")
 

@@ -271,17 +271,18 @@ def get_arabic_strings() -> LanguageStrings:
         settings_terminal="الطرفية",
         settings_conversation="المحادثة",
         settings_tabs="علامات التبويب",
-        settings_changes="التغييرات",
+        settings_journal="السجل",
 
-        changes_settings="التغييرات",
-        changes_checkpoint_interval="الفاصل الزمني لنقاط التحقق (ثوانٍ)",
-        changes_scan_section="الشجرة المراقَبة",
-        changes_scan_section_description=(
-            "لا تُسجَّل التغييرات الواقعة تحت مجلد متجاهَل. كل سطر هو اسم مجلد، ويطابق أي "
-            "مستوى، أو مسار من جذر مساحة العمل، ويطابق ذلك المسار وكل ما تحته. يُتجاهَل "
-            "دائمًا المجلد ‎.humbug‎ و‎.git‎."
+        journal_settings="السجل",
+        journal_checkpoint_interval="الفاصل الزمني لنقاط التحقق (ثوانٍ)",
+        journal_watched_section="الشجرة المراقَبة",
+        journal_watched_section_description=(
+            "لا تُسجَّل التغييرات الواقعة تحت مُدخَل متجاهَل. المُدخَلات أنماط glob، تُطابَق كما "
+            "في قوائم الوصول إلى الملفات: الاسم يُطابِق ذلك الاسم كاملًا في أي موضع من الشجرة "
+            "ولا يُطابِق اسمًا أطول، فـ‎venv‎ لا يُطابِق ‎venvity‎، وأنهِ المُدخَل بـ‎/**‎ لتضمين "
+            "كل ما يقع تحت مسار. يُتجاهَل دائمًا المجلد ‎.humbug‎ و‎.git‎."
         ),
-        changes_pruned_paths="المجلدات والمسارات المتجاهَلة",
+        journal_pruned_paths="الملفات والمجلدات والمسارات المتجاهَلة",
 
         # Conversation settings
         model_info="معلومات النموذج",
@@ -340,6 +341,10 @@ def get_arabic_strings() -> LanguageStrings:
         delete_warning_detail=(
             "سيتم إغلاق أي تبويب مفتوح دون حفظ. يُنقل العنصر إلى سلة المحذوفات، "
             "حيث يمكن استعادته."
+        ),
+        delete_recorded_warning_detail=(
+            "سيتم إغلاق أي تبويب مفتوح دون حفظ. يُسجَّل محتواه أولاً، "
+            "بحيث يمكن التراجع عن الحذف من لوحة التغييرات."
         ),
         error_deleting_file="تعذر حذف الملف: {0}",
         error_title_rename="خطأ في إعادة التسمية",
@@ -452,7 +457,7 @@ def get_arabic_strings() -> LanguageStrings:
         trash_time_hours_ago="منذ {0} س",
         trash_time_days_ago="منذ {0} ي",
 
-        changes="التغييرات",
+        journal="السجل",
         changes_no_mindspace_message="افتح مساحة عمل لعرض تغييراتها الأخيرة.",
         changes_empty_message="لم يتم تسجيل أي تغيير بعد.",
         changes_until="التغييرات في {0} أو قبله",
@@ -568,6 +573,7 @@ def get_arabic_strings() -> LanguageStrings:
         approve_tool_call="موافقة",
         i_am_unsure_about_tool_call="لست متأكداً من هذا",
         reject_tool_call="رفض",
+        auto_approve_file_changes="الموافقة التلقائية على تغييرات الملفات حتى رسالتك التالية",
         interruptible_wait_message="جارٍ الانتظار {duration} ثانية \u2014 تبقّى {remaining}...",
         finish_waiting_now="إنهاء الانتظار الآن",
         retry_error="إعادة المحاولة",

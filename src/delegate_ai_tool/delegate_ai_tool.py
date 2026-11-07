@@ -15,7 +15,7 @@ from ai.ai_model import AIReasoningEffort
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback,
-    AIToolResult, AIToolCall, AIToolOperationDefinition
+    AIToolResult, AIToolCall, AIToolOperationDefinition, AIToolApprovalKind
 )
 from ai_transcript_conversation import AITranscriptConversation
 from conversation_dag import ConversationDag
@@ -265,7 +265,9 @@ class DelegateAITool(AITool):
             f"Task prompt:\n{task_prompt[:500]}{'...' if len(task_prompt) > 500 else ''}"
         )
 
-        authorized = await request_authorization("delegate_ai", arguments, context, None, False)
+        authorized = await request_authorization(
+            "delegate_ai", arguments, context, None, False, AIToolApprovalKind.STANDARD
+        )
         if not authorized:
             raise AIToolAuthorizationDenied("User denied permission to delegate AI task")
 
