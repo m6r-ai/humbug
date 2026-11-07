@@ -300,7 +300,9 @@ class FileSystemAITool(AITool):
                 description="Read file contents. PDF files (.pdf) are supported: text is extracted automatically. "
                     "Encrypted PDFs will return an error. "
                     "DOCX files (.docx) are supported: text is extracted automatically. "
-                    "Encrypted DOCX files will return an error."
+                    "Encrypted DOCX files will return an error. "
+                    f"An error is raised if the content, or the text extracted from a PDF or DOCX, "
+                    f"exceeds {self._MAX_RESPONSE_BYTES // 1024} KB."
             ),
             "read_file_lines": AIToolOperationDefinition(
                 name="read_file_lines",
@@ -313,7 +315,9 @@ class FileSystemAITool(AITool):
                     "lines or when line numbers are important. Returns a dictionary with integer "
                     "line numbers as keys and line content as string values. Note: line content is returned as JSON-encoded "
                     "strings, so special characters (double quotes, backslashes, etc.) will appear escaped — these escape "
-                    "sequences are not present in the source."
+                    "sequences are not present in the source. "
+                    f"An error is raised if the returned lines exceed {self._MAX_RESPONSE_BYTES // 1024} KB; "
+                    "narrow the range to reduce the result."
             ),
             "write_file": AIToolOperationDefinition(
                 name="write_file",
@@ -796,6 +800,28 @@ class FileSystemAITool(AITool):
             # Ignore errors during context extraction
             return None
 
+    def _ensure_response_fits(self, content: str, narrow_hint: str) -> None:
+        """
+        Raise if text about to be returned to the AI exceeds the response size limit.
+
+        The limit protects the conversation's context window, so it applies to text
+        returned to the AI and not to content written elsewhere or shown to the user
+        for approval.
+
+        Args:
+            content: The text about to be returned to the AI.
+            narrow_hint: How the caller can narrow the request.
+
+        Raises:
+            AIToolExecutionError: If the content exceeds the limit.
+        """
+        content_bytes = len(content.encode("utf-8"))
+        if content_bytes > self._MAX_RESPONSE_BYTES:
+            raise AIToolExecutionError(
+                f"Result exceeds the {self._MAX_RESPONSE_BYTES // 1024} KB response size limit "
+                f"({content_bytes // 1024} KB). {narrow_hint}"
+            )
+
     async def _read_file(
         self,
         tool_call: AIToolCall,
@@ -839,6 +865,11 @@ class FileSystemAITool(AITool):
             except OSError as e:
                 raise AIToolExecutionError(f"Failed to read file: {e}") from e
 
+            self._ensure_response_fits(
+                content,
+                "The extracted text of a PDF cannot be read in parts, so a document "
+                "this large cannot be read with this tool."
+            )
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI read file (PDF): '{display_path}'",
@@ -862,6 +893,11 @@ class FileSystemAITool(AITool):
             except OSError as e:
                 raise AIToolExecutionError(f"Failed to read file: {e}") from e
 
+            self._ensure_response_fits(
+                content,
+                "The extracted text of a DOCX cannot be read in parts, so a document "
+                "this large cannot be read with this tool."
+            )
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI read file (DOCX): '{display_path}'",
@@ -890,6 +926,11 @@ class FileSystemAITool(AITool):
         language = ProgrammingLanguageUtils.from_file_extension(path.name)
         language_str = ProgrammingLanguageUtils.get_name(language)
 
+        self._ensure_response_fits(
+            content,
+            "Use read_file_lines with start_line and end_line to read part of the file, "
+            "or analyse_file to summarise it."
+        )
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
             f"AI read file: '{display_path}'",
@@ -986,6 +1027,11 @@ class FileSystemAITool(AITool):
             "lines": context_object
         }
 
+        result_json = json.dumps(result_object, indent=2)
+        self._ensure_response_fits(
+            result_json,
+            "Use start_line and end_line to read a smaller range of lines."
+        )
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
             f"AI read file lines: '{display_path}' ({range_value})",
@@ -994,7 +1040,7 @@ class FileSystemAITool(AITool):
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
-            content=json.dumps(result_object, indent=2),
+            content=result_json,
             context="json"
         )
 

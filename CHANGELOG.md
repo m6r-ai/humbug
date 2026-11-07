@@ -34,6 +34,7 @@ Bug fixes:
   you can detach before submitting.  Previously the box showed the text alone and the files were lost
   from the revised message.
 - Fixed issues with various sidebar panels not scaling correctly with zoom size.
+- All filesystem read operations now protect against polluting the context window.
 
 Internal structure changes:
 

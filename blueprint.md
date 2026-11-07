@@ -180,14 +180,18 @@ where the user's attention buys the least, because the record buys what the prom
 change made under it is still logged, and the log says a standing approval resolved it. See
 ADR-0022.
 
-**Bounded outputs.** Tools that can produce large outputs — file contents, search results,
-git logs, diffs — must enforce a size limit (currently 64KB). If output exceeds the limit, it
-is reported as an error naming the limit and how to narrow the request, rather than returned
+**Bounded outputs.** Output is bounded when it is returned into the conversation, because the
+context window is what the limit protects: a single tool call that floods it wastes tokens and
+crowds out relevant information that is already there. The limit is 64KB. If output exceeds it,
+it is reported as an error naming the limit and how to narrow the request, rather than returned
 partially: content the AI believes is whole but is not is worse than content it has to ask for
-again. Tools that can write their result elsewhere — a diff to a file in the mindspace, a
-download straight to disk — offer that instead. This prevents a single tool call from flooding
-the AI's context window with content it cannot use, which would waste tokens and crowd out
-relevant information. The AI can always make a more targeted follow-up request.
+again. What does not land in the conversation is not bounded by this rule — a diff written to a
+file in the mindspace, a download straight to disk, or a diff shown to the user for approval
+costs no context, and offering one of those routes is how a tool keeps a large result usable.
+Text a tool derives rather than copies is bounded too, on the derived text and not the source:
+the text extracted from a PDF counts toward the limit, not the size of the PDF. Where a tool
+has no way to narrow a result, it says so plainly rather than implying a route it does not have.
+The AI can always make a more targeted follow-up request.
 
 ### Two levels of version control
 Humbug recognises two fundamentally different kinds of content within a mindspace, each

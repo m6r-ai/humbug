@@ -2,6 +2,7 @@
 Tests for filesystem tool file operations: read_file, write_file, append_to_file.
 """
 import asyncio
+import json
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch, MagicMock, mock_open
@@ -748,3 +749,156 @@ class TestFileSystemAIToolHumbugPath:
             asyncio.run(tool.execute(tool_call, "", mock_authorization))
 
         mock_authorization.assert_not_called()
+
+
+class TestFileSystemAIToolReadFileResponseLimit:
+    """Tests that read_file bounds the text it returns into the conversation."""
+
+    def test_read_file_content_exceeding_limit_is_rejected(
+        self, filesystem_tool, mock_authorization, make_tool_call
+    ):
+        """Content exceeding 64 KB is rejected with a hint naming how to narrow the read."""
+        content = "x" * (70 * 1024)
+
+        with patch('pathlib.Path.exists') as mock_exists, \
+             patch('pathlib.Path.is_file') as mock_is_file, \
+             patch('pathlib.Path.stat') as mock_stat, \
+             patch('builtins.open', mock_open(read_data=content)):
+
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
+            mock_stat.return_value = MagicMock(st_size=len(content))
+
+            tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "big.txt"})
+            with pytest.raises(AIToolExecutionError) as exc_info:
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+
+        assert "exceeds the 64 KB response size limit" in str(exc_info.value)
+        assert "read_file_lines" in str(exc_info.value)
+
+    def test_read_file_content_within_limit_succeeds(
+        self, filesystem_tool, mock_authorization, make_tool_call
+    ):
+        """Content just under 64 KB is returned whole."""
+        content = "x" * ((64 * 1024) - 1)
+
+        with patch('pathlib.Path.exists') as mock_exists, \
+             patch('pathlib.Path.is_file') as mock_is_file, \
+             patch('pathlib.Path.stat') as mock_stat, \
+             patch('builtins.open', mock_open(read_data=content)):
+
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
+            mock_stat.return_value = MagicMock(st_size=len(content))
+
+            tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "big.txt"})
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+
+        assert result.content == content
+
+    def test_read_file_pdf_text_exceeding_limit_is_rejected(
+        self, filesystem_tool, mock_authorization, make_tool_call
+    ):
+        """A PDF whose extracted text exceeds 64 KB is rejected even though the PDF is small."""
+        extracted_text = "x" * (70 * 1024)
+
+        with patch('pathlib.Path.exists') as mock_exists, \
+             patch('pathlib.Path.is_file') as mock_is_file, \
+             patch('pathlib.Path.stat') as mock_stat, \
+             patch('builtins.open', mock_open(read_data=b"%PDF-1.4")), \
+             patch('filesystem_ai_tool.filesystem_ai_tool.parse_pdf'), \
+             patch('filesystem_ai_tool.filesystem_ai_tool.extract_text',
+                   return_value=extracted_text):
+
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
+            mock_stat.return_value = MagicMock(st_size=2048)
+
+            tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "big.pdf"})
+            with pytest.raises(AIToolExecutionError) as exc_info:
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+
+        assert "exceeds the 64 KB response size limit" in str(exc_info.value)
+        assert "cannot be read in parts" in str(exc_info.value)
+
+    def test_read_file_docx_text_exceeding_limit_is_rejected(
+        self, filesystem_tool, mock_authorization, make_tool_call
+    ):
+        """A DOCX whose extracted text exceeds 64 KB is rejected even though the DOCX is small."""
+        extracted_text = "x" * (70 * 1024)
+
+        with patch('pathlib.Path.exists') as mock_exists, \
+             patch('pathlib.Path.is_file') as mock_is_file, \
+             patch('pathlib.Path.stat') as mock_stat, \
+             patch('builtins.open', mock_open(read_data=b"PK\x03\x04")), \
+             patch('filesystem_ai_tool.filesystem_ai_tool.extract_docx_text',
+                   return_value=extracted_text):
+
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
+            mock_stat.return_value = MagicMock(st_size=4096)
+
+            tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "big.docx"})
+            with pytest.raises(AIToolExecutionError) as exc_info:
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+
+        assert "exceeds the 64 KB response size limit" in str(exc_info.value)
+        assert "cannot be read in parts" in str(exc_info.value)
+
+
+class TestFileSystemAIToolReadFileLinesResponseLimit:
+    """Tests that read_file_lines bounds the lines it returns into the conversation."""
+
+    def _large_file_content(self) -> str:
+        """Build 1000 lines of 100 characters, about 101 KB."""
+        return "\n".join("x" * 100 for _ in range(1000))
+
+    def test_read_file_lines_exceeding_limit_is_rejected(
+        self, filesystem_tool, mock_authorization, make_tool_call
+    ):
+        """Reading every line of a file whose lines exceed 64 KB is rejected."""
+        content = self._large_file_content()
+
+        with patch('pathlib.Path.exists') as mock_exists, \
+             patch('pathlib.Path.is_file') as mock_is_file, \
+             patch('pathlib.Path.stat') as mock_stat, \
+             patch('builtins.open', mock_open(read_data=content)):
+
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
+            mock_stat.return_value = MagicMock(st_size=len(content))
+
+            tool_call = make_tool_call("filesystem", {"operation": "read_file_lines", "path": "big.txt"})
+            with pytest.raises(AIToolExecutionError) as exc_info:
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+
+        assert "exceeds the 64 KB response size limit" in str(exc_info.value)
+        assert "start_line and end_line" in str(exc_info.value)
+
+    def test_read_file_lines_narrow_range_within_limit_succeeds(
+        self, filesystem_tool, mock_authorization, make_tool_call
+    ):
+        """A range small enough to fit the limit is returned from a file too large to read whole."""
+        content = self._large_file_content()
+
+        with patch('pathlib.Path.exists') as mock_exists, \
+             patch('pathlib.Path.is_file') as mock_is_file, \
+             patch('pathlib.Path.stat') as mock_stat, \
+             patch('builtins.open', mock_open(read_data=content)):
+
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
+            mock_stat.return_value = MagicMock(st_size=len(content))
+
+            tool_call = make_tool_call("filesystem", {
+                "operation": "read_file_lines",
+                "path": "big.txt",
+                "start_line": 1,
+                "end_line": 3
+            })
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+
+        payload = json.loads(result.content)
+        assert payload["range"] == "1-3"
+        assert len(payload["lines"]) == 3
+        assert payload["lines"]["1"] == "x" * 100
