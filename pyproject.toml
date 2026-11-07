@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "humbug"
-version = "59"
+version = "60"
 requires-python = ">=3.10"
 dependencies = [
     "certifi",
