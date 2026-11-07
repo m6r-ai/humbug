@@ -586,6 +586,7 @@ def get_french_strings() -> LanguageStrings:
         approve_tool_call="Approuver",
         i_am_unsure_about_tool_call="Je ne suis pas sûr à propos",
         reject_tool_call="Rejeter",
+        auto_approve_file_changes="Approuver automatiquement les modifications de fichiers jusqu'à votre prochain message",
         interruptible_wait_message="Attente de {duration} secondes \u2014 {remaining} restantes...",
         finish_waiting_now="Terminer l'attente maintenant",
         retry_error="Réessayer",

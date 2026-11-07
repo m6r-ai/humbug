@@ -573,6 +573,7 @@ def get_arabic_strings() -> LanguageStrings:
         approve_tool_call="موافقة",
         i_am_unsure_about_tool_call="لست متأكداً من هذا",
         reject_tool_call="رفض",
+        auto_approve_file_changes="الموافقة التلقائية على تغييرات الملفات حتى رسالتك التالية",
         interruptible_wait_message="جارٍ الانتظار {duration} ثانية \u2014 تبقّى {remaining}...",
         finish_waiting_now="إنهاء الانتظار الآن",
         retry_error="إعادة المحاولة",

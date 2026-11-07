@@ -178,6 +178,12 @@ Multi-backend AI conversation system.
 ### `src/ai_tool/`
 Core framework for AI tools and capabilities (base classes, manager, definitions, exceptions).
 
+Every authorization request carries an `AIToolApprovalKind` saying what the request would change:
+`STANDARD`, or `MINDSPACE_FILE_CHANGE` for one whose whole effect the change journal records.  A
+tool classifies its own requests, because only it knows the paths it resolved, but it never decides
+whether the classification matters: `AIConversation` holds the user's turn-scoped standing
+approval and is the only thing that can resolve a request without asking.  See ADR-0022.
+
 ### `src/ai_transcript_conversation/`
 AI transcript and conversation support.
 
@@ -356,6 +362,13 @@ covers.  `Mindspace.remove_path()` is the single entry point a removal takes, fo
 filesystem tool and for the desktop panels alike, and it decides between the two with
 `Mindspace.journal_target()`.  Do not add a second removal path, or a second place for
 removed content to survive; see ADR-0021.
+
+`Mindspace.journalled_path()` is the same scope test without the journal itself, and it is what
+an AI tool calls to classify a request as a change the journal will record.  That classification
+is what a user's turn-scoped standing approval covers, so a write the journal will not record
+belongs to `AIToolApprovalKind.STANDARD` and keeps asking; see ADR-0022.  Unlike `journal_target`,
+it resolves symlinks, so a path reached through a link that lands outside the mindspace is not
+reported as covered.
 
 The change watcher (`mindspace_change_watcher.py`, `mindspace_tree_scanner.py`) compares
 successive metadata walks of the tree and reports the files that changed without a

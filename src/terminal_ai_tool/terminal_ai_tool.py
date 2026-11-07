@@ -5,6 +5,7 @@ from typing import Any
 
 from ai_tool import (
     AITool,
+    AIToolApprovalKind,
     AIToolAuthorizationCallback,
     AIToolAuthorizationDenied,
     AIToolCall,
@@ -267,7 +268,9 @@ class TerminalAITool(AITool):
         context_id = terminal_context.context_id()
 
         context = f"Send keystrokes to terminal (tab {context_id}):"
-        authorized = await request_authorization("terminal", arguments, context, None, True)
+        authorized = await request_authorization(
+            "terminal", arguments, context, None, True, AIToolApprovalKind.STANDARD
+        )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to send keystrokes: {raw_input}")
 

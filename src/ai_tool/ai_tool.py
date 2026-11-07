@@ -11,10 +11,13 @@ from ai_tool.ai_tool_parameter import AIToolParameter
 from ai_tool.ai_tool_operation_definition import AIToolOperationDefinition
 from ai_tool.ai_tool_exceptions import AIToolExecutionError, AIToolAuthorizationDenied
 from ai_tool.ai_tool_result import AIToolResult
+from ai_tool.ai_tool_approval_kind import AIToolApprovalKind
 
 
 # Type alias for the authorization callback
-AIToolAuthorizationCallback = Callable[[str, dict[str, Any], str, str | None, bool], Awaitable[bool]]
+AIToolAuthorizationCallback = Callable[
+    [str, dict[str, Any], str, str | None, bool, AIToolApprovalKind], Awaitable[bool]
+]
 
 
 class AITool(ABC):

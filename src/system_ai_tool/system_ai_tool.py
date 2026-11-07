@@ -11,6 +11,7 @@ from ai.ai_model import AIReasoningEffort
 from ai_transcript_conversation import AITranscriptConversation
 from ai_tool import (
     AITool,
+    AIToolApprovalKind,
     AIToolAuthorizationCallback,
     AIToolAuthorizationDenied,
     AIToolCall,
@@ -745,7 +746,9 @@ class SystemAITool(AITool):
             if info.is_modified:
                 tab_title = info.title or tab_id
                 context = f"Close tab '{tab_title}' with unsaved changes? Unsaved modifications will be lost."
-                authorized = await request_authorization("system", arguments, context, None, True)
+                authorized = await request_authorization(
+                    "system", arguments, context, None, True, AIToolApprovalKind.STANDARD
+                )
                 if not authorized:
                     raise AIToolAuthorizationDenied(
                         f"User denied permission to close modified tab '{tab_title}'"

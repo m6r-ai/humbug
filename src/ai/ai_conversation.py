@@ -15,7 +15,9 @@ from ai.ai_message_source import AIMessageSource
 from ai.ai_model import AIReasoningCapability
 from ai.ai_response import AIError
 from ai.ai_usage import AIUsage
-from ai_tool import AIToolManager, AIToolCall, AIToolResult, AIToolAuthorizationDenied
+from ai_tool import (
+    AIToolApprovalKind, AIToolManager, AIToolCall, AIToolResult, AIToolAuthorizationDenied
+)
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 
 
@@ -42,6 +44,8 @@ class AIConversationEvent(Enum):
                                 # When a new message is added and completed immediately
     TOOL_APPROVAL_REQUIRED = auto()
                                 # When tool calls need user approval
+    TOOL_APPROVAL_AUTO_APPROVED = auto()
+                                # When a standing approval resolved a tool call without asking
     TOOL_INTERRUPTIBLE_WAIT_STARTED = auto()
                                 # When a tool begins a wait the user can interrupt
     TOOL_INTERRUPTIBLE_WAIT_ENDED = auto()
@@ -77,6 +81,7 @@ class AIConversation:
         self._pending_tool_calls: list[AIToolCall] = []
         self._pending_tool_call_message: AIMessage | None = None
         self._pending_authorization_future: asyncio.Future[bool] | None = None
+        self._auto_approve_file_changes = False
 
         # Interruptible tool wait state
         self._pending_interrupt_future: asyncio.Future[None] | None = None
@@ -93,6 +98,29 @@ class AIConversation:
     def is_streaming(self) -> bool:
         """Check if the conversation is currently streaming a response."""
         return self._is_streaming
+
+    def set_auto_approve_file_changes(self, enabled: bool) -> None:
+        """
+        Grant or withdraw a standing approval for journalled file changes.
+
+        The approval lasts for the rest of the current turn and is never remembered:
+        it is cleared when the user sends a message, when the turn completes, and
+        when the turn is cancelled.  A tool still has to classify a request as a
+        change the journal records before this approval can resolve it.
+
+        Args:
+            enabled: True to approve such changes without asking, False to ask again.
+        """
+        self._auto_approve_file_changes = enabled
+
+    def auto_approve_file_changes(self) -> bool:
+        """
+        Report whether a standing approval for journalled file changes is in force.
+
+        Returns:
+            True if such changes are approved for the rest of the current turn.
+        """
+        return self._auto_approve_file_changes
 
     def menai_help_read(self) -> bool:
         """
@@ -316,6 +344,9 @@ class AIConversation:
         """
         settings = self.conversation_settings()
 
+        # A new message starts a new turn, so any standing approval has lapsed.
+        self._auto_approve_file_changes = False
+
         # If we're actively processing, queue the message
         if self._state in (ConversationState.EXECUTING_TOOLS, ConversationState.STREAMING_AI_RESPONSE):
             self._logger.info("[conv=%s] Queuing message during active processing", self._conversation_id)
@@ -465,7 +496,8 @@ class AIConversation:
         arguments: dict[str, Any],
         reason: str,
         context: str | None,
-        destructive: bool
+        destructive: bool,
+        kind: AIToolApprovalKind
     ) -> bool:
         """
         Request authorization for a specific tool call during execution.
@@ -478,6 +510,7 @@ class AIConversation:
             reason: Human-readable reason why authorization is needed
             context: Optional context information for the authorization
             destructive: Whether the tool call is considered destructive
+            kind: What the request would change, as the tool classified it
 
         Returns:
             True if authorized, False if denied
@@ -488,6 +521,23 @@ class AIConversation:
             self._logger.debug("Processing %d queued messages before requesting tool authorization",
                                 len(self._pending_user_messages))
             return False
+
+        # A standing approval resolves a change the journal records, and only that.
+        # The classification is the tool's, made where it resolved the paths, so a
+        # change outside the journal's scope is never resolved here.
+        if kind == AIToolApprovalKind.MINDSPACE_FILE_CHANGE and self._auto_approve_file_changes:
+            self._logger.info(
+                "[conv=%s] Tool '%s' authorized by a standing approval: %s",
+                self._conversation_id,
+                tool_name,
+                reason
+            )
+            await self._trigger_event(
+                AIConversationEvent.TOOL_APPROVAL_AUTO_APPROVED,
+                self._pending_tool_call_message,
+                reason
+            )
+            return True
 
         self._logger.info(
             "[conv=%s] Tool '%s' requesting authorization: %s",
@@ -514,7 +564,8 @@ class AIConversation:
                 tool_call,
                 reason,
                 context,
-                destructive
+                destructive,
+                kind
             )
 
             # Wait for the user's response
@@ -918,6 +969,8 @@ class AIConversation:
 
             return
 
+        # The turn has ended without completing, so any standing approval lapses.
+        self._auto_approve_file_changes = False
         self._is_streaming = False
 
         # For cancellation, preserve the partial response first
@@ -1132,6 +1185,8 @@ class AIConversation:
             await self._execute_tool_calls(tool_calls)
             return
 
+        # The turn is complete, so any standing approval lapses.
+        self._auto_approve_file_changes = False
         await self._trigger_event(AIConversationEvent.COMPLETED)
 
     async def _handle_pending_user_messages(self) -> None:
@@ -1220,6 +1275,9 @@ class AIConversation:
         """Cancel any ongoing AI response tasks."""
         # If notify is False, we are expecting a cancellation and should not log it as unexpected
         self._expecting_cancellation = not notify
+
+        # A cancelled turn is over, so any standing approval lapses.
+        self._auto_approve_file_changes = False
 
         # Cancel pending tool authorization if present
         if self._pending_authorization_future and not self._pending_authorization_future.done():

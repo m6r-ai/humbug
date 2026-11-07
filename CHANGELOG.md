@@ -19,7 +19,14 @@ New features:
 - A file dragged from a sidebar panel onto a conversation's input box is now attached to the message being
   composed, instead of opening in a tab as a drop anywhere else in the tab area does.  The input highlights its
   border while the file is over it.
+- A file change in your mindspace can now be approved for the rest of the current turn: the approval prompt
+  offers "Auto-approve file changes until your next message", and the AI then works through a long task without
+  stopping for each write.  Only changes the change journal records are covered, so terminal commands, network
+  requests and anything outside the mindspace still ask every time, and sending a message takes the approval back.
+  Every change made under it is logged as before, and the log records that a standing approval resolved it.
 - Improved the rendering of the mindspace VCS entries so they aren't as wide horizontally.
+- As we now have journalling, filesystem writes within a single conversation turn can now be set to auto-approve on
+  the first approval call.
 
 Bug fixes:
 
@@ -33,6 +40,11 @@ Internal structure changes:
 - Conversations gained an identifier that lives in the transcript and survives renaming, duplicating and moving, so
   activity attributed to a conversation stays attributed to it.  A duplicated conversation receives a new identifier
   and records the conversation it came from.  See ADR-0019.
+- An authorization request now states what it would change, and the approval policy decides whether a standing
+  approval can resolve it.  The classification is the journal's own scope rule, so a change no journal entry could
+  cover is never approved on the user's behalf.  See ADR-0022.
+- Downloading a file over HTTP now records the file it replaces in the change journal, like every other write
+  inside the mindspace, instead of leaving the change to be reported after the fact as unattributed.
 
 ## v58 (2026-11-02)
 

@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ai_tool import AIToolCall
+from ai_tool import AIToolApprovalKind, AIToolCall
 from mindspace.mindspace import Mindspace
 from system_ai_tool.system_ai_tool import SystemAITool
 
@@ -31,6 +31,7 @@ def _make_auth_callback(authorized: bool = True) -> MagicMock:
         _context: str,
         _auth_context: str | None,
         _destructive: bool,
+        _kind: AIToolApprovalKind,
     ) -> bool:
         return authorized
 

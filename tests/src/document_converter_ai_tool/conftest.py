@@ -56,7 +56,7 @@ def mock_authorization():
     """Authorization callback that always approves."""
     mock = MagicMock()
 
-    async def _approve(_tool_name, _arguments, _context, _requester_ref, _destructive):
+    async def _approve(_tool_name, _arguments, _context, _requester_ref, _destructive, _kind):
         return True
 
     mock.side_effect = _approve
@@ -68,7 +68,7 @@ def mock_authorization_denied():
     """Authorization callback that always denies."""
     mock = MagicMock()
 
-    async def _deny(_tool_name, _arguments, _context, _requester_ref, _destructive):
+    async def _deny(_tool_name, _arguments, _context, _requester_ref, _destructive, _kind):
         return False
 
     mock.side_effect = _deny

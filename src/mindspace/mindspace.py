@@ -433,6 +433,39 @@ class Mindspace:
 
         return self._file_journal, relative_path
 
+    def journalled_path(self, absolute_path: str) -> str | None:
+        """
+        Return the mindspace-relative path of a change the journal records, or None.
+
+        This answers the question the approval policy asks: would the change journal
+        record a mutation of this path, and so be able to reverse it?  It is the
+        journal's scope test expressed through the tool-facing path rule, so a change
+        it accepts is inside the mindspace and outside any .humbug/ directory, and a
+        change it refuses is one no journal entry would cover.
+
+        Unlike journal_target, which hands back the journal for a caller about to
+        record, this resolves symlinks: a path reached through a link inside the
+        mindspace that lands outside it is not journalled, and must not be reported
+        as if it were.  A caller that needs the journal itself asks journal_target.
+
+        Args:
+            absolute_path: Path about to be mutated.
+
+        Returns:
+            The path relative to the mindspace root, or None when the journal would
+            not record a change to it.
+        """
+        if not self.has_mindspace():
+            return None
+
+        try:
+            _, relative_path = self.resolve_tool_path(absolute_path)
+
+        except MindspaceError:
+            return None
+
+        return relative_path
+
     def purge_journal(self, before: datetime) -> JournalPurgeResult:
         """
         Discard recorded file mutations older than a point in time.

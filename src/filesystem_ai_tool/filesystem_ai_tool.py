@@ -19,7 +19,7 @@ from menai import Menai, MenaiError, MenaiCancelledException, MenaiString, Menai
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition,
-    AIToolResult, AIToolCall, AIToolTimeoutError
+    AIToolResult, AIToolCall, AIToolTimeoutError, AIToolApprovalKind
 )
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
 from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
@@ -729,7 +729,8 @@ class FileSystemAITool(AITool):
             tool_call.arguments,
             context,
             None,
-            False
+            False,
+            AIToolApprovalKind.STANDARD
         )
 
         if not authorized:
@@ -1062,6 +1063,32 @@ class FileSystemAITool(AITool):
         """
         self._mindspace.file_journal().void_entries(list(entries))
 
+    def _approval_kind(self, *paths: Path) -> AIToolApprovalKind:
+        """
+        Classify a request by whether the journal records a change to every path.
+
+        The approval policy may grant a standing approval for a request the change
+        journal can reverse and for nothing else, so the classification is the
+        journal's own scope test rather than this tool's opinion of its operations.
+
+        Scope is necessary but not sufficient: an operation the journal will not
+        record must be classified STANDARD even when its paths are in scope.  A
+        directory is recorded when it is removed and not when it is created or moved,
+        so those callers decide for themselves.
+
+        Args:
+            paths: Every path the request will mutate.
+
+        Returns:
+            MINDSPACE_FILE_CHANGE when the journal records a change to all of them,
+            STANDARD otherwise.
+        """
+        for path in paths:
+            if self._mindspace.journalled_path(str(path)) is None:
+                return AIToolApprovalKind.STANDARD
+
+        return AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+
     async def _write_file(
         self,
         tool_call: AIToolCall,
@@ -1109,7 +1136,9 @@ class FileSystemAITool(AITool):
             destructive = False
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, None, destructive)
+        authorized = await request_authorization(
+            "filesystem", arguments, context, None, destructive, self._approval_kind(path)
+        )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to write file: {arguments['path']}")
 
@@ -1240,7 +1269,9 @@ class FileSystemAITool(AITool):
         context = f"This will append content to the end of '{display_path}'. It will modify the existing file."
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, None, True)
+        authorized = await request_authorization(
+            "filesystem", arguments, context, None, True, self._approval_kind(path)
+        )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to append to file: {arguments['path']}")
 
@@ -1380,7 +1411,11 @@ class FileSystemAITool(AITool):
             context += " This will also create any missing parent directories."
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, None, False)
+        # A created directory leaves no pre-image to record, so the journal cannot
+        # reverse one and a standing approval for journalled changes does not cover it.
+        authorized = await request_authorization(
+            "filesystem", arguments, context, None, False, AIToolApprovalKind.STANDARD
+        )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to create directory: {arguments['path']}")
 
@@ -1440,7 +1475,9 @@ class FileSystemAITool(AITool):
         context = f"Remove the empty directory '{display_path}'. Its removal is recorded so it can be recreated."
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, None, True)
+        authorized = await request_authorization(
+            "filesystem", arguments, context, None, True, self._approval_kind(path)
+        )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to remove directory: {arguments['path']}")
 
@@ -1485,7 +1522,9 @@ class FileSystemAITool(AITool):
         context = f"Delete the file '{display_path}'. Its content is recorded so the deletion can be reversed."
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, None, True)
+        authorized = await request_authorization(
+            "filesystem", arguments, context, None, True, self._approval_kind(path)
+        )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to delete file: {arguments['path']}")
 
@@ -1553,7 +1592,9 @@ class FileSystemAITool(AITool):
             destructive = False
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, None, destructive)
+        authorized = await request_authorization(
+            "filesystem", arguments, context, None, destructive, self._approval_kind(destination_path)
+        )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to copy file: {arguments['path']} -> {destination_arg}")
 
@@ -1639,7 +1680,13 @@ class FileSystemAITool(AITool):
             context = f"Move the {item_type} '{source_display_path}' to '{dest_display_path}'."
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, None, True)
+        # A moved directory is not journalled, so only a file move is reversible.
+        kind = (
+            self._approval_kind(destination_path, source_path)
+            if source_path.is_file()
+            else AIToolApprovalKind.STANDARD
+        )
+        authorized = await request_authorization("filesystem", arguments, context, None, True, kind)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to move: {arguments['path']} -> {destination_arg}")
 
@@ -2566,7 +2613,9 @@ class FileSystemAITool(AITool):
         context = f"This will apply a diff to file '{display_path}' ({result.hunks_applied} hunk(s)). " \
             "This will overwrite the existing file."
 
-        authorized = await request_authorization("filesystem", arguments, context, None, True)
+        authorized = await request_authorization(
+            "filesystem", arguments, context, None, True, self._approval_kind(path)
+        )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to apply diff to file: {arguments['path']}")
 
@@ -2977,7 +3026,9 @@ class FileSystemAITool(AITool):
                 f"'{out_display_path}'. The source file is left unchanged."
             )
 
-        authorized = await request_authorization("filesystem", arguments, context_str, diff_str, True)
+        authorized = await request_authorization(
+            "filesystem", arguments, context_str, diff_str, True, self._approval_kind(out_path)
+        )
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to transform file: {path_arg}")
 

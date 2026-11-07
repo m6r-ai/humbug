@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ai_tool import AIToolAuthorizationDenied, AIToolCall
+from ai_tool import AIToolApprovalKind, AIToolAuthorizationDenied, AIToolCall
 from http_ai_tool.http_access_settings import HttpAccessSettings
 from http_ai_tool.http_ai_tool import HttpAITool
 from mindspace.mindspace import Mindspace
@@ -59,7 +59,8 @@ def _make_auth_callback(authorized: bool = True) -> MagicMock:
         _arguments: dict[str, Any],
         _context: str,
         _requester_ref: Any,
-        _destructive: bool
+        _destructive: bool,
+        _kind: AIToolApprovalKind
     ) -> bool:
         return authorized
 

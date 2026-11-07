@@ -8,7 +8,7 @@ from typing import Any
 from ai_tool import (
     AITool, AIToolAuthorizationCallback, AIToolAuthorizationDenied,
     AIToolCall, AIToolDefinition, AIToolExecutionError,
-    AIToolOperationDefinition, AIToolParameter, AIToolResult
+    AIToolOperationDefinition, AIToolParameter, AIToolResult, AIToolApprovalKind
 )
 from html_ import (
     HtmlError, HtmlParseError, document_ir_to_html, html_ast_to_document_ir, parse_html
@@ -440,8 +440,11 @@ class DocumentConverterAITool(AITool):
             )
             destructive = False
 
+        # A conversion can also write a sidecar directory of images, which the journal
+        # does not record, so the journal cannot reverse the whole effect.
         authorized = await request_authorization(
-            "document_converter", arguments, auth_context, None, destructive
+            "document_converter", arguments, auth_context, None, destructive,
+            AIToolApprovalKind.STANDARD
         )
         if not authorized:
             raise AIToolAuthorizationDenied(

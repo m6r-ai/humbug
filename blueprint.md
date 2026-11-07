@@ -170,6 +170,16 @@ before each action. The user sees exactly what the AI intends to do and can appr
 or ask for clarification. This is not friction; it is the user's ability to course-correct
 before a mistake becomes expensive.
 
+There is one deliberate qualification, and it is bounded by the journal rather than by a
+judgement about risk. A user may grant a standing approval for the rest of the current turn,
+which resolves exactly those requests whose whole effect is a change the change journal records —
+inside the mindspace and outside `.humbug/`, which is to say a change that can be reversed. The
+approval is never remembered, lapses when the turn ends, and never covers terminal commands,
+network requests, or anything the journal would not record. The prompts it removes are the ones
+where the user's attention buys the least, because the record buys what the prompt was for. Every
+change made under it is still logged, and the log says a standing approval resolved it. See
+ADR-0022.
+
 **Bounded outputs.** Tools that can produce large outputs — file contents, search results,
 git logs, diffs — must enforce a size limit (currently 64KB). If output exceeds the limit, it
 is reported as an error naming the limit and how to narrow the request, rather than returned

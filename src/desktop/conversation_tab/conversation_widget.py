@@ -19,7 +19,7 @@ from ai import (
     AIConversationEvent, AIConversationHistory, AIConversationSettings,
     AIReasoningCapability, AIMessage, AIMessageSource
 )
-from ai_tool import AIToolCall
+from ai_tool import AIToolApprovalKind, AIToolCall
 from ai_transcript_conversation import AITranscriptConversation
 from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
 from pdf import PDFUnsupportedError, PDFError, extract_text, parse as parse_pdf
@@ -810,6 +810,7 @@ class ConversationWidget(QWidget):
         msg_widget.delete_requested.connect(self._on_message_delete_requested)
         msg_widget.expand_requested.connect(self._on_message_expand_requested)
         msg_widget.tool_call_approved.connect(self._on_tool_call_approved)
+        msg_widget.auto_approve_toggled.connect(self._on_auto_approve_toggled)
         msg_widget.tool_call_i_am_unsure.connect(self._on_tool_call_i_am_unsure)
         msg_widget.tool_call_rejected.connect(self._on_tool_call_rejected)
         msg_widget.retry_requested.connect(self._on_retry_requested)
@@ -977,6 +978,9 @@ class ConversationWidget(QWidget):
             AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._on_tool_approval_required
         )
         self._ai_conversation.unregister_callback(
+            AIConversationEvent.TOOL_APPROVAL_AUTO_APPROVED, self._on_tool_approval_auto_approved
+        )
+        self._ai_conversation.unregister_callback(
             AIConversationEvent.TOOL_INTERRUPTIBLE_WAIT_STARTED, self._on_interruptible_wait_started
         )
         self._ai_conversation.unregister_callback(
@@ -1014,6 +1018,9 @@ class ConversationWidget(QWidget):
         )
         self._ai_conversation.register_callback(
             AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._on_tool_approval_required
+        )
+        self._ai_conversation.register_callback(
+            AIConversationEvent.TOOL_APPROVAL_AUTO_APPROVED, self._on_tool_approval_auto_approved
         )
         self._ai_conversation.register_callback(
             AIConversationEvent.TOOL_INTERRUPTIBLE_WAIT_STARTED, self._on_interruptible_wait_started
@@ -1303,7 +1310,8 @@ class ConversationWidget(QWidget):
         tool_call: AIToolCall,
         reason: str,
         context: str | None,
-        destructive: bool
+        destructive: bool,
+        kind: AIToolApprovalKind
     ) -> None:
         """
         Handle tool approval requirement.
@@ -1314,15 +1322,32 @@ class ConversationWidget(QWidget):
             reason: Reason for the tool call
             context: Additional context for the tool call
             destructive: Whether the tool calls are considered destructive
+            kind: What the request would change, as the tool classified it
         """
         # Find the message widget that corresponds to this tool call message
         for msg_widget in self._ordered_widgets():
             if msg_widget.message_id() == message.id:
                 # Add approval UI to this message
                 self._pending_tool_call_approval = msg_widget
-                msg_widget.show_tool_approval_ui(tool_call, reason, context, destructive)
+                msg_widget.show_tool_approval_ui(
+                    tool_call, reason, context, destructive,
+                    kind == AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+                )
                 self.update_label.emit()
                 break
+
+    async def _on_tool_approval_auto_approved(self, message: AIMessage | None, reason: str) -> None:
+        """
+        Handle a tool call that a standing approval resolved without asking.
+
+        Args:
+            message: The tool call message that was resolved, if it was known
+            reason: The reason the tool gave for the change it is about to make
+        """
+        del message
+        self._log_conversation_interaction(
+            f"Human's standing approval authorised tool call: {reason}"
+        )
 
     async def _on_interruptible_wait_started(
         self,
@@ -1360,6 +1385,20 @@ class ConversationWidget(QWidget):
             self._pending_interruptible_wait.remove_interruptible_wait_ui()
             self._pending_interruptible_wait = None
             self.update_label.emit()
+
+    def _on_auto_approve_toggled(self, enabled: bool) -> None:
+        """Handle the user granting or withdrawing a standing approval of file changes."""
+        self._ai_conversation.set_auto_approve_file_changes(enabled)
+
+        if enabled:
+            self._log_conversation_interaction(
+                "Human enabled auto-approval of file changes for the rest of this turn"
+            )
+
+        else:
+            self._log_conversation_interaction(
+                "Human withdrew auto-approval of file changes"
+            )
 
     def _on_tool_call_approved(self, _tool_call: AIToolCall) -> None:
         """Handle user approval of tool calls."""
@@ -3856,7 +3895,8 @@ class ConversationWidget(QWidget):
                     "tool_call": tool_approval_info["tool_call"].to_dict(),
                     "reason": tool_approval_info["reason"],
                     "context": tool_approval_info["context"],
-                    "destructive": tool_approval_info["destructive"]
+                    "destructive": tool_approval_info["destructive"],
+                    "approvable": tool_approval_info["approvable"]
                 }
 
                 # Clear the approval UI from the old widget
@@ -4042,7 +4082,8 @@ class ConversationWidget(QWidget):
                     tool_call,
                     approval_info["reason"],
                     approval_info["context"],
-                    approval_info["destructive"]
+                    approval_info["destructive"],
+                    approval_info["approvable"]
                 )
 
                 # Update our tracking reference

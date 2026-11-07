@@ -504,6 +504,7 @@ class LanguageStrings:
     approve_tool_call: str
     i_am_unsure_about_tool_call: str
     reject_tool_call: str
+    auto_approve_file_changes: str
     interruptible_wait_message: str  # Format: "Waiting {duration} seconds..."
     finish_waiting_now: str
     retry_error: str

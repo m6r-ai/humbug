@@ -8,6 +8,7 @@ from typing import Any
 
 from ai_tool import (
     AITool,
+    AIToolApprovalKind,
     AIToolAuthorizationCallback,
     AIToolAuthorizationDenied,
     AIToolCall,
@@ -865,6 +866,7 @@ class GitAITool(AITool):
             reason,
             None,
             destructive,
+            AIToolApprovalKind.STANDARD,
         )
 
         if not authorized:

@@ -1,6 +1,7 @@
 """AI tool calling framework."""
 
 from ai_tool.ai_tool import AITool, AIToolAuthorizationCallback
+from ai_tool.ai_tool_approval_kind import AIToolApprovalKind
 from ai_tool.ai_tool_call import AIToolCall
 from ai_tool.ai_tool_config import AIToolConfig
 from ai_tool.ai_tool_definition import AIToolDefinition
@@ -16,6 +17,7 @@ __all__ = [
     "AITool",
     "AIToolAuthorizationCallback",
     "AIToolAuthorizationDenied",
+    "AIToolApprovalKind",
     "AIToolCall",
     "AIToolConfig",
     "AIToolDefinition",

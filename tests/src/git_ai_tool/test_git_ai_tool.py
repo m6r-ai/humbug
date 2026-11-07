@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from ai_tool import (
+    AIToolApprovalKind,
     AIToolAuthorizationDenied,
     AIToolCall,
     AIToolExecutionError,
@@ -86,7 +87,8 @@ def _make_auth_callback(authorized: bool = True) -> MagicMock:
         _arguments: dict[str, Any],
         _context: str,
         _auth_context: str | None,
-        _destructive: bool
+        _destructive: bool,
+        _kind: AIToolApprovalKind
     ) -> bool:
         return authorized
 
