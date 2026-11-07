@@ -27,6 +27,12 @@ New features:
 - Improved the rendering of the mindspace VCS entries so they aren't as wide horizontally.
 - As we now have journalling, filesystem writes within a single conversation turn can now be set to auto-approve on
   the first approval call.
+- The filesystem tool no longer refuses a file because of its size where the content is not held in memory.  A range
+  of lines can be read from a file of any size, a search streams each file and lists the ones it could not read as
+  text under `skipped` with the reason, and copying a file has no size limit.  `analyse_file` gains `offset` and
+  `length` for binary files, so a range of bytes can be analysed from a file larger than the limit.  The 64KB limit
+  on what enters the conversation is unchanged, and an operation that does hold a file whole now says that is why it
+  refused it.
 
 Bug fixes:
 

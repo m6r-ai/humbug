@@ -193,6 +193,13 @@ the text extracted from a PDF counts toward the limit, not the size of the PDF. 
 has no way to narrow a result, it says so plainly rather than implying a route it does not have.
 The AI can always make a more targeted follow-up request.
 
+A second bound is kept separate from this one because it protects something else. Where an
+operation has to hold a file's content in memory, the content is limited by what the process can
+afford, and a refusal says so rather than implying the conversation is at risk. Content that is
+streamed — a line range, a search, a copy — is not bounded by it at all, and content that is
+derived rather than copied is bounded by the context limit instead. Keeping the two apart is what
+lets a file larger than either limit be reached by part of it rather than refused whole.
+
 ### Two levels of version control
 Humbug recognises two fundamentally different kinds of content within a mindspace, each
 with its own versioning needs and ownership model.

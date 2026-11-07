@@ -109,6 +109,24 @@ This is not a restriction on what you can ask for — it is a safeguard. If the 
 it can make a more targeted request (for example, searching for a specific file rather than diffing
 the entire working tree, or looking at a single commit rather than the full log).
 
+### The loaded-content limit
+
+A second limit applies where an operation has to hold a file's content in memory: reading a whole
+file, writing or appending to one, transforming one, or analysing one without asking for a byte
+range. That limit is 10MB per call. It protects the application's memory rather than the
+conversation, and a refusal says so and names the alternative.
+
+The alternative is usually part of the file rather than the whole of it. Reading lines takes a
+range, so any range of lines can be read from a file of any size. Analysing a binary file takes an
+offset and a length, so a range of bytes can be analysed from a file of any size. Searching and
+copying read files incrementally and have no size limit at all.
+
+What a range does not do is make a computation over a whole large file possible in one call: a
+program that has to see every byte still needs the file to fit the limit. A search that could not
+read a file — because it is not text in the chosen encoding, or because a single line is larger
+than the limit — lists it under `skipped` with the reason, so a search that found nothing also
+states what it did not look at.
+
 ---
 
 *[Index](index.md) · Previous: [Viewing Git Diffs](git-diffs.md) · Next: [Searching](searching.md)*

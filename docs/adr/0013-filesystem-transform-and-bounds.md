@@ -1,7 +1,7 @@
 # ADR-0013: Filesystem transforms, binary content, context-window bounds, and transform symmetry
 
 Date: 2026-10-01  
-Status: Accepted
+Status: Superseded by ADR-0024 (bounds only)
 
 ## Context
 

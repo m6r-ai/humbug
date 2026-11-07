@@ -67,7 +67,7 @@ class TestFileSystemAIToolReadFile:
             assert "Path is not a file: dir" in str(error)
 
     def test_read_file_too_large(self, filesystem_tool, mock_authorization, make_tool_call):
-        """Test reading file that exceeds size limit."""
+        """Test reading a file that would hold more content in memory than the load limit allows."""
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat:
@@ -84,7 +84,8 @@ class TestFileSystemAIToolReadFile:
                 asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
-            assert "File too large: 11.0MB (max: 10.0MB)" in str(error)
+            assert "Operation would hold 11.0MB of content in memory (limit: 10.0MB)" in str(error)
+            assert "read_file_lines" in str(error)
 
     def test_read_file_custom_encoding(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test reading file with custom encoding."""
@@ -260,7 +261,7 @@ class TestFileSystemAIToolWriteFile:
         assert "'content' must be a string" in str(error)
 
     def test_write_file_content_too_large(self, filesystem_tool, mock_authorization, make_tool_call):
-        """Test writing file with content that exceeds size limit."""
+        """Test writing content that would hold more in memory than the load limit allows."""
         # Create content larger than 10MB
         large_content = "x" * (11 * 1024 * 1024)
 
@@ -269,7 +270,7 @@ class TestFileSystemAIToolWriteFile:
             asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
         error = exc_info.value
-        assert "'content' too large: 11.0MB (max: 10.0MB)" in str(error)
+        assert "Operation would hold 11.0MB of content in memory (limit: 10.0MB)" in str(error)
 
     def test_write_file_custom_encoding(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test writing file with custom encoding."""
@@ -424,28 +425,42 @@ class TestFileSystemAIToolAppendFile:
             error = exc_info.value
             assert "Path is not a file: dir" in str(error)
 
-    def test_append_file_too_large_after_append(self, filesystem_tool, mock_authorization, make_tool_call):
-        """Test appending when result would exceed size limit."""
+    def test_append_content_too_large(self, filesystem_tool, mock_authorization, make_tool_call):
+        """Appending content that would exceed the load limit is refused."""
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
-             patch('pathlib.Path.stat') as mock_stat:
+             patch('pathlib.Path.stat') as mock_stat, \
+             patch('builtins.open', mock_open()):
 
             mock_exists.return_value = True
             mock_is_file.return_value = True
+            mock_stat.return_value = MagicMock(st_size=0)
 
-            mock_stat_result = MagicMock()
-            mock_stat_result.st_size = 9 * 1024 * 1024  # 9MB current
-            mock_stat.return_value = mock_stat_result
-
-            # Content that would make total > 10MB
-            large_content = "x" * (2 * 1024 * 1024)  # 2MB
+            large_content = "x" * (11 * 1024 * 1024)
 
             tool_call = make_tool_call("filesystem", {"operation": "append_to_file", "path": "file.txt", "content": large_content})
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
-            assert "File would be too large after append" in str(error)
+            assert "Operation would hold 11.0MB of content in memory" in str(error)
+
+    def test_append_to_file_larger_than_load_limit(self, filesystem_tool, mock_authorization, make_tool_call):
+        """Appending is bounded by the content supplied, not by the size of the file it lands in."""
+        with patch('pathlib.Path.exists') as mock_exists, \
+             patch('pathlib.Path.is_file') as mock_is_file, \
+             patch('pathlib.Path.stat') as mock_stat, \
+             patch('builtins.open', mock_open()) as mock_file:
+
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
+            mock_stat.return_value = MagicMock(st_size=9 * 1024 * 1024)
+
+            tool_call = make_tool_call("filesystem", {"operation": "append_to_file", "path": "file.txt", "content": "one more line"})
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+
+            assert "Content appended successfully: file.txt" in result.content
+            assert any(call.args[1] == 'a' for call in mock_file.call_args_list)
 
     def test_append_file_custom_encoding(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test appending with custom encoding."""
@@ -902,3 +917,29 @@ class TestFileSystemAIToolReadFileLinesResponseLimit:
         assert payload["range"] == "1-3"
         assert len(payload["lines"]) == 3
         assert payload["lines"]["1"] == "x" * 100
+
+    def test_read_file_lines_range_from_file_larger_than_load_limit(
+        self, filesystem_tool, mock_authorization, make_tool_call
+    ):
+        """A line range is read from a file larger than the loaded-content limit."""
+        content = "".join(f"line {n}\n" for n in range(1, 1001))
+
+        with patch('pathlib.Path.exists') as mock_exists, \
+             patch('pathlib.Path.is_file') as mock_is_file, \
+             patch('pathlib.Path.stat') as mock_stat, \
+             patch('builtins.open', mock_open(read_data=content)):
+
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
+            mock_stat.return_value = MagicMock(st_size=50 * 1024 * 1024)
+
+            tool_call = make_tool_call("filesystem", {
+                "operation": "read_file_lines",
+                "path": "big.txt",
+                "start_line": 500,
+                "end_line": 501
+            })
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+
+        payload = json.loads(result.content)
+        assert payload["lines"] == {"500": "line 500", "501": "line 501"}
