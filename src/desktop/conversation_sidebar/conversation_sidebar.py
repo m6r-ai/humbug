@@ -1,5 +1,6 @@
 """Conversations view widget for mindspace."""
 
+from collections.abc import Callable
 import logging
 import os
 import shutil
@@ -58,6 +59,7 @@ class ConversationSidebar(SidebarBase):
         self._vcs_poller = MindspaceVCSPoller()
         self._pin_overlay: PinSlideOverlay | None = None
         self._operation_stack = SidebarOperationStack()
+        self._file_menu_providers: list[Callable[[str], list[tuple[str, Callable[[], None]]]]] = []
 
         # Keep pinned entries in settings consistent with the filesystem
         self.file_renamed.connect(self._mindspace_manager.migrate_pinned_path)
@@ -1113,6 +1115,16 @@ class ConversationSidebar(SidebarBase):
 
         menu.exec_(global_pos)
 
+    def add_file_menu_provider(self, provider: Callable[[str], list[tuple[str, Callable[[], None]]]]) -> None:
+        """
+        Add extra entries to the context menu of conversation files.
+
+        Args:
+            provider: Callable(path) returning (label, action) pairs to append to the
+                menu for the file at path; an empty list adds nothing.
+        """
+        self._file_menu_providers.append(provider)
+
     def _show_context_menu(self, position: QPoint) -> None:
         """Show context menu for conversations tree items."""
         # Get the index at the clicked position
@@ -1180,6 +1192,14 @@ class ConversationSidebar(SidebarBase):
                 rename_action.triggered.connect(lambda: self._start_rename(index))
                 delete_action = menu.addAction(strings.delete)
                 delete_action.triggered.connect(lambda: self._handle_delete_file(path))
+
+                for provider in self._file_menu_providers:
+                    entries = provider(path)
+                    if entries:
+                        menu.addSeparator()
+
+                    for label, callback in entries:
+                        menu.addAction(label).triggered.connect(callback)
 
         menu.exec_(self._tree_view.viewport().mapToGlobal(position))
 

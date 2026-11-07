@@ -30,6 +30,11 @@ from desktop.user.user_settings import UserSettings
 ContextFactory = Callable[[ContextInfo, ContextRegistry, QWidget], "TabBase | None"]
 
 
+# Supplies extra (label, action) entries for a tab's context menu.
+TabMenuProvider = Callable[[TabBase], list[tuple[str, Callable[[], None]]]]
+BackgroundOpenProvider = Callable[[ContextInfo, str], bool]
+
+
 class TabManager(QWidget):
     """Manages multiple tabs across multiple columns."""
 
@@ -144,6 +149,8 @@ class TabManager(QWidget):
         self._tabs: dict[str, TabBase] = {}
 
         self._context_factories: dict[str, ContextFactory] = {}
+        self._tab_menu_providers: list[TabMenuProvider] = []
+        self._background_open_providers: list[BackgroundOpenProvider] = []
         self._current_status_tab: TabBase | None = None
 
         # Lazily-created overlays: grid overview and carousel ("recents screens")
@@ -159,6 +166,42 @@ class TabManager(QWidget):
             factory: Callable(info, registry, parent) -> TabBase | None.
         """
         self._context_factories[tool_name] = factory
+
+    def add_tab_menu_provider(self, provider: "TabMenuProvider") -> None:
+        """
+        Add extra entries to the context menu of tab labels.
+
+        Args:
+            provider: Callable(tab) returning (label, action) pairs to append to that
+                tab's menu; an empty list adds nothing.
+        """
+        self._tab_menu_providers.append(provider)
+
+    def add_background_open_provider(self, provider: "BackgroundOpenProvider") -> None:
+        """
+        Let a feature open some tabs in the background.
+
+        A tab opened in the background is added to the active column without
+        becoming its current tab and without taking focus, so work that runs on
+        its own does not pull the user away from what they are looking at.
+
+        Args:
+            provider: Callable(context info, requester ID) returning True if that
+                context's tab should open in the background.
+        """
+        self._background_open_providers.append(provider)
+
+    def _opens_in_background(self, info: ContextInfo, requester_id: str) -> bool:
+        """Return True if any provider asks for a context's tab to open in the background."""
+        for provider in self._background_open_providers:
+            try:
+                if provider(info, requester_id):
+                    return True
+
+            except Exception:
+                self._logger.exception("Background open provider failed for context %s", info.context_id)
+
+        return False
 
     def _get_tab_info(self, tab: TabBase) -> dict[str, str | int | bool]:
         """
@@ -453,8 +496,21 @@ class TabManager(QWidget):
         move_to_end_action = menu.addAction(strings.move_tab_to_end)
         move_to_end_action.setEnabled(self._can_move_tab_within_column(tab, towards_start=False))
 
+        extra_actions = {}
+        for provider in self._tab_menu_providers:
+            entries = provider(tab)
+            if entries:
+                menu.addSeparator()
+
+            for label, callback in entries:
+                extra_actions[menu.addAction(label)] = callback
+
         action = menu.exec_(global_pos)
         if action is None:
+            return
+
+        if action in extra_actions:
+            extra_actions[action]()
             return
 
         close_before_action = close_left_action if visual_left_is_lower_index else close_right_action
@@ -677,7 +733,12 @@ class TabManager(QWidget):
         if self._restoring and 0 <= info.column < len(self._tab_columns):
             column = self._tab_columns[info.column]
 
-        self._add_tab(new_tab, title, requester_id, column=column)
+        if column is None and self._tabs and self._opens_in_background(info, requester_id):
+            self._add_background_tab(new_tab, title)
+
+        else:
+            self._add_tab(new_tab, title, requester_id, column=column)
+
         self._apply_context_models(new_tab)
 
         if self._restoring:
@@ -891,8 +952,20 @@ class TabManager(QWidget):
 
         self._update_tabs()
 
+    def _add_background_tab(self, tab: TabBase, title: str) -> None:
+        """
+        Add a tab to the active column behind the current tab, without changing focus.
+
+        Args:
+            tab: Tab widget to add
+            title: Initial title for the tab
+        """
+        self._add_tab_to_column(tab, title, self._active_column, restore_focus=False, make_current=False)
+        self._refresh_tab_overlays()
+
     def _add_tab_to_column(
         self, tab: TabBase, title: str, column: ColumnWidget, restore_focus: bool,
+        make_current: bool = True,
     ) -> None:
         """
         Add a tab to a column and set up associated data.
@@ -904,6 +977,8 @@ class TabManager(QWidget):
             restore_focus: Whether focus should be restored to the widget that had
                 focus before the tab was added.  This is True for non-user-initiated
                 opens (AI or another context) so the user's focus is not stolen.
+            make_current: Whether the tab becomes the column's current tab.  False
+                adds it behind the current tab, for tabs opened in the background.
         """
         tool_tip = tab.path()
         if tool_tip:
@@ -947,10 +1022,15 @@ class TabManager(QWidget):
             if view is not None:
                 focus_widget = view
 
-        column.setCurrentWidget(tab)
+        if make_current or column.currentWidget() is tab:
+            column.setCurrentWidget(tab)
+            self._update_tabs(change_focus=False)
+            self._update_mru_order(tab, column)
 
-        self._update_tabs(change_focus=False)
-        self._update_mru_order(tab, column)
+        else:
+            self._update_tabs(change_focus=False)
+            self._column_mru_order[column].append(tab_id)
+
         QTimer.singleShot(0, self.show_all_columns)
 
         # Keep the registry's column and position state in sync with the Qt layout.

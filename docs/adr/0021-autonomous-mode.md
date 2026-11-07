@@ -1,4 +1,4 @@
-# ADR-0019: Autonomous Mode — conversation-native missions alongside Classic Mode
+# ADR-0021: Autonomous Mode — conversation-native missions alongside Classic Mode
 
 Date: 2026-11-02  
 Status: Proposed — Pending Maintainer Review

@@ -90,3 +90,4 @@ What costs, risks, or constraints does this decision impose?
 | [0018](0018-file-change-journal.md) | File change journal — reversible file mutations inside the mindspace | Accepted |
 | [0019](0019-conversation-identity.md) | Conversation identity — a UUID in the transcript, distinct from its path | Accepted |
 | [0020](0020-terminal-command-effects.md) | Terminal command effects — checkpointing the mindspace so a restore covers them | Accepted |
+| [0021](0021-autonomous-mode.md) | Autonomous Mode — conversation-native missions alongside Classic Mode | Proposed — Pending Maintainer Review |

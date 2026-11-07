@@ -1,7 +1,7 @@
 # Humbug Autonomous Mode — Architecture Assessment
 
 Date: 2026-11-02  
-Status: Working document supporting [ADR-0019](adr/0019-autonomous-mode.md) (Proposed — Pending Maintainer Review)  
+Status: Working document supporting [ADR-0021](adr/0021-autonomous-mode.md) (Proposed — Pending Maintainer Review)  
 Baseline: branch `dev-autonomous-mode`, commit `448f8c67` (v59)
 
 This is a design and assessment document. Nothing described here as *proposed*

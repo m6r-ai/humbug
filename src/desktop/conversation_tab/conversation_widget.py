@@ -1825,6 +1825,14 @@ class ConversationWidget(QWidget):
         """
         self._current_unfinished_message = None
 
+        # A tool call message completes once its approval is resolved.  If that happened
+        # somewhere other than this tab, such as the Mission Control decision inbox, the
+        # approval buttons here no longer refer to a pending request and must go.
+        pending_approval = self._pending_tool_call_approval
+        if pending_approval is not None and pending_approval.message_id() == message.id:
+            pending_approval.remove_tool_approval_ui()
+            self._pending_tool_call_approval = None
+
         self._log_completed_message(message)
 
         # Update with the completed message immediately

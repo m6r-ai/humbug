@@ -139,4 +139,4 @@ a newer one exists.
 
 ---
 
-*[Index](index.md) · Previous: [Token Usage](token-usage.md) · Next: [Mindspace Settings](mindspace-settings.md)*
+*[Index](index.md) · Previous: [Mission Control](mission-control.md) · Next: [Mindspace Settings](mindspace-settings.md)*
