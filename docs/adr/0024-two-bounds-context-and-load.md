@@ -53,11 +53,19 @@ the bound that actually applies to it.
 entering the conversation and to derived text, and to nothing else. It remains the only
 bound whose purpose is the context window.
 
-**The load bound.** A separate, named bound, 10MB by default, applied only where an
+**The load bound.** A separate, named bound, 1GB by default, applied only where an
 operation holds a file's content whole in memory. Its purpose is the process's memory,
 not the conversation's, and its refusal says so. Because it is a statement about
 transient cost rather than about the tool's contract, it is a constructor parameter
 (`max_load_size_mb`) rather than a constant.
+
+The value is chosen against what loading costs, not against what a user may want to
+open. Holding content whole costs a multiple of its size: the file's bytes, the Menai
+value wrapping them, and in a transform a second copy of the source, so a loaded file
+peaks at roughly three times its size. 1GB is the largest value whose peak a desktop
+machine can be expected to afford. It is not a judgement that content above some size
+is unreasonable; a 10MB ceiling was exactly that judgement, and it refused files that
+cost nothing to read.
 
 Operation by operation:
 
@@ -98,9 +106,10 @@ implying a route it does not have.
   that the bound is applied where no bound is needed. Raising it leaves every wrong
   refusal in place, just at a higher threshold.
 
-- **One bound for everything, sized generously — 1GB, say.** Makes the wrong refusal
-  rarer by making genuine memory exhaustion possible, and keeps one number doing two
-  jobs, which means it can state only one of the two reasons.
+- **One bound for everything, sized generously — 1GB, say.** A single number would have
+  to serve both the context window and the process's memory. At 1GB it protects neither:
+  far too large to protect a context window, and stated in terms of the conversation when
+  its real subject is memory. One number doing two jobs can state only one of the reasons.
 
 - **Keep the cap and expose it as a user setting.** Moves a decision to the user who has
   no way to judge it and no reason to be asked. The tool knows which of its operations
@@ -137,11 +146,18 @@ implying a route it does not have.
 - The journal's chunked capture path is exercised rather than bypassed.
 - A large binary file has a route to the AI at all: the analysis of a range, in place of
   no route.
+- The load bound no longer doubles as a judgement about which files are reasonable. A
+  300MB PDF, deck or binary is loaded whole, because loading it costs memory and nothing
+  else.
 
 ### Negative
 
 - Two bounds must be explained, in the tool description, in the user manual, and to
   anyone writing a tool of their own. One number was simpler to state and wrong.
+- Loading 1GB whole costs roughly three times that at peak in a transform, which the
+  default permits. The bound guards against exhausting the process; it does not promise
+  that a load of the permitted size will be quick, and a file above it still needs a
+  range rather than a whole-file operation.
 - `analyse_file` gains two parameters that are valid with one `form` only, and must
   reject the other combination explicitly.
 - A search can return a `skipped` list that the AI is free to ignore, and ignoring it

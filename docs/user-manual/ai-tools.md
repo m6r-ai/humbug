@@ -113,8 +113,10 @@ the entire working tree, or looking at a single commit rather than the full log)
 
 A second limit applies where an operation has to hold a file's content in memory: reading a whole
 file, writing or appending to one, transforming one, or analysing one without asking for a byte
-range. That limit is 10MB per call. It protects the application's memory rather than the
-conversation, and a refusal says so and names the alternative.
+range. That limit is 1GB per call. It protects the application's memory rather than the
+conversation, and a refusal says so and names the alternative. It is set far above the size of any
+document you are likely to open, because holding content in memory is cheap up to that point; it is
+not a judgement about which files are reasonable to work with.
 
 The alternative is usually part of the file rather than the whole of it. Reading lines takes a
 range, so any range of lines can be read from a file of any size. Analysing a binary file takes an

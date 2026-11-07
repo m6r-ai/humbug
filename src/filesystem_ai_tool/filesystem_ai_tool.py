@@ -67,7 +67,7 @@ class FileSystemAITool(AITool):
         resolve_path: Callable[[str], tuple[Path, str]],
         get_access_settings: Callable[[], FilesystemAccessSettings],
         mindspace: Mindspace,
-        max_load_size_mb: int = 10
+        max_load_size_mb: int = 1024
     ):
         """
         Initialize the filesystem tool.
@@ -76,7 +76,9 @@ class FileSystemAITool(AITool):
             resolve_path: Callback to resolve and validate paths, returns (absolute_path, display_path)
             get_access_settings: Callback to get current filesystem access settings
             mindspace: The active mindspace, used for audit logging
-            max_load_size_mb: Maximum content in MB an operation may hold in memory at once
+            max_load_size_mb: Maximum content in MB an operation may hold in memory at once.  This guards
+                against exhausting the process; it is not a limit on what may be read, and is set well
+                above the size of any file a user is likely to load whole.
         """
         self._resolve_path = resolve_path
         self._get_access_settings = get_access_settings

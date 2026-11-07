@@ -66,7 +66,7 @@ class TestFileSystemAIToolReadFile:
             error = exc_info.value
             assert "Path is not a file: dir" in str(error)
 
-    def test_read_file_too_large(self, filesystem_tool, mock_authorization, make_tool_call):
+    def test_read_file_too_large(self, bounded_filesystem_tool, mock_authorization, make_tool_call):
         """Test reading a file that would hold more content in memory than the load limit allows."""
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -81,7 +81,7 @@ class TestFileSystemAIToolReadFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "large.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+                asyncio.run(bounded_filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Operation would hold 11.0MB of content in memory (limit: 10.0MB)" in str(error)
@@ -260,14 +260,14 @@ class TestFileSystemAIToolWriteFile:
         error = exc_info.value
         assert "'content' must be a string" in str(error)
 
-    def test_write_file_content_too_large(self, filesystem_tool, mock_authorization, make_tool_call):
+    def test_write_file_content_too_large(self, bounded_filesystem_tool, mock_authorization, make_tool_call):
         """Test writing content that would hold more in memory than the load limit allows."""
         # Create content larger than 10MB
         large_content = "x" * (11 * 1024 * 1024)
 
         tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "file.txt", "content": large_content})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+            asyncio.run(bounded_filesystem_tool.execute(tool_call, "", mock_authorization))
 
         error = exc_info.value
         assert "Operation would hold 11.0MB of content in memory (limit: 10.0MB)" in str(error)
@@ -425,7 +425,7 @@ class TestFileSystemAIToolAppendFile:
             error = exc_info.value
             assert "Path is not a file: dir" in str(error)
 
-    def test_append_content_too_large(self, filesystem_tool, mock_authorization, make_tool_call):
+    def test_append_content_too_large(self, bounded_filesystem_tool, mock_authorization, make_tool_call):
         """Appending content that would exceed the load limit is refused."""
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -440,7 +440,7 @@ class TestFileSystemAIToolAppendFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "append_to_file", "path": "file.txt", "content": large_content})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+                asyncio.run(bounded_filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Operation would hold 11.0MB of content in memory" in str(error)
