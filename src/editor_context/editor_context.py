@@ -155,6 +155,7 @@ class EditorContext:
             'is_modified': self._document.is_modified(),
             'file_path': self._document.path(),
             'untitled_number': None,
+            'read_only': self._document.read_only(),
         }
 
     def find_all_occurrences(

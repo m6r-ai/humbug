@@ -50,7 +50,7 @@ text. These include:
 
 - **Filesystem access** — reading and writing files in your mindspace
 - **Terminal access** — running commands in a shell (with your approval)
-- **Editor access** — reading, modifying, and saving files open in editor tabs
+- **Editor access** — reading and changing files open in editor tabs, each change written to the file
 - **Clock** — working with dates and times
 - **Menai** — a built-in programming language designed for AI use, safe to run without any
   approval because it cannot access the outside world

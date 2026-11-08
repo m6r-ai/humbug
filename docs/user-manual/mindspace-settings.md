@@ -34,7 +34,7 @@ be offered to the AI, even if they are globally available.
 |---|---|
 | **Filesystem** | Read, write, search, and manage files in the mindspace |
 | **Terminal** | Send keystrokes to and read output from terminal tabs |
-| **Editor** | Read, search, modify, and save files in editor tabs |
+| **Editor** | Read, search, and change files in editor tabs, writing each change to the file |
 | **Preview** | Search and navigate the content of preview tabs |
 | **Conversation** | Read, search, and navigate conversation history |
 | **Git** | Read-only repository queries: status, diff, log, branches, and file contents at a ref |
@@ -59,7 +59,9 @@ which requests skip approval.
   On by default
 - **Tab size** — the number of spaces a tab represents. Default is 4
 - **Auto backup** — when enabled, Humbug saves a backup copy of open editor files at regular
-  intervals. Off by default
+  intervals. The copies are working state rather than content: they are kept in the mindspace's own
+  storage under `.humbug/backups`, never beside your files, and are removed when the file is saved,
+  when the tab closes, or when you turn the setting off. Off by default
 - **Auto backup interval** — how often backups are saved, in seconds. Default is 300 (5 minutes)
 
 ---

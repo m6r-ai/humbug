@@ -4,8 +4,12 @@
 
 New features:
 
+- The editor AI tool now writes a file automatically as part of the edit: applying a diff to an open file, or
+  rewriting its buffer with a Menai program.
 - Resting the pointer on a conversation in the Conversations panel now describes it as well as naming its path.
 - Panel tooltips now give a path as it sits in the mindspace instead of in full.
+- Editor auto backup now keeps its copies under `.humbug/backups`, rather than saving one as `file.txt.backup`
+  beside the file itself.
 
 ## v59 (2026-11-07)
 

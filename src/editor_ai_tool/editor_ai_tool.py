@@ -31,7 +31,7 @@ class EditorAITool(AITool):
     """
     AI tool for editor operations.
 
-    Provides operations for reading, searching, navigating, and modifying
+    Provides operations for reading, searching, navigating, and changing
     editor content. Requires an editor tab to be open (use system tool to create tabs).
     """
 
@@ -76,7 +76,8 @@ class EditorAITool(AITool):
             name="editor",
             description_prefix=(
             "Operations for working with editor tabs. Use this tool to read, search, navigate, "
-            "and modify text content in open editor tabs. You must have an editor tab open first "
+            "and change text content in open editor tabs; a change is saved to the tab's file as "
+            "part of the operation. You must have an editor tab open first "
             "(use the system tool to open files)."
             ),
             additional_parameters=[
@@ -149,14 +150,18 @@ class EditorAITool(AITool):
                         "The buffer content is bound to the name 'inputs' as a dict: read the "
                         "full content with (dict-get inputs \"input-text\"). "
                         "Must evaluate to a string (new content) or a list of strings (new lines). "
-                        "Changes are applied to the buffer; use save_file to persist."
+                        "The result replaces the buffer and is saved to the file, with the user's "
+                        "approval, as part of the same operation."
                     ),
                     required=False
                 ),
                 AIToolParameter(
                     name="dry_run",
                     type="boolean",
-                    description="If True, return the diff without applying changes to the buffer (for transform operation)",
+                    description=(
+                        "If True, return the diff without changing the buffer or the file and "
+                        "without asking for approval (for transform operation)"
+                    ),
                     required=False
                 ),
             ]
@@ -164,7 +169,7 @@ class EditorAITool(AITool):
 
     def get_brief_description(self) -> str:
         """Get brief one-line description for system prompt."""
-        return "Read, search, navigate, and modify text in open editor tabs."
+        return "Read, search, navigate, and change text in open editor tabs, writing the file."
 
     def get_operation_definitions(self) -> dict[str, AIToolOperationDefinition]:
         """
@@ -235,8 +240,9 @@ class EditorAITool(AITool):
                 allowed_parameters={"tab_id", "context_lines"},
                 required_parameters={"tab_id"},
                 description="Get unified diff between saved file content and current editor buffer. "
-                    "Shows what changes would be saved. Returns empty if no modifications exist. "
-                    "Useful for previewing changes before save_file operation"
+                    "Shows what changes would be saved. Returns empty if no modifications exist, which "
+                    "is the normal state because editor operations save as they go; a diff means the "
+                    "buffer holds edits made outside this tool, which a save would write as well"
             ),
             "apply_diff": AIToolOperationDefinition(
                 name="apply_diff",
@@ -244,22 +250,15 @@ class EditorAITool(AITool):
                 extract_context=None,
                 allowed_parameters={"tab_id", "diff_content"},
                 required_parameters={"tab_id", "diff_content"},
-                description="Apply a unified diff to the editor content. This operation is atomic - either all "
-                    "hunks apply successfully or none do. The diff is applied with fuzzy matching to handle minor "
-                    "line movements. The diff should be in standard unified diff format, though the file headers "
-                    "(--- and +++) are optional. Where possible the diff should have at least 3 lines of context "
-                    "before and after each hunk. Diff line numbers are best computed using the read_lines or search "
-                    "operations. You must use the save_file operation to persist changes as this operation does not do "
-                    "this automatically. Write diffs as they should appear in the editor text and do not add extra "
-                    "escape characters to the diff content"
-            ),
-            "save_file": AIToolOperationDefinition(
-                name="save_file",
-                handler=self._save_file,
-                extract_context=None,
-                allowed_parameters={"tab_id"},
-                required_parameters={"tab_id"},
-                description="Save the current editor content to file. Requires user authorization"
+                description="Apply a unified diff to the editor content and save the result to the file. "
+                    "Requires user authorization, and the file must not be a read-only view or untitled. "
+                    "This operation is atomic - either all hunks apply and are written, or nothing changes. "
+                    "The diff is applied with fuzzy matching to handle minor line movements. The diff should "
+                    "be in standard unified diff format, though the file headers (--- and +++) are optional. "
+                    "Where possible the diff should have at least 3 lines of context before and after each "
+                    "hunk. Diff line numbers are best computed using the read_lines or search operations. "
+                    "Write diffs as they should appear in the editor text and do not add extra escape "
+                    "characters to the diff content"
             ),
             "transform": AIToolOperationDefinition(
                 name="transform",
@@ -268,12 +267,13 @@ class EditorAITool(AITool):
                 allowed_parameters={"tab_id", "program", "dry_run"},
                 required_parameters={"tab_id", "program"},
                 description=(
-                    "Use a Menai expression to modify the full editor buffer content and write the result "
-                    "back to the buffer. The buffer content is bound to the name 'inputs' as a dict: "
+                    "Use a Menai expression to replace the full editor buffer content and save the result "
+                    "to the file. Requires user authorization, and the file must not be a read-only view or "
+                    "untitled. The buffer content is bound to the name 'inputs' as a dict: "
                     "read the full content with (dict-get inputs \"input-text\"). "
                     "It must return a string or a list of strings. "
-                    "If dry_run is True, returns the diff without applying anything. "
-                    "Use save_file afterward to persist the changes. "
+                    "If dry_run is True, returns the diff without changing anything and without asking for "
+                    "approval. "
                     "program MUST use Menai syntax: (operator arg1 arg2 ...)."
                 )
             ),
@@ -636,30 +636,88 @@ class EditorAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to get diff: {str(e)}") from e
 
-    async def _save_file(
+    async def _apply_and_save(
         self,
-        tool_call: AIToolCall,
+        context: EditorContext,
+        operation: str,
+        diff_text: str,
+        arguments: dict[str, Any],
         requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Save the current editor content to file."""
-        arguments = tool_call.arguments
-        context = self._get_editor_context(arguments)
-        context_id = context.context_id()
+    ) -> str:
+        """
+        Apply a diff to an editor buffer and write the result to its file.
 
+        The buffer change and the write are one operation, so what the user
+        approves is the file change: the difference between the file and the
+        buffer the edit produced.  A change that is refused, or whose write
+        fails, is undone so the buffer is left as it was found.
+
+        Args:
+            context: The editor context to change.
+            operation: How to describe the change, such as "diff".
+            diff_text: The unified diff to apply to the buffer.
+            arguments: Tool arguments, passed to the front end with the request.
+            requester_ref: The conversation the change belongs to.
+            request_authorization: Callback requesting the user's approval.
+
+        Returns:
+            The content to report to the AI.
+
+        Raises:
+            AIToolExecutionError: If the tab cannot be written to, or the write failed.
+            AIToolAuthorizationDenied: If the user refused the change.
+        """
+        context_id = context.context_id()
         editor_info = context.get_editor_info()
         file_path = editor_info.get('file_path', '')
 
-        if not file_path:
-            raise AIToolExecutionError("Cannot save: editor has no file path (untitled file)")
-
         if editor_info.get('read_only', False):
             raise AIToolExecutionError(
-                "Cannot save: the editor shows a read-only view of an earlier version"
+                f"Cannot apply {operation}: the tab shows a read-only view of an earlier version"
             )
 
-        context_str = f"Save editor content to file: {file_path} (tab {context_id})"
+        if not file_path:
+            raise AIToolExecutionError(
+                f"Cannot apply {operation}: the tab has no file path (untitled file). "
+                "Ask the user to save it to a file first"
+            )
+
+        # The write carries the whole buffer rather than this change alone, so
+        # the approval shows the whole buffer's difference from the file.
+        unsaved_before = context.get_diff(3)
+        before_text = context.get_text_range(None, None)
+
+        result = context.apply_diff(diff_text)
+        if not result['success']:
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI {operation} application failed: {result['message']}\ntab ID: {context_id}",
+                context=self._mindspace.conversation_log_context(requester_ref)
+            )
+
+            return (
+                f"Failed to apply {operation}: {result['message']} No changes were made"
+                " - the operation is atomic and all hunks must succeed for any"
+                f" changes to take effect.\n\nError details:\n{result.get('error_details', {})}"
+            )
+
+        hunks_applied = result.get('hunks_applied', 0)
+        after_text = context.get_text_range(None, None)
         diff = context.get_diff(3)
+
+        if not diff:
+            return (
+                f"The {operation} left the buffer identical to the file on disk,"
+                " so nothing was written"
+            )
+
+        context_str = f"Apply {operation} to editor file: {file_path} (tab {context_id}) and save it"
+        if unsaved_before:
+            context_str += (
+                "\nThe buffer also holds unsaved changes made outside this tool,"
+                " which this write will save as well"
+            )
 
         # A tab may show a file outside the mindspace, which the journal does not
         # record, so the classification is the file's rather than the operation's.
@@ -670,86 +728,104 @@ class EditorAITool(AITool):
         )
         authorized = await request_authorization("editor", arguments, context_str, diff, True, kind)
         if not authorized:
-            raise AIToolAuthorizationDenied("User denied permission to save file")
+            restored = self._undo_buffer_change(context, before_text, after_text, operation)
+            message = f"User denied permission to change '{file_path}'"
+            if not restored:
+                message += (
+                    " and the buffer could not be restored to its previous"
+                    " content; the change it holds has not been written"
+                )
+
+            raise AIToolAuthorizationDenied(message)
 
         try:
-            success = context.save(
+            saved = context.save(
                 JournalActor.AI, self._mindspace.conversation_identifier(requester_ref)
             )
 
-            if not success:
-                raise AIToolExecutionError("Save operation failed")
-
-            self._mindspace.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI saved editor file: {file_path}\ntab ID: {context_id}",
-                context=self._mindspace.conversation_log_context(requester_ref)
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="editor",
-                content=f"Saved file: '{file_path}'"
-            )
-
-        except AIToolExecutionError:
-            raise
-
         except Exception as e:
-            raise AIToolExecutionError(f"Failed to save file: {str(e)}") from e
+            self._undo_buffer_change(context, before_text, after_text, operation)
+            raise AIToolExecutionError(
+                f"Failed to save '{file_path}': {str(e)}. The change has been undone in"
+                " the editor, so the file was not written"
+            ) from e
+
+        if not saved:
+            self._undo_buffer_change(context, before_text, after_text, operation)
+            raise AIToolExecutionError(
+                f"Failed to save '{file_path}': the write did not happen. The change"
+                " has been undone in the editor"
+            )
+
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI applied {operation} to editor and saved: {file_path}"
+            f" ({hunks_applied} hunks)\ntab ID: {context_id}",
+            context=self._mindspace.conversation_log_context(requester_ref)
+        )
+
+        return f"Applied {hunks_applied} hunk(s) to '{file_path}' and saved it"
+
+    def _undo_buffer_change(
+        self,
+        context: EditorContext,
+        before_text: str,
+        after_text: str,
+        operation: str
+    ) -> bool:
+        """
+        Undo a buffer change whose write did not happen.
+
+        The inverse diff is applied through the same path as the change itself,
+        so edits made to the buffer after the change are left alone.
+
+        Args:
+            context: The editor context holding the change.
+            before_text: The buffer content before the change.
+            after_text: The buffer content after the change.
+            operation: How to describe the change, for the log.
+
+        Returns:
+            True if the buffer was restored.
+        """
+        reverse_diff = '\n'.join(
+            difflib.unified_diff(after_text.splitlines(), before_text.splitlines(), lineterm='')
+        )
+
+        if not reverse_diff:
+            return True
+
+        result = context.apply_diff(reverse_diff)
+        if result['success']:
+            return True
+
+        self._logger.error(
+            "Failed to undo a refused %s in tab '%s': %s",
+            operation, context.context_id(), result['message']
+        )
+        return False
 
     async def _apply_diff(
         self,
         tool_call: AIToolCall,
         requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
-        """Apply a unified diff to editor content."""
+        """Apply a unified diff to editor content and save it to the file."""
         arguments = tool_call.arguments
         context = self._get_editor_context(arguments)
-        context_id = context.context_id()
 
         diff_content = self._get_required_str_value("diff_content", arguments)
 
-        try:
-            result = context.apply_diff(diff_content)
+        content = await self._apply_and_save(
+            context, "diff", diff_content, arguments, requester_ref, request_authorization
+        )
 
-            if result['success']:
-                self._mindspace.add_interaction(
-                    MindspaceLogLevel.INFO,
-                    f"AI applied diff to editor ({result.get('hunks_applied', 0)} hunks)\ntab ID: {context_id}",
-                    context=self._mindspace.conversation_log_context(requester_ref)
-                )
-
-                return AIToolResult(
-                    id=tool_call.id,
-                    name="editor",
-                    content=result['message']
-                )
-
-            error_details = result.get('error_details', {})
-            self._mindspace.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI diff application failed: {result['message']}\ntab ID: {context_id}",
-                context=self._mindspace.conversation_log_context(requester_ref)
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="editor",
-                content=(
-                    f"Failed to apply diff: {result['message']} No changes were applied"
-                    " - the operation is atomic and all hunks must succeed for any"
-                    f" changes to take effect.\n\nError details:\n{error_details}"
-                )
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(
-                f"Failed to apply diff: {str(e)} No changes were applied"
-                " - the operation is atomic and all hunks must succeed for any"
-                " changes to take effect."
-            ) from e
+        return AIToolResult(
+            id=tool_call.id,
+            name="editor",
+            content=content
+        )
 
     def _transform_context(self, arguments: dict[str, Any]) -> str | None:
         """Extract context for transform operation."""
@@ -811,9 +887,9 @@ class EditorAITool(AITool):
         self,
         tool_call: AIToolCall,
         requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
-        """Apply a Menai transform program to the editor buffer."""
+        """Apply a Menai transform program to the editor buffer and save it to the file."""
         arguments = tool_call.arguments
 
         self.require_menai_help(requester_ref)
@@ -899,22 +975,14 @@ class EditorAITool(AITool):
                 )
             )
 
-        result = context.apply_diff(diff_str)
-        if not result['success']:
-            raise AIToolExecutionError(f"Failed to apply transform: {result['message']}")
-
-        self._mindspace.add_interaction(
-            MindspaceLogLevel.INFO,
-            f"AI applied Menai transform to editor ({result.get('hunks_applied', 0)} hunks)\ntab ID: {context_id}",
-            context=self._mindspace.conversation_log_context(requester_ref)
+        content = await self._apply_and_save(
+            context, "Menai transform", diff_str, arguments, requester_ref, request_authorization
         )
 
         result_obj: dict[str, Any] = {
-            "message": (
-                f"Transform applied to buffer ({result.get('hunks_applied', 0)} hunks). "
-                "Use save_file to persist."
-            ),
+            "message": content,
         }
+
         return AIToolResult(
             id=tool_call.id,
             name="editor",

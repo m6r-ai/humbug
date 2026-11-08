@@ -272,7 +272,10 @@ Abstract document IR.
 DOCX file handling support, including converting to/from a DOCX AST.
 
 ### `src/editor_ai_tool/`
-AI tool implementation for editor tab operations (read, search, diff, apply diffs, save).
+AI tool implementation for editor tab operations (read, search, navigate, change).
+`apply_diff` and `transform` write the file as part of the operation, so the approval the user
+answers is the file change and the buffer is never a separate persistence step.  A refused or
+failed write is undone in the buffer.  See ADR-0025.
 
 ### `src/editor_context/`
 Context model for open editor tabs (`EditorContext`, `EditorDiffApplier`).

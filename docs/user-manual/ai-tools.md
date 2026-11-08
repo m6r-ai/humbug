@@ -21,8 +21,10 @@ Tools fall into two categories:
   files, running terminal commands, fetching a URL, and converting documents. When the AI wants to
   use one, you will see an approval prompt showing exactly what it intends to do.
 
-A change that only touches an open editor buffer is not yet a change to your files, so it is not
-approved separately: the buffer is changed freely and you are asked when it is saved.
+Changing a file through an editor tab is an ordinary write. When the AI edits an open file — with a
+diff or with a Menai program — the change is made to the editor buffer and written to the file as
+one operation, so you are asked once, seeing the difference the write makes to the file. There is no
+separate save step to forget. If you refuse, the buffer is put back as it was.
 
 ---
 
@@ -37,10 +39,10 @@ What it covers is deliberately narrow:
 
 - It covers only changes inside the mindspace that the **journal** records, which means changes it
   can reverse. That is where the switch appears, and why it does not appear on every prompt.
-- It covers writing, appending to, overwriting, moving and copying files, applying diffs, saving
-  from an editor, and downloading a file into the mindspace — including deleting files and empty
-  folders, which the journal records along with the content they held, and creating folders, which
-  it records so they can be removed again.
+- It covers writing, appending to, overwriting, moving and copying files, applying diffs and other
+  changes made through an editor tab, and downloading a file into the mindspace — including
+  deleting files and empty folders, which the journal records along with the content they held, and
+  creating folders, which it records so they can be removed again.
 - It never covers terminal commands, HTTP requests other than a download, delegating to a child AI,
   or anything that would reach outside the mindspace or into `.humbug/`.
 - Converting a document is covered too, including the image folder a conversion to Markdown or HTML
@@ -68,7 +70,7 @@ The following tools are available to the AI in every conversation:
 | **Conversation** | Browse, search, and navigate conversation history | No |
 | **Delegation** | Delegate tasks to specialised child AI instances for parallel or focused work | No |
 | **Document Converter** | Convert documents between Markdown, DOCX, and HTML | Yes |
-| **Editor** | Read, search, navigate, and modify text in open editor tabs | Saving only |
+| **Editor** | Read, search, navigate, and change text in open editor tabs, writing the file | Each change |
 | **Filesystem** | Read, write, search, and manage files and directories in your mindspace | Writes only |
 | **Git** | Read-only git operations: status, diff, log, branches, file contents at a ref, and files changed in a commit | No |
 | **Help** | List available tools and get detailed documentation on any tool | No |
