@@ -670,10 +670,10 @@ def get_english_strings() -> LanguageStrings:
 
         mission_control="Mission Control",
         mission_subtitle="Plan, delegate and approve in one place",
-        mission_hero_title="What would you like to achieve?",
+        mission_hero_title="What should your AI team do for you?",
         mission_hero_subtitle=(
-            "Describe an objective. A lead AI plans the work, coordinates helper AIs and keeps you in "
-            "control: anything that changes files or runs commands still waits for your approval."
+            "Describe the job and hand it over. Your AI lead plans it, brings in helpers, works in the "
+            "background and comes back with a final report. You only step in when it needs your say."
         ),
         mission_examples_label="Try one of these",
         mission_example_1="Review this project and write a short architecture overview",
@@ -711,7 +711,10 @@ def get_english_strings() -> LanguageStrings:
         mission_agent_idle="Idle",
         mission_agent_error="Stopped with an error",
         mission_inbox_title="Decision Inbox",
-        mission_inbox_empty="Nothing needs your decision. Approval requests from every open conversation appear here.",
+        mission_inbox_empty=(
+            "Nothing needs your decision. Approval requests from this mission, and from conversations "
+            "outside any mission, appear here."
+        ),
         mission_approve="Approve",
         mission_unsure="Unsure",
         mission_reject="Reject",
@@ -778,9 +781,10 @@ def get_english_strings() -> LanguageStrings:
         mission_auto_approve_safe="Safe actions",
         mission_auto_approve_all="Everything",
         mission_auto_approve_tip=(
-            "An AI reviewer approves this mission's requests when they clearly fit the objective. "
-            "Anything it is unsure about still comes to you. Safe actions never includes deleting, "
-            "moving, overwriting, terminal commands or network writes."
+            "File changes the journal records are approved straight away; at Everything, for the rest of each turn. "
+            "Anything else goes to an AI reviewer, which approves it only when it clearly fits the "
+            "objective; whatever it is unsure about still comes to you. Safe actions never includes "
+            "deleting, moving, overwriting, terminal commands or network writes."
         ),
         mission_auto_approve_all_title="Approve everything automatically?",
         mission_auto_approve_all_confirm=(
@@ -837,5 +841,37 @@ def get_english_strings() -> LanguageStrings:
         mission_wait_left="{0} left",
         mission_activity_started_prompt="Mission started: “{0}”",
         mission_activity_guidance_prompt="You: “{0}”",
-        mission_composer_hint_enter="Enter for a new line"
+        mission_composer_hint_enter="Enter for a new line",
+        mission_stage_asked="You asked",
+        mission_stage_planning="AI plans it",
+        mission_stage_working="AI team works",
+        mission_stage_done="Job done",
+        mission_report_title="Mission accomplished",
+        mission_report_caption="Final report from your AI lead",
+        mission_report_stats="Steps done: {0} of {1}  ·  Agents on the team: {2}",
+        mission_follow_up="Ask a follow-up",
+        mission_activity_reversible_approved="Approved {0} — recorded in the journal",
+        mission_activity_user_message="You, to {0}: “{1}”",
+        mission_say_waiting_helpers="Waiting for {0} to finish and report back…",
+        mission_read_more="Read more",
+        mission_activity_open_tip="Click to see what happened",
+        mission_attention="{0} request(s) need your decision",
+        mission_review_now="Review now",
+        mission_more_actions="More actions",
+        mission_agents_show_list="Show as a list",
+        mission_agents_hide_list="Hide the list",
+        mission_auto_approve_off_note="Every action that changes files, runs commands or sends data waits for you.",
+        mission_auto_approve_safe_note=(
+            "Journalled file changes and safe requests go ahead; "
+            "anything destructive still waits for you."
+        ),
+        mission_auto_approve_all_note=(
+            "The team works without stopping; only what the AI "
+            "reviewer is unsure about comes to you."
+        ),
+        mission_scroll_left="Scroll missions left",
+        mission_scroll_right="Scroll missions right",
+        mission_waiting_elsewhere="“{0}” is waiting for your decision",
+        mission_waiting_elsewhere_many="{0} other missions are waiting for your decisions",
+        mission_go_to_waiting="Go there"
     )

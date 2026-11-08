@@ -696,11 +696,11 @@ def get_french_strings() -> LanguageStrings:
 
         mission_control="Centre de missions",
         mission_subtitle="Planifiez, déléguez et approuvez au même endroit",
-        mission_hero_title="Que souhaitez-vous accomplir ?",
+        mission_hero_title="Que doit faire votre équipe IA pour vous ?",
         mission_hero_subtitle=(
-            "Décrivez un objectif. Une IA principale planifie le travail, coordonne des IA auxiliaires "
-            "et vous laisse le contrôle : tout ce qui modifie des fichiers ou exécute des commandes "
-            "attend toujours votre approbation."
+            "Décrivez le travail et confiez-le. Votre IA principale le planifie, fait appel à des aides, "
+            "travaille en arrière-plan et revient avec un rapport final. Vous n'intervenez que lorsqu'elle "
+            "a besoin de votre avis."
         ),
         mission_examples_label="Essayez par exemple",
         mission_example_1="Analyser ce projet et rédiger une brève présentation de son architecture",
@@ -742,8 +742,8 @@ def get_french_strings() -> LanguageStrings:
         mission_agent_error="Arrêté sur une erreur",
         mission_inbox_title="Décisions en attente",
         mission_inbox_empty=(
-            "Aucune décision n'est requise. Les demandes d'approbation de toutes les conversations "
-            "ouvertes s'affichent ici."
+            "Aucune décision n'est requise. Les demandes d'approbation de cette mission, et des "
+            "conversations hors de toute mission, s'affichent ici."
         ),
         mission_approve="Approuver",
         mission_unsure="Pas sûr",
@@ -814,10 +814,11 @@ def get_french_strings() -> LanguageStrings:
         mission_auto_approve_safe="Actions sûres",
         mission_auto_approve_all="Tout",
         mission_auto_approve_tip=(
-            "Un relecteur IA approuve les demandes de cette mission lorsqu'elles correspondent "
-            "clairement à l'objectif. Tout ce dont il n'est pas sûr vous est soumis. Les actions "
-            "sûres n'incluent jamais la suppression, le déplacement, l'écrasement, les commandes de "
-            "terminal ni les envois réseau."
+            "Les modifications de fichiers que le journal enregistre sont approuvées aussitôt ; avec Tout, "
+            "pour le reste de chaque tour. Le reste passe par un relecteur IA, qui ne l'approuve que si cela "
+            "correspond clairement à l'objectif ; tout ce dont il n'est pas sûr vous est soumis. Les "
+            "actions sûres n'incluent jamais la suppression, le déplacement, l'écrasement, les commandes "
+            "de terminal ni les envois réseau."
         ),
         mission_auto_approve_all_title="Tout approuver automatiquement ?",
         mission_auto_approve_all_confirm=(
@@ -883,5 +884,40 @@ def get_french_strings() -> LanguageStrings:
         mission_wait_left="Encore {0}",
         mission_activity_started_prompt="Mission démarrée : « {0} »",
         mission_activity_guidance_prompt="Vous : « {0} »",
-        mission_composer_hint_enter="Entrée pour une nouvelle ligne"
+        mission_composer_hint_enter="Entrée pour une nouvelle ligne",
+        mission_stage_asked="Votre demande",
+        mission_stage_planning="L'IA planifie",
+        mission_stage_working="L'équipe IA travaille",
+        mission_stage_done="Travail terminé",
+        mission_report_title="Mission accomplie",
+        mission_report_caption="Rapport final de votre IA principale",
+        mission_report_stats="Étapes terminées : {0} sur {1}  ·  Agents dans l'équipe : {2}",
+        mission_follow_up="Poser une question de suivi",
+        mission_activity_reversible_approved="{0} approuvé — enregistré dans le journal",
+        mission_activity_user_message="Vous, à {0} : « {1} »",
+        mission_say_waiting_helpers="J'attends que {0} termine et me fasse son rapport…",
+        mission_read_more="En savoir plus",
+        mission_activity_open_tip="Cliquez pour voir ce qui s'est passé",
+        mission_attention="{0} demande(s) attendent votre décision",
+        mission_review_now="Examiner",
+        mission_more_actions="Plus d'actions",
+        mission_agents_show_list="Afficher en liste",
+        mission_agents_hide_list="Masquer la liste",
+        mission_auto_approve_off_note=(
+            "Toute action qui modifie des fichiers, exécute des "
+            "commandes ou envoie des données vous attend."
+        ),
+        mission_auto_approve_safe_note=(
+            "Les modifications journalisées et les demandes sûres passent "
+            "; tout ce qui est destructif vous attend."
+        ),
+        mission_auto_approve_all_note=(
+            "L'équipe travaille sans s'arrêter ; seul ce dont le "
+            "relecteur IA doute vous est soumis."
+        ),
+        mission_scroll_left="Faire défiler les missions vers la gauche",
+        mission_scroll_right="Faire défiler les missions vers la droite",
+        mission_waiting_elsewhere="« {0} » attend votre décision",
+        mission_waiting_elsewhere_many="{0} autres missions attendent vos décisions",
+        mission_go_to_waiting="Y aller"
     )

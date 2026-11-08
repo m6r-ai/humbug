@@ -39,6 +39,8 @@ class MissionChipView:
     title: str
     tone: MissionTone
     selected: bool
+    status_text: str = ""
+    waiting_text: str = ""
 
 
 @dataclass(frozen=True)
@@ -55,6 +57,10 @@ class MissionHeaderView:
     is_classic: bool
     live: bool
     auto_approve: str
+    stage: int = 0
+    stage_tone: MissionTone = MissionTone.ACCENT
+    now_text: str = ""
+    now_tone: MissionTone = MissionTone.ACCENT
 
 
 @dataclass(frozen=True)
@@ -159,11 +165,21 @@ class MissionDecisionView:
 
 @dataclass(frozen=True)
 class MissionActivityView:
-    """One line of the activity feed."""
+    """
+    One line of the activity feed.
+
+    Attributes:
+        glyph: Symbol shown beside the line
+        text: The line itself
+        time_text: When it happened
+        tone: Colour of the symbol
+        more: The whole story, shown when the user opens the line, or "" if the line says it all
+    """
     glyph: str
     text: str
     time_text: str
     tone: MissionTone
+    more: str = ""
 
 
 @dataclass(frozen=True)
@@ -198,3 +214,5 @@ class MissionView:
     lead_message_time: str
     awaiting_reply: bool
     history: list[MissionPhaseView] = field(default_factory=list)
+    completed: bool = False
+    report_text: str = ""

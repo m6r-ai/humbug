@@ -1,6 +1,7 @@
 """Mission Control tab."""
 
 import asyncio
+import dataclasses
 from collections.abc import Callable, Coroutine
 from datetime import datetime
 import logging
@@ -60,6 +61,7 @@ _ACTIVITY_STYLES = {
     MissionActivityKind.APPROVED: ("✓", MissionTone.SUCCESS),
     MissionActivityKind.REJECTED: ("✕", MissionTone.DANGER),
     MissionActivityKind.GUIDANCE_SENT: ("✎", MissionTone.ACCENT),
+    MissionActivityKind.USER_MESSAGE: ("✎", MissionTone.ACCENT),
     MissionActivityKind.MISSION_STOPPED: ("■", MissionTone.DANGER),
     MissionActivityKind.AUTO_CONTINUED: ("↻", MissionTone.ACCENT),
     MissionActivityKind.AUTO_PAUSED: ("‖", MissionTone.WARNING),
@@ -67,10 +69,35 @@ _ACTIVITY_STYLES = {
     MissionActivityKind.TASK_STOPPED: ("■", MissionTone.DANGER),
     MissionActivityKind.MODE_CHANGED: ("⇄", MissionTone.INFO),
     MissionActivityKind.AUTO_APPROVED: ("✓", MissionTone.ACCENT),
+    MissionActivityKind.REVERSIBLE_APPROVED: ("↺", MissionTone.SUCCESS),
     MissionActivityKind.REVIEW_DEFERRED: ("?", MissionTone.WARNING),
     MissionActivityKind.PLAN_ARCHIVED: ("▣", MissionTone.INFO),
     MissionActivityKind.ERROR: ("!", MissionTone.DANGER),
 }
+
+# Colour of the current stage of the journey, where it differs from the status colour.
+_STAGE_TONES = {
+    MissionStatus.PLANNING: MissionTone.ACCENT,
+    MissionStatus.RUNNING: MissionTone.ACCENT,
+    MissionStatus.IDLE: MissionTone.WARNING,
+    MissionStatus.COMPLETED: MissionTone.SUCCESS,
+}
+
+
+def _stage(status: MissionStatus, has_plan: bool) -> int:
+    """
+    Return how far along its journey a mission is.
+
+    The stages are: the user asked, the AI planned, the AI team worked, and the job is done.
+    """
+    if status == MissionStatus.COMPLETED:
+        return 3
+
+    if status == MissionStatus.PLANNING or not has_plan:
+        return 1
+
+    return 2
+
 
 # Friendly names given to a mission's agents, so they read as a team rather than as file names.
 _AGENT_NAMES = (
@@ -346,9 +373,14 @@ class MissionTab(TabBase):
         name: str,
         task_title: str,
         snapshot: MissionSnapshot,
-        decision: MissionDecision | None
+        decision: MissionDecision | None,
+        helpers: list[str]
     ) -> str:
-        """Say, in the agent's own words, what it is doing for the user."""
+        """
+        Say, in the agent's own words, what it is doing for the user.
+
+        helpers names the agents this one delegated to that are still at work.
+        """
         strings = self._strings()
         mission = snapshot.mission
         if agent.wait_started_at is not None:
@@ -363,6 +395,10 @@ class MissionTab(TabBase):
             return strings.mission_say_approval.format(request) if request else strings.mission_agent_waiting
 
         if agent.state == MissionAgentState.WORKING:
+            if agent.tool_name.startswith("delegate_ai") and helpers:
+                # A delegation lasts until the helper reports back, so say who it is waiting for.
+                return strings.mission_say_waiting_helpers.format(", ".join(helpers))
+
             return self._tool_speech(agent.tool_name, agent.tool_target)
 
         if agent.state == MissionAgentState.ERROR:
@@ -416,12 +452,14 @@ class MissionTab(TabBase):
                 strings.mission_activity_guidance_prompt.format(entry.detail) if entry.detail
                 else strings.mission_activity_guidance
             ),
+            MissionActivityKind.USER_MESSAGE: strings.mission_activity_user_message.format(subject, entry.detail),
             MissionActivityKind.MISSION_STOPPED: strings.mission_activity_stopped,
             MissionActivityKind.AUTO_CONTINUED: strings.mission_activity_auto_continued,
             MissionActivityKind.AUTO_PAUSED: strings.mission_activity_auto_paused.format(entry.detail),
             MissionActivityKind.RESUMED: strings.mission_activity_resumed,
             MissionActivityKind.TASK_STOPPED: strings.mission_activity_task_stopped.format(subject),
             MissionActivityKind.AUTO_APPROVED: strings.mission_activity_auto_approved.format(entry.detail),
+            MissionActivityKind.REVERSIBLE_APPROVED: strings.mission_activity_reversible_approved.format(entry.detail),
             MissionActivityKind.REVIEW_DEFERRED: strings.mission_activity_review_deferred.format(entry.detail),
             MissionActivityKind.PLAN_ARCHIVED: strings.mission_activity_plan_archived,
             MissionActivityKind.MODE_CHANGED: (
@@ -436,6 +474,8 @@ class MissionTab(TabBase):
             text=texts[entry.kind],
             time_text=_local_time(entry.occurred_at, with_seconds=True),
             tone=tone,
+            # Nothing to open when the line already shows everything.
+            more=entry.more if entry.more and entry.more != entry.detail else "",
         )
 
     def _decision_view(self, decision: MissionDecision) -> MissionDecisionView:
@@ -497,6 +537,8 @@ class MissionTab(TabBase):
             is_classic=classic,
             live=not classic and snapshot.status in (MissionStatus.PLANNING, MissionStatus.RUNNING),
             auto_approve=mission.auto_approve.value,
+            stage=_stage(snapshot.status, bool(mission.tasks)),
+            stage_tone=_STAGE_TONES.get(snapshot.status, tone),
         )
         stats = [
             MissionStatView("✓", str(mission.completed_count()), strings.mission_stat_completed, MissionTone.SUCCESS,
@@ -522,21 +564,35 @@ class MissionTab(TabBase):
             self._phase_view(phase, names_by_title, open_agents) for phase in reversed(mission.history)
         ]
 
+        agents = [
+            self._agent_view(
+                agent, not classic, names[agent.context_id], task_titles.get(agent.title, ""),
+                self._agent_speech(
+                    agent, names[agent.context_id], task_titles.get(agent.title, ""), snapshot,
+                    decisions_by_context.get(agent.context_id),
+                    [
+                        names[helper.context_id] for helper in snapshot.agents
+                        if helper.parent_id == agent.context_id and helper.state != MissionAgentState.IDLE
+                    ]
+                ),
+                decisions_by_context.get(agent.context_id),
+            )
+            for agent in snapshot.agents
+        ]
+
+        # The header says what is happening now, in the lead's own words.
+        lead_view = next((agent for agent in agents if agent.is_lead), None)
+        if lead_view is not None and lead_view.speech:
+            header = dataclasses.replace(
+                header, now_text=f"{lead_view.name}: {lead_view.speech}",
+                now_tone=MissionTone.SUCCESS if snapshot.status == MissionStatus.COMPLETED else MissionTone.ACCENT
+            )
+
         return MissionView(
             header=header,
             stats=stats,
             steps=steps,
-            agents=[
-                self._agent_view(
-                    agent, not classic, names[agent.context_id], task_titles.get(agent.title, ""),
-                    self._agent_speech(
-                        agent, names[agent.context_id], task_titles.get(agent.title, ""), snapshot,
-                        decisions_by_context.get(agent.context_id)
-                    ),
-                    decisions_by_context.get(agent.context_id),
-                )
-                for agent in snapshot.agents
-            ],
+            agents=agents,
             agents_badge=strings.mission_agents_active.format(busy_agents),
             activity=[self._activity_view(entry) for entry in snapshot.activity],
             lead_message=snapshot.lead_message,
@@ -545,6 +601,10 @@ class MissionTab(TabBase):
             ),
             awaiting_reply=bool(snapshot.lead_message) and snapshot.status == MissionStatus.IDLE,
             history=history,
+            completed=not classic and snapshot.status == MissionStatus.COMPLETED,
+            report_text=strings.mission_report_stats.format(
+                mission.completed_count(), len(mission.tasks), len(snapshot.agents)
+            ),
         )
 
     def _step_views(
@@ -606,6 +666,7 @@ class MissionTab(TabBase):
             self._widget.set_missions([], True)
             self._widget.set_mission(None)
             self._widget.set_decisions([])
+            self._widget.set_waiting_elsewhere("", "")
             return
 
         missions = service.missions()
@@ -624,6 +685,12 @@ class MissionTab(TabBase):
         if self._selected_mission_id is None and not self._starting_new and missions:
             self._selected_mission_id = missions[0].mission_id
 
+        decisions = service.decisions()
+        waiting: dict[str, int] = {}
+        for decision in decisions:
+            if decision.mission_id is not None:
+                waiting[decision.mission_id] = waiting.get(decision.mission_id, 0) + 1
+
         chips = []
         for mission in missions:
             status = service.status(mission.mission_id) or MissionStatus.IDLE
@@ -633,8 +700,10 @@ class MissionTab(TabBase):
                     f"{mission.title}  ·  {self._strings().mission_mode_classic}"
                     if mission.mode == MissionMode.CLASSIC else mission.title
                 ),
+                status_text=self._status_text(status),
                 tone=_STATUS_TONES[status],
                 selected=mission.mission_id == self._selected_mission_id,
+                waiting_text=str(waiting[mission.mission_id]) if mission.mission_id in waiting else "",
             ))
 
         self._widget.set_missions(chips, self._selected_mission_id is None)
@@ -642,7 +711,21 @@ class MissionTab(TabBase):
 
         snapshot = service.snapshot(self._selected_mission_id) if self._selected_mission_id else None
         self._widget.set_mission(self._mission_view(snapshot) if snapshot is not None else None)
-        self._widget.set_decisions([self._decision_view(d) for d in service.decisions()])
+        # Each mission's inbox holds its own requests, and those from conversations outside any
+        # mission; requests from other missions are pointed out instead.
+        self._widget.set_decisions([
+            self._decision_view(d) for d in decisions if d.mission_id in (self._selected_mission_id, None)
+        ])
+        elsewhere = [m for m in missions if m.mission_id in waiting and m.mission_id != self._selected_mission_id]
+        if elsewhere:
+            text = (
+                self._strings().mission_waiting_elsewhere.format(elsewhere[0].title) if len(elsewhere) == 1
+                else self._strings().mission_waiting_elsewhere_many.format(len(elsewhere))
+            )
+            self._widget.set_waiting_elsewhere(elsewhere[0].mission_id, text)
+
+        else:
+            self._widget.set_waiting_elsewhere("", "")
 
     def _run(self, coroutine: Coroutine[Any, Any, None]) -> None:
         """Run a coroutine on the event loop, keeping a reference until it finishes."""

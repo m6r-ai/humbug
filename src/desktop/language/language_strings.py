@@ -750,3 +750,29 @@ class LanguageStrings:
     mission_activity_started_prompt: str
     mission_activity_guidance_prompt: str
     mission_composer_hint_enter: str
+    mission_stage_asked: str
+    mission_stage_planning: str
+    mission_stage_working: str
+    mission_stage_done: str
+    mission_report_title: str
+    mission_report_caption: str
+    mission_report_stats: str
+    mission_follow_up: str
+    mission_activity_reversible_approved: str
+    mission_activity_user_message: str
+    mission_say_waiting_helpers: str
+    mission_read_more: str
+    mission_activity_open_tip: str
+    mission_attention: str
+    mission_review_now: str
+    mission_more_actions: str
+    mission_agents_show_list: str
+    mission_agents_hide_list: str
+    mission_auto_approve_off_note: str
+    mission_auto_approve_safe_note: str
+    mission_auto_approve_all_note: str
+    mission_scroll_left: str
+    mission_scroll_right: str
+    mission_waiting_elsewhere: str
+    mission_waiting_elsewhere_many: str
+    mission_go_to_waiting: str

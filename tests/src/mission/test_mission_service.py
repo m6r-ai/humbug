@@ -7,10 +7,11 @@ import pytest
 
 from ai import AIConversation, AIConversationEvent, AIConversationParent, AIMessage, AIMessageSource
 from ai_transcript_conversation import AITranscriptConversation
+from ai_tool import AIToolApprovalKind
 from mindspace.mindspace import Mindspace
 from mission import mission_service as mission_service_module
 from mission.mission_service import MAX_CONTINUES_WITHOUT_PROGRESS, MISSION_REQUESTER, MissionService
-from mission.mission_snapshot import MissionActivityKind, MissionStatus
+from mission.mission_snapshot import MissionActivityKind, MissionAgentState, MissionStatus
 from mission.mission import AutoApproveLevel, MissionMode, MissionTaskStatus
 from mission.mission_reviewer import ReviewRequest, ReviewVerdict
 from mission.mission_store import MissionStore
@@ -61,7 +62,8 @@ def _request_approval(transcript: AITranscriptConversation) -> asyncio.Task:
     """Start a tool authorization request on a conversation, as a tool would."""
     conversation = transcript.inner_conversation()
     return asyncio.create_task(conversation._request_tool_authorization(  # pylint: disable=protected-access
-        "filesystem", {"operation": "write_file", "path": "a.txt"}, "Write a.txt", "+ hello", True
+        "terminal", {"operation": "send_command", "command": "make docs"}, "Run make docs", "$ make docs", True,
+        AIToolApprovalKind.STANDARD
     ))
 
 
@@ -88,9 +90,9 @@ class TestDecisionInbox:
 
             decisions = service.decisions()
             assert len(decisions) == 1
-            assert decisions[0].tool_name == "filesystem.write_file"
-            assert decisions[0].reason == "Write a.txt"
-            assert decisions[0].detail == "+ hello"
+            assert decisions[0].tool_name == "terminal.send_command"
+            assert decisions[0].reason == "Run make docs"
+            assert decisions[0].detail == "$ make docs"
             assert decisions[0].destructive
             assert decisions[0].conversation_title == "Chat"
             assert decisions[0].mission_id is None
@@ -738,15 +740,25 @@ class _FakeReviewer:
         return self._verdict
 
 
-async def _mission_waiting_on_approval(mindspace, reviewer: _FakeReviewer, level: AutoApproveLevel, destructive: bool):
+async def _mission_waiting_on_approval(
+    mindspace, reviewer: _FakeReviewer, level: AutoApproveLevel, destructive: bool,
+    kind: AIToolApprovalKind = AIToolApprovalKind.STANDARD
+):
     """Start a mission at an auto-approve level whose lead then asks for approval."""
     service = MissionService(mindspace, reviewer=reviewer)  # type: ignore[arg-type]
     service.start()
     mission = await service.create_mission("Write the docs")
     service.set_auto_approve(mission.mission_id, level)
     conversation = _lead(service, mission).inner_conversation()
+    # A journalled request is a file change; anything else is modelled as a terminal command.
+    if kind == AIToolApprovalKind.MINDSPACE_FILE_CHANGE:
+        tool, arguments, reason = "filesystem", {"operation": "write_file", "path": "docs/a.md"}, "Write docs/a.md"
+
+    else:
+        tool, arguments, reason = "terminal", {"operation": "send_command", "command": "make docs"}, "Run make docs"
+
     request = asyncio.create_task(conversation._request_tool_authorization(  # pylint: disable=protected-access
-        "filesystem", {"operation": "write_file", "path": "docs/a.md"}, "Write docs/a.md", "+ hello", destructive
+        tool, arguments, reason, "+ hello", destructive, kind
     ))
     for _ in range(5):
         await asyncio.sleep(0)
@@ -767,7 +779,7 @@ class TestAutoApprove:
 
             assert await request is True
             assert reviewer.requests[0].objective == "Write the docs"
-            assert reviewer.requests[0].tool_name == "filesystem.write_file"
+            assert reviewer.requests[0].tool_name == "terminal.send_command"
             assert not service.decisions()
             snapshot = service.snapshot(mission.mission_id)
             assert snapshot is not None
@@ -844,7 +856,8 @@ class TestAutoApprove:
             service.set_auto_approve(mission.mission_id, AutoApproveLevel.ALL)
             conversation = service._lead_for(mission).conversation  # pylint: disable=protected-access
             request = asyncio.create_task(conversation._request_tool_authorization(  # pylint: disable=protected-access
-                "filesystem", {"operation": "write_file"}, "Write", None, False
+                "filesystem", {"operation": "write_file"}, "Write", None, False,
+                AIToolApprovalKind.MINDSPACE_FILE_CHANGE
             ))
             for _ in range(5):
                 await asyncio.sleep(0)
@@ -888,7 +901,8 @@ class TestAutoApprove:
             service.set_auto_approve(mission.mission_id, AutoApproveLevel.SAFE)
 
             request = asyncio.create_task(lead.inner_conversation()._request_tool_authorization(  # pylint: disable=protected-access
-                "filesystem", {"operation": "write_file"}, "Write New/login.html", None, False
+                "filesystem", {"operation": "write_file"}, "Write New/login.html", None, False,
+                AIToolApprovalKind.STANDARD
             ))
             for _ in range(5):
                 await asyncio.sleep(0)
@@ -902,6 +916,125 @@ class TestAutoApprove:
 
         asyncio.run(run())
 
+
+    def test_journalled_change_at_everything_uses_the_conversations_standing_approval(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """At Everything, a change the journal records is approved without a review, and arms the standing approval."""
+        async def run() -> None:
+            reviewer = _FakeReviewer(approve=False)
+            service, mission, request = await _mission_waiting_on_approval(
+                mindspace, reviewer, AutoApproveLevel.ALL, destructive=True,
+                kind=AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+            )
+
+            assert await asyncio.wait_for(request, timeout=1) is True
+            assert not reviewer.requests
+            conversation = _lead(service, mission).inner_conversation()
+            assert conversation.auto_approve_file_changes()
+
+            # The rest of the turn's journalled changes are approved by the conversation itself.
+            again = await asyncio.wait_for(conversation._request_tool_authorization(  # pylint: disable=protected-access
+                "filesystem", {"operation": "write_file", "path": "docs/b.md"}, "Write docs/b.md", None, True,
+                AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+            ), timeout=1)
+            assert again is True
+            assert not service.decisions()
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            kinds = [a.kind for a in snapshot.activity]
+            assert kinds.count(MissionActivityKind.REVERSIBLE_APPROVED) == 2
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_safe_approves_a_journalled_change_without_a_standing_approval(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """At Safe, a non-destructive journalled change is approved on its own, and nothing is armed for later ones."""
+        async def run() -> None:
+            reviewer = _FakeReviewer(approve=False)
+            service, mission, request = await _mission_waiting_on_approval(
+                mindspace, reviewer, AutoApproveLevel.SAFE, destructive=False,
+                kind=AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+            )
+
+            assert await asyncio.wait_for(request, timeout=1) is True
+            assert not reviewer.requests
+            assert not _lead(service, mission).inner_conversation().auto_approve_file_changes()
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_destructive_journalled_change_at_safe_comes_to_the_user(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """At Safe, a destructive change waits for the user even when the journal records it."""
+        async def run() -> None:
+            reviewer = _FakeReviewer(approve=True)
+            service, mission, request = await _mission_waiting_on_approval(
+                mindspace, reviewer, AutoApproveLevel.SAFE, destructive=True,
+                kind=AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+            )
+
+            assert not request.done()
+            assert not reviewer.requests
+            assert service.decisions()
+            assert not _lead(service, mission).inner_conversation().auto_approve_file_changes()
+            request.cancel()
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_journalled_change_waits_for_the_user_when_auto_approve_is_off(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """With auto-approve off, a journalled change still comes to the user, labelled as journalled."""
+        async def run() -> None:
+            reviewer = _FakeReviewer(approve=True)
+            service, mission, request = await _mission_waiting_on_approval(
+                mindspace, reviewer, AutoApproveLevel.OFF, destructive=False,
+                kind=AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+            )
+
+            assert not request.done()
+            assert service.decisions()[0].reversible
+            assert not _lead(service, mission).inner_conversation().auto_approve_file_changes()
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            requested = [a for a in snapshot.activity if a.kind == MissionActivityKind.APPROVAL_REQUESTED]
+            assert requested[0].detail == "filesystem.write_file (journalled)"
+            assert requested[0].more == "Write docs/a.md\n\n+ hello"
+            request.cancel()
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_other_requests_are_not_labelled_journalled(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A request the journal does not record is named by its tool alone."""
+        async def run() -> None:
+            service, mission, request = await _mission_waiting_on_approval(
+                mindspace, _FakeReviewer(approve=True), AutoApproveLevel.OFF, destructive=False
+            )
+
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            requested = [a for a in snapshot.activity if a.kind == MissionActivityKind.APPROVAL_REQUESTED]
+            assert requested[0].detail == "terminal.send_command"
+            request.cancel()
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_lowering_the_level_from_everything_withdraws_the_standing_approval(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Leaving Everything withdraws a standing approval the mission granted."""
+        async def run() -> None:
+            for level in (AutoApproveLevel.SAFE, AutoApproveLevel.OFF):
+                service, mission, request = await _mission_waiting_on_approval(
+                    mindspace, _FakeReviewer(approve=True), AutoApproveLevel.ALL, destructive=False,
+                    kind=AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+                )
+                assert await asyncio.wait_for(request, timeout=1) is True
+                conversation = _lead(service, mission).inner_conversation()
+                assert conversation.auto_approve_file_changes()
+
+                service.set_auto_approve(mission.mission_id, level)
+                assert not conversation.auto_approve_file_changes()
+                service.stop()
+
+        asyncio.run(run())
 
     def test_raising_the_level_reviews_a_request_left_for_the_user(self, mindspace, submitted):  # pylint: disable=unused-argument
         """A destructive request waiting at Safe is reviewed and approved as soon as the level becomes Everything."""
@@ -939,6 +1072,48 @@ class TestAutoApprove:
 
             assert await request is True
             assert len(reviewer.requests) == 2
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_standing_approval_used_names_the_tool_it_approved(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A change the standing approval resolves is reported in the feed under the tool that asked for it."""
+        async def run() -> None:
+            service, mission, request = await _mission_waiting_on_approval(
+                mindspace, _FakeReviewer(approve=False), AutoApproveLevel.ALL, destructive=False,
+                kind=AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+            )
+            assert await asyncio.wait_for(request, timeout=1) is True
+            conversation = _lead(service, mission).inner_conversation()
+
+            again = await asyncio.wait_for(conversation._request_tool_authorization(  # pylint: disable=protected-access
+                "filesystem", {"operation": "write_file", "path": "docs/b.md"}, "Write docs/b.md", None, False,
+                AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+            ), timeout=1)
+            assert again is True
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            approved = [a for a in snapshot.activity if a.kind == MissionActivityKind.REVERSIBLE_APPROVED]
+            assert approved[-1].detail == "filesystem.write_file"
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_standing_approval_used_ignores_a_conversation_outside_any_mission(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A standing approval resolving a change in a conversation no mission drives records nothing."""
+        async def run() -> None:
+            service = MissionService(mindspace, reviewer=_FakeReviewer(approve=True))  # type: ignore[arg-type]
+            service.start()
+            mission = await service.create_mission("Write the docs")
+            context_id, _transcript = _open_conversation(mindspace, "outsider")
+            for _ in range(5):
+                await asyncio.sleep(0)
+
+            service.handle_standing_approval_used(service._tracked[context_id], "Write docs/a.md")  # pylint: disable=protected-access
+
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            assert not [a for a in snapshot.activity if a.kind == MissionActivityKind.REVERSIBLE_APPROVED]
             service.stop()
 
         asyncio.run(run())
@@ -1195,6 +1370,79 @@ class TestBackgroundWork:
             details = {entry.kind: entry.detail for entry in snapshot.activity}
             assert details[MissionActivityKind.MISSION_STARTED] == "Write the release notes"
             assert details[MissionActivityKind.GUIDANCE_SENT] == "Keep them short"
+            service.stop()
+
+        asyncio.run(run())
+
+
+class TestAgentProgress:
+    """What the feed and the agents show follows what the user and the agents actually do."""
+
+    def test_agent_is_working_once_its_approval_is_answered(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """An approved tool runs, so the agent is working, not still waiting for the user, while it does."""
+        async def run() -> None:
+            service, mission, request = await _mission_waiting_on_approval(
+                mindspace, _FakeReviewer(approve=False), AutoApproveLevel.OFF, destructive=False
+            )
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            assert snapshot.agents[0].state == MissionAgentState.WAITING_FOR_APPROVAL
+
+            assert await service.approve(service.decisions()[0].decision_id)
+            assert await asyncio.wait_for(request, timeout=1) is True
+
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            assert snapshot.agents[0].state == MissionAgentState.WORKING
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_message_typed_into_a_mission_conversation_is_in_the_feed(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """What the user types into a mission's conversation is recorded once, with the full text to open."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Objective")
+            conversation = _lead(service, mission).inner_conversation()
+            text = "Please also add a changelog entry. " * 20
+            for source in (AIMessageSource.USER_QUEUED, AIMessageSource.USER):
+                message = AIMessage.create(source, text)
+                await conversation._trigger_event(  # pylint: disable=protected-access
+                    AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, message
+                )
+
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            typed = [a for a in snapshot.activity if a.kind == MissionActivityKind.USER_MESSAGE]
+            assert len(typed) == 1
+            assert typed[0].more == text.strip()
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_messages_sent_for_the_user_and_by_agents_are_not_repeated(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Guidance sent from Mission Control and prompts from other agents are not recorded as typed input."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Objective")
+            await service.send_guidance(mission.mission_id, "Use British spelling")
+            conversation = _lead(service, mission).inner_conversation()
+            for message in (
+                AIMessage.create(AIMessageSource.USER, "Use British spelling"),
+                AIMessage.create(AIMessageSource.USER, "Do part two", user_name="Parent AI"),
+            ):
+                await conversation._trigger_event(  # pylint: disable=protected-access
+                    AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, message
+                )
+
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            kinds = [a.kind for a in snapshot.activity]
+            assert MissionActivityKind.USER_MESSAGE not in kinds
+            guidance = next(a for a in snapshot.activity if a.kind == MissionActivityKind.GUIDANCE_SENT)
+            assert guidance.more == "Use British spelling"
             service.stop()
 
         asyncio.run(run())

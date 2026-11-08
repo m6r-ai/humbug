@@ -112,6 +112,7 @@ class AIConversation:
             return None
 
         return self._pending_authorization
+
     def set_auto_approve_file_changes(self, enabled: bool) -> None:
         """
         Grant or withdraw a standing approval for journalled file changes.
@@ -573,7 +574,8 @@ class AIConversation:
             tool_call=tool_call,
             reason=reason,
             context=context,
-            destructive=destructive
+            destructive=destructive,
+            kind=kind
         )
 
         try:

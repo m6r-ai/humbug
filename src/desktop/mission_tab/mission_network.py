@@ -6,7 +6,7 @@ from functools import partial
 import math
 import time
 
-from PySide6.QtCore import QEvent, QPointF, QRectF, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QPointF, QRectF, QSize, Qt, QTimer, Signal, SignalInstance
 from PySide6.QtGui import (
     QBrush, QColor, QFont, QFontMetrics, QHideEvent, QLinearGradient, QMouseEvent, QPainter, QPainterPath,
     QPaintEvent, QPen, QRadialGradient, QResizeEvent, QShowEvent
@@ -30,6 +30,9 @@ _TYPING_RATE = 45.0
 _WAVE_SECONDS = 1.4
 _POP_SECONDS = 0.25
 _CARD_LINES = 3
+
+# How far below a robot's centre its name sits, in robot sizes, clearing the pedestal it stands on.
+_LABEL_DROP = 0.94
 
 
 @dataclass
@@ -59,13 +62,15 @@ class AgentNetworkView(QWidget):
     records and reports clicks.
 
     Each agent says what it is doing in a speech bubble, typed out as it
-    speaks, and an agent waiting for approval offers Approve and Reject
-    buttons in its bubble.
+    speaks, and an agent waiting for approval offers Approve, Unsure, Reject
+    and Read more buttons in its bubble.
     """
 
     agent_clicked = Signal(str)
     decision_approved = Signal(str)
+    decision_unsure = Signal(str)
     decision_rejected = Signal(str)
+    decision_details_requested = Signal(str)
     wait_finish_requested = Signal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -81,7 +86,7 @@ class AgentNetworkView(QWidget):
         self._phase = 0.0
         self._hover_id = ""
         self._speech: dict[str, tuple[str, float]] = {}
-        self._fitted: dict[tuple[str, int], str] = {}
+        self._fitted: dict[tuple[str, int, int], str] = {}
         self._buttons: dict[str, tuple[str, list[QPushButton]]] = {}
         self._time_shown: dict[str, bool] = {}
         self._labels = {"approve": "", "reject": "", "finish": "", "left": "{0}"}
@@ -99,7 +104,9 @@ class AgentNetworkView(QWidget):
         approve_label: str = "",
         reject_label: str = "",
         finish_label: str = "",
-        left_label: str = "{0}"
+        left_label: str = "{0}",
+        more_label: str = "",
+        unsure_label: str = ""
     ) -> None:
         """
         Show a mission's agents.
@@ -111,9 +118,14 @@ class AgentNetworkView(QWidget):
             reject_label: Label of the Reject button shown in a waiting agent's card
             finish_label: Label of the button that cuts a wait short
             left_label: Format for the time a wait has left, such as "{0} left"
+            more_label: Label of the button that shows a waiting agent's whole request
+            unsure_label: Label of the Unsure button shown in a waiting agent's card
         """
         self._user_label = user_label
-        self._labels = {"approve": approve_label, "reject": reject_label, "finish": finish_label, "left": left_label}
+        self._labels = {
+            "approve": approve_label, "reject": reject_label, "finish": finish_label, "left": left_label,
+            "more": more_label, "unsure": unsure_label
+        }
         speech: dict[str, tuple[str, float]] = {}
         for agent in agents:
             if not agent.speech:
@@ -181,6 +193,7 @@ class AgentNetworkView(QWidget):
         for context_id in list(self._buttons):
             key, buttons = self._buttons[context_id]
             if wanted.get(context_id, ("", None))[0] != key:
+                self._release_focus(buttons)
                 for button in buttons:
                     button.deleteLater()
 
@@ -189,9 +202,9 @@ class AgentNetworkView(QWidget):
         for context_id, (key, agent) in wanted.items():
             if context_id in self._buttons:
                 buttons = self._buttons[context_id][1]
-                texts = [self._labels["approve"], self._labels["reject"]] if agent.decision_id else [
-                    self._labels["finish"]
-                ]
+                texts = [
+                    self._labels["approve"], self._labels["unsure"], self._labels["reject"], self._labels["more"]
+                ] if agent.decision_id else [self._labels["finish"]]
                 for button, text in zip(buttons, texts):
                     button.setText(text)
 
@@ -202,12 +215,20 @@ class AgentNetworkView(QWidget):
                 approve = self._make_button(
                     self._labels["approve"],
                     "MissionApproveDestructive" if agent.decision_destructive else "MissionApprove",
-                    partial(self._answer, decision_id, True)
+                    partial(self._answer, decision_id, self.decision_approved)
+                )
+                unsure = self._make_button(
+                    self._labels["unsure"], "MissionSecondaryButton",
+                    partial(self._answer, decision_id, self.decision_unsure)
                 )
                 reject = self._make_button(
-                    self._labels["reject"], "MissionSecondaryButton", partial(self._answer, decision_id, False)
+                    self._labels["reject"], "MissionSecondaryButton",
+                    partial(self._answer, decision_id, self.decision_rejected)
                 )
-                self._buttons[context_id] = (key, [approve, reject])
+                more = self._make_button(
+                    self._labels["more"], "MissionLinkButton", partial(self.decision_details_requested.emit, decision_id)
+                )
+                self._buttons[context_id] = (key, [approve, unsure, reject, more])
                 continue
 
             finish = self._make_button(
@@ -224,23 +245,31 @@ class AgentNetworkView(QWidget):
         button.clicked.connect(lambda _checked=False: action())
         return button
 
-    def _answer(self, decision_id: str, approved: bool) -> None:
+    def _answer(self, decision_id: str, answered: SignalInstance) -> None:
         """Report an answer given from a card, and stop it being given twice."""
         for key, buttons in self._buttons.values():
             if key == decision_id:
+                self._release_focus(buttons)
                 for button in buttons:
                     button.setEnabled(False)
 
-        if approved:
-            self.decision_approved.emit(decision_id)
+        answered.emit(decision_id)
 
-        else:
-            self.decision_rejected.emit(decision_id)
+    def _release_focus(self, buttons: list[QPushButton]) -> None:
+        """
+        Keep focus here when a card's buttons are about to go.
+
+        A focused button that is disabled or hidden hands focus to the next widget, and the
+        page scrolls to wherever that is, so the user would be carried away from the agents.
+        """
+        if any(button.hasFocus() for button in buttons):
+            self.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def _finish_wait(self, context_id: str) -> None:
         """Ask for an agent's wait to be cut short, once."""
         entry = self._buttons.get(context_id)
         if entry is not None:
+            self._release_focus(entry[1])
             for button in entry[1]:
                 button.setEnabled(False)
 
@@ -282,15 +311,15 @@ class AgentNetworkView(QWidget):
         caption_font.setPointSizeF(base * 0.8)
         return QFontMetrics(name_font).height() + QFontMetrics(caption_font).height() + 4
 
-    def _fit_text(self, text: str, width: int) -> str:
-        """Return text shortened, if need be, to fit the card's lines at a width."""
-        key = (text, width)
+    def _fit_text(self, text: str, width: int, lines: int = _CARD_LINES) -> str:
+        """Return text shortened, if need be, to fit a number of the card's lines at a width."""
+        key = (text, width, lines)
         fitted = self._fitted.get(key)
         if fitted is not None:
             return fitted
 
         metrics = QFontMetrics(self._speech_font())
-        limit = metrics.lineSpacing() * _CARD_LINES + 1
+        limit = metrics.lineSpacing() * lines + 1
         flags = int(Qt.TextFlag.TextWordWrap)
         fitted = text
         if metrics.boundingRect(0, 0, width, 10000, flags, text).height() > limit:
@@ -325,19 +354,44 @@ class AgentNetworkView(QWidget):
         pad = 10 * zoom
         share = self.width() / max(1, sum(1 for n in self._nodes if n.level == node.level))
         width = max(110 * zoom, min(320 * zoom, share - 14 * zoom))
-        text = self._fit_text(self._speech[node.node_id][0], round(width - pad * 2))
+        wrapped = self._link_on_own_row(node.node_id, width)
+        text = self._card_text(node.node_id, width)
         metrics = QFontMetrics(self._speech_font())
         text_rect = metrics.boundingRect(0, 0, round(width - pad * 2), 10000, int(Qt.TextFlag.TextWordWrap), text)
         height = text_rect.height() + pad * 2
         if node.node_id in self._buttons:
             height += self._button_height() + pad * 0.8
+            if wrapped:
+                height += self._buttons[node.node_id][1][-1].sizeHint().height() + pad * 0.4
 
         else:
             width = min(width, text_rect.width() + pad * 2 + 2)
 
-        top = node.center.y() + size * 0.72 + self._name_height() + 6 * zoom
+        top = node.center.y() + size * _LABEL_DROP + self._name_height() + 6 * zoom
         left = max(6 * zoom, min(node.center.x() - width / 2, self.width() - 6 * zoom - width))
         return QRectF(left, top, width, height)
+
+    def _link_on_own_row(self, context_id: str, width: float) -> bool:
+        """
+        Return True when a card's Read more link moves to a row of its own.
+
+        That happens when the answer buttons and the link do not all fit on one row at
+        their natural widths, so no button is squeezed until its label is cut off.
+        """
+        entry = self._buttons.get(context_id)
+        if entry is None or len(entry[1]) < 2 or entry[1][-1].objectName() != "MissionLinkButton":
+            return False
+
+        pad = 10 * self._style_manager.zoom_factor()
+        buttons = entry[1]
+        needed = sum(button.sizeHint().width() for button in buttons) + pad * 0.8 * (len(buttons) - 1)
+        return needed > width - pad * 2
+
+    def _card_text(self, context_id: str, width: float) -> str:
+        """Return what a card shows, giving up a line when its link needs a row of its own."""
+        pad = 10 * self._style_manager.zoom_factor()
+        lines = _CARD_LINES - 1 if self._link_on_own_row(context_id, width) else _CARD_LINES
+        return self._fit_text(self._speech[context_id][0], round(width - pad * 2), lines)
 
     def _place_buttons(self) -> None:
         """Put each agent's buttons along the bottom of its card once its words are typed out."""
@@ -355,6 +409,19 @@ class AgentNetworkView(QWidget):
             card = self._bubble_rect(node)
             row = self._button_height()
             y = round(card.bottom() - pad - row)
+            if self._link_on_own_row(context_id, card.width()):
+                # Read more sits on its own row above the answer buttons.
+                link = buttons[-1]
+                link_height = link.sizeHint().height()
+                link.setGeometry(
+                    round(card.left() + pad), round(y - pad * 0.4 - link_height),
+                    min(link.sizeHint().width(), round(card.width() - pad * 2)), link_height
+                )
+                if link.isHidden():
+                    link.show()
+
+                buttons = buttons[:-1]
+
             available = card.width() - pad * 2 - pad * 0.8 * (len(buttons) - 1)
             natural = [button.sizeHint().width() for button in buttons]
             limit = available
@@ -380,7 +447,7 @@ class AgentNetworkView(QWidget):
         """Return the robot size, the gap between agent levels and the top margin, scaled by zoom."""
         zoom = self._style_manager.zoom_factor()
         size = 56 * zoom
-        gap = size * 0.72 + self._name_height() + 6 * zoom + self._card_reserve() + 40 * zoom + size * 0.8
+        gap = size * _LABEL_DROP + self._name_height() + 6 * zoom + self._card_reserve() + 40 * zoom + size * 0.8
         return size, gap, 40 * zoom
 
     def _level_y(self, level: int) -> float:
@@ -409,7 +476,7 @@ class AgentNetworkView(QWidget):
     def sizeHint(self) -> QSize:
         size, _gap, _top = self._metrics()
         deepest = max((node.level for node in self._nodes), default=0)
-        bottom = self._level_y(deepest) + size * 0.72 + self._name_height()
+        bottom = self._level_y(deepest) + size * _LABEL_DROP + self._name_height()
         if deepest > 0:
             bottom += 6 * self._style_manager.zoom_factor() + self._card_reserve()
 
@@ -537,26 +604,53 @@ class AgentNetworkView(QWidget):
         painter.end()
 
     def _paint_grid(self, painter: QPainter) -> None:
-        """Draw a faint dotted grid, so the network reads as a web."""
-        dot = QColor(self._style_manager.get_color(ColorRole.TEXT_PRIMARY))
-        dot.setAlphaF(0.07)
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(dot)
-        spacing = 22 * self._style_manager.zoom_factor()
-        y = spacing / 2
-        while y < self.height():
-            x = spacing / 2
-            while x < self.width():
-                painter.drawEllipse(QPointF(x, y), 1.1, 1.1)
-                x += spacing
+        """Draw a floor grid receding in perspective, so the robots stand in a room rather than on a page."""
+        line = QColor(self._style_manager.get_color(ColorRole.TEXT_PRIMARY))
+        width, height = float(self.width()), float(self.height())
+        horizon = -height * 0.35
+        vanish = QPointF(width / 2, horizon)
+        spacing = 46 * self._style_manager.zoom_factor()
 
-            y += spacing
+        # Lines running into the distance, all meeting at the vanishing point above the view.
+        count = int(width / spacing) + 6
+        for index in range(-count, count + 1):
+            foot = QPointF(width / 2 + index * spacing * 1.6, height)
+            line.setAlphaF(0.06)
+            painter.setPen(QPen(line, 1.0))
+            painter.drawLine(vanish + (foot - vanish) * 0.42, foot)
+
+        # Cross lines, closer together towards the horizon.
+        rows = 9
+        for row in range(1, rows + 1):
+            depth = row / rows
+            y = horizon + (height - horizon) * (0.42 + 0.58 * depth * depth)
+            line.setAlphaF(0.025 + 0.05 * depth)
+            painter.setPen(QPen(line, 1.0))
+            painter.drawLine(QPointF(0, y), QPointF(width, y))
+
+        # Fade the far end out, so the floor dissolves into the card rather than stopping.
+        _page, card = surface_colors()
+        mist = QLinearGradient(0, 0, 0, height * 0.45)
+        top = QColor(card)
+        top.setAlphaF(0.9)
+        mist.setColorAt(0.0, top)
+        clear = QColor(card)
+        clear.setAlphaF(0.0)
+        mist.setColorAt(1.0, clear)
+        painter.fillRect(QRectF(0, 0, width, height * 0.45), QBrush(mist))
 
     def _paint_edge(self, painter: QPainter, parent: _Node, child: _Node) -> None:
         """Draw a curved arrow from a delegator to its agent, with particles while work flows."""
         size, _gap, _top = self._metrics()
-        # Arrows leave below the delegator's name and caption, so they never cross its label.
-        start = QPointF(parent.center.x(), parent.center.y() + self._label_bottom(parent))
+        zoom = self._style_manager.zoom_factor()
+        # Arrows leave from the bottom of what the delegator is saying, or below its name when it
+        # is quiet, so the link visibly joins the two agents without crossing either label.
+        if parent.agent is not None and parent.node_id in self._speech:
+            start = QPointF(parent.center.x(), self._bubble_rect(parent).bottom())
+
+        else:
+            start = QPointF(parent.center.x(), parent.center.y() + self._name_bottom(parent))
+
         end = QPointF(child.center.x(), child.center.y() - size * 0.78)
         bend = (end.y() - start.y()) * 0.55
         path = QPainterPath(start)
@@ -566,10 +660,20 @@ class AgentNetworkView(QWidget):
         tone = {
             "waiting": MissionTone.WARNING, "error": MissionTone.DANGER, "idle": MissionTone.NEUTRAL,
         }.get(activity, MissionTone.ACCENT)
-        color = QColor(tone_color(tone))
+        # An idle link keeps the team's colour, faded, so it never reads as a line of the floor grid.
+        color = QColor(tone_color(MissionTone.ACCENT if tone == MissionTone.NEUTRAL else tone))
         line = QColor(color)
-        line.setAlphaF(0.55 if activity != "idle" else 0.35)
-        pen = QPen(line, 2 * self._style_manager.zoom_factor())
+        line.setAlphaF(0.85 if activity != "idle" else 0.5)
+
+        halo = QColor(color)
+        halo.setAlphaF(0.16 if activity != "idle" else 0.08)
+        halo_pen = QPen(halo, 8 * zoom)
+        halo_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        painter.setPen(halo_pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawPath(path)
+
+        pen = QPen(line, 2.5 * zoom)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         if activity == "waiting":
             pen.setStyle(Qt.PenStyle.DashLine)
@@ -589,6 +693,13 @@ class AgentNetworkView(QWidget):
         painter.setBrush(line)
         painter.drawPath(arrow)
 
+        # A socket where the link leaves, so it reads as plugged into the delegator.
+        _page, card = surface_colors()
+        painter.setPen(QPen(line, 2 * zoom))
+        painter.setBrush(card)
+        painter.drawEllipse(start, 4 * zoom, 4 * zoom)
+        painter.setPen(Qt.PenStyle.NoPen)
+
         if activity in ("working", "thinking"):
             for index in range(3):
                 t = (self._phase * 0.55 + index / 3) % 1.0
@@ -602,14 +713,13 @@ class AgentNetworkView(QWidget):
                 painter.setBrush(QBrush(glow))
                 painter.drawEllipse(point, 7 * self._style_manager.zoom_factor(), 7 * self._style_manager.zoom_factor())
 
-    def _label_bottom(self, node: _Node) -> float:
-        """Return how far below a node's centre its label ends."""
+    def _name_bottom(self, node: _Node) -> float:
+        """Return how far below a node's centre its name and caption end."""
         size, _gap, _top = self._metrics()
         if node.agent is None:
             return size * 0.5 + self._name_height()
 
-        # Below an agent's card space, so arrows never cross what it says.
-        return size * 0.72 + self._name_height() + 6 * self._style_manager.zoom_factor() + self._card_reserve() + 4
+        return size * _LABEL_DROP + self._name_height() + 4 * self._style_manager.zoom_factor()
 
     def _paint_label(self, painter: QPainter, node: _Node, below: float) -> None:
         """Draw a node's name and caption under it."""
@@ -700,14 +810,16 @@ class AgentNetworkView(QWidget):
         if agent.wait_started:
             self._paint_wait_ring(painter, QPointF(cx, cy), agent, size)
 
-        # Shadow on the floor, which shrinks as the robot bobs up, for depth.
-        shadow = QRadialGradient(QPointF(node.center.x(), node.center.y() + size * 0.62), size * 0.5)
-        shadow.setColorAt(0.0, QColor(0, 0, 0, 70))
+        self._paint_pedestal(painter, node, body_color, busy, phase, size)
+
+        # Shadow on the pedestal, which shrinks as the robot bobs up, for depth.
+        shadow = QRadialGradient(QPointF(node.center.x(), node.center.y() + size * 0.6), size * 0.5)
+        shadow.setColorAt(0.0, QColor(0, 0, 0, 80))
         shadow.setColorAt(1.0, QColor(0, 0, 0, 0))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QBrush(shadow))
         spread = 1.0 - bob / size
-        painter.drawEllipse(QPointF(node.center.x(), node.center.y() + size * 0.62), size * 0.45 * spread, size * 0.1)
+        painter.drawEllipse(QPointF(node.center.x(), node.center.y() + size * 0.6), size * 0.4 * spread, size * 0.08)
 
         # Torso.
         torso = QRectF(cx - size * 0.28, cy + size * 0.1, size * 0.56, size * 0.42)
@@ -735,8 +847,14 @@ class AgentNetworkView(QWidget):
             painter.drawLine(QPointF(torso.right(), torso.top() + size * 0.1),
                              QPointF(torso.right() + size * 0.12, torso.top() + size * 0.3 - swing))
 
-        # Head, lit from the top left.
+        # Head, lit from the top left.  It turns slowly from side to side, and the side
+        # face that shows as it turns gives it depth.
         head = QRectF(cx - size * 0.4, cy - size * 0.5, size * 0.8, size * 0.6)
+        turn = math.sin(phase * (0.9 if busy else 0.5)) * size * 0.07
+        side = QRectF(head.translated(turn, size * 0.04))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(_shade(body_color, 50))
+        painter.drawRoundedRect(side, size * 0.2, size * 0.2)
         head_gradient = QLinearGradient(head.topLeft(), head.bottomRight())
         head_gradient.setColorAt(0.0, _shade(body_color, 165))
         head_gradient.setColorAt(0.55, body_color)
@@ -809,7 +927,49 @@ class AgentNetworkView(QWidget):
         if node.node_id not in self._speech:
             self._paint_bubble(painter, activity, QPointF(head.right() + size * 0.18, head.top() - size * 0.12), size)
 
-        self._paint_label(painter, node, node.center.y() + size * 0.72)
+        self._paint_label(painter, node, node.center.y() + size * _LABEL_DROP)
+
+    def _paint_pedestal(
+        self, painter: QPainter, node: _Node, color: QColor, busy: bool, phase: float, size: float
+    ) -> None:
+        """Draw the round platform a robot stands on, lit from inside while the robot works."""
+        center = QPointF(node.center.x(), node.center.y() + size * 0.62)
+        radius_x, radius_y, depth = size * 0.58, size * 0.16, size * 0.1
+
+        # The platform's side: a band from the top ellipse down to the bottom one.
+        side = QPainterPath()
+        side.moveTo(center.x() - radius_x, center.y())
+        side.lineTo(center.x() - radius_x, center.y() + depth)
+        side.arcTo(QRectF(center.x() - radius_x, center.y() + depth - radius_y, radius_x * 2, radius_y * 2), 180, 180)
+        side.lineTo(center.x() + radius_x, center.y())
+        side.arcTo(QRectF(center.x() - radius_x, center.y() - radius_y, radius_x * 2, radius_y * 2), 0, -180)
+        side_gradient = QLinearGradient(center.x() - radius_x, 0, center.x() + radius_x, 0)
+        side_gradient.setColorAt(0.0, _shade(color, 40))
+        side_gradient.setColorAt(0.4, _shade(color, 75))
+        side_gradient.setColorAt(1.0, _shade(color, 35))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QBrush(side_gradient))
+        painter.drawPath(side)
+
+        top_gradient = QRadialGradient(center - QPointF(radius_x * 0.3, radius_y * 0.4), radius_x * 1.2)
+        top_gradient.setColorAt(0.0, _shade(color, 150))
+        top_gradient.setColorAt(1.0, _shade(color, 85))
+        painter.setBrush(QBrush(top_gradient))
+        painter.drawEllipse(center, radius_x, radius_y)
+
+        # A ring of light that runs round the rim while the robot is busy.
+        glow = QColor(tone_color(MissionTone.SUCCESS) if busy else _shade(color, 170))
+        glow.setAlphaF(0.85 if busy else 0.35)
+        painter.setPen(QPen(glow, max(1.0, size * 0.025)))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        rim = QRectF(center.x() - radius_x * 0.86, center.y() - radius_y * 0.86, radius_x * 1.72, radius_y * 1.72)
+        if busy:
+            start = int((phase * 220) % 360 * 16)
+            painter.drawArc(rim, start, 120 * 16)
+            painter.drawArc(rim, start + 180 * 16, 120 * 16)
+
+        else:
+            painter.drawEllipse(rim)
 
     def _paint_badge(self, painter: QPainter, center: QPointF, glyph: str, color: QColor, size: float) -> None:
         """Draw a small round badge with a symbol."""
@@ -923,10 +1083,10 @@ class AgentNetworkView(QWidget):
         assert agent is not None
         zoom = self._style_manager.zoom_factor()
         pad = 10 * zoom
-        full_text, started = self._speech[node.node_id]
+        _full_text, started = self._speech[node.node_id]
         age = self._phase - started
         card = self._bubble_rect(node)
-        text = self._fit_text(full_text, round(card.width() - pad * 2))
+        text = self._card_text(node.node_id, card.width())
         _page, surface = surface_colors()
         tone = {
             "waiting": MissionTone.WARNING, "error": MissionTone.DANGER, "idle": MissionTone.NEUTRAL,

@@ -2,28 +2,35 @@
 
 import asyncio
 import dataclasses
+from datetime import datetime, timezone
+import types
 
 import pytest
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QPoint, QPointF, QPropertyAnimation, Qt
+from PySide6.QtGui import QWheelEvent
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QPushButton
+from PySide6.QtWidgets import QApplication, QFrame, QPushButton, QWidget
 
 from ai import AIConversation, AIConversationEvent, AIMessage, AIMessageSource
-from ai_tool import AIToolCall
+from ai_tool import AIToolApprovalKind, AIToolCall
 from context.context_registry import ContextEvent
-from mission import MissionAgent, MissionAgentState, MissionMode
+from mission import MissionAgent, MissionAgentState, MissionDecision, MissionMode, MissionStatus
 from PySide6.QtWidgets import QLabel
 
 from desktop.mission_tab import mission_tab as mission_tab_module
 from desktop.mission_tab import mission_widget as mission_widget_module
+from desktop.mission_tab import mission_scene as mission_scene_module
 from desktop.mission_tab.mission_display import (
-    MissionAgentView, MissionChipView, MissionDecisionView, MissionPhaseView, MissionStatTarget, MissionStatView, MissionStepState, MissionStepView, MissionTone
+    MissionActivityView, MissionAgentView, MissionChipView, MissionDecisionView, MissionHeaderView, MissionPhaseView, MissionStatTarget,
+    MissionStatView, MissionStepState, MissionStepView, MissionTone, MissionView
 )
 from desktop.message_box import MessageBoxButton
 from desktop.mission_tab.mission_mode_menus import MissionModeMenus
 from desktop.mission_tab.mission_service_holder import MissionServiceHolder
 from desktop.mission_tab.mission_network import AgentNetworkView
+from desktop.mission_tab.mission_scene import ConfettiOverlay, MissionJourney, MissionOrb
+from desktop.style_manager import StyleManager
 from desktop.mission_tab.mission_tab import MissionTab, agent_names
 from desktop.mission_tab.mission_widget import MissionWidget, submit_key_text
 
@@ -549,7 +556,7 @@ class TestTalkingAgents:
             speech="I need your approval: Run the tests", decision_id="decision-1",
         )
         network.set_agents([_agent_view("lead", is_lead=True), waiting], "You", "Approve", "Reject")
-        _decision_id, (approve, reject) = network._buttons["a"]  # pylint: disable=protected-access
+        _decision_id, (approve, _unsure, reject, _more) = network._buttons["a"]  # pylint: disable=protected-access
         assert approve.isHidden() and reject.isHidden()
 
         network._phase += 10  # pylint: disable=protected-access
@@ -603,7 +610,8 @@ class TestTalkingAgents:
             assert not lead.decision_id
 
             request = asyncio.create_task(conversation._request_tool_authorization(  # pylint: disable=protected-access
-                "terminal", {"operation": "send_command"}, "Run the tests", None, True
+                "terminal", {"operation": "send_command"}, "Run the tests", None, True,
+                AIToolApprovalKind.STANDARD
             ))
             for _ in range(5):
                 await asyncio.sleep(0)
@@ -670,3 +678,585 @@ class TestDecisionReasons:
         summary, rest = mission_widget_module._split_reason("x" * 500)  # pylint: disable=protected-access
         assert len(summary) <= 220 and summary.endswith("…")
         assert rest == "x" * 500
+
+
+def _view(completed: bool, stage: int, lead_message: str = "All done: the docs are in docs/.") -> MissionView:
+    """Return a minimal mission view at a stage of its journey."""
+    header = MissionHeaderView(
+        title="Write the docs", summary="", status_text="Done" if completed else "Running",
+        tone=MissionTone.SUCCESS if completed else MissionTone.ACCENT, progress=1.0 if completed else 0.5,
+        progress_text="", can_stop=not completed, can_resume=False, is_classic=False, live=not completed,
+        auto_approve="off", stage=stage, stage_tone=MissionTone.SUCCESS if completed else MissionTone.ACCENT
+    )
+    return MissionView(
+        header=header, stats=_stats(), steps=[], agents=[], agents_badge="", activity=[],
+        lead_message=lead_message, lead_message_time="10:30", awaiting_reply=False,
+        completed=completed, report_text="Steps done: 2 of 2  ·  Agents on the team: 1"
+    )
+
+
+class TestMissionJourney:
+    """The mission shows its way from the user's request to the AI's final report."""
+
+    def test_stage_follows_the_mission_status(self) -> None:
+        """Planning, working and done map to the journey's stages."""
+        stage = mission_tab_module._stage  # pylint: disable=protected-access
+        assert stage(MissionStatus.PLANNING, has_plan=False) == 1
+        assert stage(MissionStatus.RUNNING, has_plan=False) == 1
+        assert stage(MissionStatus.RUNNING, has_plan=True) == 2
+        assert stage(MissionStatus.NEEDS_YOU, has_plan=True) == 2
+        assert stage(MissionStatus.COMPLETED, has_plan=True) == 3
+
+    def test_journey_has_room_for_the_current_stage_glow(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The glow and orbit round the current stage are never cut off at the top."""
+        journey = MissionJourney()
+        journey.set_labels(["You asked", "AI plans it", "AI team works", "Job done"])
+        bead = journey._bead()  # pylint: disable=protected-access
+        reach = bead * mission_scene_module._CURRENT_SCALE * mission_scene_module._GLOW_REACH  # pylint: disable=protected-access
+        assert journey._track_y() >= reach  # pylint: disable=protected-access
+        assert journey.sizeHint().height() > journey._track_y() + bead  # pylint: disable=protected-access
+        journey.deleteLater()
+
+    def test_journey_shows_the_current_stage(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The journey bar is given the stage from the view."""
+        widget = MissionWidget()
+        widget.set_mission(_view(completed=False, stage=2))
+
+        assert widget._journey.stage() == 2  # pylint: disable=protected-access
+        assert widget._report_card.isHidden()  # pylint: disable=protected-access
+        assert not widget._lead_card.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_finished_mission_shows_the_final_report(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Once done, the lead's last message is shown as the final report, and the moment is celebrated."""
+        widget = MissionWidget()
+        widget.set_mission(_view(completed=False, stage=2))
+        widget.set_mission(_view(completed=True, stage=3))
+
+        assert not widget._report_card.isHidden()  # pylint: disable=protected-access
+        assert widget._lead_card.isHidden()  # pylint: disable=protected-access
+        assert "docs/" in widget._report_body.text()  # pylint: disable=protected-access
+        assert widget._report_stats.text().startswith("Steps done: 2 of 2")  # pylint: disable=protected-access
+        assert widget._confetti.is_celebrating()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_opening_a_finished_mission_does_not_celebrate_again(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Selecting a mission that finished earlier shows the report without the confetti."""
+        widget = MissionWidget()
+        widget.set_mission(_view(completed=True, stage=3))
+
+        assert not widget._report_card.isHidden()  # pylint: disable=protected-access
+        assert not widget._confetti.is_celebrating()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_follow_up_and_new_mission_are_offered(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The report offers a new mission, which the widget reports for its owner to start."""
+        widget = MissionWidget()
+        requested: list[bool] = []
+        widget.new_mission_requested.connect(lambda: requested.append(True))
+        widget.set_mission(_view(completed=True, stage=3))
+
+        widget._report_new_button.click()  # pylint: disable=protected-access
+
+        assert requested == [True]
+        widget.deleteLater()
+
+    def test_activity_feed_uses_its_set_height(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The activity feed is given its own height, scaled with the zoom, whatever it holds."""
+        widget = MissionWidget()
+        widget.apply_style()
+
+        expected = round(mission_widget_module._ACTIVITY_HEIGHT * StyleManager().zoom_factor())  # pylint: disable=protected-access
+        assert widget._activity_scroll.height() == expected  # pylint: disable=protected-access
+        widget.deleteLater()
+
+
+class TestMissionScene:
+    """The painted scenes keep their state and stop animating when they are done."""
+
+    def test_confetti_falls_and_then_stops(self, qapp, monkeypatch) -> None:  # pylint: disable=unused-argument
+        """A burst is in the air for a while, then it is over and the layer is put away."""
+        clock = [100.0]
+        monkeypatch.setattr(mission_scene_module.time, "monotonic", lambda: clock[0])
+        page = QWidget()
+        page.resize(400, 300)
+        overlay = ConfettiOverlay(page)
+
+        overlay.burst(QPointF(200, 150))
+        assert overlay.is_celebrating()
+        assert overlay.geometry() == page.rect()
+
+        clock[0] += mission_scene_module._CONFETTI_SECONDS + 0.1  # pylint: disable=protected-access
+        assert not overlay.is_celebrating()
+        overlay._tick()  # pylint: disable=protected-access
+        assert overlay.isHidden()
+        page.deleteLater()
+
+    def test_orb_sizes_itself_to_its_diameter(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The orb asks for a square as wide as the diameter it was given, scaled with the zoom."""
+        orb = MissionOrb("✦", MissionTone.ACCENT, 120)
+
+        expected = round(120 * StyleManager().zoom_factor())
+        assert orb.sizeHint().width() == expected
+        assert orb.sizeHint().height() == expected
+        assert orb.minimumSizeHint() == orb.sizeHint()
+        orb.deleteLater()
+
+    def test_orb_animates_only_while_shown(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The orb's timer runs while it is visible and stops when it is hidden."""
+        orb = MissionOrb("✦", MissionTone.ACCENT, 120)
+        orb.show()
+
+        assert orb._timer.isActive()  # pylint: disable=protected-access
+        orb.hide()
+        assert not orb._timer.isActive()  # pylint: disable=protected-access
+        orb.deleteLater()
+
+    def test_journey_reports_its_stage(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The journey keeps the stage it was given."""
+        journey = MissionJourney()
+        journey.set_labels(["You asked", "AI plans it", "AI team works", "Job done"])
+
+        journey.set_stage(2, MissionTone.ACCENT, live=True)
+
+        assert journey.stage() == 2
+        journey.deleteLater()
+
+
+class TestAgentFollowUp:
+    """Waiting agents lead to the full request, and the feed opens to show what happened."""
+
+    def test_read_more_reports_the_decision(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Read more, in a waiting agent's bubble, asks to show that agent's request."""
+        network = AgentNetworkView()
+        network.resize(800, 600)
+        shown: list[str] = []
+        network.decision_details_requested.connect(shown.append)
+        waiting = dataclasses.replace(
+            _agent_view("a", parent_id="lead", activity="waiting"),
+            speech="I need your approval: Run the tests", decision_id="decision-1",
+        )
+        network.set_agents([_agent_view("lead", is_lead=True), waiting], "You", "Approve", "Reject", more_label="Read more")
+        _decision_id, (_approve, _unsure, _reject, more) = network._buttons["a"]  # pylint: disable=protected-access
+
+        assert more.text() == "Read more"
+        more.click()
+        assert shown == ["decision-1"]
+        network.deleteLater()
+
+    def test_unsure_is_offered_beside_approve_and_reject(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A waiting agent's bubble offers Unsure too, and it reports the decision once."""
+        network = AgentNetworkView()
+        network.resize(800, 600)
+        unsure_answers: list[str] = []
+        network.decision_unsure.connect(unsure_answers.append)
+        waiting = dataclasses.replace(
+            _agent_view("a", parent_id="lead", activity="waiting"),
+            speech="I need your approval: Run the tests", decision_id="decision-1",
+        )
+        network.set_agents(
+            [_agent_view("lead", is_lead=True), waiting], "You", "Approve", "Reject",
+            more_label="Read more", unsure_label="Unsure"
+        )
+        _decision_id, buttons = network._buttons["a"]  # pylint: disable=protected-access
+        assert [button.text() for button in buttons] == ["Approve", "Unsure", "Reject", "Read more"]
+
+        buttons[1].click()
+        assert unsure_answers == ["decision-1"]
+        assert not any(button.isEnabled() for button in buttons[:3])
+        network.deleteLater()
+
+    def test_show_decision_highlights_its_card(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Being taken to a decision highlights its card in the inbox until the highlight times out."""
+        widget = MissionWidget()
+        widget.set_decisions([_decision()])
+
+        widget.show_decision("d1")
+        card = widget._decision_cards["d1"]  # pylint: disable=protected-access
+        assert card.objectName() == "MissionDecisionCardHighlight"
+
+        widget._clear_highlight()  # pylint: disable=protected-access
+        assert card.objectName() == "MissionDecisionCard"
+        widget.deleteLater()
+
+    def test_activity_entry_opens_to_show_the_whole_story(self, qapp) -> None:  # pylint: disable=unused-argument
+        """An entry with more to tell opens on click and closes on a second click."""
+        widget = MissionWidget()
+        full = "Please also add a changelog entry, and keep it short."
+        widget._set_activity([  # pylint: disable=protected-access
+            MissionActivityView("✎", "You: “Please also add…”", "10:00:00", MissionTone.ACCENT, more=full),
+            MissionActivityView("▶", "Juno started working", "10:00:01", MissionTone.INFO),
+        ])
+
+        def rows() -> list[QWidget]:
+            layout = widget._activity_layout  # pylint: disable=protected-access
+            return [layout.itemAt(index).widget() for index in range(layout.count())]
+
+        def details() -> list[str]:
+            return [label.text() for row in rows() for label in row.findChildren(QLabel, "MissionActivityMore")]
+
+        assert [row.objectName() for row in rows()] == ["MissionActivityRow", ""]
+        assert not details()
+
+        QTest.mouseClick(rows()[0], Qt.MouseButton.LeftButton)
+        assert rows()[0].objectName() == "MissionActivityRowOpen"
+        assert len(details()) == 1 and "changelog" in details()[0]
+
+        QTest.mouseClick(rows()[0], Qt.MouseButton.LeftButton)
+        assert not details()
+        widget.deleteLater()
+
+    def test_send_button_is_an_icon(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The send button shows a send icon, and keeps its name for tooltips and screen readers."""
+        widget = MissionWidget()
+        widget.apply_style()
+
+        assert not widget._send_button.text()  # pylint: disable=protected-access
+        assert not widget._send_button.icon().isNull()  # pylint: disable=protected-access
+        assert widget._send_button.accessibleName() == "Send"  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_agent_rows_that_cannot_open_are_not_tab_stops(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Only agents whose conversation can be shown take keyboard focus."""
+        widget = MissionWidget()
+        widget._set_agents([_agent_view("lead", is_lead=True), _agent_view("a", parent_id="lead")], "")  # pylint: disable=protected-access
+
+        policies = [row.focusPolicy() for row in widget.findChildren(QFrame, "MissionAgentRow")]
+
+        assert sorted(policies, key=lambda p: p.value) == [Qt.FocusPolicy.NoFocus, Qt.FocusPolicy.StrongFocus]
+        widget.deleteLater()
+
+    def test_lead_waiting_on_a_helper_says_so(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """A lead whose delegation is running names the helper it is waiting for."""
+        tab = MissionTab("mission")
+        lead = MissionAgent(
+            context_id="lead", title="lead", is_lead=True, state=MissionAgentState.WORKING,
+            tool_name="delegate_ai", tool_target=""
+        )
+        snapshot = types.SimpleNamespace(mission=None)
+        speech = tab._agent_speech(lead, "Theo", "", snapshot, None, ["Ada"])  # type: ignore[arg-type]  # pylint: disable=protected-access
+        assert speech == "Waiting for Ada to finish and report back…"
+        tab.deleteLater()
+
+
+class TestFriendlyDashboard:
+    """The dashboard says plainly what is happening and what the user needs to do."""
+
+    def test_waiting_requests_raise_a_banner_that_leads_to_them(self, qapp) -> None:  # pylint: disable=unused-argument
+        """While requests wait, a banner counts them, and Review now highlights the oldest."""
+        widget = MissionWidget()
+        widget.set_mission(_view(completed=False, stage=2))
+        assert widget._attention.isHidden()  # pylint: disable=protected-access
+
+        widget.set_decisions([_decision()])
+        assert not widget._attention.isHidden()  # pylint: disable=protected-access
+        assert widget._attention_text.text().startswith("1 ")  # pylint: disable=protected-access
+
+        widget._attention_button.click()  # pylint: disable=protected-access
+        assert widget._decision_cards["d1"].objectName() == "MissionDecisionCardHighlight"  # pylint: disable=protected-access
+
+        widget.set_decisions([])
+        assert widget._attention.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_auto_approve_level_is_explained(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Each auto-approve level comes with a sentence saying what it means."""
+        widget = MissionWidget()
+        notes = set()
+        for level in ("off", "safe", "all"):
+            widget._show_auto_approve(level)  # pylint: disable=protected-access
+            notes.add(widget._auto_approve_note.text())  # pylint: disable=protected-access
+
+        assert len(notes) == 3 and "" not in notes
+        widget.deleteLater()
+
+    def test_agents_list_is_folded_until_asked_for(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The list of agents is hidden by default and toggled by its button."""
+        widget = MissionWidget()
+        assert widget._agents_list.isHidden()  # pylint: disable=protected-access
+
+        widget._agents_list_button.click()  # pylint: disable=protected-access
+        assert not widget._agents_list.isHidden()  # pylint: disable=protected-access
+        assert "Hide" in widget._agents_list_button.text()  # pylint: disable=protected-access
+
+        widget._agents_list_button.click()  # pylint: disable=protected-access
+        assert widget._agents_list.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_now_line_shows_what_the_lead_says(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The header repeats the lead's latest words, and hides the line when there are none."""
+        widget = MissionWidget()
+        view = _view(completed=False, stage=2)
+        widget.set_mission(dataclasses.replace(
+            view, header=dataclasses.replace(view.header, now_text="Theo: Waiting for Ada to finish…")
+        ))
+        assert not widget._now_row.isHidden()  # pylint: disable=protected-access
+        assert widget._now_text.text() == "Theo: Waiting for Ada to finish…"  # pylint: disable=protected-access
+
+        widget.set_mission(view)
+        assert widget._now_row.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_journey_fill_follows_the_plan_while_the_team_works(self, qapp) -> None:  # pylint: disable=unused-argument
+        """While the team works, the fill heads part of the way to the last stage."""
+        journey = MissionJourney()
+        journey.set_stage(2, MissionTone.ACCENT, live=True, fraction=0.5)
+
+        assert journey._fill_target() == 2.5  # pylint: disable=protected-access
+        journey.deleteLater()
+
+
+def _many_chips(count: int, selected: int) -> list[MissionChipView]:
+    return [
+        MissionChipView(f"m{index}", f"Mission number {index} with a long title", MissionTone.ACCENT, index == selected)
+        for index in range(count)
+    ]
+
+
+def _shown_strip(width: int, chips: list[MissionChipView]) -> MissionWidget:
+    """Return a widget of the given width, shown, with its mission chips laid out."""
+    widget = MissionWidget()
+    widget.resize(width, 800)
+    widget.apply_style()
+    widget.show()
+    widget.set_missions(chips, new_mission_selected=False)
+    for _ in range(3):
+        QApplication.processEvents()
+
+    return widget
+
+
+class TestMissionChipStrip:
+    """Missions that do not fit scroll sideways, with arrows and swipes, while New mission stays put."""
+
+    def test_arrows_appear_only_when_missions_overflow(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A few missions need no arrows; many missions get them."""
+        widget = _shown_strip(1400, _many_chips(2, 0))
+        assert widget._chip_left.isHidden() and widget._chip_right.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+        widget = _shown_strip(700, _many_chips(8, 0))
+        assert not widget._chip_left.isHidden() and not widget._chip_right.isHidden()  # pylint: disable=protected-access
+        assert not widget._chip_left.isEnabled() and widget._chip_right.isEnabled()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_new_mission_stays_outside_the_scrolling_strip(self, qapp) -> None:  # pylint: disable=unused-argument
+        """New mission is never scrolled away."""
+        widget = _shown_strip(700, _many_chips(8, 0))
+        new_chip = widget.findChildren(QPushButton, "MissionNewChip")[0]
+
+        assert not widget._chip_strip.isAncestorOf(new_chip)  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_right_arrow_scrolls_towards_later_missions(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The right arrow moves the strip, after which the left arrow can move it back."""
+        widget = _shown_strip(700, _many_chips(8, 0))
+        strip = widget._chip_strip  # pylint: disable=protected-access
+        strip._animation.setDuration(0)  # pylint: disable=protected-access
+
+        widget._chip_right.click()  # pylint: disable=protected-access
+        QApplication.processEvents()
+
+        assert strip.horizontalScrollBar().value() > 0
+        assert widget._chip_left.isEnabled()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_sideways_swipe_moves_the_strip_and_vertical_scroll_does_not(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A trackpad swipe sideways scrolls the missions; scrolling up or down is left to the page."""
+        widget = _shown_strip(700, _many_chips(8, 0))
+        strip = widget._chip_strip  # pylint: disable=protected-access
+        centre = QPointF(strip.width() / 2, strip.height() / 2)
+
+        def wheel(dx: int, dy: int) -> QWheelEvent:
+            return QWheelEvent(
+                centre, strip.mapToGlobal(centre), QPoint(dx, dy), QPoint(dx, dy),
+                Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier, Qt.ScrollPhase.NoScrollPhase, False
+            )
+
+        vertical = wheel(0, -120)
+        strip.wheelEvent(vertical)
+        assert strip.horizontalScrollBar().value() == 0
+        assert not vertical.isAccepted()
+
+        sideways = wheel(-120, 0)
+        strip.wheelEvent(sideways)
+        assert strip.horizontalScrollBar().value() == 120
+        assert sideways.isAccepted()
+        widget.deleteLater()
+
+    def test_selected_mission_is_scrolled_into_view(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Selecting a mission at the far end glides its chip into view."""
+        widget = _shown_strip(700, _many_chips(8, 7))
+        QTest.qWait(400)
+
+        assert widget._chip_strip.horizontalScrollBar().value() > 0  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_strip_keeps_its_height_when_missions_arrive_later(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Missions added after the strip is shown are drawn at full height, not squashed out of sight."""
+        widget = _shown_strip(1000, _many_chips(1, 0))
+        widget.set_missions(_many_chips(3, 0), new_mission_selected=False)
+        QTest.qWait(50)
+
+        strip = widget._chip_strip  # pylint: disable=protected-access
+        assert strip.height() > 0
+        assert strip.height() == strip.sizeHint().height()
+        widget.deleteLater()
+
+
+class TestSmoothScrolling:
+    """Moving the page to show something glides there rather than jumping."""
+
+    def test_review_now_glides_to_the_request(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The page starts where it was and glides until the request is in view."""
+        widget = MissionWidget()
+        widget.resize(420, 500)
+        widget.apply_style()
+        widget.show()
+        widget.set_mission(_view(completed=False, stage=2))
+        widget.set_decisions([_decision()])
+        for _ in range(3):
+            QApplication.processEvents()
+
+        scrollbar = widget._scroll.verticalScrollBar()  # pylint: disable=protected-access
+        assert scrollbar.value() == 0
+
+        widget._attention_button.click()  # pylint: disable=protected-access
+        QApplication.processEvents()
+        animation = widget._scroll_animations[widget._scroll]  # pylint: disable=protected-access
+        assert animation.state() == QPropertyAnimation.State.Running
+        assert scrollbar.value() < animation.endValue()
+
+        QTest.qWait(animation.duration() + 100)
+        assert scrollbar.value() == animation.endValue() > 0
+        widget.deleteLater()
+
+
+def _waiting_view() -> MissionView:
+    """Return a mission whose helper waits for an answer, with a plan tall enough to scroll."""
+    waiting = dataclasses.replace(
+        _agent_view("a", parent_id="lead", activity="waiting"),
+        speech="I need your approval: Write a file", decision_id="d1",
+    )
+    return dataclasses.replace(
+        _view(completed=False, stage=2),
+        agents=[_agent_view("lead", is_lead=True), waiting],
+        steps=[_step(str(n), MissionStepState.PENDING) for n in range(1, 9)],
+    )
+
+
+class TestAnsweringInPlace:
+    """Answering in an agent's bubble leaves the user where they are; only Read more moves the page."""
+
+    def test_answering_in_a_bubble_keeps_the_agents_in_place(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The call to action above disappears once answered, and the page makes up for it."""
+        widget = MissionWidget()
+        widget.resize(900, 600)
+        widget.apply_style()
+        widget.show()
+        widget.set_mission(_waiting_view())
+        widget.set_decisions([_decision()])
+        approved: list[str] = []
+        widget.decision_approved.connect(approved.append)
+        QTest.qWait(50)
+
+        network = widget._agent_network  # pylint: disable=protected-access
+        content = widget._scroll.widget()  # pylint: disable=protected-access
+        scrollbar = widget._scroll.verticalScrollBar()  # pylint: disable=protected-access
+        scrollbar.setValue(network.mapTo(content, QPoint(0, 0)).y() - 40)
+        on_screen = network.mapTo(content, QPoint(0, 0)).y() - scrollbar.value()
+        assert scrollbar.value() > 0
+
+        network.decision_approved.emit("d1")
+        widget.set_decisions([])
+        QTest.qWait(50)
+
+        assert approved == ["d1"]
+        assert widget._attention.isHidden()  # pylint: disable=protected-access
+        assert network.mapTo(content, QPoint(0, 0)).y() - scrollbar.value() == on_screen
+        widget.deleteLater()
+
+    def test_read_more_glides_to_the_request(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Read more is the one button in a bubble that takes the user to the inbox, gliding there."""
+        widget = MissionWidget()
+        widget.resize(420, 500)
+        widget.apply_style()
+        widget.show()
+        widget.set_mission(_waiting_view())
+        widget.set_decisions([_decision()])
+        QTest.qWait(50)
+
+        widget._agent_network.decision_details_requested.emit("d1")  # pylint: disable=protected-access
+        QApplication.processEvents()
+        animation = widget._scroll_animations[widget._scroll]  # pylint: disable=protected-access
+        assert animation.state() == QPropertyAnimation.State.Running
+        widget.deleteLater()
+
+
+class TestWaitingAlerts:
+    """A mission waiting for an answer is pointed out from wherever the user is."""
+
+    def test_a_waiting_mission_shows_a_count_on_its_chip(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Only the chip of a waiting mission carries the count."""
+        widget = MissionWidget()
+        widget.set_missions([
+            MissionChipView("m1", "First", MissionTone.ACCENT, True),
+            MissionChipView("m2", "Second", MissionTone.WARNING, False, "Needs you", waiting_text="2"),
+        ], False)
+        badges = widget.findChildren(QWidget, "MissionChipWaiting")
+        assert len(badges) == 1
+        assert badges[0].toolTip() == "Needs you"
+        widget.deleteLater()
+
+    def test_another_waiting_mission_is_one_click_away(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The notice names the waiting mission and its button opens it."""
+        widget = MissionWidget()
+        selected: list[str] = []
+        widget.mission_selected.connect(selected.append)
+        widget.set_waiting_elsewhere("m2", "“Second” is waiting for your decision")
+        assert not widget._elsewhere.isHidden()  # pylint: disable=protected-access
+        assert widget._elsewhere_text.text() == "“Second” is waiting for your decision"  # pylint: disable=protected-access
+
+        widget._elsewhere_button.click()  # pylint: disable=protected-access
+        assert selected == ["m2"]
+
+        widget.set_waiting_elsewhere("", "")
+        assert widget._elsewhere.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_each_mission_shows_only_its_own_requests(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Requests from other missions stay out of the inbox and are pointed out; those outside any mission stay."""
+        missions = [
+            types.SimpleNamespace(mission_id="m1", title="First", mode=MissionMode.AUTONOMOUS),
+            types.SimpleNamespace(mission_id="m2", title="Second", mode=MissionMode.AUTONOMOUS),
+        ]
+        service = types.SimpleNamespace(
+            missions=lambda: missions,
+            snapshot=lambda _mission_id: None,
+            status=lambda mission_id: MissionStatus.NEEDS_YOU if mission_id == "m2" else MissionStatus.RUNNING,
+            resume_automatically=lambda: False,
+            decisions=lambda: [
+                MissionDecision(
+                    decision_id="d1", context_id="c1", conversation_title="Helper", mission_id="m2",
+                    tool_name="system", reason="Open a tab", detail=None, destructive=False,
+                    requested_at=datetime.now(timezone.utc),
+                ),
+                MissionDecision(
+                    decision_id="d2", context_id="c2", conversation_title="Chat", mission_id=None,
+                    tool_name="system", reason="Open a tab", detail=None, destructive=False,
+                    requested_at=datetime.now(timezone.utc),
+                ),
+            ],
+        )
+        tab = MissionTab("mission-tab")
+        tab._service = service  # pylint: disable=protected-access
+        tab._starting_new = True  # pylint: disable=protected-access
+        tab._refresh()  # pylint: disable=protected-access
+
+        widget = tab._widget  # pylint: disable=protected-access
+        assert [d.decision_id for d in widget._decisions] == ["d2"]  # pylint: disable=protected-access
+        assert widget._elsewhere_mission_id == "m2"  # pylint: disable=protected-access
+        assert widget._elsewhere_text.text() == "“Second” is waiting for your decision"  # pylint: disable=protected-access
+        assert [chip.waiting_text for chip in widget._chips] == ["", "1"]  # pylint: disable=protected-access
+        tab._service = None  # pylint: disable=protected-access
+        tab.deleteLater()

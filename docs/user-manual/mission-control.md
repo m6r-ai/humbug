@@ -3,7 +3,8 @@
 Mission Control lets Humbug work through an objective by itself. Instead of starting and coordinating each
 conversation yourself, you describe an objective. A lead AI conversation plans the work, hands
 independent parts to delegated AI conversations, and reports its progress back to one dashboard.
-Every approval request from every open conversation collects in a single **Decision Inbox**.
+Approval requests collect in a **Decision Inbox**: each mission shows its own requests, along with
+those from conversations outside any mission.
 
 Mission Control is a tab, like your conversations and editors. Each mission is followed in one of
 two modes, never both at once:
@@ -32,7 +33,7 @@ them until the mindspace is closed, so reopening the tab shows everything that h
 ## Starting a mission
 
 Type what you want to achieve in the box at the bottom (**Tell Humbug what you want to
-achieve…**) and press **Ctrl+Enter** (macOS: **Cmd+Enter**) or click **Send**, just as you
+achieve…**) and press **Ctrl+Enter** (macOS: **Cmd+Enter**) or click the send button (the paper plane), just as you
 would in a conversation. **Enter** on its own starts a new line. You can also click one of the example objectives to
 fill in the box.
 
@@ -104,10 +105,22 @@ such as an approval it was waiting for, is not carried over; resuming starts a n
 
 ## The mission dashboard
 
-When a mission is selected, Mission Control shows:
+When a mission is selected, Mission Control shows, from the top:
 
+- **A reminder when something needs you**: while requests wait in the Decision Inbox, a banner
+  says how many, and **Review now** takes you to the oldest one.
 - **The mission card** with the mission's title, summary, status and progress. Progress counts a
-  task in progress as half done.
+  task in progress as half done. Under the title, a journey bar shows where the mission is on its
+  way: **You asked**, **AI plans it**, **AI team works** and **Job done**. The current stage glows,
+  and while the AI is working a small moon circles it and a soft pulse spreads out from it; it turns amber when the mission is waiting for you. While the
+  team works, the track beyond **AI team works** fills with the share of the plan that is done.
+  Below it, a line gives what the lead is doing right now, in its own words. Under the
+  **Auto-approve** choice, a sentence says what the chosen level means.
+- **Mission accomplished**: when every step is done, a report card appears at the top of the
+  dashboard with a short celebration. It shows the lead's final report, how many steps were done and
+  how many agents took part, with **Ask a follow-up** (to continue the same mission) and
+  **New mission**. While the report is showing, the lead's last message is not repeated in
+  **Latest from the mission lead**.
 - **Latest from the mission lead**: the lead's most recent reply, without its plan. This is where
   the lead reports progress and asks you questions. When it has stopped to wait for you, the card
   is highlighted and marked **Waiting for your reply**: click **Reply**, or type in the box at the
@@ -132,21 +145,42 @@ When a mission is selected, Mission Control shows:
   waiting for you turns into an amber dashed line. Each agent also tells you what it is doing in
   a speech bubble, typed out as it speaks: for example "Writing intro.md for you…", "Bringing in a
   helper agent for this…" or, when it is done, "All done! Anything else I can do for you?". An
-  agent waiting for your approval says what it wants to do and shows **Approve** and **Reject**
-  buttons in its bubble, which work exactly like the same buttons in the Decision Inbox; the
-  bubble gives the request in a line, and the Decision Inbox shows it in full. An agent that is
+  agent waiting for your approval says what it wants to do and shows **Approve**, **Unsure** and
+  **Reject** buttons in its bubble, which work exactly like the same buttons in the Decision Inbox.
+  Answering in the bubble leaves you where you are: the page does not move, even as the banner
+  and cards above change. The bubble gives the request in a line, and **Read more** is the one
+  button that takes you to the request in the Decision Inbox, gliding there and highlighting it,
+  where it is shown in full. Once you approve a delegation, the agent that
+  asked says it is waiting for its helper to finish and report back, for as long as the helper
+  works. An agent that is
   pausing on purpose, for example with the clock tool's sleep, shows a ring and a bar that fill as
   the pause runs down, the time left, and a **Finish waiting** button that ends the pause early so
   the agent carries on straight away. Clicking an agent, or the conversation named on a plan step
   or a request, opens that conversation in a column beside Mission Control, so Mission Control
   stays in view. Hover over a robot for a summary, or click it to
-  open its conversation. A list of the same agents and what each is doing follows the picture. The
+  open its conversation. **Show as a list** under the picture lists the same agents and what each
+  is doing, and **Hide the list** folds it away again. The
   same names are used in the Decision Inbox and Recent Activity.
-- **Recent Activity**: a scrolling feed, newest first, of what has happened in this mission since Mission Control was first opened
-  in this mindspace, including the objective you started it with and each message you sent it.
+- **Recent Activity**: a tall scrolling feed, newest first, of what has happened in this mission
+  since Mission Control was first opened in this mindspace. It includes the objective you started
+  it with, each message you sent from Mission Control, and anything you typed directly into one of
+  the mission's conversations. Entries marked **▶** have more to show: click one to open it and see
+  the whole story, such as your full message, the full approval request, the file or command a tool
+  worked on, or the reviewer's reasoning, and click it again to close it.
 
 Use the chips above the dashboard to switch between missions, or **+ New mission** to start
-another. Each chip has a **⋯** button (you can also right-click the chip) with:
+another. **+ New mission** always stays in view. When there are more missions than fit, the chips
+scroll sideways: use the **‹** and **›** arrows, swipe sideways on a trackpad or touch screen, or
+scroll sideways with a mouse that can. The faded end shows which way more missions lie, and the
+selected mission is always scrolled into view.
+
+A mission waiting for your decision shows a pulsing amber count on its chip. When another mission
+than the one you are looking at is waiting, a banner under the chips names it (or says how many
+are waiting), and **Go there** opens it.
+
+Whenever Mission Control moves the page for you, such as **Review now**, **Read more**, a
+statistic, opening a plan step or the plan history, or opening an activity entry, it glides there
+rather than jumping, so you can see where you have been taken. Each chip has a **⋯** button (you can also right-click the chip) with:
 
 - **Rename**, to give the mission a name of your own. The name stays, even when the lead later
   reports a plan with a different title.
@@ -165,6 +199,9 @@ another. Each chip has a **⋯** button (you can also right-click the chip) with
 | **Stopped** | You stopped the mission |
 
 ### Mission actions
+
+**Stop** is in the mission card. **Switch to Classic mode** and **Delete** are in the **⋯** menu
+beside it, so a mission cannot be deleted by a slip of the mouse aimed at **Stop**.
 
 - **Switch to Classic mode** opens the lead conversation as a tab beside Mission Control and
   moves the mission to Classic mode.
@@ -204,7 +241,7 @@ closes.
 
 There are three ways to switch:
 
-- In Mission Control, **Switch to Classic mode** in the mission header, or
+- In Mission Control, **Switch to Classic mode** in the **⋯** menu of the mission card, or
   **Switch to Autonomous mode** on a Classic mission.
 - Right-click the mission's conversation in the conversations sidebar and choose
   **Switch to Classic mode** or **Switch to Autonomous mode**, whichever it is not in.
@@ -234,11 +271,26 @@ By default every action that changes files, runs commands or sends data waits fo
 mission in Autonomous mode you can let an **AI reviewer** make some of those decisions instead.
 Choose a level with **Auto-approve** in the mission header:
 
-| Level | What the reviewer may approve |
+| Level | What is approved without you |
 |---|---|
 | **Off** (the default) | Nothing. Every request comes to you. |
-| **Safe actions** | Requests Humbug does not mark destructive, such as creating or writing files and delegating to a helper. Deleting, moving, overwriting, terminal commands and network writes always come to you. |
-| **Everything** | Any request, including destructive ones. Humbug asks you to confirm before turning this on. |
+| **Safe actions** | File changes the journal records that Humbug does not mark destructive, approved straight away. Other requests Humbug does not mark destructive, such as delegating to a helper, go to the reviewer. Deleting, moving, overwriting, terminal commands and network writes always come to you. |
+| **Everything** | Any request. File changes the journal records are approved straight away; everything else goes to the reviewer. Humbug asks you to confirm before turning this on. |
+
+**File changes the journal records** are not sent to the reviewer, because the journal keeps what
+the file held before, so the change can usually be reversed. At **Safe actions**, each such change
+that Humbug does not mark destructive is approved as it comes. At **Everything**, Mission Control
+approves the first one in an agent's turn and turns on that conversation's own **Auto-approve file
+changes until your next message** switch, the same one you can turn on from an approval card in a
+conversation (see [AI tools](ai-tools.md)), so the agent's other changes in that turn go ahead
+without stopping. The switch turns itself off when the turn ends, so each turn's first change is
+checked against the level again, and choosing **Safe actions** or **Off** turns it off straight
+away. Each of these approvals shows in Recent Activity as **Approved … — recorded in the journal**.
+
+Recorded is not the same as guaranteed to be reversible. The journal only covers files inside the
+mindspace, outside `.humbug`, and below its size limit, and reversing a file does not undo what has
+already happened because of it, such as a file that was run or committed. Anything the journal does
+not record, such as moving a folder of files, follows the reviewer rules below.
 
 For each request in scope, the reviewer, using the same AI model as the mission's lead, is given
 the request together with what you have asked for: the mission's original objective, the messages
@@ -274,8 +326,10 @@ guaranteed. Use **Everything** only for work you are comfortable not supervising
 
 ## The Decision Inbox
 
-The Decision Inbox lists every tool approval waiting in the mindspace, from any open
-conversation, not only from missions. Each request shows the tool, the reason it gave, any
+The Decision Inbox lists the tool approvals waiting for the mission you are looking at, together
+with those from conversations that are not part of any mission. Requests from other missions are
+not mixed in: they show on their own mission's page, and the chip and banner described above tell
+you they are waiting. Each request shows the tool, the reason it gave, any
 detail such as a diff, which conversation asked, and whether the operation is destructive.
 
 - **Approve** allows the operation. It is red for destructive operations.

@@ -666,10 +666,10 @@ def get_arabic_strings() -> LanguageStrings:
 
         mission_control="مركز المهام",
         mission_subtitle="خطّط وفوّض ووافق في مكان واحد",
-        mission_hero_title="ما الذي تودّ تحقيقه؟",
+        mission_hero_title="ما الذي تريد أن يفعله فريق الذكاء الاصطناعي من أجلك؟",
         mission_hero_subtitle=(
-            "صِف هدفًا. يخطّط ذكاء اصطناعي رئيسي للعمل وينسّق مع مساعدين من الذكاء الاصطناعي ويُبقيك "
-            "صاحب القرار: أي إجراء يغيّر الملفات أو ينفّذ أوامر يبقى بانتظار موافقتك."
+            "صِف العمل وسلّمه. يخطّط له قائد المهمة ويستعين بمساعدين ويعمل في الخلفية "
+            "ثم يعود إليك بتقرير نهائي. لا تتدخّل إلا عندما يحتاج إلى رأيك."
         ),
         mission_examples_label="جرّب أحد هذه الأمثلة",
         mission_example_1="راجع هذا المشروع واكتب نظرة عامة موجزة على بنيته",
@@ -707,7 +707,7 @@ def get_arabic_strings() -> LanguageStrings:
         mission_agent_idle="خامل",
         mission_agent_error="توقّف بسبب خطأ",
         mission_inbox_title="صندوق القرارات",
-        mission_inbox_empty="لا شيء بانتظار قرارك. تظهر هنا طلبات الموافقة من جميع المحادثات المفتوحة.",
+        mission_inbox_empty="لا شيء بانتظار قرارك. تظهر هنا طلبات الموافقة من هذه المهمة ومن المحادثات التي لا تنتمي إلى أي مهمة.",
         mission_approve="موافقة",
         mission_unsure="غير متأكد",
         mission_reject="رفض",
@@ -771,8 +771,9 @@ def get_arabic_strings() -> LanguageStrings:
         mission_auto_approve_safe="الإجراءات الآمنة",
         mission_auto_approve_all="كل شيء",
         mission_auto_approve_tip=(
-            "يوافق مراجع ذكاء اصطناعي على طلبات هذه المهمة عندما تتوافق بوضوح مع الهدف، وما لا يتأكد "
-            "منه يُعرض عليك. لا تشمل الإجراءات الآمنة أبدًا الحذف أو النقل أو الاستبدال أو أوامر "
+            "تتم الموافقة فورًا على تغييرات الملفات التي يسجّلها السجل، ومع «كل شيء» لبقية كل دورة. "
+            "أما غيرها فيراجعه مراجع ذكاء اصطناعي لا يوافق إلا عندما تتوافق بوضوح مع الهدف، وما لا "
+            "يتأكد منه يُعرض عليك. لا تشمل الإجراءات الآمنة أبدًا الحذف أو النقل أو الاستبدال أو أوامر "
             "الطرفية أو الإرسال عبر الشبكة."
         ),
         mission_auto_approve_all_title="الموافقة على كل شيء تلقائيًا؟",
@@ -829,5 +830,34 @@ def get_arabic_strings() -> LanguageStrings:
         mission_wait_left="متبقٍ {0}",
         mission_activity_started_prompt="بدأت المهمة: «{0}»",
         mission_activity_guidance_prompt="أنت: «{0}»",
-        mission_composer_hint_enter="Enter لسطر جديد"
+        mission_composer_hint_enter="Enter لسطر جديد",
+        mission_stage_asked="طلبك",
+        mission_stage_planning="الذكاء الاصطناعي يخطط",
+        mission_stage_working="فريق الذكاء الاصطناعي يعمل",
+        mission_stage_done="اكتملت المهمة",
+        mission_report_title="تم إنجاز المهمة",
+        mission_report_caption="التقرير النهائي من قائد المهمة",
+        mission_report_stats="الخطوات المكتملة: {0} من {1}  ·  الوكلاء في الفريق: {2}",
+        mission_follow_up="اطرح سؤال متابعة",
+        mission_activity_reversible_approved="تمت الموافقة على {0} — مُسجَّل في السجل",
+        mission_activity_user_message="أنت، إلى {0}: «{1}»",
+        mission_say_waiting_helpers="بانتظار أن يُنهي {0} العمل ويرفع تقريره…",
+        mission_read_more="اقرأ المزيد",
+        mission_activity_open_tip="انقر لمعرفة ما حدث",
+        mission_attention="{0} طلب/طلبات تحتاج إلى قرارك",
+        mission_review_now="راجِع الآن",
+        mission_more_actions="إجراءات أخرى",
+        mission_agents_show_list="اعرض كقائمة",
+        mission_agents_hide_list="أخفِ القائمة",
+        mission_auto_approve_off_note="كل إجراء يغيّر الملفات أو ينفّذ أوامر أو يرسل بيانات ينتظرك.",
+        mission_auto_approve_safe_note="تمضي تغييرات الملفات المسجّلة والطلبات الآمنة؛ وأي إجراء مُتلف ينتظرك.",
+        mission_auto_approve_all_note=(
+            "يعمل الفريق دون توقف؛ ولا يُعرض عليك إلا ما لا "
+            "يتأكد منه مراجع الذكاء الاصطناعي."
+        ),
+        mission_scroll_left="مرّر المهام إلى اليسار",
+        mission_scroll_right="مرّر المهام إلى اليمين",
+        mission_waiting_elsewhere="المهمة «{0}» بانتظار قرارك",
+        mission_waiting_elsewhere_many="{0} مهام أخرى بانتظار قراراتك",
+        mission_go_to_waiting="انتقل إليها"
     )

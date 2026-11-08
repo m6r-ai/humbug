@@ -3,14 +3,17 @@
 import re
 import sys
 
-from PySide6.QtCore import QEasingCurve, QPoint, QSize, Qt, QTimer, QVariantAnimation, Signal
+from PySide6.QtCore import (
+    QEasingCurve, QEvent, QObject, QPoint, QPointF, QPropertyAnimation, QSize, Qt, QTimer, QVariantAnimation, Signal,
+    SignalInstance
+)
 from PySide6.QtGui import (
-    QColor, QHideEvent, QIcon, QKeyEvent, QMouseEvent, QPainter, QPen, QPixmap, QResizeEvent, QShowEvent,
-    QTextCursor
+    QColor, QHideEvent, QIcon, QKeyEvent, QMouseEvent, QPainter, QPainterPath, QPen, QPixmap, QResizeEvent,
+    QLinearGradient, QPaintEvent, QShowEvent, QTextCursor, QWheelEvent
 )
 from PySide6.QtWidgets import (
     QBoxLayout, QCheckBox, QFrame, QGridLayout, QHBoxLayout, QLabel, QLayout, QPlainTextEdit, QPushButton,
-    QScrollArea, QSizePolicy, QVBoxLayout, QWidget
+    QScrollArea, QScroller, QSizePolicy, QVBoxLayout, QWidget
 )
 
 from desktop.color_role import ColorRole
@@ -20,8 +23,9 @@ from desktop.mission_tab.mission_display import (
     MissionStatTarget, MissionStatView, MissionStepState, MissionStepView, MissionTone, MissionView
 )
 from desktop.mission_tab.mission_network import AgentNetworkView
+from desktop.mission_tab.mission_scene import ConfettiOverlay, MissionJourney, MissionOrb
 from desktop.mission_tab.mission_painted import (
-    BusySpinner, GlyphBadge, MissionProgressBar, StatusPill, StepMarker, blend, fade_in, readable, surface_colors,
+    BusySpinner, GlyphBadge, StatusPill, StepMarker, blend, fade_in, readable, surface_colors,
     tone_color, tone_rgba, tone_text
 )
 from desktop.style_manager import StyleManager
@@ -35,7 +39,7 @@ _SIDE_COLUMN_WIDTH = 360
 _DETAIL_MAX_LINES = 10
 _DETAIL_MAX_CHARS = 900
 _LEAD_MESSAGE_MAX_CHARS = 2400
-_ACTIVITY_HEIGHT = 300
+_ACTIVITY_HEIGHT = 520
 _COMPOSER_MAX_LINES = 6
 
 
@@ -115,6 +119,32 @@ def _breakable(text: str) -> str:
     return text
 
 
+def _send_icon(color: QColor, size: int) -> QIcon:
+    """Return a paper-plane icon, the usual sign for sending a message."""
+    ratio = 2
+    pixmap = QPixmap(size * ratio, size * ratio)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    pixmap.setDevicePixelRatio(ratio)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    unit = size / 24
+    plane = QPainterPath()
+    plane.moveTo(3 * unit, 3.5 * unit)
+    plane.lineTo(21.5 * unit, 12 * unit)
+    plane.lineTo(3 * unit, 20.5 * unit)
+    plane.lineTo(5.5 * unit, 12 * unit)
+    plane.closeSubpath()
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(color)
+    painter.drawPath(plane)
+    # The fold along the middle, cut out so the plane reads as paper.
+    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
+    painter.setPen(QPen(Qt.GlobalColor.transparent, 1.6 * unit))
+    painter.drawLine(QPointF(5.5 * unit, 12 * unit), QPointF(12 * unit, 12 * unit))
+    painter.end()
+    return QIcon(pixmap)
+
+
 class _WrapLabel(QLabel):
     """
     A word-wrapped label that always keeps the height its text needs at its width.
@@ -160,9 +190,22 @@ def _dot_icon(tone: MissionTone, ringed: bool) -> QIcon:
 
 
 class _ClickableFrame(QFrame):
-    """A frame that reports clicks, used for agent rows."""
+    """
+    A frame that reports clicks, used for step and agent rows.
+
+    It takes focus and answers Return and Space as a click, so the rows it is
+    used for can be opened without a mouse.
+    """
 
     clicked = Signal()
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
+    def set_clickable(self, clickable: bool) -> None:
+        """Choose whether the frame can be clicked; one that cannot is not a stop when tabbing."""
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus if clickable else Qt.FocusPolicy.NoFocus)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Report a left click."""
@@ -172,6 +215,170 @@ class _ClickableFrame(QFrame):
             return
 
         super().mousePressEvent(event)
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        """Report Return and Space as a click."""
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
+            self.clicked.emit()
+            event.accept()
+            return
+
+        super().keyPressEvent(event)
+
+
+class _EdgeFade(QWidget):
+    """A fade over one end of the chip strip, hinting that more missions lie that way."""
+
+    def __init__(self, direction: int, parent: QWidget) -> None:
+        super().__init__(parent)
+        self._direction = direction
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.hide()
+
+    def paintEvent(self, event: QPaintEvent) -> None:
+        """Fade from the page colour at the edge to clear."""
+        super().paintEvent(event)
+        page, _card = surface_colors()
+        clear = QColor(page)
+        clear.setAlphaF(0.0)
+        gradient = QLinearGradient(0, 0, self.width(), 0)
+        gradient.setColorAt(0.0, page if self._direction < 0 else clear)
+        gradient.setColorAt(1.0, clear if self._direction < 0 else page)
+        painter = QPainter(self)
+        painter.fillRect(self.rect(), gradient)
+        painter.end()
+
+
+class _ChipStrip(QScrollArea):
+    """
+    A row of mission chips that scrolls sideways when there are more than fit.
+
+    A sideways swipe on a trackpad or a touch screen moves it, while an
+    up-and-down scroll is left to the page.  It reports when its position or
+    extent changes, so arrow buttons beside it can follow.
+    """
+
+    moved = Signal()
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("MissionChipStrip")
+        self.setFrameShape(QFrame.Shape.NoFrame)
+        self.setWidgetResizable(True)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._keep_in_view: QWidget | None = None
+        scrollbar = self.horizontalScrollBar()
+        scrollbar.valueChanged.connect(lambda _value: self.moved.emit())
+        scrollbar.rangeChanged.connect(self._on_range_changed)
+        self._animation = QPropertyAnimation(scrollbar, b"value", self)
+        self._animation.setDuration(260)
+        self._animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+        QScroller.grabGesture(self.viewport(), QScroller.ScrollerGestureType.TouchGesture)
+        self._fades = {-1: _EdgeFade(-1, self), 1: _EdgeFade(1, self)}
+        self.moved.connect(self._update_fades)
+
+    def _update_fades(self) -> None:
+        """Fade each end that has more missions beyond it."""
+        width = round(36 * StyleManager().zoom_factor())
+        for direction, fade in self._fades.items():
+            fade.setGeometry(0 if direction < 0 else self.width() - width, 0, width, self.height())
+            fade.setVisible(self.can_scroll(direction))
+            fade.raise_()
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        """Keep the fades at the ends."""
+        super().resizeEvent(event)
+        self._update_fades()
+
+    def sizeHint(self) -> QSize:
+        content = self.widget()
+        height = content.sizeHint().height() if content is not None else 0
+        return QSize(super().sizeHint().width(), height)
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        """
+        Take the chips' height whenever they are laid out again.
+
+        A scroll area does not tell the layout it sits in when its content changes
+        size, so without this the strip keeps the height it had when it was empty.
+        """
+        if watched is self.widget() and event.type() == QEvent.Type.LayoutRequest:
+            self.updateGeometry()
+
+        return super().eventFilter(watched, event)
+
+    def minimumSizeHint(self) -> QSize:
+        return QSize(0, self.sizeHint().height())
+
+    def keep_in_view(self, widget: QWidget | None) -> None:
+        """Scroll a chip into view once the strip has been laid out."""
+        self._keep_in_view = widget
+        self.updateGeometry()
+
+    def _on_range_changed(self, _minimum: int, _maximum: int) -> None:
+        """Bring the chip asked for into view now its position is known, and report the change."""
+        if self._keep_in_view is not None:
+            self._glide_into_view(self._keep_in_view)
+            self._keep_in_view = None
+
+        self.moved.emit()
+
+    def _glide_into_view(self, chip: QWidget) -> None:
+        """Glide sideways just far enough for a chip to be fully in view."""
+        content = self.widget()
+        if content is None or not content.isAncestorOf(chip):
+            return
+
+        margin = round(24 * StyleManager().zoom_factor())
+        left = chip.mapTo(content, QPoint(0, 0)).x()
+        scrollbar = self.horizontalScrollBar()
+        view = self.viewport().width()
+        if left - margin < scrollbar.value():
+            target = left - margin
+
+        elif left + chip.width() + margin > scrollbar.value() + view:
+            target = left + chip.width() + margin - view
+
+        else:
+            return
+
+        self._glide(max(scrollbar.minimum(), min(scrollbar.maximum(), target)))
+
+    def _glide(self, target: int) -> None:
+        """Move smoothly to a scroll position."""
+        self._animation.stop()
+        self._animation.setStartValue(self.horizontalScrollBar().value())
+        self._animation.setEndValue(target)
+        self._animation.start()
+
+    def can_scroll(self, direction: int) -> bool:
+        """Return whether there are chips further left (direction -1) or right (direction 1)."""
+        scrollbar = self.horizontalScrollBar()
+        return scrollbar.value() > scrollbar.minimum() if direction < 0 else scrollbar.value() < scrollbar.maximum()
+
+    def overflowing(self) -> bool:
+        """Return whether the chips are wider than the strip."""
+        return self.horizontalScrollBar().maximum() > 0
+
+    def scroll_page(self, direction: int) -> None:
+        """Glide most of a strip's width left (direction -1) or right (direction 1)."""
+        scrollbar = self.horizontalScrollBar()
+        start = self._animation.endValue() if self._animation.state() == QPropertyAnimation.State.Running else scrollbar.value()
+        target = max(scrollbar.minimum(), min(scrollbar.maximum(), int(start) + direction * round(self.viewport().width() * 0.7)))
+        self._glide(target)
+
+    def wheelEvent(self, event: QWheelEvent) -> None:
+        """Move sideways on a sideways swipe; leave an up-and-down scroll to the page."""
+        delta = event.pixelDelta() if not event.pixelDelta().isNull() else event.angleDelta()
+        if delta.x() == 0 or abs(delta.x()) < abs(delta.y()):
+            event.ignore()
+            return
+
+        scrollbar = self.horizontalScrollBar()
+        scrollbar.setValue(scrollbar.value() - delta.x())
+        event.accept()
 
 
 class _ComposerEdit(QPlainTextEdit):
@@ -196,7 +403,10 @@ class _ComposerEdit(QPlainTextEdit):
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         """Send on Ctrl+Enter (Cmd+Enter on macOS); every other key edits as usual."""
-        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+        submits = event.modifiers() & (
+            Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.MetaModifier
+        )
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and submits:
             self.submitted.emit()
             event.accept()
             return
@@ -272,6 +482,34 @@ class MissionWidget(QWidget):
         self._shown_decisions: set[str] = set()
         self._shown_activity: set[tuple[str, str]] = set()
         self._stat_values: dict[MissionStatTarget, str] = {}
+        self._shown_completed = False
+        self._shown_title = ""
+        self._decision_cards: dict[str, QFrame] = {}
+        self._highlighted_card: QFrame | None = None
+        self._open_activity: set[tuple[str, str]] = set()
+        self._just_opened_activity: tuple[str, str] | None = None
+
+        # Takes the highlight off a decision card the user was taken to.
+        self._highlight_timer = QTimer(self)
+        self._highlight_timer.setSingleShot(True)
+        self._highlight_timer.setInterval(1600)
+        self._highlight_timer.timeout.connect(self._clear_highlight)
+
+        # Moving the page to show something glides there.  The move waits for the next turn of the
+        # event loop, so a card that has just been shown or rebuilt is measured once laid out.
+        self._glide_target: QWidget | None = None
+        self._glide_timer = QTimer(self)
+        self._glide_timer.setSingleShot(True)
+        self._glide_timer.setInterval(0)
+        self._glide_timer.timeout.connect(self._glide_now)
+
+        # While an answer given in an agent's card takes effect, the cards above it change size; the
+        # agents are held where they were on screen so the user is not carried somewhere else.
+        self._hold_offset: int | None = None
+        self._hold_timer = QTimer(self)
+        self._hold_timer.setSingleShot(True)
+        self._hold_timer.setInterval(2500)
+        self._hold_timer.timeout.connect(self._release_hold)
 
         self._spinner_timer = QTimer(self)
         self._spinner_timer.setInterval(90)
@@ -289,6 +527,7 @@ class MissionWidget(QWidget):
         self._scroll.setWidgetResizable(True)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         root.addWidget(self._scroll, 1)
+        self._scroll_animations: dict[QScrollArea, QPropertyAnimation] = {}
 
         content = QWidget()
         content.setObjectName("MissionContent")
@@ -296,11 +535,50 @@ class MissionWidget(QWidget):
         self._content_layout.setSpacing(16)
         self._scroll.setWidget(content)
 
+        # New mission stays in place on the left; the missions themselves scroll beside it, with
+        # arrows that appear when there are more than fit.
         self._chip_row = QWidget()
-        self._chip_layout = QHBoxLayout(self._chip_row)
+        row_layout = QHBoxLayout(self._chip_row)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.setSpacing(8)
+        self._new_chip_layout = QHBoxLayout()
+        self._new_chip_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.addLayout(self._new_chip_layout)
+        self._chip_left = self._chip_arrow("‹", -1)
+        row_layout.addWidget(self._chip_left)
+        self._chip_strip = _ChipStrip()
+        self._chip_strip.moved.connect(self._update_chip_arrows)
+        strip_content = QWidget()
+        self._chip_layout = QHBoxLayout(strip_content)
         self._chip_layout.setContentsMargins(0, 0, 0, 0)
         self._chip_layout.setSpacing(8)
+        self._chip_strip.setWidget(strip_content)
+        row_layout.addWidget(self._chip_strip, 1)
+        self._chip_right = self._chip_arrow("›", 1)
+        row_layout.addWidget(self._chip_right)
         self._content_layout.addWidget(self._chip_row)
+
+        # Another mission waiting for an answer, so it is noticed from wherever the user is.
+        self._elsewhere = QFrame()
+        self._elsewhere.setObjectName("MissionAttention")
+        elsewhere_layout = QHBoxLayout(self._elsewhere)
+        elsewhere_layout.setContentsMargins(16, 8, 10, 8)
+        elsewhere_layout.setSpacing(12)
+        self._elsewhere_bell = GlyphBadge("!", MissionTone.WARNING, 24)
+        elsewhere_layout.addWidget(self._elsewhere_bell)
+        self._elsewhere_text = QLabel()
+        self._elsewhere_text.setObjectName("MissionAttentionText")
+        self._elsewhere_text.setWordWrap(True)
+        self._elsewhere_text.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        elsewhere_layout.addWidget(self._elsewhere_text, 1)
+        self._elsewhere_button = QPushButton()
+        self._elsewhere_button.setObjectName("MissionReplyButton")
+        self._elsewhere_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._elsewhere_button.clicked.connect(self._open_waiting_mission)
+        elsewhere_layout.addWidget(self._elsewhere_button)
+        self._elsewhere_mission_id = ""
+        self._elsewhere.hide()
+        self._content_layout.addWidget(self._elsewhere)
 
         self._body = QBoxLayout(QBoxLayout.Direction.LeftToRight)
         self._body.setSpacing(16)
@@ -314,6 +592,7 @@ class MissionWidget(QWidget):
         main_layout.addWidget(self._hero)
         self._lead_card = self._build_lead_card()
         self._classic_card = self._build_classic_card()
+        self._report_card = self._build_report_card()
         self._dashboard = self._build_dashboard()
         main_layout.addWidget(self._dashboard)
         main_layout.addStretch(1)
@@ -333,10 +612,27 @@ class MissionWidget(QWidget):
         self._body.addStretch(0)
 
         root.addWidget(self._build_composer())
+        self._confetti = ConfettiOverlay(self)
 
         self.retranslate()
         self.set_mission(None)
         self.set_decisions([])
+
+    def _chip_arrow(self, glyph: str, direction: int) -> QPushButton:
+        """Create an arrow that scrolls the mission chips one way."""
+        button = QPushButton(glyph)
+        button.setObjectName("MissionChipArrow")
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.clicked.connect(lambda _checked=False: self._chip_strip.scroll_page(direction))
+        button.hide()
+        return button
+
+    def _update_chip_arrows(self) -> None:
+        """Show the arrows only when the chips overflow, and enable each while there is more that way."""
+        overflowing = self._chip_strip.overflowing()
+        for button, direction in ((self._chip_left, -1), (self._chip_right, 1)):
+            button.setVisible(overflowing)
+            button.setEnabled(self._chip_strip.can_scroll(direction))
 
     def _build_top_bar(self) -> QWidget:
         """Create the title bar."""
@@ -374,8 +670,8 @@ class MissionWidget(QWidget):
         layout.setContentsMargins(48, 40, 48, 40)
         layout.setSpacing(12)
 
-        badge = GlyphBadge("◎", MissionTone.ACCENT, 72)
-        layout.addWidget(badge, 0, Qt.AlignmentFlag.AlignHCenter)
+        self._hero_orb = MissionOrb("◎", MissionTone.ACCENT, 150)
+        layout.addWidget(self._hero_orb, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self._hero_title = QLabel()
         self._hero_title.setObjectName("MissionHeroTitle")
@@ -475,15 +771,31 @@ class MissionWidget(QWidget):
         title_row.addLayout(status_column)
         text_column.addLayout(title_row)
 
+        # Where the mission is on its way from the user's request to the AI's report.
+        self._journey = MissionJourney()
+        text_column.addWidget(self._journey)
+
+        # What is happening right now, in the lead's own words.
+        self._now_row = QFrame()
+        self._now_row.setObjectName("MissionNowRow")
+        now_layout = QHBoxLayout(self._now_row)
+        now_layout.setContentsMargins(12, 8, 12, 8)
+        now_layout.setSpacing(10)
+        self._now_badge = GlyphBadge("★", MissionTone.ACCENT, 24)
+        now_layout.addWidget(self._now_badge, 0, Qt.AlignmentFlag.AlignTop)
+        self._now_text = QLabel()
+        self._now_text.setObjectName("MissionNowText")
+        self._now_text.setWordWrap(True)
+        self._now_text.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        now_layout.addWidget(self._now_text, 1)
+        text_column.addWidget(self._now_row)
+
         self._summary = QLabel()
         self._summary.setObjectName("MissionSummary")
         self._summary.setWordWrap(True)
         self._summary.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self._summary.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         text_column.addWidget(self._summary)
-        text_column.addSpacing(6)
-        self._progress_bar = MissionProgressBar()
-        text_column.addWidget(self._progress_bar)
         text_column.addSpacing(4)
         self._interrupted_notice = QLabel()
         self._interrupted_notice.setObjectName("MissionNotice")
@@ -499,21 +811,19 @@ class MissionWidget(QWidget):
         self._resume_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._resume_button.clicked.connect(self.resume_requested)
         actions.addWidget(self._resume_button)
-        self._open_lead_button = QPushButton()
-        self._open_lead_button.setObjectName("MissionGhostButton")
-        self._open_lead_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._open_lead_button.clicked.connect(self.switch_to_classic_requested)
-        actions.addWidget(self._open_lead_button)
         self._stop_button = QPushButton()
-        self._stop_button.setObjectName("MissionGhostButton")
+        self._stop_button.setObjectName("MissionStopButton")
         self._stop_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._stop_button.clicked.connect(self.stop_requested)
         actions.addWidget(self._stop_button)
-        self._remove_button = QPushButton()
-        self._remove_button.setObjectName("MissionGhostButton")
-        self._remove_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._remove_button.clicked.connect(self.remove_requested)
-        actions.addWidget(self._remove_button)
+        # Switching mode and deleting are rarer, and deleting is not to be hit by accident beside
+        # Stop, so they wait behind a menu.
+        self._more_button = QPushButton("⋯")
+        self._more_button.setObjectName("MissionGhostButton")
+        self._more_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._more_button.clicked.connect(self._show_more_actions)
+        actions.addWidget(self._more_button)
+        self._can_switch_to_classic = True
         actions.addStretch(1)
         text_column.addLayout(actions)
 
@@ -542,7 +852,34 @@ class MissionWidget(QWidget):
         auto_row.addWidget(segment)
         auto_row.addStretch(1)
         text_column.addWidget(self._auto_approve_row)
+        # What the chosen level means, in plain words, so the user need not hover for a tooltip.
+        self._auto_approve_note = QLabel()
+        self._auto_approve_note.setObjectName("MissionHintText")
+        self._auto_approve_note.setWordWrap(True)
+        self._auto_approve_note.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        text_column.addWidget(self._auto_approve_note)
         header_layout.addLayout(text_column, 1)
+
+        # A call to action when something waits for the user, so it is never missed below the fold.
+        self._attention = QFrame()
+        self._attention.setObjectName("MissionAttention")
+        attention_layout = QHBoxLayout(self._attention)
+        attention_layout.setContentsMargins(16, 10, 10, 10)
+        attention_layout.setSpacing(12)
+        attention_layout.addWidget(GlyphBadge("!", MissionTone.WARNING, 28))
+        self._attention_text = QLabel()
+        self._attention_text.setObjectName("MissionAttentionText")
+        self._attention_text.setWordWrap(True)
+        self._attention_text.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        attention_layout.addWidget(self._attention_text, 1)
+        self._attention_button = QPushButton()
+        self._attention_button.setObjectName("MissionReplyButton")
+        self._attention_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._attention_button.clicked.connect(self._review_first_decision)
+        attention_layout.addWidget(self._attention_button)
+        self._attention.hide()
+        layout.addWidget(self._attention)
+        layout.addWidget(self._report_card)
         layout.addWidget(header_card)
         layout.addWidget(self._lead_card)
         layout.addWidget(self._classic_card)
@@ -599,6 +936,8 @@ class MissionWidget(QWidget):
         self._lower.addWidget(self._plan_card, 3)
 
         self._agents_card, agents_layout = self._card()
+        self._agents_card.installEventFilter(self)
+        self._scroll.verticalScrollBar().rangeChanged.connect(lambda _low, _high: self._keep_hold())
         header, self._agents_title, self._agents_pill = self._card_header("◆", MissionTone.INFO)
         agents_layout.addLayout(header)
         self._agents_empty = QLabel()
@@ -607,21 +946,35 @@ class MissionWidget(QWidget):
         agents_layout.addWidget(self._agents_empty)
         self._agent_network = AgentNetworkView()
         self._agent_network.agent_clicked.connect(self.conversation_requested)
-        self._agent_network.decision_approved.connect(self.decision_approved)
-        self._agent_network.decision_rejected.connect(self.decision_rejected)
-        self._agent_network.wait_finish_requested.connect(self.wait_finish_requested)
+        self._agent_network.decision_approved.connect(lambda d: self._answer_in_place(self.decision_approved, d))
+        self._agent_network.decision_unsure.connect(lambda d: self._answer_in_place(self.decision_unsure, d))
+        self._agent_network.decision_rejected.connect(lambda d: self._answer_in_place(self.decision_rejected, d))
+        self._agent_network.decision_details_requested.connect(self.show_decision)
+        self._agent_network.wait_finish_requested.connect(
+            lambda c: self._answer_in_place(self.wait_finish_requested, c)
+        )
         agents_layout.addWidget(self._agent_network)
-        self._agents_layout = QVBoxLayout()
+        # The same agents as a list, for reading their states at a glance; folded away by default
+        # because the picture above already shows them.
+        self._agents_list_button = QPushButton()
+        self._agents_list_button.setObjectName("MissionLinkButton")
+        self._agents_list_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._agents_list_button.clicked.connect(self._toggle_agents_list)
+        agents_layout.addWidget(self._agents_list_button, 0, Qt.AlignmentFlag.AlignLeft)
+        self._agents_list = QWidget()
+        self._agents_layout = QVBoxLayout(self._agents_list)
+        self._agents_layout.setContentsMargins(0, 0, 0, 0)
         self._agents_layout.setSpacing(8)
-        agents_layout.addLayout(self._agents_layout)
+        self._agents_list.hide()
+        agents_layout.addWidget(self._agents_list)
         agents_layout.addStretch(1)
 
-        # The agent network needs the full width to spread out, so it sits above the plan.
-        layout.addWidget(self._agents_card)
+        # The plan says what the work is, so it comes before the picture of who is doing it.
         self._lower_container = QWidget()
         self._lower_container.setLayout(self._lower)
         self._lower.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._lower_container)
+        layout.addWidget(self._agents_card)
         return dashboard
 
     def _build_lead_card(self) -> QWidget:
@@ -665,6 +1018,77 @@ class MissionWidget(QWidget):
         actions.addStretch(1)
         layout.addLayout(actions)
         return lead_card
+
+    def _build_report_card(self) -> QWidget:
+        """Create the card that presents the AI's final report once the mission is done."""
+        card = QFrame()
+        card.setObjectName("MissionReportCard")
+        layout = QHBoxLayout(card)
+        layout.setContentsMargins(24, 22, 24, 22)
+        layout.setSpacing(20)
+        self._report_orb = MissionOrb("✓", MissionTone.SUCCESS, 120)
+        layout.addWidget(self._report_orb, 0, Qt.AlignmentFlag.AlignTop)
+
+        column = QVBoxLayout()
+        column.setSpacing(6)
+        self._report_caption = QLabel()
+        self._report_caption.setObjectName("MissionCaption")
+        column.addWidget(self._report_caption)
+        self._report_title = QLabel()
+        self._report_title.setObjectName("MissionReportTitle")
+        self._report_title.setWordWrap(True)
+        column.addWidget(self._report_title)
+        self._report_stats = QLabel()
+        self._report_stats.setObjectName("MissionReportStats")
+        self._report_stats.setWordWrap(True)
+        column.addWidget(self._report_stats)
+        column.addSpacing(4)
+        self._report_body = QLabel()
+        self._report_body.setObjectName("MissionLeadText")
+        self._report_body.setWordWrap(True)
+        self._report_body.setTextFormat(Qt.TextFormat.MarkdownText)
+        self._report_body.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self._report_body.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        column.addWidget(self._report_body)
+
+        actions = QHBoxLayout()
+        actions.setSpacing(8)
+        actions.setContentsMargins(0, 8, 0, 0)
+        self._follow_up_button = QPushButton()
+        self._follow_up_button.setObjectName("MissionReplyButton")
+        self._follow_up_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._follow_up_button.clicked.connect(self.focus_composer)
+        actions.addWidget(self._follow_up_button)
+        self._report_new_button = QPushButton()
+        self._report_new_button.setObjectName("MissionGhostButton")
+        self._report_new_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._report_new_button.clicked.connect(self.new_mission_requested)
+        actions.addWidget(self._report_new_button)
+        actions.addStretch(1)
+        column.addLayout(actions)
+        layout.addLayout(column, 1)
+        card.hide()
+        return card
+
+    def _set_report(self, view: MissionView) -> None:
+        """Show the final report when the mission is done, celebrating the moment it finishes."""
+        completed = view.completed
+        self._report_card.setVisible(completed)
+        if completed:
+            text = view.lead_message
+            shown = text if len(text) <= _LEAD_MESSAGE_MAX_CHARS else text[:_LEAD_MESSAGE_MAX_CHARS].rstrip() + " …"
+            self._report_body.setText(shown)
+            self._report_body.setVisible(bool(text))
+            self._report_stats.setText(view.report_text)
+            # The view has no mission id, so a mission is recognised by its title: a mission
+            # that has just finished celebrates, and one opened after it finished does not.
+            if not self._shown_completed and self._shown_title == view.header.title:
+                fade_in(self._report_card, 420)
+                orb = self._report_orb
+                self._confetti.burst(QPointF(orb.mapTo(self, orb.rect().center())))
+
+        self._shown_completed = completed
+        self._shown_title = view.header.title
 
     def _build_classic_card(self) -> QWidget:
         """Create the panel shown instead of the dashboard while a mission is in classic mode."""
@@ -805,6 +1229,14 @@ class MissionWidget(QWidget):
             button.setText(text)
 
         self._caption.setText(strings.mission_caption)
+        self._journey.set_labels([
+            strings.mission_stage_asked, strings.mission_stage_planning, strings.mission_stage_working,
+            strings.mission_stage_done
+        ])
+        self._report_caption.setText(strings.mission_report_caption.upper())
+        self._report_title.setText("🎉  " + strings.mission_report_title)
+        self._follow_up_button.setText("✎  " + strings.mission_follow_up)
+        self._report_new_button.setText("+  " + strings.mission_new)
         self._classic_title.setText(strings.mission_classic_title)
         self._classic_body.setText(strings.mission_classic_body)
         self._to_autonomous_button.setText("✦  " + strings.mission_switch_to_autonomous)
@@ -812,9 +1244,15 @@ class MissionWidget(QWidget):
         self._lead_title.setText(strings.mission_lead_message_title)
         self._lead_pill.set_pill(strings.mission_lead_waiting, MissionTone.WARNING)
         self._reply_button.setText(strings.mission_reply)
-        self._open_lead_button.setText(strings.mission_switch_to_classic)
+        self._elsewhere_button.setText(strings.mission_go_to_waiting)
+        for button, text in ((self._chip_left, strings.mission_scroll_left), (self._chip_right, strings.mission_scroll_right)):
+            button.setToolTip(text)
+            button.setAccessibleName(text)
+
+        self._more_button.setToolTip(strings.mission_more_actions)
+        self._more_button.setAccessibleName(strings.mission_more_actions)
+        self._update_agents_list_button()
         self._stop_button.setText(strings.mission_stop)
-        self._remove_button.setText(strings.mission_delete)
         self._auto_approve_label.setText(strings.mission_auto_approve)
         self._auto_approve_row.setToolTip(strings.mission_auto_approve_tip)
         self._auto_approve_buttons["off"].setText(strings.mission_auto_approve_off)
@@ -830,7 +1268,8 @@ class MissionWidget(QWidget):
         self._inbox_empty.setText(strings.mission_inbox_empty)
         self._activity_title.setText(strings.mission_activity_title)
         self._activity_empty.setText(strings.mission_activity_empty)
-        self._send_button.setText(strings.mission_send)
+        self._send_button.setToolTip(f"{strings.mission_send} ({submit_key_text()})")
+        self._send_button.setAccessibleName(strings.mission_send)
         self._resume_button.setText("↻  " + strings.mission_resume)
         self._interrupted_notice.setText(strings.mission_interrupted_notice)
         self._auto_resume.setText(strings.mission_auto_resume)
@@ -862,11 +1301,13 @@ class MissionWidget(QWidget):
 
         self._chips = chips
         _clear_layout(self._chip_layout)
+        _clear_layout(self._new_chip_layout)
         self._new_chip = QPushButton("+  " + self._language_manager.strings().mission_new)
         self._new_chip.setObjectName("MissionNewChip")
         self._new_chip.setCursor(Qt.CursorShape.PointingHandCursor)
         self._new_chip.clicked.connect(self.new_mission_requested)
-        self._chip_layout.addWidget(self._new_chip)
+        self._new_chip_layout.addWidget(self._new_chip)
+        selected_group: QWidget | None = None
 
         strings = self._language_manager.strings()
         for chip in chips:
@@ -880,7 +1321,8 @@ class MissionWidget(QWidget):
             button.setObjectName("MissionChipLabel")
             button.setIcon(_dot_icon(chip.tone, chip.selected))
             button.setIconSize(QSize(12, 12))
-            button.setToolTip(chip.title)
+            button.setToolTip(f"{chip.title} — {chip.status_text}" if chip.status_text else chip.title)
+            button.setAccessibleName(f"{chip.title} — {chip.status_text}" if chip.status_text else chip.title)
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             button.setMaximumWidth(400)
             button.clicked.connect(lambda _checked=False, m=chip.mission_id: self.mission_selected.emit(m))
@@ -889,6 +1331,13 @@ class MissionWidget(QWidget):
                 lambda pos, b=button, m=chip.mission_id: self._show_chip_menu(m, b.mapToGlobal(pos))
             )
             group_layout.addWidget(button)
+            if chip.waiting_text:
+                # A mission waiting for an answer says so on its chip, so it is noticed from any mission.
+                waiting = StatusPill()
+                waiting.setObjectName("MissionChipWaiting")
+                waiting.set_pill(chip.waiting_text, MissionTone.WARNING, pulsing=True)
+                waiting.setToolTip(chip.status_text)
+                group_layout.addWidget(waiting, 0, Qt.AlignmentFlag.AlignVCenter)
 
             menu_button = QPushButton("⋯")
             menu_button.setObjectName("MissionChipMenu")
@@ -902,9 +1351,13 @@ class MissionWidget(QWidget):
             )
             group_layout.addWidget(menu_button)
             self._chip_layout.addWidget(group)
+            if chip.selected:
+                selected_group = group
 
         self._chip_layout.addStretch(1)
         self._chip_row.setVisible(bool(chips))
+        self._chip_strip.keep_in_view(selected_group)
+        self._update_chip_arrows()
         self._update_new_chip()
 
     def _show_chip_menu(self, mission_id: str, position: QPoint) -> None:
@@ -946,6 +1399,8 @@ class MissionWidget(QWidget):
         if view is None:
             self._set_spinners([])
             self._set_lead_message("", "", False)
+            self._shown_completed = False
+            self._shown_title = ""
             self._update_composer_target(None)
             return
 
@@ -957,17 +1412,28 @@ class MissionWidget(QWidget):
         self._lower_container.setVisible(not classic)
         self._agents_card.setVisible(not classic)
         self._activity_card.setVisible(not classic)
-        self._open_lead_button.setVisible(not classic)
+        self._can_switch_to_classic = not classic
         self._auto_approve_row.setVisible(not classic)
         self._show_auto_approve(header.auto_approve)
-        self._set_lead_message("" if classic else view.lead_message, view.lead_message_time, view.awaiting_reply)
+        # Once the mission is done, its last message is the final report and is shown as one.
+        self._set_lead_message(
+            "" if classic or view.completed else view.lead_message, view.lead_message_time, view.awaiting_reply
+        )
+        self._set_report(view)
+        self._journey.setVisible(not classic)
+        self._journey.set_stage(
+            header.stage, header.stage_tone, header.live, header.progress if header.stage == 2 else 0.0
+        )
+        self._update_attention()
 
         self._title.setText(header.title)
         self._summary.setText(header.summary)
         self._summary.setVisible(bool(header.summary) and header.summary.strip() != header.title.strip())
         self._status_pill.set_pill(header.status_text, header.tone, pulsing=header.live)
         self._progress_label.setText(header.progress_text)
-        self._progress_bar.set_progress(header.progress, header.tone)
+        self._now_row.setVisible(not classic and bool(header.now_text))
+        self._now_badge.set_badge("★", header.now_tone)
+        self._now_text.setText(header.now_text)
         self._stop_button.setVisible(header.can_stop)
         self._resume_button.setVisible(header.can_resume)
         self._interrupted_notice.setVisible(header.can_resume)
@@ -1030,18 +1496,111 @@ class MissionWidget(QWidget):
         label.setText(old)
         animation.start(QVariantAnimation.DeletionPolicy.DeleteWhenStopped)
 
+    def glide_to(self, widget: QWidget) -> None:
+        """Scroll the page smoothly until a widget is in view, once the layout has caught up."""
+        self._glide_target = widget
+        self._glide_timer.start()
+
+    def _glide_now(self) -> None:
+        """Glide just far enough for the requested widget to be in view."""
+        widget = self._glide_target
+        self._glide_target = None
+        self._release_hold()
+        if widget is None or not widget.isVisible():
+            return
+
+        # The activity feed scrolls on its own; everything else is on the page.
+        area = self._activity_scroll if self._activity_scroll.widget().isAncestorOf(widget) else self._scroll
+        content = area.widget()
+        if content is None or not content.isAncestorOf(widget):
+            return
+
+        margin = round((8 if area is self._activity_scroll else 24) * self._style_manager.zoom_factor())
+        top = widget.mapTo(content, QPoint(0, 0)).y()
+        scrollbar = area.verticalScrollBar()
+        view = area.viewport().height()
+        if top - margin < scrollbar.value():
+            target = top - margin
+
+        elif top + widget.height() + margin > scrollbar.value() + view:
+            # Show the bottom, but never push the top out of view.
+            target = min(top - margin, top + widget.height() + margin - view)
+
+        else:
+            return
+
+        animation = self._scroll_animations.get(area)
+        if animation is None:
+            animation = QPropertyAnimation(scrollbar, b"value", self)
+            animation.setDuration(420)
+            animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+            self._scroll_animations[area] = animation
+
+        animation.stop()
+        animation.setStartValue(scrollbar.value())
+        animation.setEndValue(max(scrollbar.minimum(), min(scrollbar.maximum(), target)))
+        animation.start()
+
+    def _answer_in_place(self, answered: SignalInstance, key: str) -> None:
+        """Pass on an answer given in an agent's card, keeping the agents where they are on screen."""
+        content = self._scroll.widget()
+        if self._agent_network.isVisible() and content is not None:
+            top = self._agent_network.mapTo(content, QPoint(0, 0)).y()
+            self._hold_offset = top - self._scroll.verticalScrollBar().value()
+            self._hold_timer.start()
+
+        answered.emit(key)
+
+    def _keep_hold(self) -> None:
+        """Scroll so the agents stay where they were on screen when the page above them changes."""
+        content = self._scroll.widget()
+        if self._hold_offset is None or content is None or not self._agent_network.isVisible():
+            return
+
+        top = self._agent_network.mapTo(content, QPoint(0, 0)).y()
+        self._scroll.verticalScrollBar().setValue(top - self._hold_offset)
+
+    def _release_hold(self) -> None:
+        """Let the page move freely again."""
+        self._hold_offset = None
+        self._hold_timer.stop()
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        """Keep the agents in place while an answer given in their cards takes effect."""
+        if watched is self._agents_card and event.type() == QEvent.Type.Move:
+            self._keep_hold()
+
+        return super().eventFilter(watched, event)
+
+    def set_waiting_elsewhere(self, mission_id: str, text: str) -> None:
+        """
+        Say that another mission is waiting for the user, or hide the notice.
+
+        Args:
+            mission_id: The mission to go to, or "" when no other mission is waiting
+            text: What to tell the user
+        """
+        self._elsewhere_mission_id = mission_id
+        self._elsewhere_text.setText(text)
+        self._elsewhere.setVisible(bool(mission_id))
+
+    def _open_waiting_mission(self) -> None:
+        """Go to the mission that is waiting for the user."""
+        if self._elsewhere_mission_id:
+            self.mission_selected.emit(self._elsewhere_mission_id)
+
     def _on_stat_clicked(self, target: MissionStatTarget) -> None:
         """Filter the plan, or bring the related card into view."""
         if target == MissionStatTarget.INBOX:
-            self._scroll.ensureWidgetVisible(self._inbox_card)
+            self.glide_to(self._inbox_card)
             return
 
         if target == MissionStatTarget.AGENTS:
-            self._scroll.ensureWidgetVisible(self._agents_card)
+            self.glide_to(self._agents_card)
             return
 
         self._set_step_filter(MissionStatTarget.ALL_STEPS if target == self._step_filter else target)
-        self._scroll.ensureWidgetVisible(self._plan_card)
+        self.glide_to(self._plan_card)
 
     def _set_step_filter(self, target: MissionStatTarget) -> None:
         """Show only the steps a statistic stands for."""
@@ -1125,6 +1684,7 @@ class MissionWidget(QWidget):
             row = _ClickableFrame()
             row.setObjectName("MissionStepRowOpen" if expanded else "MissionStepRow")
             row.setCursor(Qt.CursorShape.PointingHandCursor)
+            row.setAccessibleName(f"{step.number}. {step.title} — {step.status_text}")
             row.clicked.connect(lambda t=step.task_id: self._toggle_step(t))
             row_layout = QHBoxLayout(row)
             row_layout.setContentsMargins(4, 0, 8, 0)
@@ -1150,16 +1710,17 @@ class MissionWidget(QWidget):
                 text.addWidget(self._step_progress(step))
 
             row_layout.addLayout(text, 1)
-            side = QVBoxLayout()
-            side.setContentsMargins(0, 8, 0, 0)
-            side.setSpacing(4)
+            # The status and the open/close chevron sit on one line, level with the title.
+            side = QHBoxLayout()
+            side.setContentsMargins(0, 10, 0, 0)
+            side.setSpacing(8)
+            side.setAlignment(Qt.AlignmentFlag.AlignTop)
             pill = StatusPill()
             pill.set_pill(step.status_text, step.tone)
-            side.addWidget(pill, 0, Qt.AlignmentFlag.AlignRight)
+            side.addWidget(pill, 0, Qt.AlignmentFlag.AlignTop)
             chevron = QLabel("▼" if expanded else "▶")
             chevron.setObjectName("MissionStepChevron")
-            side.addWidget(chevron, 0, Qt.AlignmentFlag.AlignRight)
-            side.addStretch(1)
+            side.addWidget(chevron, 0, Qt.AlignmentFlag.AlignTop)
             row_layout.addLayout(side)
             self._steps_layout.addWidget(row)
 
@@ -1186,7 +1747,7 @@ class MissionWidget(QWidget):
         self._history_panel.setVisible(self._history_open)
         if self._history_open:
             fade_in(self._history_panel)
-            QTimer.singleShot(0, lambda: self._scroll.ensureWidgetVisible(self._history_panel))
+            self.glide_to(self._history_panel)
 
     @staticmethod
     def _phase_key(phase: MissionPhaseView) -> str:
@@ -1212,6 +1773,7 @@ class MissionWidget(QWidget):
             row = _ClickableFrame()
             row.setObjectName("MissionPhaseRowOpen" if expanded else "MissionPhaseRow")
             row.setCursor(Qt.CursorShape.PointingHandCursor)
+            row.setAccessibleName(phase.title)
             row.clicked.connect(lambda k=key: self._toggle_phase(k))
             row_layout = QVBoxLayout(row)
             row_layout.setContentsMargins(12, 10, 12, 10)
@@ -1333,6 +1895,7 @@ class MissionWidget(QWidget):
         if step.task_id == self._just_expanded:
             self._just_expanded = ""
             fade_in(box)
+            self.glide_to(box)
 
         return box
 
@@ -1350,12 +1913,15 @@ class MissionWidget(QWidget):
         strings = self._language_manager.strings()
         self._agent_network.set_agents(
             agents, strings.mission_you, strings.mission_approve, strings.mission_reject,
-            strings.mission_finish_waiting, strings.mission_wait_left
+            strings.mission_finish_waiting, strings.mission_wait_left, strings.mission_read_more,
+            strings.mission_unsure
         )
         spinners: list[BusySpinner] = []
         for agent in agents:
             row = _ClickableFrame()
             row.setObjectName("MissionAgentRow")
+            row.setAccessibleName(f"{agent.title} — {agent.role_text}")
+            row.set_clickable(agent.clickable)
             if agent.clickable:
                 row.setCursor(Qt.CursorShape.PointingHandCursor)
                 row.clicked.connect(lambda c=agent.context_id: self.conversation_requested.emit(c))
@@ -1403,7 +1969,10 @@ class MissionWidget(QWidget):
             return
 
         self._decisions = decisions
+        self._update_attention()
         _clear_layout(self._decisions_layout)
+        self._decision_cards = {}
+        self._highlighted_card = None
         self._inbox_empty.setVisible(not decisions)
         strings = self._language_manager.strings()
         for decision in decisions:
@@ -1488,10 +2057,56 @@ class MissionWidget(QWidget):
             buttons.addWidget(reject, 1)
             layout.addLayout(buttons)
             self._decisions_layout.addWidget(card)
+            self._decision_cards[decision.decision_id] = card
             if decision.decision_id not in self._shown_decisions:
                 fade_in(card, 320)
 
         self._shown_decisions = {decision.decision_id for decision in decisions}
+
+    def show_decision(self, decision_id: str) -> None:
+        """Bring a decision's card in the inbox into view and highlight it, so its whole request can be read."""
+        card = self._decision_cards.get(decision_id)
+        if card is None:
+            return
+
+        self._clear_highlight()
+        self.glide_to(card)
+        self._set_card_name(card, "MissionDecisionCardHighlight")
+        self._highlighted_card = card
+        self._highlight_timer.start()
+
+    def _clear_highlight(self) -> None:
+        """Take the highlight off the decision card the user was taken to."""
+        card = self._highlighted_card
+        self._highlighted_card = None
+        if card is None or card not in self._decision_cards.values():
+            return
+
+        destructive = any(
+            d.destructive for d in self._decisions or [] if self._decision_cards.get(d.decision_id) is card
+        )
+        self._set_card_name(card, "MissionDecisionCardDestructive" if destructive else "MissionDecisionCard")
+
+    @staticmethod
+    def _set_card_name(card: QFrame, name: str) -> None:
+        """Restyle a card by changing its object name."""
+        card.setObjectName(name)
+        card.style().unpolish(card)
+        card.style().polish(card)
+
+    def _toggle_activity(self, key: tuple[str, str]) -> None:
+        """Open or close an activity entry's details."""
+        if key in self._open_activity:
+            self._open_activity.discard(key)
+
+        else:
+            self._open_activity.add(key)
+            self._just_opened_activity = key
+
+        activity = self._activity
+        self._activity = None
+        if activity is not None:
+            self._set_activity(activity)
 
     def _set_activity(self, activity: list[MissionActivityView]) -> None:
         """Show the activity feed."""
@@ -1502,21 +2117,53 @@ class MissionWidget(QWidget):
         self._activity = activity
         _clear_layout(self._activity_layout)
         self._activity_empty.setVisible(not activity)
+        strings = self._language_manager.strings()
         for entry in activity:
-            row = QWidget()
-            layout = QHBoxLayout(row)
-            layout.setContentsMargins(0, 2, 0, 2)
+            key = (entry.text, entry.time_text)
+            opened = bool(entry.more) and key in self._open_activity
+            row: QWidget
+            if entry.more:
+                clickable = _ClickableFrame()
+                clickable.setObjectName("MissionActivityRowOpen" if opened else "MissionActivityRow")
+                clickable.setCursor(Qt.CursorShape.PointingHandCursor)
+                clickable.setToolTip(strings.mission_activity_open_tip)
+                clickable.setAccessibleName(entry.text)
+                clickable.clicked.connect(lambda k=key: self._toggle_activity(k))
+                row = clickable
+
+            else:
+                row = QWidget()
+
+            column = QVBoxLayout(row)
+            column.setContentsMargins(4, 3, 4, 3)
+            column.setSpacing(4)
+            layout = QHBoxLayout()
             layout.setSpacing(10)
             layout.addWidget(GlyphBadge(entry.glyph, entry.tone, 22), 0, Qt.AlignmentFlag.AlignTop)
             text = QLabel(entry.text)
             text.setObjectName("MissionActivityText")
             text.setWordWrap(True)
+            text.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
             layout.addWidget(text, 1)
             when = QLabel(entry.time_text)
             when.setObjectName("MissionTimeText")
             layout.addWidget(when, 0, Qt.AlignmentFlag.AlignTop)
+            if entry.more:
+                chevron = QLabel("▼" if opened else "▶")
+                chevron.setObjectName("MissionTimeText")
+                layout.addWidget(chevron, 0, Qt.AlignmentFlag.AlignTop)
+
+            column.addLayout(layout)
+            if opened:
+                more = _WrapLabel(_breakable(entry.more))
+                more.setObjectName("MissionActivityMore")
+                more.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+                column.addWidget(more)
+                if key == self._just_opened_activity:
+                    self._just_opened_activity = None
+                    self.glide_to(row)
+
             self._activity_layout.addWidget(row)
-            key = (entry.text, entry.time_text)
             if self._shown_activity and key not in self._shown_activity:
                 fade_in(row, 360)
 
@@ -1569,9 +2216,56 @@ class MissionWidget(QWidget):
         self.submit_requested.emit(text)
 
     def _show_auto_approve(self, level: str) -> None:
-        """Mark the current auto-approve level."""
+        """Mark the current auto-approve level, and say what it means."""
         for value, button in self._auto_approve_buttons.items():
             button.setChecked(value == level)
+
+        strings = self._language_manager.strings()
+        self._auto_approve_note.setText({
+            "off": strings.mission_auto_approve_off_note,
+            "safe": strings.mission_auto_approve_safe_note,
+            "all": strings.mission_auto_approve_all_note,
+        }.get(level, ""))
+
+    def _show_more_actions(self) -> None:
+        """Offer the mission's less common actions."""
+        strings = self._language_manager.strings()
+        menu = self._style_manager.create_menu(self)
+        switch = menu.addAction(strings.mission_switch_to_classic) if self._can_switch_to_classic else None
+        menu.addSeparator()
+        delete = menu.addAction(strings.mission_delete)
+        chosen = menu.exec(self._more_button.mapToGlobal(self._more_button.rect().bottomLeft()))
+        if chosen is not None and chosen == switch:
+            self.switch_to_classic_requested.emit()
+
+        elif chosen is not None and chosen == delete:
+            self.remove_requested.emit()
+
+    def _toggle_agents_list(self) -> None:
+        """Show or hide the agents as a list."""
+        self._agents_list.setVisible(self._agents_list.isHidden())
+        self._update_agents_list_button()
+
+    def _update_agents_list_button(self) -> None:
+        """Label the agents list toggle for what it will do."""
+        strings = self._language_manager.strings()
+        self._agents_list_button.setText(
+            ("▼  " + strings.mission_agents_hide_list) if not self._agents_list.isHidden()
+            else ("▶  " + strings.mission_agents_show_list)
+        )
+
+    def _review_first_decision(self) -> None:
+        """Take the user to the oldest request waiting for them."""
+        if self._decisions:
+            self.show_decision(self._decisions[0].decision_id)
+
+    def _update_attention(self) -> None:
+        """Show the call to action while requests wait for the user."""
+        count = len(self._decisions or [])
+        self._attention.setVisible(self._has_mission and count > 0)
+        strings = self._language_manager.strings()
+        self._attention_text.setText(strings.mission_attention.format(count))
+        self._attention_button.setText(strings.mission_review_now)
 
     def _on_auto_approve_clicked(self, level: str) -> None:
         """Report a chosen auto-approve level; the owner confirms it and then redraws the actual level."""
@@ -1639,6 +2333,9 @@ class MissionWidget(QWidget):
         self._content_layout.setContentsMargins(24, 20, 24, 24)
         self._activity_scroll.setFixedHeight(round(_ACTIVITY_HEIGHT * self._style_manager.zoom_factor()))
         self._input.set_margin(round(6 * self._style_manager.zoom_factor()))
+        icon_size = round(18 * self._style_manager.zoom_factor())
+        self._send_button.setIcon(_send_icon(self._style_manager.get_color(ColorRole.TEXT_RECOMMENDED), icon_size))
+        self._send_button.setIconSize(QSize(icon_size, icon_size))
         new_stylesheet = self._build_stylesheet()
         if new_stylesheet != self.styleSheet():
             self.setStyleSheet(new_stylesheet)
@@ -1685,7 +2382,9 @@ class MissionWidget(QWidget):
         secondary = sm.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)
         secondary_hover = sm.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)
         secondary_pressed = sm.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)
-        on_primary = sm.get_color_str(ColorRole.TEXT_BRIGHT)
+        on_primary = sm.get_color_str(ColorRole.TEXT_RECOMMENDED)
+        disabled_fill = sm.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)
+        disabled_text = sm.get_color_str(ColorRole.TEXT_DISABLED)
         mono = sm.make_monospace_font().family()
 
         focus = readable(tone_color(MissionTone.ACCENT), card_color, 3.0).name()
@@ -1693,7 +2392,6 @@ class MissionWidget(QWidget):
         accent_soft = tone_rgba(MissionTone.ACCENT, 0.08)
         accent_line = tone_rgba(MissionTone.ACCENT, 0.45)
         warning_soft = blend(tone_color(MissionTone.WARNING), 0.10, card_color).name()
-        danger_text = tone_text(MissionTone.DANGER, 0.0).name()
         danger_soft = blend(tone_color(MissionTone.DANGER), 0.07, page_color).name()
         hover_color = QColor(sm.get_color(ColorRole.TEXT_PRIMARY))
         hover = f"rgba({hover_color.red()}, {hover_color.green()}, {hover_color.blue()}, 0.05)"
@@ -1770,6 +2468,54 @@ class MissionWidget(QWidget):
                 background-color: {blend(tone_color(MissionTone.ACCENT), 0.04, card_color).name()};
                 border: 1px solid {tone_rgba(MissionTone.ACCENT, 0.30)};
             }}
+            #MissionNowRow {{
+                background-color: {accent_soft};
+                border: 1px solid {tone_rgba(MissionTone.ACCENT, 0.25)};
+                border-radius: {round(10 * zoom)}px;
+            }}
+            #MissionWidget QLabel#MissionNowText {{
+                color: {heading};
+                font-size: {fs * 1.02:.1f}pt;
+            }}
+            #MissionAttention {{
+                background-color: {warning_soft};
+                border: 1px solid {tone_rgba(MissionTone.WARNING, 0.6)};
+                border-radius: {radius}px;
+            }}
+            #MissionWidget QLabel#MissionAttentionText {{
+                color: {heading};
+                font-weight: bold;
+            }}
+            QPushButton#MissionStopButton {{
+                background-color: {danger_fill};
+                color: {on_primary};
+                border: 1px solid {danger_fill};
+            }}
+            QPushButton#MissionStopButton:hover {{
+                background-color: {danger_hover};
+            }}
+            QPushButton#MissionStopButton:pressed {{
+                background-color: {danger_pressed};
+            }}
+            QPushButton#MissionStopButton:focus {{
+                border: 2px solid {focus};
+            }}
+            #MissionReportCard {{
+                background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 {blend(tone_color(MissionTone.SUCCESS), 0.14, card_color).name()},
+                    stop:1 {blend(tone_color(MissionTone.ACCENT), 0.06, card_color).name()});
+                border: 1px solid {tone_rgba(MissionTone.SUCCESS, 0.55)};
+                border-radius: {radius}px;
+            }}
+            #MissionWidget QLabel#MissionReportTitle {{
+                color: {heading};
+                font-size: {fs * 1.6:.1f}pt;
+                font-weight: bold;
+            }}
+            #MissionWidget QLabel#MissionReportStats {{
+                color: {readable(tone_color(MissionTone.SUCCESS), card_color).name()};
+                font-weight: 600;
+            }}
             #MissionLeadCardWaiting {{
                 background-color: {warning_soft};
                 border: 1px solid {tone_rgba(MissionTone.WARNING, 0.55)};
@@ -1818,6 +2564,35 @@ class MissionWidget(QWidget):
                 border-bottom-left-radius: {round(13 * zoom)}px;
                 padding: {round(5 * zoom)}px {round(6 * zoom)}px {round(5 * zoom)}px {round(14 * zoom)}px;
                 text-align: left;
+            }}
+            #MissionChipStrip {{
+                background: transparent;
+            }}
+            QPushButton#MissionChipArrow {{
+                min-width: {round(28 * zoom)}px;
+                max-width: {round(28 * zoom)}px;
+                min-height: {round(28 * zoom)}px;
+                max-height: {round(28 * zoom)}px;
+                padding: 0px;
+                border-radius: {round(14 * zoom)}px;
+                background-color: {secondary};
+                border: 1px solid transparent;
+                color: {text};
+                font-size: {fs * 1.25:.1f}pt;
+                font-weight: bold;
+            }}
+            QPushButton#MissionChipArrow:hover {{
+                background-color: {secondary_hover};
+            }}
+            QPushButton#MissionChipArrow:pressed {{
+                background-color: {secondary_pressed};
+            }}
+            QPushButton#MissionChipArrow:focus {{
+                border: 2px solid {focus};
+            }}
+            QPushButton#MissionChipArrow:disabled {{
+                color: {disabled_text};
+                background-color: {disabled_fill};
             }}
             QPushButton#MissionChipMenu {{
                 border-top-right-radius: {round(13 * zoom)}px;
@@ -1919,32 +2694,22 @@ class MissionWidget(QWidget):
 
             QPushButton#MissionGhostButton, QPushButton#MissionSecondaryButton, QPushButton#MissionApprove,
             QPushButton#MissionApproveDestructive, QPushButton#MissionReplyButton, QPushButton#MissionStopTaskButton,
-            QPushButton#MissionButtonProbe {{
+            QPushButton#MissionStopButton, QPushButton#MissionButtonProbe {{
                 min-height: {control_height - round(14 * zoom)}px;
                 border-radius: {small_radius}px;
                 padding: {round(6 * zoom)}px {round(14 * zoom)}px;
                 font-size: {fs * 0.9:.1f}pt;
                 font-weight: 600;
             }}
-            QPushButton#MissionGhostButton {{
-                background: transparent;
-                color: {text};
-                border: 1px solid {line};
-                font-weight: 500;
-            }}
-            QPushButton#MissionGhostButton:hover {{
-                background-color: {hover};
-                border-color: {accent_line};
-            }}
-            QPushButton#MissionSecondaryButton {{
+            QPushButton#MissionGhostButton, QPushButton#MissionSecondaryButton {{
                 background-color: {secondary};
                 color: {text};
                 border: 1px solid transparent;
             }}
-            QPushButton#MissionSecondaryButton:hover {{
+            QPushButton#MissionGhostButton:hover, QPushButton#MissionSecondaryButton:hover {{
                 background-color: {secondary_hover};
             }}
-            QPushButton#MissionSecondaryButton:pressed {{
+            QPushButton#MissionGhostButton:pressed, QPushButton#MissionSecondaryButton:pressed {{
                 background-color: {secondary_pressed};
             }}
             QPushButton#MissionApprove, QPushButton#MissionReplyButton {{
@@ -1970,12 +2735,23 @@ class MissionWidget(QWidget):
                 background-color: {danger_pressed};
             }}
             QPushButton#MissionStopTaskButton {{
-                background: transparent;
-                color: {danger_text};
-                border: 1px solid {tone_rgba(MissionTone.DANGER, 0.5)};
+                background-color: {danger_fill};
+                color: {on_primary};
+                border: 1px solid {danger_fill};
             }}
             QPushButton#MissionStopTaskButton:hover {{
-                background-color: {tone_rgba(MissionTone.DANGER, 0.08)};
+                background-color: {danger_hover};
+            }}
+            QPushButton#MissionStopTaskButton:pressed {{
+                background-color: {danger_pressed};
+            }}
+            QPushButton#MissionGhostButton:disabled, QPushButton#MissionSecondaryButton:disabled,
+            QPushButton#MissionApprove:disabled, QPushButton#MissionApproveDestructive:disabled,
+            QPushButton#MissionReplyButton:disabled, QPushButton#MissionStopTaskButton:disabled,
+            QPushButton#MissionStopButton:disabled {{
+                background-color: {disabled_fill};
+                color: {disabled_text};
+                border: 1px solid {disabled_fill};
             }}
             QPushButton#MissionGhostButton:focus, QPushButton#MissionSecondaryButton:focus,
             QPushButton#MissionApprove:focus, QPushButton#MissionApproveDestructive:focus,
@@ -2021,21 +2797,20 @@ class MissionWidget(QWidget):
             }}
 
             QPushButton#MissionHistoryButton {{
-                background-color: transparent;
-                color: {link};
-                border: 1px solid {line};
+                background-color: {secondary};
+                color: {text};
+                border: 1px solid transparent;
                 border-radius: {round(8 * zoom)}px;
                 padding: {round(3 * zoom)}px {round(10 * zoom)}px;
                 font-size: {fs * 0.82:.1f}pt;
                 font-weight: 600;
             }}
             QPushButton#MissionHistoryButton:hover {{
-                background-color: {hover};
+                background-color: {secondary_hover};
             }}
             QPushButton#MissionHistoryButton:checked {{
-                background-color: {accent_soft};
-                color: {heading};
-                border-color: {accent_line};
+                background-color: {primary};
+                color: {on_primary};
             }}
             #MissionHistoryPanel {{
                 background-color: {page};
@@ -2114,6 +2889,11 @@ class MissionWidget(QWidget):
                 border: 1px solid {line};
                 border-radius: {small_radius}px;
             }}
+            #MissionDecisionCardHighlight {{
+                background-color: {blend(tone_color(MissionTone.WARNING), 0.16, page_color).name()};
+                border: 2px solid {tone_rgba(MissionTone.WARNING, 0.9)};
+                border-radius: {small_radius}px;
+            }}
             #MissionDecisionCardDestructive {{
                 background-color: {danger_soft};
                 border: 1px solid {tone_rgba(MissionTone.DANGER, 0.45)};
@@ -2160,6 +2940,25 @@ class MissionWidget(QWidget):
             #MissionWidget QLabel#MissionActivityText {{
                 font-size: {fs * 0.9:.1f}pt;
             }}
+            #MissionActivityRow, #MissionActivityRowOpen {{
+                border: 1px solid transparent;
+                border-radius: {round(6 * zoom)}px;
+            }}
+            #MissionActivityRow:hover {{
+                background-color: {hover};
+                border-color: {line};
+            }}
+            #MissionActivityRowOpen {{
+                background-color: {accent_soft};
+                border-color: {accent_line};
+            }}
+            #MissionWidget QLabel#MissionActivityMore {{
+                background-color: {input_bg};
+                border: 1px solid {line};
+                border-radius: {round(6 * zoom)}px;
+                padding: {round(8 * zoom)}px;
+                font-size: {fs * 0.86:.1f}pt;
+            }}
 
             #MissionComposer {{
                 background-color: {input_bg};
@@ -2177,10 +2976,10 @@ class MissionWidget(QWidget):
                 background-color: {primary};
                 color: {on_primary};
                 border: 2px solid transparent;
-                border-radius: {radius}px;
-                padding: {round(8 * zoom)}px {round(22 * zoom)}px;
-                font-size: {fs:.1f}pt;
-                font-weight: bold;
+                border-radius: {round(19 * zoom)}px;
+                min-width: {round(34 * zoom)}px;
+                min-height: {round(34 * zoom)}px;
+                padding: 0px;
             }}
             QPushButton#MissionSendButton:hover {{
                 background-color: {primary_hover};
@@ -2192,8 +2991,14 @@ class MissionWidget(QWidget):
                 border-color: {focus};
             }}
             QPushButton#MissionSendButton:disabled {{
-                background-color: {blend(QColor(primary), 0.35, QColor(input_bg)).name()};
-                color: {on_primary};
+                background-color: {disabled_fill};
+                color: {disabled_text};
+            }}
+
+            #MissionStepRow:focus, #MissionStepRowOpen:focus, #MissionPhaseRow:focus,
+            #MissionPhaseRowOpen:focus, #MissionAgentRow:focus, #MissionStatCard:focus,
+            #MissionStatCardActive:focus, #MissionActivityRow:focus, #MissionActivityRowOpen:focus {{
+                border: 2px solid {focus};
             }}
 
             {sm.get_scrollbar_stylesheet("#MissionScroll QScrollBar")}

@@ -46,6 +46,8 @@ class MissionActivityKind(Enum):
     TASK_STOPPED = auto()
     MODE_CHANGED = auto()
     AUTO_APPROVED = auto()
+    REVERSIBLE_APPROVED = auto()
+    USER_MESSAGE = auto()
     REVIEW_DEFERRED = auto()
     PLAN_ARCHIVED = auto()
     ERROR = auto()
@@ -96,6 +98,7 @@ class MissionDecision:
         requested_at: When the request was seen
         reviewing: Whether an AI reviewer is deciding on it now
         review_note: Why the AI reviewer left it for the user, if it did
+        reversible: Whether the change is one the file change journal records, so can be undone
     """
     decision_id: str
     context_id: str
@@ -108,6 +111,7 @@ class MissionDecision:
     requested_at: datetime
     reviewing: bool = False
     review_note: str = ""
+    reversible: bool = False
 
 
 @dataclass(frozen=True)
@@ -121,12 +125,14 @@ class MissionActivity:
         detail: Extra detail, such as a tool name
         mission_id: Mission the activity belongs to, if any
         occurred_at: When it happened
+        more: The whole story, such as the full message or request, shown when the entry is opened
     """
     kind: MissionActivityKind
     subject: str
     detail: str
     mission_id: str | None
     occurred_at: datetime
+    more: str = ""
 
 
 @dataclass(frozen=True)

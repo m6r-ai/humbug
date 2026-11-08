@@ -3,10 +3,10 @@
 from typing import Any
 
 from ai import AIConversationEvent, AIMessage, AIMessageSource
-from ai_tool import AIToolCall
 from ai_transcript_conversation import AITranscriptConversation
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_log_level import MindspaceLogLevel
+from mission.mission_tool_label import tool_call_label
 
 
 LOG_PREVIEW_CHARS = 120
@@ -19,12 +19,6 @@ def _summarize_for_log(text: str) -> str:
         return flat
 
     return f"{flat[:LOG_PREVIEW_CHARS]}..."
-
-
-def _tool_call_label(tool_call: AIToolCall) -> str:
-    """Return a readable label for a tool call, naming its operation if it has one."""
-    operation = tool_call.arguments.get("operation", "")
-    return f"{tool_call.name}.{operation}" if operation else tool_call.name
 
 
 class MissionConversationAuditor:
@@ -86,7 +80,7 @@ class MissionConversationAuditor:
                 self._log(f"AI response: '{content}'")
 
             elif message.tool_calls:
-                tools = ", ".join(_tool_call_label(tc) for tc in message.tool_calls)
+                tools = ", ".join(tool_call_label(tc) for tc in message.tool_calls)
                 self._log(f"AI requested tool calls: {tools}")
 
         elif message.source == AIMessageSource.USER and not message.tool_results:

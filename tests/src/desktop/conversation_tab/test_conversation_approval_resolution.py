@@ -6,7 +6,7 @@ import os
 import pytest
 
 from ai import AIMessage, AIMessageSource
-from ai_tool import AIToolCall
+from ai_tool import AIToolApprovalKind, AIToolCall
 from ai_transcript_conversation import AITranscriptConversation
 from desktop.conversation_tab.conversation_widget import ConversationWidget
 
@@ -34,7 +34,7 @@ def _show_approval(widget: ConversationWidget, message: AIMessage) -> None:
     """Show the approval UI for a tool call message, as an approval request does."""
     tool_call = AIToolCall(id="auth_filesystem", name="filesystem", arguments={"operation": "write_file"})
     asyncio.run(widget._on_tool_approval_required(  # pylint: disable=protected-access
-        message, tool_call, "Write a file", None, True
+        message, tool_call, "Write a file", None, True, AIToolApprovalKind.STANDARD
     ))
 
 

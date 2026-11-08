@@ -2,8 +2,8 @@
 
 import math
 
-from PySide6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, QSize, Qt, QTimer, QVariantAnimation
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QLinearGradient, QPainter, QPaintEvent, QPen
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, QSize, Qt, QTimer
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPaintEvent, QPen
 from PySide6.QtWidgets import QGraphicsOpacityEffect, QSizePolicy, QWidget
 
 from desktop.color_role import ColorRole
@@ -178,69 +178,6 @@ class GlyphBadge(QWidget):
         painter.setFont(font)
         painter.setPen(glyph_color)
         painter.drawText(rect, int(Qt.AlignmentFlag.AlignCenter), self._glyph)
-        painter.end()
-
-
-class MissionProgressBar(QWidget):
-    """A slim rounded progress bar with a gradient fill."""
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self._value = 0.0
-        self._target = 0.0
-        self._tone = MissionTone.ACCENT
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self._animation = QVariantAnimation(self)
-        self._animation.setDuration(600)
-        self._animation.setEasingCurve(QEasingCurve.Type.OutCubic)
-        self._animation.valueChanged.connect(self._on_animated)
-
-    def set_progress(self, value: float, tone: MissionTone) -> None:
-        """Move to a progress between 0.0 and 1.0, gliding there from the current value."""
-        value = max(0.0, min(1.0, value))
-        if tone != self._tone:
-            self._tone = tone
-            self.update()
-
-        if value == self._target:
-            return
-
-        self._target = value
-        self._animation.stop()
-        self._animation.setStartValue(self._value)
-        self._animation.setEndValue(value)
-        self._animation.start()
-
-    def _on_animated(self, value: float) -> None:
-        """Redraw at an intermediate value of the glide."""
-        self._value = float(value)
-        self.update()
-
-    def sizeHint(self) -> QSize:
-        return QSize(_scaled(200), _scaled(8))
-
-    def paintEvent(self, event: QPaintEvent) -> None:
-        """Draw the track and the filled portion."""
-        super().paintEvent(event)
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        height = self.height()
-        radius = height / 2
-        track = QColor(StyleManager().get_color(ColorRole.TEXT_INACTIVE))
-        track.setAlphaF(0.18)
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(track)
-        painter.drawRoundedRect(QRectF(0, 0, self.width(), height), radius, radius)
-
-        fill_width = self.width() * self._value
-        if fill_width > 0:
-            color = tone_color(self._tone)
-            gradient = QLinearGradient(0, 0, fill_width, 0)
-            gradient.setColorAt(0.0, color.lighter(135))
-            gradient.setColorAt(1.0, color)
-            painter.setBrush(gradient)
-            painter.drawRoundedRect(QRectF(0, 0, max(fill_width, height), height), radius, radius)
-
         painter.end()
 
 
