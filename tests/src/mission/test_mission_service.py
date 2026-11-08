@@ -5,13 +5,15 @@ import os
 
 import pytest
 
-from ai import AIConversation, AIConversationEvent, AIConversationParent, AIMessage, AIMessageSource
+from ai import (
+    AIConversation, AIConversationEvent, AIConversationParent, AIConversationSettings, AIMessage, AIMessageSource
+)
 from ai_transcript_conversation import AITranscriptConversation
-from ai_tool import AIToolApprovalKind
+from ai_tool import AIToolApprovalKind, AIToolCall
 from mindspace.mindspace import Mindspace
 from mission import mission_service as mission_service_module
 from mission.mission_service import MAX_CONTINUES_WITHOUT_PROGRESS, MISSION_REQUESTER, MissionService
-from mission.mission_snapshot import MissionActivityKind, MissionAgentState, MissionStatus
+from mission.mission_snapshot import MissionActivityKind, MissionAgentState, MissionSpeaker, MissionStatus
 from mission.mission import AutoApproveLevel, MissionMode, MissionTaskStatus
 from mission.mission_reviewer import ReviewRequest, ReviewVerdict
 from mission.mission_store import MissionStore
@@ -1154,8 +1156,8 @@ class TestAutoApprove:
 class TestPlanHistory:
     """A finished plan moves to the mission's history when new work starts."""
 
-    def test_new_request_after_a_finished_plan_starts_an_empty_plan(self, mindspace, submitted):
-        """Guidance sent to a finished mission archives its plan, so progress starts again from zero."""
+    def test_follow_up_on_a_finished_plan_lets_the_lead_decide(self, mindspace, submitted):
+        """Guidance sent to a finished mission keeps the plan until the lead decides it is new work."""
         async def run() -> None:
             service, mission, _conversation = await _start_mission_with_plan(mindspace, ["completed", "completed"])
             assert service.status(mission.mission_id) == MissionStatus.COMPLETED
@@ -1164,16 +1166,34 @@ class TestPlanHistory:
             for _ in range(5):
                 await asyncio.sleep(0)
 
-            assert not mission.tasks
-            assert mission.progress() == 0.0
+            assert [t.status for t in mission.tasks] == [MissionTaskStatus.COMPLETED] * 2
+            assert not mission.history
+            assert "Yes, go ahead with the suggestions" in submitted[-1][1]
+            assert "If it is a question or a remark, just answer it, without a plan block" in submitted[-1][1]
+            assert "will move to this mission's history" in submitted[-1][1]
+            assert _store(mindspace).load_all()[0].follow_up == "Yes, go ahead with the suggestions"
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_new_work_after_a_follow_up_starts_an_empty_plan(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """When the lead answers a follow-up with new work, the finished plan is archived and progress restarts."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["completed", "completed"])
+            await service.send_guidance(mission.mission_id, "Yes, go ahead with the suggestions")
+
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["pending"])
+            )
+
+            assert [t.status for t in mission.tasks] == [MissionTaskStatus.PENDING]
             assert service.status(mission.mission_id) != MissionStatus.COMPLETED
             assert len(mission.history) == 1
             assert [t.status for t in mission.history[0].tasks] == [MissionTaskStatus.COMPLETED] * 2
             assert mission.history[0].finished_at
-            assert "moved to this mission's history" in submitted[-1][1]
-            assert "Yes, go ahead with the suggestions" in submitted[-1][1]
+            assert (mission.follow_up, mission.report) == ("", "")
             stored = _store(mindspace).load_all()[0]
-            assert len(stored.history) == 1 and not stored.tasks
+            assert len(stored.history) == 1 and len(stored.tasks) == 1 and not stored.follow_up
             snapshot = service.snapshot(mission.mission_id)
             assert snapshot is not None
             assert MissionActivityKind.PLAN_ARCHIVED in [a.kind for a in snapshot.activity]
@@ -1197,20 +1217,22 @@ class TestPlanHistory:
 
         asyncio.run(run())
 
-    def test_finished_plan_repeated_by_the_lead_stays_in_history(self, mindspace, submitted):  # pylint: disable=unused-argument
-        """The lead repeating the archived plan does not bring it back as the current plan."""
+    def test_question_after_a_finished_plan_keeps_the_plan(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A follow-up the lead only answers, even repeating the finished plan, leaves the mission completed."""
         async def run() -> None:
             service, mission, conversation = await _start_mission_with_plan(mindspace, ["completed"])
-            await service.send_guidance(mission.mission_id, "Now do the next thing")
+            await service.send_guidance(mission.mission_id, "Which file did you change?")
             for _ in range(5):
                 await asyncio.sleep(0)
 
             await conversation._trigger_event(  # pylint: disable=protected-access
                 AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["completed"])
             )
+            await _finish_turn(conversation)
 
-            assert not mission.tasks
-            assert len(mission.history) == 1
+            assert len(mission.tasks) == 1
+            assert not mission.history
+            assert service.status(mission.mission_id) == MissionStatus.COMPLETED
             service.stop()
 
         asyncio.run(run())
@@ -1226,6 +1248,287 @@ class TestPlanHistory:
 
             assert len(mission.tasks) == 1
             assert not mission.history
+            service.stop()
+
+        asyncio.run(run())
+
+
+class TestEarlierResults:
+    """Each round's request and the lead's final report are kept, so a follow-up never hides what came before."""
+
+    @staticmethod
+    def _report(conversation: AIConversation, text: str) -> None:
+        """Add the lead's final report on a round to its conversation."""
+        conversation.get_conversation_history().add_message(
+            AIMessage.create(source=AIMessageSource.AI, content=text, completed=True)
+        )
+
+    def test_follow_up_keeps_the_finished_round(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """The objective and the lead's report move to history; the follow-up is what the next round answers."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["completed", "completed"])
+            self._report(conversation, "**All done.** The docs are in docs/.")
+
+            await service.send_guidance(mission.mission_id, "Now add a changelog\nKeep it short")
+            for _ in range(5):
+                await asyncio.sleep(0)
+            # The lead's answer to the follow-up comes after the report, but the round keeps the report.
+            self._report(conversation, "I'll add a changelog.")
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["pending"])
+            )
+
+            assert mission.history[0].request == "Objective"
+            assert mission.history[0].report == "**All done.** The docs are in docs/."
+            assert mission.request == "Now add a changelog\nKeep it short"
+            stored = _store(mindspace).load_all()[0]
+            assert stored.history[0].report == "**All done.** The docs are in docs/."
+            assert stored.request == "Now add a changelog\nKeep it short"
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_every_round_is_kept_in_order(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A second follow-up keeps the second round, with the first follow-up as what was asked."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["completed"])
+            self._report(conversation, "First report")
+            await service.send_guidance(mission.mission_id, "Second request")
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["pending", "pending"])
+            )
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["completed", "completed"])
+            )
+            self._report(conversation, "Second report")
+
+            await service.send_guidance(mission.mission_id, "Third request")
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["pending"])
+            )
+
+            assert [(p.request, p.report) for p in mission.history] == [
+                ("Objective", "First report"), ("Second request", "Second report")
+            ]
+            assert mission.request == "Third request"
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_lead_starting_new_work_keeps_its_report_on_the_finished_round(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """When the lead itself plans more work, the round keeps the report before that new plan, not the plan."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["completed"])
+            self._report(conversation, "Finished the first part.")
+            new_plan = _plan_message(["pending", "pending"])
+            conversation.get_conversation_history().add_message(new_plan)
+
+            await conversation._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, new_plan)  # pylint: disable=protected-access
+
+            assert mission.history[0].report == "Finished the first part."
+            assert mission.history[0].request == "Objective"
+            assert mission.request == ""
+            service.stop()
+
+        asyncio.run(run())
+
+
+class TestQuestionsAreAnswered:
+    """A question is answered, not turned into a mission; only work is planned and carried out."""
+
+    @staticmethod
+    async def _answer(conversation: AIConversation, text: str) -> None:
+        """Have the lead reply without a plan and end its turn."""
+        answer = AIMessage.create(source=AIMessageSource.AI, content=text, completed=True)
+        conversation.get_conversation_history().add_message(answer)
+        await conversation._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, answer)  # pylint: disable=protected-access
+        await _finish_turn(conversation)
+
+    def test_lead_is_told_to_answer_questions_and_plan_only_work(self, mindspace, submitted):
+        """The lead's brief asks it to work out whether the user wants an answer or work done."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            await service.create_mission("What does the mission service do?")
+
+            brief = submitted[-1][1]
+            assert "First work out what the user actually wants" in brief
+            assert "just answer it" in brief and "Do not make a plan" in brief
+            assert "run it as a mission" in brief
+            assert brief.endswith("What does the mission service do?")
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_lead_is_told_which_model_it_runs_on(self, mindspace, submitted):
+        """Asked which model it is, the lead can name the model it really runs on."""
+        async def run() -> None:
+            settings = mindspace.settings()
+            settings.model = "deepseek-v4.1-flash"
+            settings.provider = "ollama-cloud"
+            service = MissionService(mindspace)
+            service.start()
+            await service.create_mission("Which model are you?")
+
+            expected = AIConversationSettings.get_display_name("deepseek-v4.1-flash", "ollama-cloud")
+            assert f"You are running on the AI model {expected}." in submitted[-1][1]
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_answered_question_is_not_continued_and_shows_as_answered(
+        self, mindspace, submitted, no_continue_delay  # pylint: disable=unused-argument
+    ):
+        """A reply without a plan leaves the mission answered, and the lead is not pushed to carry on."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("What does the mission service do?")
+            conversation = _lead(service, mission).inner_conversation()
+
+            await self._answer(conversation, "It tracks missions and their conversations.")
+
+            assert _continues(submitted) == 0
+            assert not mission.tasks
+            assert service.status(mission.mission_id) == MissionStatus.REPLIED
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            assert snapshot.lead_message == "It tracks missions and their conversations."
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_mission_waits_for_the_user_until_the_lead_replies(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Before the lead has said anything there is nothing answered."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("What does the mission service do?")
+            conversation = _lead(service, mission).inner_conversation()
+
+            await _finish_turn(conversation)
+
+            assert service.status(mission.mission_id) == MissionStatus.IDLE
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_work_asked_after_an_answer_becomes_a_mission(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """Once the lead plans work, the mission runs and is continued as before."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("What does the mission service do?")
+            conversation = _lead(service, mission).inner_conversation()
+            await self._answer(conversation, "It tracks missions.")
+
+            await service.send_guidance(mission.mission_id, "Add a docstring to it")
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["completed", "pending"])
+            )
+            await _finish_turn(conversation)
+
+            assert not mission.history
+            assert len(mission.tasks) == 2
+            assert _continues(submitted) == 1
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_classic_mission_without_a_plan_is_not_called_answered(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Answering is shown only in autonomous mode; a classic mission keeps its existing status."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("What does the mission service do?")
+            conversation = _lead(service, mission).inner_conversation()
+            await self._answer(conversation, "It tracks missions.")
+            mission.mode = MissionMode.CLASSIC
+
+            assert service.status(mission.mission_id) == MissionStatus.IDLE
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_question_after_a_finished_mission_keeps_the_report(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """The report on the finished plan is kept, however many questions follow."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["completed"])
+            TestEarlierResults._report(conversation, "All done.")  # pylint: disable=protected-access
+
+            await service.send_guidance(mission.mission_id, "Which file?")
+            await self._answer(conversation, "docs/README.md")
+            await service.send_guidance(mission.mission_id, "And why?")
+            await self._answer(conversation, "Because it is the index.")
+
+            assert (mission.report, mission.follow_up) == ("All done.", "And why?")
+            assert service.status(mission.mission_id) == MissionStatus.COMPLETED
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            assert snapshot.lead_message == "Because it is the index."
+            service.stop()
+
+        asyncio.run(run())
+
+
+class TestMissionConversation:
+    """The conversation with the lead is shown as the user would read it in a conversation tab."""
+
+    def test_conversation_shows_what_was_asked_and_replied(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """The brief shows as the request, notes and nudges are left out, replies lose their plans, tools are named."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("What does it do?")
+            history = _lead(service, mission).inner_conversation().get_conversation_history()
+            history.add_message(AIMessage.create(
+                source=AIMessageSource.USER, content="You are the mission lead…", user_name=MISSION_REQUESTER
+            ))
+            history.add_message(AIMessage.create(source=AIMessageSource.AI, content="It tracks **missions**."))
+            history.add_message(AIMessage.create(
+                source=AIMessageSource.USER, content="Write it down\n\n(Mission Control: the previous plan is finished.)"
+            ))
+            tool_call = AIMessage.create(source=AIMessageSource.TOOL_CALL, content="")
+            tool_call.tool_calls = [AIToolCall(
+                id="t", name="filesystem", arguments={"operation": "write_file", "path": "notes.md"}
+            )]
+            history.add_message(tool_call)
+            history.add_message(AIMessage.create(source=AIMessageSource.USER, content=""))
+            history.add_message(AIMessage.create(
+                source=AIMessageSource.USER, content="Continue the mission", user_name=MISSION_REQUESTER
+            ))
+            history.add_message(_plan_message(["completed"]))
+            history.add_message(AIMessage.create(source=AIMessageSource.AI, content="Still writing", completed=False))
+
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            assert [(e.speaker, e.text) for e in snapshot.conversation] == [
+                (MissionSpeaker.USER, "What does it do?"),
+                (MissionSpeaker.LEAD, "It tracks **missions**."),
+                (MissionSpeaker.USER, "Write it down"),
+                (MissionSpeaker.TOOL, "filesystem.write_file · notes.md"),
+                (MissionSpeaker.LEAD, "Plan:"),
+            ]
+            assert all(entry.at is not None for entry in snapshot.conversation)
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_long_replies_are_kept_whole(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Nothing the lead wrote is shortened, in the conversation or as its latest message."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Write an essay")
+            essay = "# Essay\n\n" + "A long paragraph. " * 800 + "\n\nThe end."
+            _lead(service, mission).inner_conversation().get_conversation_history().add_message(
+                AIMessage.create(source=AIMessageSource.AI, content=essay)
+            )
+
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            assert snapshot.lead_message == essay
+            assert snapshot.conversation[-1].text == essay
             service.stop()
 
         asyncio.run(run())
@@ -1432,6 +1735,77 @@ class TestBackgroundFailures:
             service.stop()
 
         asyncio.run(run())
+
+
+class TestAgentStory:
+    """Each agent's snapshot says which model it uses and what it has done, so its progress can be told."""
+
+    def test_agent_remembers_its_last_step_between_steps(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """The tool in use clears when the agent thinks again, but its last step and its count stay."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Write the docs")
+            conversation = _lead(service, mission).inner_conversation()
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            assert snapshot.agents[0].actions == 0
+
+            for path in ("docs/a.md", "docs/b.md"):
+                message = AIMessage.create(source=AIMessageSource.TOOL_CALL, content="", completed=False)
+                message.tool_calls = [AIToolCall(id=path, name="filesystem", arguments={"operation": "read_file", "path": path})]
+                await conversation._trigger_event(AIConversationEvent.MESSAGE_ADDED, message)  # pylint: disable=protected-access
+
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.AI_CONNECTED, AIMessage.create(AIMessageSource.AI_CONNECTED, "", completed=False)
+            )
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            agent = snapshot.agents[0]
+            assert agent.state == MissionAgentState.THINKING and agent.tool_name == ""
+            assert agent.actions == 2
+            assert agent.last_tool_name == "filesystem.read_file"
+            assert agent.last_tool_target == "docs/b.md"
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_agent_names_the_model_it_uses(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """The model is given by its display name, as the conversation tab shows it, and is left out when not set."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Write the docs")
+            _lead(service, mission).update_conversation_settings(
+                AIConversationSettings(model="claude-opus-5-5", provider="anthropic")
+            )
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            assert snapshot.agents[0].model == "Claude Opus 5.5"
+
+            _lead(service, mission).update_conversation_settings(AIConversationSettings(model="", provider=""))
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            assert snapshot.agents[0].model == ""
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_steps_already_in_a_conversation_are_counted(self, mindspace):
+        """A conversation followed after it has started, such as after a restart, carries on from its last step."""
+        _context_id, transcript = _open_conversation(mindspace, "dAI-helper")
+        history = transcript.get_conversation_history()
+        for path in ("a.md", "b.md", "c.md"):
+            message = AIMessage.create(source=AIMessageSource.TOOL_CALL, content="", completed=True)
+            message.tool_calls = [AIToolCall(id=path, name="filesystem", arguments={"operation": "write_file", "path": path})]
+            history.add_message(message)
+
+        service = MissionService(mindspace)
+        tracked = mission_service_module._TrackedConversation(service, "c", transcript)  # pylint: disable=protected-access
+        assert tracked.actions == 3
+        assert tracked.last_tool_name == "filesystem.write_file"
+        assert tracked.last_tool_target == "c.md"
+        tracked.detach()
 
 
 class TestAgentProgress:

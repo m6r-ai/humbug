@@ -29,7 +29,7 @@ from mission.mission_prompt import build_lead_prompt
 from mission.mission_reviewer import MissionApprovalReviewer, ReviewRequest, ReviewVerdict
 from mission.mission_snapshot import (
     MissionActivity, MissionActivityKind, MissionAgent, MissionAgentState,
-    MissionDecision, MissionSnapshot, MissionStatus
+    MissionDecision, MissionExchange, MissionSnapshot, MissionSpeaker, MissionStatus
 )
 from mission.mission_store import MissionStore
 
@@ -71,9 +71,13 @@ _HEADLESS_PREFIX = "mission-lead:"
 _REVIEW_INSTRUCTION_COUNT = 6
 _REVIEW_TEXT_LIMIT = 800
 
-_NEW_PHASE_NOTE = (
-    "(Mission Control: the previous plan is finished and has been moved to this mission's history. Treat the "
-    "message above as new work: report a new mission-plan block for it.)"
+# Notes Mission Control adds to the user's messages start like this, so they can be left out when shown.
+_NOTE_START = "\n\n(Mission Control:"
+
+_FOLLOW_UP_NOTE = (
+    "(Mission Control: the previous plan is finished. If the message above asks for more work, report a new "
+    "mission-plan block for it and the finished plan will move to this mission's history. If it is a question or "
+    "a remark, just answer it, without a plan block.)"
 )
 
 _MAX_ACTIVITY = 300
@@ -160,6 +164,15 @@ class _TrackedConversation:
         self.tool_target = ""
         self.wait_seconds = 0.0
         self.wait_started_at: datetime | None = None
+        # What the conversation did last, kept between steps so its progress can be told,
+        # counted from its history so a conversation followed again carries on from where it was.
+        self.actions = 0
+        self.last_tool_name = ""
+        self.last_tool_target = ""
+        for message in transcript.get_conversation_history().get_messages():
+            if message.source == AIMessageSource.TOOL_CALL and message.tool_calls:
+                self._note_tool_call(message.tool_calls[0])
+
         self._service = service
         self._callbacks: list[tuple[AIConversationEvent, Callable]] = [
             (AIConversationEvent.AI_CONNECTED, self._on_ai_connected),
@@ -229,7 +242,22 @@ class _TrackedConversation:
         self.state = MissionAgentState.WORKING
         self.tool_name = tool_call_label(message.tool_calls[0])
         self.tool_target = _tool_target(message.tool_calls[0])
+        self._note_tool_call(message.tool_calls[0])
         self._service.handle_tool_used(self, self.tool_name)
+
+    def _note_tool_call(self, tool_call: AIToolCall) -> None:
+        """Count a tool call and remember it as the latest thing the conversation did."""
+        self.actions += 1
+        self.last_tool_name = tool_call_label(tool_call)
+        self.last_tool_target = _tool_target(tool_call)
+
+    def model_name(self) -> str:
+        """Return the display name of the AI model the conversation uses."""
+        settings = self.conversation.conversation_settings()
+        if not settings.model:
+            return ""
+
+        return AIConversationSettings.get_display_name(settings.model, settings.provider)
 
     async def _on_wait_started(self, _message: AIMessage | None, duration: float, *_args: Any) -> None:
         """Note that a tool, such as the clock, started a wait the user can cut short."""
@@ -425,6 +453,10 @@ class MissionService:
                 wait_seconds=tracked.wait_seconds,
                 wait_started_at=tracked.wait_started_at,
                 parent_id=self._delegator_of(tracked, delegators),
+                model=tracked.model_name(),
+                actions=tracked.actions,
+                last_tool_name=tracked.last_tool_name,
+                last_tool_target=tracked.last_tool_target,
             )
             for tracked in self._tracked.values()
             if self._members.get(tracked.context_id) == mission_id
@@ -442,15 +474,62 @@ class MissionService:
             activity=activity[:_SNAPSHOT_ACTIVITY],
             lead_message=lead_message,
             lead_message_at=lead_message_at,
+            conversation=self._conversation(mission),
         )
 
-    def _latest_lead_message(self, mission: Mission) -> tuple[str, datetime | None]:
+    def _conversation(self, mission: Mission) -> list[MissionExchange]:
+        """
+        Return the conversation between the user and a mission's lead, as the user would read it.
+
+        The lead's brief is shown as the request it carries, and the notes Mission Control
+        adds to the user's messages, its requests to carry on and plan blocks are left out.
+        """
+        tracked = self._lead_for(mission)
+        if tracked is None:
+            return []
+
+        entries: list[MissionExchange] = []
+        briefed = False
+        for message in tracked.transcript.get_conversation_history().get_messages():
+            if message.source == AIMessageSource.USER:
+                if message.user_name == MISSION_REQUESTER:
+                    if not briefed:
+                        briefed = True
+                        entries.append(MissionExchange(MissionSpeaker.USER, mission.objective, message.timestamp))
+
+                    continue
+
+                head, note, _rest = message.content.rpartition(_NOTE_START)
+                text = (head if note else message.content).strip()
+                if text:
+                    entries.append(MissionExchange(MissionSpeaker.USER, text, message.timestamp))
+
+            elif message.source == AIMessageSource.AI and message.completed:
+                text = strip_mission_plan(message.content).strip()
+                if text:
+                    entries.append(MissionExchange(MissionSpeaker.LEAD, text, message.timestamp))
+
+            elif message.source == AIMessageSource.TOOL_CALL:
+                for tool_call in message.tool_calls or []:
+                    target = _tool_target(tool_call)
+                    label = tool_call_label(tool_call)
+                    entries.append(MissionExchange(
+                        MissionSpeaker.TOOL, f"{label} · {target}" if target else label, message.timestamp
+                    ))
+
+        return entries
+
+    def _latest_lead_message(self, mission: Mission, excluding: str = "") -> tuple[str, datetime | None]:
         """
         Return the lead's latest completed reply, without its plan block.
 
         This is usually where the lead reports progress or asks the user a
         question, so a front end shows it next to the place the user replies.
         A reply that held nothing but a plan is skipped.
+
+        Args:
+            mission: Mission whose lead to read
+            excluding: Content of a reply to pass over, such as one being handled now
         """
         tracked = self._lead_for(mission)
         if tracked is None:
@@ -458,6 +537,9 @@ class MissionService:
 
         for message in reversed(tracked.transcript.get_conversation_history().get_messages()):
             if message.source != AIMessageSource.AI or not message.completed:
+                continue
+
+            if excluding and message.content == excluding:
                 continue
 
             text = strip_mission_plan(message.content)
@@ -552,6 +634,7 @@ class MissionService:
             lead_path=lead_rel_path,
             created_at=timestamp.isoformat(),
             active=True,
+            request=objective,
         )
         self._store.save(mission)
         self._missions[mission.mission_id] = mission
@@ -566,7 +649,10 @@ class MissionService:
             context=self._mindspace.conversation_log_context(conversation)
         )
 
-        await transcript.submit_message(MISSION_REQUESTER, build_lead_prompt(objective))
+        model_name = (
+            AIConversationSettings.get_display_name(settings.model, settings.provider) if settings.model else ""
+        )
+        await transcript.submit_message(MISSION_REQUESTER, build_lead_prompt(objective, model_name))
         self._notify()
         return mission
 
@@ -604,8 +690,14 @@ class MissionService:
         mission.stopped = False
         self._set_active(mission, True)
         if mission.is_complete():
-            self._archive_plan(mission)
-            text = f"{text}\n\n{_NEW_PHASE_NOTE}"
+            # The lead decides whether this asks for new work or is only a question.  The finished
+            # plan stays current until a new plan arrives; the report on it is kept for then.
+            if not mission.follow_up:
+                mission.report = self._latest_lead_message(mission)[0]
+
+            mission.follow_up = user_text
+            self._save(mission)
+            text = f"{text}\n\n{_FOLLOW_UP_NOTE}"
 
         # The user has stepped in, so automatic continuing starts afresh.
         self._continues_without_progress.pop(mission_id, None)
@@ -1073,7 +1165,8 @@ class MissionService:
         """
         Return True if the lead should be asked to carry on with a mission by itself.
 
-        It is not asked when the mission is stopped or finished, when a step is
+        It is not asked when the mission is stopped or finished, when there is no
+        plan (the lead answered rather than taking on work), when a step is
         blocked on the user, when an approval is waiting, or while any of the
         mission's conversations is still working.
 
@@ -1081,7 +1174,7 @@ class MissionService:
             mission: Mission to check
             decisions: Decisions already computed for this operation, or None to compute them
         """
-        if not self._started or mission.stopped or mission.is_complete():
+        if not self._started or mission.stopped or not mission.tasks or mission.is_complete():
             return False
 
         if mission.mission_id in self._interrupted or mission.mode == MissionMode.CLASSIC:
@@ -1632,8 +1725,14 @@ class MissionService:
             for task in plan.tasks
         )
         if mission.is_complete() and starts_new_work:
-            # New unfinished work after the plan was done: the finished plan becomes history.
-            self._archive_plan(mission)
+            # New unfinished work after the plan was done: the finished plan becomes history, with
+            # the lead's report on it.  If the user followed up, that report was kept when they did and
+            # their message is what the new plan answers; otherwise the lead started the work itself
+            # and its report is the message before the new plan.
+            report = mission.report or self._latest_lead_message(mission, excluding=text)[0]
+            follow_up = mission.follow_up
+            self._archive_plan(mission, report)
+            mission.request = follow_up
 
         for task in plan.tasks:
             if task.task_id in mission.stopped_tasks:
@@ -1654,19 +1753,31 @@ class MissionService:
         if announce:
             self._record(MissionActivityKind.PLAN_UPDATED, mission.title, "", mission.mission_id)
 
-    def _archive_plan(self, mission: Mission) -> None:
-        """Move a mission's finished plan into its history, so new work starts from an empty plan."""
+    def _archive_plan(self, mission: Mission, report: str) -> None:
+        """
+        Move a mission's finished plan into its history, so new work starts from an empty plan.
+
+        Args:
+            mission: Mission whose plan is finished
+            report: The lead's final report on the plan, kept with it as an earlier result
+        """
         if not mission.tasks:
             return
 
+        # Records from before requests were kept only know the objective, which started the first plan.
+        request = mission.request or (mission.objective if not mission.history else "")
         mission.history.append(MissionPhase(
             title=mission.title,
             summary=mission.summary,
             tasks=list(mission.tasks),
             finished_at=datetime.now(timezone.utc).isoformat(),
+            request=request,
+            report=report,
         ))
         mission.tasks = []
         mission.stopped_tasks = []
+        mission.follow_up = ""
+        mission.report = ""
         self._continues_without_progress.pop(mission.mission_id, None)
         self._completed_at_last_continue.pop(mission.mission_id, None)
         self._save(mission)
@@ -2053,6 +2164,10 @@ class MissionService:
 
         if mission.is_complete():
             return MissionStatus.COMPLETED
+
+        # Without a plan, a reply from the lead answers the user rather than leaving work waiting.
+        if not mission.tasks and mission.mode == MissionMode.AUTONOMOUS and self._latest_lead_message(mission)[0]:
+            return MissionStatus.REPLIED
 
         return MissionStatus.IDLE
 

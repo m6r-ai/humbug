@@ -8,22 +8,27 @@ from unittest import mock
 
 import pytest
 
-from PySide6.QtCore import QPoint, QPointF, QPropertyAnimation, QRectF, Qt
-from PySide6.QtGui import QImage, QPainterPath, QRegion, QWheelEvent
+from PySide6.QtCore import QEvent, QPoint, QPointF, QPropertyAnimation, QRectF, Qt
+from PySide6.QtGui import QImage, QMouseEvent, QPainterPath, QRegion, QWheelEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QFrame, QPushButton, QWidget
 
 from ai import AIConversation, AIConversationEvent, AIMessage, AIMessageSource
 from ai_tool import AIToolApprovalKind, AIToolCall
 from context.context_registry import ContextEvent
-from mission import AutoApproveLevel, MissionAgent, MissionAgentState, MissionDecision, MissionMode, MissionStatus
+from mission import (
+    AutoApproveLevel, Mission, MissionAgent, MissionAgentState, MissionDecision, MissionExchange, MissionMode,
+    MissionPhase, MissionSnapshot, MissionSpeaker, MissionStatus, MissionTask, MissionTaskStatus
+)
 from PySide6.QtWidgets import QLabel
 
 from desktop.mission_tab import mission_tab as mission_tab_module
 from desktop.mission_tab import mission_widget as mission_widget_module
 from desktop.mission_tab import mission_scene as mission_scene_module
+from desktop.mission_tab import mission_network as mission_network_module
 from desktop.mission_tab.mission_display import (
-    MissionActivityView, MissionAgentView, MissionChipView, MissionDecisionView, MissionHeaderView, MissionPhaseView, MissionStatTarget,
+    MissionActivityView, MissionAgentView, MissionChatView, MissionChipView, MissionDecisionView, MissionHeaderView, MissionPhaseView,
+    MissionResultView, MissionStatTarget,
     MissionStatView, MissionStepState, MissionStepView, MissionTone, MissionView
 )
 from desktop.message_box import MessageBoxButton
@@ -692,8 +697,9 @@ def _view(completed: bool, stage: int, lead_message: str = "All done: the docs a
     )
     return MissionView(
         header=header, stats=_stats(), steps=[], agents=[], agents_badge="", activity=[],
-        lead_message=lead_message, lead_message_time="10:30", awaiting_reply=False,
-        completed=completed, report_text="Steps done: 2 of 2  ·  Agents on the team: 1"
+        lead_message="" if completed else lead_message, lead_message_time="10:30", awaiting_reply=False,
+        completed=completed, report_text="Steps done: 2 of 2  ·  Agents on the team: 1",
+        report_message=lead_message if completed else "",
     )
 
 
@@ -1746,4 +1752,359 @@ class TestWaitingElsewhereText:
         assert widget._elsewhere.isHidden()  # pylint: disable=protected-access
         assert all(not chip.waiting_text for chip in widget._chips)  # pylint: disable=protected-access
         tab._service = None  # pylint: disable=protected-access
+        tab.deleteLater()
+
+
+
+def _helper(actions: int = 0, last_tool: str = "", target: str = "", is_lead: bool = False) -> MissionAgent:
+    """Return an agent thinking between steps, having taken a number of them."""
+    return MissionAgent(
+        context_id="h", title="dAI-h", is_lead=is_lead, state=MissionAgentState.THINKING, tool_name="",
+        actions=actions, last_tool_name=last_tool, last_tool_target=target, model="Claude Sonnet 4.5",
+    )
+
+
+class TestDashboardOrder:
+    """The dashboard shows the team before the plan."""
+
+    def test_agents_come_before_the_plan(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The Agents card sits above the Mission Plan."""
+        widget = MissionWidget()
+        layout = widget._agents_card.parentWidget().layout()  # pylint: disable=protected-access
+        agents = layout.indexOf(widget._agents_card)  # pylint: disable=protected-access
+        plan = layout.indexOf(widget._lower_container)  # pylint: disable=protected-access
+        assert 0 <= agents < plan
+        widget.deleteLater()
+
+
+class TestMissionConversationCard:
+    """The conversation with the lead is shown like a conversation tab, without its input."""
+
+    _CHAT = [
+        MissionChatView("user", "You", "What does *it* do?", "10:00"),
+        MissionChatView("lead", "Theo", "It tracks **missions**.", "10:01"),
+        MissionChatView("tool", "", "filesystem.read_file · README.md", "10:01"),
+    ]
+
+    def test_messages_replies_and_tools_are_shown(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The user's message keeps what they typed, the lead's reply is formatted, and a tool gets a line."""
+        widget = MissionWidget()
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), conversation=self._CHAT))
+
+        assert not widget._chat_card.isHidden()  # pylint: disable=protected-access
+        card = widget._chat_card  # pylint: disable=protected-access
+        user = card.findChild(QFrame, "MissionChatUser")
+        lead = card.findChild(QFrame, "MissionChatLead")
+        user_text = [label for label in user.findChildren(QLabel) if label.objectName() == "MissionLeadText"][0]
+        lead_text = [label for label in lead.findChildren(QLabel) if label.objectName() == "MissionLeadText"][0]
+        assert user_text.text() == "What does *it* do?"
+        assert user_text.textFormat() == Qt.TextFormat.PlainText
+        assert lead_text.textFormat() == Qt.TextFormat.MarkdownText
+        assert any("filesystem.read_file · README.md" in label.text() for label in card.findChildren(QLabel))
+        assert widget._chat_pill._text == "1"  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_conversation_is_folded_until_opened(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Only the heading shows at first; clicking it opens the conversation and clicking again folds it."""
+        widget = MissionWidget()
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), conversation=self._CHAT))
+        assert not widget._chat_card.isHidden()  # pylint: disable=protected-access
+        assert widget._chat_body.isHidden()  # pylint: disable=protected-access
+        assert widget._chat_toggle.accessibleName() == "Show the conversation"  # pylint: disable=protected-access
+
+        QTest.mouseClick(widget._chat_toggle, Qt.MouseButton.LeftButton)  # pylint: disable=protected-access
+        assert not widget._chat_body.isHidden()  # pylint: disable=protected-access
+        assert widget._chat_chevron.text() == "▼"  # pylint: disable=protected-access
+
+        QTest.mouseClick(widget._chat_toggle, Qt.MouseButton.LeftButton)  # pylint: disable=protected-access
+        assert widget._chat_body.isHidden()  # pylint: disable=protected-access
+        assert widget._chat_chevron.text() == "▶"  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_conversation_sits_below_the_activity(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The conversation is in the side column, directly under Recent Activity."""
+        widget = MissionWidget()
+        side = widget._side_column.layout()  # pylint: disable=protected-access
+        activity = side.indexOf(widget._activity_card)  # pylint: disable=protected-access
+        assert side.indexOf(widget._chat_card) == activity + 1  # pylint: disable=protected-access
+        widget.set_mission(None)
+        assert widget._chat_card.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_card_is_hidden_without_a_conversation_and_in_classic_mode(self, qapp) -> None:  # pylint: disable=unused-argument
+        """There is nothing to show before anything is said, and a classic mission has its own tab."""
+        widget = MissionWidget()
+        widget.set_mission(_view(completed=False, stage=2))
+        assert widget._chat_card.isHidden()  # pylint: disable=protected-access
+
+        view = _view(completed=False, stage=2)
+        classic = dataclasses.replace(
+            view, header=dataclasses.replace(view.header, is_classic=True), conversation=self._CHAT
+        )
+        widget.set_mission(classic)
+        assert widget._chat_card.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_mediator_names_who_said_what(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """The user is "You", the lead goes by its name, and a tool has no speaker."""
+        tab = MissionTab("mission")
+        at = datetime(2026, 11, 8, 9, 30, tzinfo=timezone.utc)
+        views = [
+            tab._chat_view(MissionExchange(speaker, "text", at), "Theo")  # pylint: disable=protected-access
+            for speaker in (MissionSpeaker.USER, MissionSpeaker.LEAD, MissionSpeaker.TOOL)
+        ]
+        assert [(v.kind, v.speaker) for v in views] == [("user", "You"), ("lead", "Theo"), ("tool", "")]
+        assert views[0].time_text == at.astimezone().strftime("%H:%M")
+        assert tab._chat_view(MissionExchange(MissionSpeaker.LEAD, "x"), "Theo").time_text == ""  # pylint: disable=protected-access
+        tab.deleteLater()
+
+    def test_long_lead_message_is_shown_whole(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The lead's latest message and the final report are never cut short."""
+        essay = "# Essay\n\n" + "A long paragraph. " * 800 + "\n\nThe end."
+        widget = MissionWidget()
+        widget.set_mission(_view(completed=False, stage=2, lead_message=essay))
+        assert widget._lead_body.text() == essay  # pylint: disable=protected-access
+
+        widget.set_mission(_view(completed=True, stage=3, lead_message=essay))
+        assert widget._report_body.text() == essay  # pylint: disable=protected-access
+        widget.deleteLater()
+
+
+class TestAnsweredQuestions:
+    """A question the lead answered is shown as answered, not as work waiting for the user."""
+
+    @staticmethod
+    def _view(status: MissionStatus, tasks: list[MissionTask], lead_message: str, report: str = "") -> MissionView:
+        tab = MissionTab("mission")
+        mission = Mission(
+            mission_id="m", objective="What does it do?", title="What does it do?", lead_path="lead.conv",
+            created_at="2026-11-08T09:00:00+00:00", tasks=tasks, report=report,
+        )
+        snapshot = MissionSnapshot(
+            mission=mission, status=status, agents=[], decisions=[], activity=[],
+            lead_message=lead_message, lead_message_at=None,
+        )
+        view = tab._mission_view(snapshot)  # pylint: disable=protected-access
+        tab.deleteLater()
+        return view
+
+    def test_answer_is_shown_as_answered_and_done(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """The answer is the lead's message, without asking the user to reply, and the journey is done."""
+        view = self._view(MissionStatus.REPLIED, [], "It tracks missions.")
+
+        assert view.header.status_text == "Answered"
+        assert view.header.tone == MissionTone.SUCCESS
+        assert view.header.stage == 3
+        assert not view.header.can_stop
+        assert view.lead_message == "It tracks missions."
+        assert not view.awaiting_reply
+        assert not view.completed and view.report_message == ""
+        assert not view.steps
+
+    def test_answered_stage_is_the_last(self) -> None:
+        """An answered question needs no plan, so it is done as soon as it is answered."""
+        assert mission_tab_module._stage(MissionStatus.REPLIED, has_plan=False) == 3  # pylint: disable=protected-access
+
+    def test_finished_mission_shows_its_last_message_as_the_report(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """Without a follow-up, the lead's last message is the final report and is not repeated above it."""
+        done = [MissionTask("1", "Write", "", MissionTaskStatus.COMPLETED)]
+        view = self._view(MissionStatus.COMPLETED, done, "All done.")
+
+        assert view.completed
+        assert view.report_message == "All done."
+        assert view.lead_message == ""
+
+    def test_answer_to_a_question_after_the_mission_keeps_the_report(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """A question asked once the mission is done is answered on its own; the final report stays as it was."""
+        done = [MissionTask("1", "Write", "", MissionTaskStatus.COMPLETED)]
+        view = self._view(MissionStatus.COMPLETED, done, "docs/README.md", report="All done.")
+
+        assert view.completed
+        assert view.report_message == "All done."
+        assert view.lead_message == "docs/README.md"
+
+    def test_widget_shows_the_answer_beside_the_report(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The widget shows the report and the later answer each in its own card."""
+        widget = MissionWidget()
+        view = dataclasses.replace(
+            _view(completed=True, stage=3), lead_message="docs/README.md", report_message="All done."
+        )
+        widget.set_mission(view)
+
+        assert not widget._report_card.isHidden()  # pylint: disable=protected-access
+        assert widget._report_body.text() == "All done."  # pylint: disable=protected-access
+        assert not widget._lead_card.isHidden()  # pylint: disable=protected-access
+        assert widget._lead_body.text() == "docs/README.md"  # pylint: disable=protected-access
+        widget.deleteLater()
+
+
+class TestAgentProgressSpeech:
+    """An agent introduces itself once, then tells the user what it has done and how far it has got."""
+
+    @staticmethod
+    def _speech(agent: MissionAgent, task_title: str = "") -> str:
+        tab = MissionTab("mission")
+        mission = types.SimpleNamespace(tasks=[])
+        snapshot = types.SimpleNamespace(mission=mission, status=MissionStatus.RUNNING, lead_message="")
+        speech = tab._agent_speech(agent, "Mira", task_title, snapshot, None, [])  # type: ignore[arg-type]  # pylint: disable=protected-access
+        tab.deleteLater()
+        return speech
+
+    def test_new_helper_introduces_itself(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """Before its first step, a helper says hello."""
+        assert self._speech(_helper()) == "Hi, I'm Mira! Getting started on my part…"
+
+    def test_helper_does_not_introduce_itself_again(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """Between steps, a helper says what it just did instead of saying hello again."""
+        speech = self._speech(_helper(3, "filesystem.read_file", "src/pairing/handshake.py"))
+        assert speech == "Read handshake.py, now working out what's next… (3 actions so far)"
+
+    def test_progress_is_shown_even_with_a_plan_step(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """A helper on a plan step also reports its latest step, once it has one."""
+        speech = self._speech(_helper(1, "terminal.send_command", "pytest -q"), task_title="Write the tests")
+        assert speech == "Ran pytest -q, now reading the result… (1 action so far)"
+
+    def test_lead_reports_its_progress_too(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """The lead, once it has acted, says what it did rather than repeating that it is planning."""
+        speech = self._speech(_helper(2, "delegate_ai", "", is_lead=True))
+        assert speech == "My helper reported back, now reading what they found… (2 actions so far)"
+
+    @pytest.mark.parametrize("tool, target, expected", [
+        ("filesystem.write_file", "docs/a.md", "Wrote a.md, now checking it and moving on…"),
+        ("filesystem.delete_file", "old.txt", "Removed old.txt, now moving on…"),
+        ("filesystem.move_file", "", "Done with the files, now working out what's next…"),
+        ("editor.apply_diff", "src/app.py", "Edited app.py, now checking it and moving on…"),
+        ("http.get", "https://example.com", "Got an answer from the web, now reading it…"),
+        ("clock", "", "Finished with clock, now working out what's next…"),
+    ])
+    def test_each_kind_of_step_is_told(self, mindspace_sandbox, qapp, tool, target, expected) -> None:  # pylint: disable=unused-argument
+        """Every kind of tool has its own words for having been used."""
+        tab = MissionTab("mission")
+        assert tab._tool_speech(tool, target, done=True) == expected  # pylint: disable=protected-access
+        tab.deleteLater()
+
+    def test_agent_view_carries_the_model(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """The model each agent uses reaches its display record."""
+        tab = MissionTab("mission")
+        view = tab._agent_view(_helper(), True, "Mira", "")  # pylint: disable=protected-access
+        assert view.model_text == "Claude Sonnet 4.5"
+        tab.deleteLater()
+
+
+class TestAgentModel:
+    """The model each agent uses is shown beside it, in the picture and in the list."""
+
+    def test_list_names_each_agents_model(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The agents list says which model each agent uses after its role."""
+        widget = MissionWidget()
+        agent = dataclasses.replace(_agent_view("a", parent_id="lead"), model_text="Claude Sonnet 4.5")
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), agents=[_agent_view("lead", is_lead=True), agent]))
+        roles = [label.text() for label in widget.findChildren(QLabel, "MissionAgentRole")]
+        assert "role  ·  Claude Sonnet 4.5" in roles
+        assert "role" in roles
+        widget.deleteLater()
+
+    def test_picture_draws_the_model_tag(self, qapp) -> None:  # pylint: disable=unused-argument
+        """An agent with a known model has a tag under its name; the space for it is kept either way."""
+        def painted(model: str) -> tuple[QImage, int]:
+            network = AgentNetworkView()
+            agent = dataclasses.replace(_agent_view("a", parent_id="lead"), model_text=model)
+            network.set_agents([_agent_view("lead", is_lead=True), agent], "You")
+            network.resize(600, network.sizeHint().height())
+            image = QImage(network.size(), QImage.Format.Format_ARGB32)
+            image.fill(Qt.GlobalColor.transparent)
+            network.render(image, QPoint(), QRegion(), QWidget.RenderFlag.DrawChildren)
+            height = network.sizeHint().height()
+            network.deleteLater()
+            return image, height
+
+        with_model, height_with = painted("Claude Sonnet 4.5")
+        without_model, height_without = painted("")
+        assert with_model != without_model
+        assert height_with == height_without
+
+    def test_hover_names_the_model(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The tooltip over an agent includes its model."""
+        network = AgentNetworkView()
+        agent = dataclasses.replace(_agent_view("a", parent_id="lead"), model_text="Claude Sonnet 4.5")
+        network.set_agents([_agent_view("lead", is_lead=True), agent], "You")
+        network.resize(600, network.sizeHint().height())
+        node = next(n for n in network._nodes if n.node_id == "a")  # pylint: disable=protected-access
+        shown: list[str] = []
+        move = QMouseEvent(
+            QEvent.Type.MouseMove, node.center, network.mapToGlobal(node.center), Qt.MouseButton.NoButton,
+            Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier
+        )
+        with mock.patch.object(mission_network_module.QToolTip, "showText", lambda _pos, text, *_args: shown.append(text)):
+            network.mouseMoveEvent(move)
+
+        assert shown and "Claude Sonnet 4.5" in shown[-1]
+        network.deleteLater()
+
+
+
+def _results() -> list[MissionResultView]:
+    return [
+        MissionResultView("2:b", "Round 2  ·  2026-11-08 10:00  ·  2 of 2 steps done", "You asked: Add a changelog",
+                          "**Changelog added.** See CHANGELOG.md."),
+        MissionResultView("1:a", "Round 1  ·  2026-11-08 09:00  ·  3 of 3 steps done", "You asked: Write the docs", ""),
+    ]
+
+
+class TestEarlierResultsCard:
+    """Earlier rounds stay on screen after a follow-up, each opening to its full report."""
+
+    def test_card_is_hidden_until_there_is_an_earlier_round(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A mission on its first round has no earlier results to show."""
+        widget = MissionWidget()
+        widget.set_mission(_view(completed=False, stage=2))
+        assert widget._results_card.isHidden()  # pylint: disable=protected-access
+
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), results=_results()))
+        assert not widget._results_card.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_rounds_are_listed_newest_first_with_what_was_asked(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Each round shows its heading, the request and the first line of its report until opened."""
+        widget = MissionWidget()
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), results=_results()))
+        texts = [label.text() for label in widget._results_card.findChildren(QLabel)]  # pylint: disable=protected-access
+        assert texts.index(_results()[0].heading) < texts.index(_results()[1].heading)
+        assert "You asked: Add a changelog" in texts
+        assert "Changelog added. See CHANGELOG.md." in texts
+        assert "The lead gave no final report for this round." in texts
+        widget.deleteLater()
+
+    def test_a_round_opens_to_its_full_report_and_closes_again(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Clicking a round shows the whole report as formatted text; clicking again folds it."""
+        widget = MissionWidget()
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), results=_results()))
+
+        widget._toggle_result("2:b")  # pylint: disable=protected-access
+        bodies = [l for l in widget._results_card.findChildren(QLabel, "MissionLeadText") if not l.isHidden()]  # pylint: disable=protected-access
+        assert [b.text() for b in bodies] == ["**Changelog added.** See CHANGELOG.md."]
+        assert bodies[0].textFormat() == Qt.TextFormat.MarkdownText
+
+        widget._toggle_result("2:b")  # pylint: disable=protected-access
+        QApplication.processEvents()
+        layout = widget._results_layout  # pylint: disable=protected-access
+        shown = [layout.itemAt(i).widget() for i in range(layout.count())]
+        assert all(not row.findChildren(QLabel, "MissionLeadText") for row in shown)
+        widget.deleteLater()
+
+    def test_mediator_turns_history_into_rounds(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """Rounds are numbered in order, listed newest first, and plans kept before results were recorded are left out."""
+        tab = MissionTab("mission")
+        done = [MissionTask("1", "Write", "", MissionTaskStatus.COMPLETED)]
+        phases = [
+            MissionPhase("Old", "", done, "2026-11-08T08:00:00+00:00"),
+            MissionPhase("Docs", "", done, "2026-11-08T09:00:00+00:00", request="Write the docs\nPlease", report="Done."),
+            MissionPhase("Log", "", done, "2026-11-08T10:00:00+00:00", request="Add a changelog", report=""),
+        ]
+        views = [tab._result_view(number, phase) for number, phase in enumerate(phases, start=1)]  # pylint: disable=protected-access
+        assert views[1].heading.startswith("Round 2  ·  ")
+        assert views[1].heading.endswith("1 of 1 steps done")
+        assert views[1].request_text == "You asked: Write the docs"
+        assert views[1].report == "Done."
+        assert views[0].request_text == ""
         tab.deleteLater()

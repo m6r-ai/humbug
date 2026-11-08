@@ -17,8 +17,9 @@ from desktop.language.language_strings import LanguageStrings
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.mission_tab.mission_display import (
-    MissionActivityView, MissionAgentView, MissionChipView, MissionDecisionView, MissionHeaderView,
-    MissionPhaseView, MissionStatTarget, MissionStatView, MissionStepState, MissionStepView, MissionTone, MissionView
+    MissionActivityView, MissionAgentView, MissionChatView, MissionChipView, MissionDecisionView, MissionHeaderView,
+    MissionPhaseView, MissionResultView, MissionStatTarget, MissionStatView, MissionStepState, MissionStepView,
+    MissionTone, MissionView
 )
 from desktop.mission_tab.mission_service_holder import MissionServiceHolder
 from desktop.mission_tab.mission_widget import MissionWidget
@@ -27,8 +28,8 @@ from desktop.style_manager import StyleManager
 from desktop.tab import TabBase
 from mission import (
     AutoApproveLevel, MissionActivity, MissionActivityKind, MissionAgent, MissionAgentState, MissionDecision,
-    MissionError, MissionMode, MissionPhase, MissionService, MissionSnapshot, MissionStatus, MissionTask,
-    MissionTaskStatus
+    MissionError, MissionExchange, MissionMode, MissionPhase, MissionService, MissionSnapshot, MissionSpeaker,
+    MissionStatus, MissionTask, MissionTaskStatus
 )
 
 
@@ -40,6 +41,7 @@ _STATUS_TONES = {
     MissionStatus.COMPLETED: MissionTone.SUCCESS,
     MissionStatus.STOPPED: MissionTone.DANGER,
     MissionStatus.INTERRUPTED: MissionTone.WARNING,
+    MissionStatus.REPLIED: MissionTone.SUCCESS,
 }
 
 _TASK_STATES = {
@@ -81,6 +83,7 @@ _STAGE_TONES = {
     MissionStatus.RUNNING: MissionTone.ACCENT,
     MissionStatus.IDLE: MissionTone.WARNING,
     MissionStatus.COMPLETED: MissionTone.SUCCESS,
+    MissionStatus.REPLIED: MissionTone.SUCCESS,
 }
 
 
@@ -89,8 +92,9 @@ def _stage(status: MissionStatus, has_plan: bool) -> int:
     Return how far along its journey a mission is.
 
     The stages are: the user asked, the AI planned, the AI team worked, and the job is done.
+    A question the lead answered needed no plan, so it is done as soon as it is answered.
     """
-    if status == MissionStatus.COMPLETED:
+    if status in (MissionStatus.COMPLETED, MissionStatus.REPLIED):
         return 3
 
     if status == MissionStatus.PLANNING or not has_plan:
@@ -281,6 +285,7 @@ class MissionTab(TabBase):
             MissionStatus.COMPLETED: strings.mission_status_completed,
             MissionStatus.STOPPED: strings.mission_status_stopped,
             MissionStatus.INTERRUPTED: strings.mission_status_interrupted,
+            MissionStatus.REPLIED: strings.mission_status_replied,
         }[status]
 
     def _task_text(self, status: MissionTaskStatus) -> str:
@@ -333,39 +338,64 @@ class MissionTab(TabBase):
             decision_destructive=decision.destructive if decision is not None else False,
             wait_seconds=agent.wait_seconds,
             wait_started=agent.wait_started_at.timestamp() if agent.wait_started_at is not None else 0.0,
+            model_text=agent.model,
         )
 
-    def _tool_speech(self, tool_name: str, target: str) -> str:
-        """Say, in the agent's words, what it is doing with a tool."""
+    def _tool_speech(self, tool_name: str, target: str, done: bool = False) -> str:
+        """
+        Say, in the agent's words, what it is doing with a tool, or what it has just done with one.
+
+        done selects the words for a tool the agent has finished with and is now thinking about.
+        """
         strings = self._strings()
+        say = {
+            "reading": strings.mission_say_after_reading if done else strings.mission_say_reading,
+            "writing": strings.mission_say_after_writing if done else strings.mission_say_writing,
+            "deleting": strings.mission_say_after_deleting if done else strings.mission_say_deleting,
+            "files": strings.mission_say_after_files if done else strings.mission_say_files,
+            "editing": strings.mission_say_after_editing if done else strings.mission_say_editing,
+            "delegating": strings.mission_say_after_delegating if done else strings.mission_say_delegating,
+            "terminal": strings.mission_say_after_terminal if done else strings.mission_say_terminal,
+            "web": strings.mission_say_after_web if done else strings.mission_say_web,
+            "tool": strings.mission_say_after_tool if done else strings.mission_say_tool,
+        }
         tool, _dot, operation = tool_name.partition(".")
         # A file path reads better as just the file's name.
         short = (os.path.basename(target.rstrip("/\\")) or target) if tool in ("filesystem", "editor") else target
         if tool == "filesystem":
             if operation.startswith(("read", "list", "search", "get", "find")):
-                return strings.mission_say_reading.format(short) if short else strings.mission_say_files
+                return say["reading"].format(short) if short else say["files"]
 
             if operation.startswith(("write", "append", "apply", "create")):
-                return strings.mission_say_writing.format(short) if short else strings.mission_say_files
+                return say["writing"].format(short) if short else say["files"]
 
             if operation.startswith(("delete", "remove")):
-                return strings.mission_say_deleting.format(short) if short else strings.mission_say_files
+                return say["deleting"].format(short) if short else say["files"]
 
-            return strings.mission_say_files
+            return say["files"]
 
         if tool == "editor":
-            return strings.mission_say_editing.format(short) if short else strings.mission_say_tool.format(tool_name)
+            return say["editing"].format(short) if short else say["tool"].format(tool_name)
 
         if tool == "delegate_ai":
-            return strings.mission_say_delegating
+            return say["delegating"]
 
         if tool == "terminal":
-            return strings.mission_say_terminal.format(target) if target else strings.mission_say_tool.format(tool_name)
+            return say["terminal"].format(target) if target else say["tool"].format(tool_name)
 
         if tool in ("http", "preview"):
-            return strings.mission_say_web
+            return say["web"]
 
-        return strings.mission_say_tool.format(tool_name)
+        return say["tool"].format(tool_name)
+
+    def _progress_speech(self, agent: MissionAgent) -> str:
+        """Say what the agent has just done and how far it has got, while it works out its next step."""
+        strings = self._strings()
+        latest = self._tool_speech(agent.last_tool_name, agent.last_tool_target, done=True)
+        if agent.actions == 1:
+            return strings.mission_say_progress_one.format(latest)
+
+        return strings.mission_say_progress.format(latest, agent.actions)
 
     def _agent_speech(
         self,
@@ -405,6 +435,11 @@ class MissionTab(TabBase):
             return strings.mission_say_error
 
         if agent.state == MissionAgentState.THINKING:
+            # Once the agent has done something, it says what that was and how far it has got,
+            # so its introduction is only heard before its first step.
+            if agent.actions and agent.last_tool_name:
+                return self._progress_speech(agent)
+
             if not agent.is_lead:
                 return strings.mission_say_task.format(task_title) if task_title else strings.mission_say_hello.format(name)
 
@@ -423,6 +458,7 @@ class MissionTab(TabBase):
             MissionStatus.STOPPED: strings.mission_say_stopped,
             MissionStatus.INTERRUPTED: strings.mission_say_interrupted,
             MissionStatus.NEEDS_YOU: strings.mission_say_helper_waiting,
+            MissionStatus.REPLIED: strings.mission_say_replied,
         }
         if snapshot.status in idle_speech:
             return idle_speech[snapshot.status]
@@ -563,6 +599,11 @@ class MissionTab(TabBase):
         history = [
             self._phase_view(phase, names_by_title, open_agents) for phase in reversed(mission.history)
         ]
+        results = [
+            self._result_view(number, phase)
+            for number, phase in reversed(list(enumerate(mission.history, start=1)))
+            if phase.request or phase.report
+        ]
 
         agents = [
             self._agent_view(
@@ -585,9 +626,20 @@ class MissionTab(TabBase):
         if lead_view is not None and lead_view.speech:
             header = dataclasses.replace(
                 header, now_text=f"{lead_view.name}: {lead_view.speech}",
-                now_tone=MissionTone.SUCCESS if snapshot.status == MissionStatus.COMPLETED else MissionTone.ACCENT
+                now_tone=(
+                    MissionTone.SUCCESS if snapshot.status in (MissionStatus.COMPLETED, MissionStatus.REPLIED)
+                    else MissionTone.ACCENT
+                )
             )
 
+        lead_name = lead_view.name if lead_view is not None else strings.mission_chat_lead
+        conversation = [self._chat_view(entry, lead_name) for entry in snapshot.conversation]
+
+        # Once the mission is done, the lead's report on it is shown as the final report.  A later reply
+        # answers something the user asked after that, so it is shown on its own where they reply.
+        completed = not classic and snapshot.status == MissionStatus.COMPLETED
+        report_message = (mission.report or snapshot.lead_message) if completed else ""
+        lead_message = "" if completed and snapshot.lead_message == report_message else snapshot.lead_message
         return MissionView(
             header=header,
             stats=stats,
@@ -595,16 +647,51 @@ class MissionTab(TabBase):
             agents=agents,
             agents_badge=strings.mission_agents_active.format(busy_agents),
             activity=[self._activity_view(entry) for entry in snapshot.activity],
-            lead_message=snapshot.lead_message,
+            lead_message=lead_message,
             lead_message_time=(
                 _local_time(snapshot.lead_message_at, with_seconds=False) if snapshot.lead_message_at else ""
             ),
             awaiting_reply=bool(snapshot.lead_message) and snapshot.status == MissionStatus.IDLE,
             history=history,
-            completed=not classic and snapshot.status == MissionStatus.COMPLETED,
+            completed=completed,
             report_text=strings.mission_report_stats.format(
                 mission.completed_count(), len(mission.tasks), len(snapshot.agents)
             ),
+            results=results,
+            report_message=report_message,
+            conversation=conversation,
+        )
+
+    def _chat_view(self, entry: MissionExchange, lead_name: str) -> MissionChatView:
+        """Turn an entry in the conversation with the lead into its display record."""
+        strings = self._strings()
+        kind, speaker = {
+            MissionSpeaker.USER: ("user", strings.mission_chat_you),
+            MissionSpeaker.LEAD: ("lead", lead_name),
+            MissionSpeaker.TOOL: ("tool", ""),
+        }[entry.speaker]
+        time_text = _local_time(entry.at, with_seconds=False) if entry.at is not None else ""
+        return MissionChatView(kind=kind, speaker=speaker, text=entry.text, time_text=time_text)
+
+    def _result_view(self, number: int, phase: MissionPhase) -> MissionResultView:
+        """Turn a finished round kept in a mission's history into its display record."""
+        strings = self._strings()
+        done = sum(1 for task in phase.tasks if task.status == MissionTaskStatus.COMPLETED)
+        try:
+            time_text = datetime.fromisoformat(phase.finished_at).astimezone().strftime("%Y-%m-%d %H:%M")
+
+        except ValueError:
+            time_text = ""
+
+        heading = "  ·  ".join(part for part in (
+            strings.mission_result_number.format(number), time_text,
+            strings.mission_phase_count.format(done, len(phase.tasks)),
+        ) if part)
+        return MissionResultView(
+            key=f"{number}:{phase.finished_at}",
+            heading=heading,
+            request_text=strings.mission_result_asked.format(_first_line(phase.request)) if phase.request else "",
+            report=phase.report,
         )
 
     def _step_views(

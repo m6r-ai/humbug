@@ -42,9 +42,18 @@ Humbug then:
 1. Records the mission.
 2. Starts a new conversation, the **mission lead**, in Autonomous mode, so it has no tab. Its
    transcript is in the conversations sidebar with a name that starts with `Mission-`.
-3. Sends the lead your objective, together with instructions to plan the work, report the plan,
-   decide details it reasonably can by itself, check its results, and stop only when it truly
-   needs you.
+3. Sends the lead your request, together with instructions to work out first what you actually
+   want. A question, or a request for an explanation, an opinion or a review, is simply answered:
+   no plan is made and no agents are started, and the mission shows **Answered** with the reply in
+   **Latest from the mission lead**. Only when the request needs work carried out, such as changing
+   files, running commands, or building or fixing something, or when you ask for a plan, does the
+   lead plan the work, report the plan, decide details it reasonably can by itself, check its
+   results, and stop only when it truly needs you. When it cannot tell, it answers and offers to do
+   the work.
+
+The lead works this out for every message you send, not only the first, so you can ask it questions
+about a mission at any time. A question asked while a mission is running is answered and the work
+carries on.
 
 ---
 
@@ -56,6 +65,7 @@ It does not ask when:
 
 - a step is marked **Blocked**, because the lead has stopped to ask you something;
 - an approval is waiting in the Decision Inbox;
+- there is no plan, because the lead answered a question rather than taking on work;
 - the mission is finished or stopped;
 - the lead's reply ended in an error, or you cancelled it.
 
@@ -120,8 +130,15 @@ When a mission is selected, Mission Control shows, from the top:
   dashboard with a short celebration. It shows the lead's final report, how many steps were done and
   how many agents took part, with **Ask a follow-up** (to continue the same mission) and
   **New mission**. While the report is showing, the lead's last message is not repeated in
-  **Latest from the mission lead**.
-- **Latest from the mission lead**: the lead's most recent reply, without its plan. This is where
+  **Latest from the mission lead**. If you then ask a question that the lead just answers, the report
+  stays as it was and the answer is shown in **Latest from the mission lead**.
+- **Earlier results**: once you have asked a follow-up, the rounds that finished before it are
+  kept here, newest first, so the new work never hides what came before. Each round shows when it
+  finished, how many of its steps were done, what you asked for (your objective, or the follow-up
+  that started it) and the first line of the lead's final report. Click a round to read the whole
+  report, and click it again to fold it away. Earlier results are kept with the mission when
+  Humbug closes.
+- **Latest from the mission lead**: the lead's most recent reply in full, without its plan. This is where
   the lead reports progress and asks you questions. When it has stopped to wait for you, the card
   is highlighted and marked **Waiting for your reply**: click **Reply**, or type in the box at the
   bottom, to answer it. The **Reply** button only appears when the lead is waiting for you.
@@ -129,13 +146,7 @@ When a mission is selected, Mission Control shows, from the top:
   you, and agents currently working. Click **Completed** or **In progress** to show only those
   steps in the plan, and click it again (or **Show all**) to see every step. Click the approvals
   or agents figure to jump to the Decision Inbox or the Agents list.
-- **Mission Plan**: the steps the lead has reported, each marked Pending, In progress, Completed
-  or Blocked. Click a step to open it and see the lead's latest progress note, the evidence for a
-  completed step, and the delegated conversation working on it, with a button to open that
-  conversation. Click the step again to close it. What a step shows is only as complete as the
-  lead's report: a step the lead has said nothing about shows that no progress has been
-  reported.
-- **Agents**: a live picture of who is working on the mission. You are at the top, the lead
+- **Agents**: a live picture of who is working on the mission, shown above the Mission Plan. You are at the top, the lead
   below you, and each delegated agent below the agent that handed it the work. Every agent has a
   short name of its own (such as Atlas or Nova) that it keeps for the life of the mission, and is
   described by the plan step it is working on where the lead has said so. Each is drawn as a small
@@ -144,7 +155,12 @@ When a mission is selected, Mission Control shows, from the top:
   idle. Particles flow along the arrows to agents that are working, and the arrow to an agent
   waiting for you turns into an amber dashed line. Each agent also tells you what it is doing in
   a speech bubble, typed out as it speaks: for example "Writing intro.md for you…", "Bringing in a
-  helper agent for this…" or, when it is done, "All done! Anything else I can do for you?". An
+  helper agent for this…" or, when it is done, "All done! Anything else I can do for you?". A new
+  agent introduces itself once; after its first step, while it works out its next one, it says what
+  it has just done and how many actions it has taken so far, such as "Read merge.py, now working out
+  what's next… (2 actions so far)". A tag under each agent's name shows the AI model it uses, such
+  as **Claude Sonnet 5.5**, and the same model is named in **Show as a list** and when you hover over
+  the agent. An
   agent waiting for your approval says what it wants to do and shows **Approve**, **Unsure** and
   **Reject** buttons in its bubble, which work exactly like the same buttons in the Decision Inbox.
   Answering in the bubble leaves you where you are: the page does not move, even as the banner
@@ -161,12 +177,28 @@ When a mission is selected, Mission Control shows, from the top:
   open its conversation. **Show as a list** under the picture lists the same agents and what each
   is doing, and **Hide the list** folds it away again. The
   same names are used in the Decision Inbox and Recent Activity.
+- **Mission Plan**: the steps the lead has reported, each marked Pending, In progress, Completed
+  or Blocked. Click a step to open it and see the lead's latest progress note, the evidence for a
+  completed step, and the delegated conversation working on it, with a button to open that
+  conversation. Click the step again to close it. What a step shows is only as complete as the
+  lead's report: a step the lead has said nothing about shows that no progress has been
+  reported.
 - **Recent Activity**: a tall scrolling feed, newest first, of what has happened in this mission
   since Mission Control was first opened in this mindspace. It includes the objective you started
   it with, each message you sent from Mission Control, and anything you typed directly into one of
   the mission's conversations. Entries marked **▶** have more to show: click one to open it and see
   the whole story, such as your full message, the full approval request, the file or command a tool
   worked on, or the reviewer's reasoning, and click it again to close it.
+- **Conversation**: in the right-hand column, below Recent Activity. It starts folded, showing only
+  its heading: click the heading (or press **Enter** or **Space** on it) to open it, and click again to
+  fold it. Open, it shows everything you and the lead have said, oldest first,
+  as you would read it in a conversation tab but without the input box (you reply from the box at
+  the bottom of Mission Control). Your messages sit on the right, shown exactly as you typed them;
+  the lead's replies are on the left under its name, formatted and in full. Between them, a small
+  **⚙** line names each tool the lead used and what it worked on, such as
+  `filesystem.write_file · notes.md`. Your first message is shown as the request you typed, not the
+  instructions Mission Control adds to it, and Mission Control's own requests for the lead to carry
+  on are left out. The count beside the heading is how many messages you have sent.
 
 Use the chips above the dashboard to switch between missions, or **+ New mission** to start
 another. **+ New mission** always stays in view. When there are more missions than fit, the chips
@@ -195,6 +227,7 @@ rather than jumping, so you can see where you have been taken. Each chip has a *
 | **Running** | The lead or a delegated agent is working |
 | **Needs you** | A conversation in the mission is waiting for your approval |
 | **Waiting for you** | Nothing is running; the lead may have asked you a question |
+| **Answered** | The lead answered your question; no work was needed, so there is no plan |
 | **Completed** | Every task in the plan is completed |
 | **Stopped** | You stopped the mission |
 
@@ -225,15 +258,16 @@ mission whose remaining tasks are all completed or stopped counts as completed.
 
 When a mission's plan is finished, the lead often suggests what to do next. If you ask it to
 carry on (for example, by replying "yes"), or the lead starts new work itself, the finished plan
-moves to the mission's history and the new work starts with an empty plan. Progress starts again
-from zero and the status shows the new work, not the finished plan. Until the lead reports its new
-plan, the Mission Plan says that it is being drafted.
+moves to the mission's history when the lead reports the plan for the new work. If you only ask a
+question, the lead answers it and the finished plan stays as it is. Progress starts again
+from zero and the status shows the new work, not the finished plan.
 
 Click **History** in the Mission Plan heading to see the plans the mission finished earlier, newest
 first, each with its title, how many steps were done and when it finished. Click a plan to see its
 steps and the evidence the lead reported for them, and click it again to close it. **History** only
 appears once a mission has an earlier plan, and the history is kept with the mission when Humbug
-closes.
+closes. The lead's final report on each finished plan, and what you asked for, are shown under
+**Earlier results** on the dashboard.
 
 ---
 

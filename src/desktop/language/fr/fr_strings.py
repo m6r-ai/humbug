@@ -785,6 +785,7 @@ def get_french_strings() -> LanguageStrings:
         mission_activity_auto_continued="Le responsable a été relancé",
         mission_activity_auto_paused="En pause : aucune étape terminée après {0} relances automatiques",
         mission_status_interrupted="Interrompue",
+        mission_status_replied="Répondu",
         mission_resume="Reprendre",
         mission_interrupted_notice=(
             "Humbug a été fermé pendant que cette mission était en cours. Reprenez-la pour continuer "
@@ -877,9 +878,38 @@ def get_french_strings() -> LanguageStrings:
             "Humbug s'est fermé pendant que je travaillais. Appuyez sur Reprendre et je continuerai là où je m'étais arrêté."
         ),
         mission_say_helper_waiting="Un de mes assistants a besoin de votre accord.",
+        mission_say_replied=(
+            "Je vous ai répondu ci-dessous. Posez-moi d'autres questions ou confiez-moi une tâche."
+        ),
         mission_say_ready="Prêt quand vous l'êtes.",
         mission_say_error="Un problème est survenu. Ouvrez ma conversation pour voir pourquoi.",
         mission_say_sleeping="Je fais une pause prévue de {0}. Je reprendrai ensuite…",
+        mission_chat_title="Conversation",
+        mission_chat_hint="Vos messages et les réponses du responsable, comme dans un onglet de conversation",
+        mission_chat_you="Vous",
+        mission_chat_lead="Responsable de mission",
+        mission_chat_show="Afficher la conversation",
+        mission_chat_hide="Masquer la conversation",
+        mission_chat_toggle_tip="Cliquez pour afficher ou masquer la conversation avec le responsable",
+        mission_results_title="Résultats précédents",
+        mission_results_hint=(
+            "Chaque étape terminée avant une question de suivi est conservée ici, la plus récente en premier. "
+            "Cliquez pour lire son rapport complet."
+        ),
+        mission_result_number="Étape {0}",
+        mission_result_asked="Vous avez demandé : {0}",
+        mission_result_no_report="Le responsable n'a pas donné de rapport final pour cette étape.",
+        mission_say_after_reading="J'ai lu {0}, je réfléchis à la suite…",
+        mission_say_after_writing="J'ai écrit {0}, je vérifie et je continue…",
+        mission_say_after_editing="J'ai modifié {0}, je vérifie et je continue…",
+        mission_say_after_deleting="J'ai supprimé {0}, je continue…",
+        mission_say_after_files="J'ai terminé avec les fichiers, je réfléchis à la suite…",
+        mission_say_after_delegating="Mon assistant a rendu compte, je lis ce qu'il a trouvé…",
+        mission_say_after_terminal="J'ai exécuté {0}, je lis le résultat…",
+        mission_say_after_web="J'ai obtenu une réponse du web, je la lis…",
+        mission_say_after_tool="J'ai terminé avec {0}, je réfléchis à la suite…",
+        mission_say_progress="{0} ({1} actions jusqu'ici)",
+        mission_say_progress_one="{0} (1 action jusqu'ici)",
         mission_finish_waiting="Terminer l'attente",
         mission_wait_left="Encore {0}",
         mission_activity_started_prompt="Mission démarrée : « {0} »",

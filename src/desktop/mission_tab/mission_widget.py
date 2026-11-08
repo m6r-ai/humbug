@@ -19,8 +19,8 @@ from PySide6.QtWidgets import (
 from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.mission_tab.mission_display import (
-    MissionActivityView, MissionAgentView, MissionChipView, MissionDecisionView, MissionPhaseView,
-    MissionStatTarget, MissionStatView, MissionStepState, MissionStepView, MissionTone, MissionView
+    MissionActivityView, MissionAgentView, MissionChatView, MissionChipView, MissionDecisionView, MissionPhaseView,
+    MissionResultView, MissionStatTarget, MissionStatView, MissionStepState, MissionStepView, MissionTone, MissionView
 )
 from desktop.mission_tab.mission_network import AgentNetworkView
 from desktop.mission_tab.mission_scene import ConfettiOverlay, MissionJourney, MissionOrb
@@ -38,7 +38,6 @@ _SIDE_COLUMN_WIDTH = 360
 
 _DETAIL_MAX_LINES = 10
 _DETAIL_MAX_CHARS = 900
-_LEAD_MESSAGE_MAX_CHARS = 2400
 _ACTIVITY_HEIGHT = 520
 _COMPOSER_MAX_LINES = 6
 
@@ -117,6 +116,16 @@ def _breakable(text: str) -> str:
         text = text.replace(separator, separator + "\u200b")
 
     return text
+
+
+def _first_report_line(report: str) -> str:
+    """Return the first line of a report with its Markdown marks removed, to show it folded."""
+    for line in report.splitlines():
+        plain = re.sub(r"[*_`#>]+", "", line).strip(" -")
+        if plain:
+            return plain
+
+    return ""
 
 
 def _send_icon(color: QColor, size: int) -> QIcon:
@@ -487,6 +496,10 @@ class MissionWidget(QWidget):
         self._decision_cards: dict[str, QFrame] = {}
         self._highlighted_card: QFrame | None = None
         self._open_activity: set[tuple[str, str]] = set()
+        self._results: list[MissionResultView] | None = None
+        self._conversation: list[MissionChatView] | None = None
+        self._open_results: set[str] = set()
+        self._just_opened_result = ""
         self._just_opened_activity: tuple[str, str] | None = None
 
         # Takes the highlight off a decision card the user was taken to.
@@ -593,6 +606,8 @@ class MissionWidget(QWidget):
         self._lead_card = self._build_lead_card()
         self._classic_card = self._build_classic_card()
         self._report_card = self._build_report_card()
+        self._results_card = self._build_results_card()
+        self._chat_card = self._build_chat_card()
         self._dashboard = self._build_dashboard()
         main_layout.addWidget(self._dashboard)
         main_layout.addStretch(1)
@@ -606,6 +621,7 @@ class MissionWidget(QWidget):
         side_layout.addWidget(self._inbox_card)
         self._activity_card = self._build_activity()
         side_layout.addWidget(self._activity_card)
+        side_layout.addWidget(self._chat_card)
         side_layout.addStretch(1)
         self._body.addWidget(self._side_column)
         # Takes the spare height once the columns are stacked, so the side cards follow the main ones directly.
@@ -881,6 +897,7 @@ class MissionWidget(QWidget):
         layout.addWidget(self._attention)
         layout.addWidget(self._report_card)
         layout.addWidget(header_card)
+        layout.addWidget(self._results_card)
         layout.addWidget(self._lead_card)
         layout.addWidget(self._classic_card)
 
@@ -969,13 +986,118 @@ class MissionWidget(QWidget):
         agents_layout.addWidget(self._agents_list)
         agents_layout.addStretch(1)
 
-        # The plan says what the work is, so it comes before the picture of who is doing it.
+        # The team, and what each agent is doing and waiting on, comes first; the plan follows it.
         self._lower_container = QWidget()
         self._lower_container.setLayout(self._lower)
         self._lower.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self._lower_container)
         layout.addWidget(self._agents_card)
+        layout.addWidget(self._lower_container)
         return dashboard
+
+    def _build_chat_card(self) -> QWidget:
+        """
+        Create the card showing the conversation with the lead, as a conversation tab would, without its input.
+
+        The card folds like an accordion: only its heading shows until the user opens it.
+        """
+        card, layout = self._card()
+        self._chat_toggle = _ClickableFrame()
+        self._chat_toggle.setObjectName("MissionActivityRow")
+        self._chat_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._chat_toggle.clicked.connect(self._toggle_chat)
+        header, self._chat_title, self._chat_pill = self._card_header("✉", MissionTone.ACCENT)
+        self._chat_chevron = QLabel("▶")
+        self._chat_chevron.setObjectName("MissionTimeText")
+        header.addWidget(self._chat_chevron)
+        header.setContentsMargins(0, 0, 4, 0)
+        self._chat_toggle.setLayout(header)
+        layout.addWidget(self._chat_toggle)
+        self._chat_body = QWidget()
+        body_layout = QVBoxLayout(self._chat_body)
+        body_layout.setContentsMargins(0, 0, 0, 0)
+        body_layout.setSpacing(10)
+        self._chat_hint = QLabel()
+        self._chat_hint.setObjectName("MissionHintText")
+        self._chat_hint.setWordWrap(True)
+        body_layout.addWidget(self._chat_hint)
+        self._chat_layout = QVBoxLayout()
+        self._chat_layout.setSpacing(10)
+        body_layout.addLayout(self._chat_layout)
+        self._chat_body.hide()
+        layout.addWidget(self._chat_body)
+        card.hide()
+        return card
+
+    def _toggle_chat(self) -> None:
+        """Open or fold the conversation."""
+        opened = self._chat_body.isHidden()
+        self._chat_body.setVisible(opened)
+        self._chat_chevron.setText("▼" if opened else "▶")
+        self._chat_toggle.setAccessibleName(self._chat_toggle_text())
+
+    def _chat_toggle_text(self) -> str:
+        """Return what activating the conversation's heading does now."""
+        strings = self._language_manager.strings()
+        return strings.mission_chat_hide if self._chat_body.isVisible() else strings.mission_chat_show
+
+    def _set_conversation(self, conversation: list[MissionChatView]) -> None:
+        """Show the user's messages and the lead's replies, with the tools the lead used between them."""
+        self._chat_card.setVisible(bool(conversation))
+        self._chat_pill.set_pill(str(sum(1 for entry in conversation if entry.kind == "user")), MissionTone.ACCENT)
+        if conversation == self._conversation:
+            return
+
+        self._conversation = conversation
+        _clear_layout(self._chat_layout)
+        for entry in conversation:
+            if entry.kind == "tool":
+                row = QWidget()
+                row_layout = QHBoxLayout(row)
+                row_layout.setContentsMargins(14, 0, 4, 0)
+                row_layout.setSpacing(8)
+                used = QLabel(f"⚙  {entry.text}")
+                used.setObjectName("MissionHintText")
+                used.setWordWrap(True)
+                used.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+                row_layout.addWidget(used, 1)
+                when = QLabel(entry.time_text)
+                when.setObjectName("MissionTimeText")
+                row_layout.addWidget(when, 0, Qt.AlignmentFlag.AlignTop)
+                self._chat_layout.addWidget(row)
+                continue
+
+            bubble = QFrame()
+            bubble.setObjectName("MissionChatUser" if entry.kind == "user" else "MissionChatLead")
+            bubble_layout = QVBoxLayout(bubble)
+            bubble_layout.setContentsMargins(14, 10, 14, 12)
+            bubble_layout.setSpacing(6)
+            heading = QHBoxLayout()
+            name = QLabel(entry.speaker)
+            name.setObjectName("MissionResultHeading")
+            heading.addWidget(name)
+            heading.addStretch(1)
+            when = QLabel(entry.time_text)
+            when.setObjectName("MissionTimeText")
+            heading.addWidget(when)
+            bubble_layout.addLayout(heading)
+            body = _WrapLabel(entry.text)
+            body.setObjectName("MissionLeadText")
+            # The lead writes Markdown; what the user typed is shown exactly as they typed it.
+            body.setTextFormat(Qt.TextFormat.MarkdownText if entry.kind == "lead" else Qt.TextFormat.PlainText)
+            body.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            body.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+            bubble_layout.addWidget(body)
+            if entry.kind == "user":
+                # The user's messages sit to one side, as in a conversation tab.
+                row = QWidget()
+                row_layout = QHBoxLayout(row)
+                row_layout.setContentsMargins(0, 0, 0, 0)
+                row_layout.addSpacing(32)
+                row_layout.addWidget(bubble, 1)
+                self._chat_layout.addWidget(row)
+
+            else:
+                self._chat_layout.addWidget(bubble)
 
     def _build_lead_card(self) -> QWidget:
         """Create the card showing the lead's latest message and where to reply."""
@@ -1000,9 +1122,8 @@ class MissionWidget(QWidget):
         header.addWidget(self._lead_time)
         layout.addLayout(header)
 
-        self._lead_body = QLabel()
+        self._lead_body = _WrapLabel()
         self._lead_body.setObjectName("MissionLeadText")
-        self._lead_body.setWordWrap(True)
         self._lead_body.setTextFormat(Qt.TextFormat.MarkdownText)
         self._lead_body.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self._lead_body.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
@@ -1043,9 +1164,8 @@ class MissionWidget(QWidget):
         self._report_stats.setWordWrap(True)
         column.addWidget(self._report_stats)
         column.addSpacing(4)
-        self._report_body = QLabel()
+        self._report_body = _WrapLabel()
         self._report_body.setObjectName("MissionLeadText")
-        self._report_body.setWordWrap(True)
         self._report_body.setTextFormat(Qt.TextFormat.MarkdownText)
         self._report_body.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self._report_body.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
@@ -1075,9 +1195,8 @@ class MissionWidget(QWidget):
         completed = view.completed
         self._report_card.setVisible(completed)
         if completed:
-            text = view.lead_message
-            shown = text if len(text) <= _LEAD_MESSAGE_MAX_CHARS else text[:_LEAD_MESSAGE_MAX_CHARS].rstrip() + " …"
-            self._report_body.setText(shown)
+            text = view.report_message
+            self._report_body.setText(text)
             self._report_body.setVisible(bool(text))
             self._report_stats.setText(view.report_text)
             # The view has no mission id, so a mission is recognised by its title: a mission
@@ -1089,6 +1208,93 @@ class MissionWidget(QWidget):
 
         self._shown_completed = completed
         self._shown_title = view.header.title
+
+    def _build_results_card(self) -> QWidget:
+        """Create the card that keeps the results of a mission's earlier rounds, for follow-ups to build on."""
+        card, layout = self._card()
+        header, self._results_title, self._results_pill = self._card_header("✓", MissionTone.SUCCESS)
+        layout.addLayout(header)
+        self._results_hint = QLabel()
+        self._results_hint.setObjectName("MissionHintText")
+        self._results_hint.setWordWrap(True)
+        layout.addWidget(self._results_hint)
+        self._results_layout = QVBoxLayout()
+        self._results_layout.setSpacing(6)
+        layout.addLayout(self._results_layout)
+        card.hide()
+        return card
+
+    def _set_results(self, results: list[MissionResultView]) -> None:
+        """Show the results of the mission's earlier rounds, newest first, each opening to its full report."""
+        self._results_card.setVisible(bool(results))
+        self._results_pill.set_pill(str(len(results)), MissionTone.SUCCESS)
+        if results == self._results:
+            return
+
+        self._results = results
+        _clear_layout(self._results_layout)
+        strings = self._language_manager.strings()
+        for result in results:
+            opened = result.key in self._open_results
+            row = _ClickableFrame()
+            row.setObjectName("MissionActivityRowOpen" if opened else "MissionActivityRow")
+            row.setCursor(Qt.CursorShape.PointingHandCursor)
+            row.setToolTip(strings.mission_activity_open_tip)
+            row.setAccessibleName(result.heading)
+            row.clicked.connect(lambda k=result.key: self._toggle_result(k))
+            column = QVBoxLayout(row)
+            column.setContentsMargins(8, 6, 8, 6)
+            column.setSpacing(4)
+            top = QHBoxLayout()
+            top.setSpacing(8)
+            heading = QLabel(result.heading)
+            heading.setObjectName("MissionResultHeading")
+            heading.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+            top.addWidget(heading, 1)
+            chevron = QLabel("▼" if opened else "▶")
+            chevron.setObjectName("MissionTimeText")
+            top.addWidget(chevron, 0, Qt.AlignmentFlag.AlignTop)
+            column.addLayout(top)
+            if result.request_text:
+                asked = QLabel(result.request_text)
+                asked.setObjectName("MissionHintText")
+                asked.setToolTip(result.request_text)
+                asked.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+                column.addWidget(asked)
+
+            report = result.report or strings.mission_result_no_report
+            if opened:
+                body = QLabel(report)
+                body.setObjectName("MissionLeadText")
+                body.setWordWrap(True)
+                body.setTextFormat(Qt.TextFormat.MarkdownText if result.report else Qt.TextFormat.PlainText)
+                body.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+                body.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+                column.addWidget(body)
+
+            else:
+                excerpt = QLabel(_first_report_line(report))
+                excerpt.setObjectName("MissionActivityText")
+                excerpt.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+                column.addWidget(excerpt)
+
+            self._results_layout.addWidget(row)
+            if opened and result.key == self._just_opened_result:
+                self._just_opened_result = ""
+                self.glide_to(row)
+
+    def _toggle_result(self, key: str) -> None:
+        """Open or close an earlier result's full report."""
+        if key in self._open_results:
+            self._open_results.discard(key)
+
+        else:
+            self._open_results.add(key)
+            self._just_opened_result = key
+
+        results = self._results or []
+        self._results = None
+        self._set_results(results)
 
     def _build_classic_card(self) -> QWidget:
         """Create the panel shown instead of the dashboard while a mission is in classic mode."""
@@ -1132,8 +1338,7 @@ class MissionWidget(QWidget):
         self._lead_card.setVisible(bool(text))
         if text != self._lead_text:
             self._lead_text = text
-            shown = text if len(text) <= _LEAD_MESSAGE_MAX_CHARS else text[:_LEAD_MESSAGE_MAX_CHARS].rstrip() + " …"
-            self._lead_body.setText(shown)
+            self._lead_body.setText(text)
 
         self._lead_time.setText(time_text)
         self._lead_pill.setVisible(awaiting_reply)
@@ -1262,6 +1467,12 @@ class MissionWidget(QWidget):
         self._plan_hint.setText(strings.mission_plan_hint)
         self._history_button.setToolTip(strings.mission_plan_history_tip)
         self._history_title.setText(strings.mission_plan_history_title.upper())
+        self._results_title.setText(strings.mission_results_title)
+        self._results_hint.setText(strings.mission_results_hint)
+        self._chat_title.setText(strings.mission_chat_title)
+        self._chat_hint.setText(strings.mission_chat_hint)
+        self._chat_toggle.setToolTip(strings.mission_chat_toggle_tip)
+        self._chat_toggle.setAccessibleName(self._chat_toggle_text())
         self._agents_title.setText(strings.mission_agents_title)
         self._agents_empty.setText(strings.mission_agents_empty)
         self._inbox_title.setText(strings.mission_inbox_title)
@@ -1285,6 +1496,7 @@ class MissionWidget(QWidget):
         self._decisions = None
         self._activity = None
         self._stats = None
+        self._conversation = None
 
     def set_missions(self, chips: list[MissionChipView], new_mission_selected: bool) -> None:
         """
@@ -1397,6 +1609,7 @@ class MissionWidget(QWidget):
         self._dashboard.setVisible(view is not None)
         self._activity_card.setVisible(view is not None)
         if view is None:
+            self._chat_card.hide()
             self._set_spinners([])
             self._set_lead_message("", "", False)
             self._shown_completed = False
@@ -1415,11 +1628,10 @@ class MissionWidget(QWidget):
         self._can_switch_to_classic = not classic
         self._auto_approve_row.setVisible(not classic)
         self._show_auto_approve(header.auto_approve)
-        # Once the mission is done, its last message is the final report and is shown as one.
-        self._set_lead_message(
-            "" if classic or view.completed else view.lead_message, view.lead_message_time, view.awaiting_reply
-        )
+        self._set_lead_message("" if classic else view.lead_message, view.lead_message_time, view.awaiting_reply)
         self._set_report(view)
+        self._set_results(view.results)
+        self._set_conversation([] if classic else view.conversation)
         self._journey.setVisible(not classic)
         self._journey.set_stage(
             header.stage, header.stage_tone, header.live, header.progress if header.stage == 2 else 0.0
@@ -1939,7 +2151,7 @@ class MissionWidget(QWidget):
             title.setToolTip(agent.title)
             title.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
             text.addWidget(title)
-            role = QLabel(agent.role_text)
+            role = QLabel(f"{agent.role_text}  ·  {agent.model_text}" if agent.model_text else agent.role_text)
             role.setObjectName("MissionAgentRole")
             text.addWidget(role)
             layout.addLayout(text, 1)
@@ -2812,6 +3024,16 @@ class MissionWidget(QWidget):
                 background-color: {primary};
                 color: {on_primary};
             }}
+            #MissionChatUser {{
+                background-color: {sm.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                border: 1px solid {sm.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
+                border-radius: {small_radius}px;
+            }}
+            #MissionChatLead {{
+                background-color: {sm.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: 1px solid {line};
+                border-radius: {small_radius}px;
+            }}
             #MissionHistoryPanel {{
                 background-color: {page};
                 border: 1px solid {line};
@@ -2939,6 +3161,10 @@ class MissionWidget(QWidget):
             }}
             #MissionWidget QLabel#MissionActivityText {{
                 font-size: {fs * 0.9:.1f}pt;
+            }}
+            #MissionWidget QLabel#MissionResultHeading {{
+                color: {heading};
+                font-weight: bold;
             }}
             #MissionActivityRow, #MissionActivityRowOpen {{
                 border: 1px solid transparent;

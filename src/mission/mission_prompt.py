@@ -11,26 +11,48 @@ _PLAN_EXAMPLE = (
 )
 
 
-def build_lead_prompt(objective: str) -> str:
+def build_lead_prompt(objective: str, model_name: str = "") -> str:
     """
     Return the opening message for a mission lead conversation.
 
-    The lead is an ordinary conversation.  These instructions ask it to plan,
-    to report the plan in a form Mission Control can display, and to keep the
-    user in control: nothing here grants it any authority it would not have
-    in a conversation the user started themselves.
+    The lead is an ordinary conversation.  These instructions ask it first to
+    work out whether the user wants an answer or work done: a question is
+    simply answered, and only work is planned, reported in a form Mission
+    Control can display, and carried out.  They keep the user in control:
+    nothing here grants the lead any authority it would not have in a
+    conversation the user started themselves.
+
+    The lead is told which AI model it runs on, because a model cannot see
+    that for itself and, asked which model it is, may otherwise name another.
 
     Args:
         objective: What the user wants to achieve
+        model_name: Display name of the AI model the lead runs on, or "" if not known
 
     Returns:
         The message to submit to the lead conversation
     """
-    return f"""You are the mission lead for a Humbug mission. The user's objective is at the end of this message.
+    model_note = (
+        f"\nYou are running on the AI model {model_name}. If the user asks which model you are, say that.\n"
+        if model_name else ""
+    )
+    return f"""You are the mission lead for a Humbug mission. The user's request is at the end of this message.
+{model_note}
+First work out what the user actually wants. Do this for the request below and for every later message from the
+user:
 
-Work as follows:
+- If it is a question, or asks for an explanation, an opinion or a review, or anything else you can give in a
+  reply, just answer it. Reading files to find the answer is fine. Do not make a plan, do not include a
+  `{PLAN_FENCE}` block and do not delegate: Mission Control shows your answer to the user as it is.
+- If it needs work carried out, such as changing files, running commands, or building or fixing something, or if
+  the user asks for a plan or a mission, run it as a mission as described below.
+- If you cannot tell, answer, and offer to carry out the work if the user wants it.
+- If the user asks a question while a mission is under way, answer it in your reply and carry on with the plan.
 
-1. Explore only what you need to understand the objective, then draft a plan of 3 to 8 concrete tasks.
+To run a mission:
+
+1. Explore only what you need to understand the work, then draft a plan of concrete tasks: as few as the work
+   needs, and no more than 8.
 2. Report the plan in a fenced code block tagged `{PLAN_FENCE}` containing JSON in exactly this shape:
 
 ```{PLAN_FENCE}
@@ -56,6 +78,6 @@ Work as follows:
    tests) and say what evidence you have.
 8. When everything is done, give a short summary of what changed and anything the user should follow up.
 
-Objective:
+Request:
 
 {objective}"""

@@ -128,6 +128,7 @@ class MissionAgentView:
         decision_destructive: Whether that request is destructive
         wait_seconds: Length of a wait the agent is in that the user can cut short, or 0
         wait_started: When that wait started, in seconds since the epoch, or 0
+        model_text: The AI model the agent uses, or "" when not known
     """
     context_id: str
     title: str
@@ -145,6 +146,7 @@ class MissionAgentView:
     decision_destructive: bool = False
     wait_seconds: float = 0.0
     wait_started: float = 0.0
+    model_text: str = ""
 
 
 @dataclass(frozen=True)
@@ -202,8 +204,47 @@ class MissionPhaseView:
 
 
 @dataclass(frozen=True)
+class MissionResultView:
+    """
+    The outcome of an earlier round of a mission, kept when the user asked a follow-up.
+
+    Attributes:
+        key: Identifies the round while the mission is shown
+        heading: Which round it was, when it finished and how much of its plan was done
+        request_text: What the user asked for in that round, or ""
+        report: The lead's final report on that round, or ""
+    """
+    key: str
+    heading: str
+    request_text: str
+    report: str
+
+
+@dataclass(frozen=True)
+class MissionChatView:
+    """
+    One entry in the conversation between the user and the mission's lead.
+
+    Attributes:
+        kind: "user", "lead" or "tool", for how the entry is drawn
+        speaker: Who it comes from, or "" for a tool the lead used
+        text: The message in full (Markdown for the lead's replies), or what a tool was used for
+        time_text: When it was written
+    """
+    kind: str
+    speaker: str
+    text: str
+    time_text: str
+
+
+@dataclass(frozen=True)
 class MissionView:
-    """Everything shown for the selected mission."""
+    """
+    Everything shown for the selected mission.
+
+    `lead_message` is the lead's latest reply, shown where the user replies,
+    and `report_message` the final report shown once the mission is done.
+    """
     header: MissionHeaderView
     stats: list[MissionStatView]
     steps: list[MissionStepView]
@@ -216,3 +257,6 @@ class MissionView:
     history: list[MissionPhaseView] = field(default_factory=list)
     completed: bool = False
     report_text: str = ""
+    results: list[MissionResultView] = field(default_factory=list)
+    report_message: str = ""
+    conversation: list[MissionChatView] = field(default_factory=list)

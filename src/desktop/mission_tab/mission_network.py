@@ -303,13 +303,25 @@ class AgentNetworkView(QWidget):
         return pad * 2 + line * _CARD_LINES + pad * 0.8 + self._button_height()
 
     def _name_height(self) -> float:
-        """Return the height of a node's name and caption."""
+        """Return the height of a node's name, caption and model, which every agent has room for."""
         base = self._style_manager.base_font_size() * self._style_manager.zoom_factor()
         name_font = QFont(self.font())
         name_font.setPointSizeF(base * 0.95)
         caption_font = QFont(self.font())
         caption_font.setPointSizeF(base * 0.8)
-        return QFontMetrics(name_font).height() + QFontMetrics(caption_font).height() + 4
+        return QFontMetrics(name_font).height() + QFontMetrics(caption_font).height() + self._model_height() + 4
+
+    def _model_font(self) -> QFont:
+        """Return the font an agent's model is named in."""
+        font = QFont(self.font())
+        font.setPointSizeF(self._style_manager.base_font_size() * self._style_manager.zoom_factor() * 0.72)
+        font.setBold(True)
+        return font
+
+    def _model_height(self) -> float:
+        """Return the height of the tag naming an agent's model, with the gap above it."""
+        zoom = self._style_manager.zoom_factor()
+        return QFontMetrics(self._model_font()).height() + 6 * zoom
 
     def _fit_text(self, text: str, width: int, lines: int = _CARD_LINES) -> str:
         """Return text shortened, if need be, to fit a number of the card's lines at a width."""
@@ -555,7 +567,9 @@ class AgentNetworkView(QWidget):
         if node is not None and node.agent is not None:
             QToolTip.showText(
                 event.globalPosition().toPoint(),
-                f"{node.label} · {node.caption}\n{node.agent.speech or node.agent.state_text}",
+                f"{node.label} · {node.caption}"
+                + (f" · {node.agent.model_text}" if node.agent.model_text else "")
+                + f"\n{node.agent.speech or node.agent.state_text}",
                 self
             )
 
@@ -751,6 +765,29 @@ class AgentNetworkView(QWidget):
         painter.drawText(caption_rect, int(Qt.AlignmentFlag.AlignCenter), caption_metrics.elidedText(
             node.caption, Qt.TextElideMode.ElideRight, round(width)
         ))
+        if node.agent is not None and node.agent.model_text:
+            self._paint_model(painter, node.agent.model_text, node.center.x(), caption_rect.bottom() + 3 * zoom, width)
+
+    def _paint_model(self, painter: QPainter, model: str, center_x: float, top: float, width: float) -> None:
+        """Draw a small tag naming the AI model an agent uses."""
+        zoom = self._style_manager.zoom_factor()
+        _page, card = surface_colors()
+        font = self._model_font()
+        metrics = QFontMetrics(font)
+        pad = 7 * zoom
+        text = metrics.elidedText(model, Qt.TextElideMode.ElideRight, round(width - pad * 2))
+        tag = QRectF(0, top, metrics.horizontalAdvance(text) + pad * 2, metrics.height() + 2 * zoom)
+        tag.moveLeft(center_x - tag.width() / 2)
+        fill = QColor(tone_color(MissionTone.ACCENT))
+        fill.setAlphaF(0.1)
+        edge = QColor(tone_color(MissionTone.ACCENT))
+        edge.setAlphaF(0.35)
+        painter.setPen(QPen(edge, 1))
+        painter.setBrush(fill)
+        painter.drawRoundedRect(tag, tag.height() / 2, tag.height() / 2)
+        painter.setFont(font)
+        painter.setPen(readable(tone_color(MissionTone.ACCENT), card))
+        painter.drawText(tag, int(Qt.AlignmentFlag.AlignCenter), text)
 
     def _paint_user(self, painter: QPainter, node: _Node) -> None:
         """Draw the user's node: a simple person in a circle."""

@@ -138,11 +138,15 @@ class MissionPhase:
         summary: Its summary while the plan ran
         tasks: The plan's tasks as they finished
         finished_at: When the plan was moved to history, as an ISO timestamp
+        request: What the user asked for that started the plan, or "" if it is not known
+        report: The lead's final report on the plan, or "" if there was none
     """
     title: str
     summary: str
     tasks: list[MissionTask]
     finished_at: str
+    request: str = ""
+    report: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         """Return the phase as a JSON-safe dictionary."""
@@ -151,6 +155,8 @@ class MissionPhase:
             "summary": self.summary,
             "tasks": [task.to_dict() for task in self.tasks],
             "finishedAt": self.finished_at,
+            "request": self.request,
+            "report": self.report,
         }
 
     @classmethod
@@ -169,6 +175,8 @@ class MissionPhase:
             summary=str(data.get("summary", "")),
             tasks=[MissionTask.from_dict(t) for t in data.get("tasks", []) if isinstance(t, dict)],
             finished_at=str(data.get("finishedAt", "")),
+            request=str(data.get("request", "")),
+            report=str(data.get("report", "")),
         )
 
 
@@ -181,7 +189,12 @@ class Mission:
     reported.  What actually happened lives in the conversation transcripts.
     `active` is set while the mission is working and cleared once it is
     waiting for the user, so a record still marked active when Humbug starts
-    belongs to a mission that was interrupted.
+    belongs to a mission that was interrupted.  `request` is what the user asked
+    for that started the current plan: the objective, then each follow-up.
+    Once the plan is finished, `follow_up` is the user's latest message and
+    `report` the lead's report on the finished plan: the lead decides whether
+    the message asks for new work, and only a new plan moves the finished one
+    to `history`, taking them with it.
     """
     mission_id: str
     objective: str
@@ -197,6 +210,9 @@ class Mission:
     auto_approve: AutoApproveLevel = AutoApproveLevel.OFF
     title_locked: bool = False
     history: list[MissionPhase] = field(default_factory=list)
+    request: str = ""
+    follow_up: str = ""
+    report: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         """Return the mission as a JSON-safe dictionary."""
@@ -216,6 +232,9 @@ class Mission:
             "autoApprove": self.auto_approve.value,
             "titleLocked": self.title_locked,
             "history": [phase.to_dict() for phase in self.history],
+            "request": self.request,
+            "followUp": self.follow_up,
+            "report": self.report,
         }
 
     @classmethod
@@ -256,6 +275,9 @@ class Mission:
             ),
             title_locked=bool(data.get("titleLocked", False)),
             history=[MissionPhase.from_dict(p) for p in data.get("history", []) if isinstance(p, dict)],
+            request=str(data.get("request", "")),
+            follow_up=str(data.get("followUp", "")),
+            report=str(data.get("report", "")),
         )
 
     def completed_count(self) -> int:

@@ -48,6 +48,47 @@ class TestMissionStore:
 
         assert store.load_all()[0].history == mission.history
 
+    def test_earlier_results_survive_a_round_trip(self, tmp_path):
+        """What the user asked and the lead's report are saved with each finished plan, with the current request."""
+        store = MissionStore(str(tmp_path / "missions"))
+        mission = _mission()
+        mission.request = "Now add a changelog"
+        mission.history.append(MissionPhase(
+            title="Earlier", summary="", tasks=[], finished_at="2026-11-06T09:00:00+00:00",
+            request="Build the thing", report="**All done.** The thing is built.",
+        ))
+
+        store.save(mission)
+
+        loaded = store.load_all()[0]
+        assert loaded.request == "Now add a changelog"
+        assert loaded.history[0].request == "Build the thing"
+        assert loaded.history[0].report == "**All done.** The thing is built."
+
+    def test_records_from_before_results_were_kept_still_load(self):
+        """A record without requests or reports loads with them empty."""
+        data = _mission().to_dict()
+        del data["request"]
+        data["history"] = [{"title": "Earlier", "summary": "", "tasks": [], "finishedAt": "2026-11-06T09:00:00+00:00"}]
+
+        loaded = Mission.from_dict(data)
+        assert loaded.request == ""
+        assert loaded.history[0].request == "" and loaded.history[0].report == ""
+        assert loaded.follow_up == "" and loaded.report == ""
+
+    def test_follow_up_on_a_finished_plan_survives_a_round_trip(self, tmp_path):
+        """A follow-up the lead has not yet turned into new work, and the report it follows, are saved."""
+        store = MissionStore(str(tmp_path / "missions"))
+        mission = _mission()
+        mission.follow_up = "Which file did you change?"
+        mission.report = "**All done.** The docs are in docs/."
+
+        store.save(mission)
+
+        loaded = store.load_all()[0]
+        assert loaded.follow_up == "Which file did you change?"
+        assert loaded.report == "**All done.** The docs are in docs/."
+
     def test_missions_load_oldest_first(self, tmp_path):
         """Missions are returned in creation order."""
         store = MissionStore(str(tmp_path / "missions"))

@@ -1,6 +1,6 @@
 """Point-in-time views of mission state for front ends."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
 
@@ -16,6 +16,7 @@ class MissionStatus(Enum):
     COMPLETED = auto()
     STOPPED = auto()
     INTERRUPTED = auto()
+    REPLIED = auto()
 
 
 class MissionAgentState(Enum):
@@ -69,6 +70,10 @@ class MissionAgent:
         tool_target: What the tool is working on, such as a file, a URL or a command, when known
         wait_seconds: Length of a wait the user can cut short, such as a clock sleep, or 0 when not waiting
         wait_started_at: When that wait started
+        model: Display name of the AI model the conversation uses
+        actions: How many tool calls the conversation has made so far
+        last_tool_name: The most recent tool the conversation used, kept after the tool finishes
+        last_tool_target: What that tool worked on, when known
     """
     context_id: str
     title: str
@@ -79,6 +84,10 @@ class MissionAgent:
     tool_target: str = ""
     wait_seconds: float = 0.0
     wait_started_at: datetime | None = None
+    model: str = ""
+    actions: int = 0
+    last_tool_name: str = ""
+    last_tool_target: str = ""
 
 
 @dataclass(frozen=True)
@@ -135,6 +144,28 @@ class MissionActivity:
     more: str = ""
 
 
+class MissionSpeaker(Enum):
+    """Who an entry in a mission's conversation comes from."""
+    USER = auto()
+    LEAD = auto()
+    TOOL = auto()
+
+
+@dataclass(frozen=True)
+class MissionExchange:
+    """
+    One entry in the conversation between the user and a mission's lead.
+
+    Attributes:
+        speaker: Who it comes from
+        text: What the user asked or the lead replied, in full, or for a tool, what it was used for
+        at: When it was written
+    """
+    speaker: MissionSpeaker
+    text: str
+    at: datetime | None = None
+
+
 @dataclass(frozen=True)
 class MissionSnapshot:
     """
@@ -148,6 +179,7 @@ class MissionSnapshot:
         activity: Recent activity for this mission, newest first
         lead_message: The lead's latest reply without its plan block, or "" if there is none
         lead_message_at: When that reply was written, if there is one
+        conversation: The user's messages, the lead's replies and the tools it used, oldest first
     """
     mission: Mission
     status: MissionStatus
@@ -156,3 +188,4 @@ class MissionSnapshot:
     activity: list[MissionActivity]
     lead_message: str
     lead_message_at: datetime | None
+    conversation: list[MissionExchange] = field(default_factory=list)

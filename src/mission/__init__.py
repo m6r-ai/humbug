@@ -5,7 +5,7 @@ from mission.mission_error import MissionError
 from mission.mission_service import MissionService
 from mission.mission_snapshot import (
     MissionActivity, MissionActivityKind, MissionAgent, MissionAgentState,
-    MissionDecision, MissionSnapshot, MissionStatus
+    MissionDecision, MissionExchange, MissionSnapshot, MissionSpeaker, MissionStatus
 )
 
 
@@ -18,10 +18,12 @@ __all__ = [
     "MissionAgentState",
     "MissionDecision",
     "MissionError",
+    "MissionExchange",
     "MissionMode",
     "MissionPhase",
     "MissionService",
     "MissionSnapshot",
+    "MissionSpeaker",
     "MissionStatus",
     "MissionTask",
     "MissionTaskStatus",

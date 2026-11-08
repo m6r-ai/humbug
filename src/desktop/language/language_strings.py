@@ -676,6 +676,7 @@ class LanguageStrings:
     mission_activity_auto_continued: str
     mission_activity_auto_paused: str
     mission_status_interrupted: str
+    mission_status_replied: str
     mission_resume: str
     mission_interrupted_notice: str
     mission_auto_resume: str
@@ -742,9 +743,33 @@ class LanguageStrings:
     mission_say_stopped: str
     mission_say_interrupted: str
     mission_say_helper_waiting: str
+    mission_say_replied: str
     mission_say_ready: str
     mission_say_error: str
     mission_say_sleeping: str
+    mission_results_title: str
+    mission_chat_title: str
+    mission_chat_hint: str
+    mission_chat_you: str
+    mission_chat_lead: str
+    mission_chat_show: str
+    mission_chat_hide: str
+    mission_chat_toggle_tip: str
+    mission_results_hint: str
+    mission_result_number: str
+    mission_result_asked: str
+    mission_result_no_report: str
+    mission_say_after_reading: str
+    mission_say_after_writing: str
+    mission_say_after_editing: str
+    mission_say_after_deleting: str
+    mission_say_after_files: str
+    mission_say_after_delegating: str
+    mission_say_after_terminal: str
+    mission_say_after_web: str
+    mission_say_after_tool: str
+    mission_say_progress: str
+    mission_say_progress_one: str
     mission_finish_waiting: str
     mission_wait_left: str
     mission_activity_started_prompt: str

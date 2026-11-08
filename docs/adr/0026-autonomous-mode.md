@@ -125,6 +125,14 @@ only what a conversation cannot do for itself.
   plans the work, records the plan, and runs the tasks by delegating to child
   conversations with the existing delegate tool. Independent tasks run in parallel
   as they already do today.
+- **Only work becomes a mission.** The lead first decides, for every message the
+  user sends, whether it asks for an answer or for work. A question is answered in
+  a reply with no plan and no delegates, and the mission shows it as answered;
+  Mission Control does not ask the lead to continue while there is no plan. A
+  follow-up on a finished plan is handed to the lead the same way: the finished
+  plan moves to history only when the lead reports a new plan, so a question
+  leaves it, and its report, as they were. The decision is the AI's, made inside
+  the conversation; Humbug only reacts to whether a plan was reported.
 - **Humbug's backend adds** the following:
   - **Limits**, enforced in the delegate path: depth, children per task, total
     tasks, concurrent turns, and a token budget.
