@@ -4,18 +4,19 @@ import asyncio
 import dataclasses
 from datetime import datetime, timezone
 import types
+from unittest import mock
 
 import pytest
 
-from PySide6.QtCore import QPoint, QPointF, QPropertyAnimation, Qt
-from PySide6.QtGui import QWheelEvent
+from PySide6.QtCore import QPoint, QPointF, QPropertyAnimation, QRectF, Qt
+from PySide6.QtGui import QImage, QPainterPath, QRegion, QWheelEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QFrame, QPushButton, QWidget
 
 from ai import AIConversation, AIConversationEvent, AIMessage, AIMessageSource
 from ai_tool import AIToolApprovalKind, AIToolCall
 from context.context_registry import ContextEvent
-from mission import MissionAgent, MissionAgentState, MissionDecision, MissionMode, MissionStatus
+from mission import AutoApproveLevel, MissionAgent, MissionAgentState, MissionDecision, MissionMode, MissionStatus
 from PySide6.QtWidgets import QLabel
 
 from desktop.mission_tab import mission_tab as mission_tab_module
@@ -30,6 +31,7 @@ from desktop.mission_tab.mission_mode_menus import MissionModeMenus
 from desktop.mission_tab.mission_service_holder import MissionServiceHolder
 from desktop.mission_tab.mission_network import AgentNetworkView
 from desktop.mission_tab.mission_scene import ConfettiOverlay, MissionJourney, MissionOrb
+from desktop.color_role import ColorRole
 from desktop.style_manager import StyleManager
 from desktop.mission_tab.mission_tab import MissionTab, agent_names
 from desktop.mission_tab.mission_widget import MissionWidget, submit_key_text
@@ -1258,5 +1260,490 @@ class TestWaitingAlerts:
         assert widget._elsewhere_mission_id == "m2"  # pylint: disable=protected-access
         assert widget._elsewhere_text.text() == "“Second” is waiting for your decision"  # pylint: disable=protected-access
         assert [chip.waiting_text for chip in widget._chips] == ["", "1"]  # pylint: disable=protected-access
+        tab._service = None  # pylint: disable=protected-access
+        tab.deleteLater()
+
+
+def _waiting_network(helpers: int, width: int) -> AgentNetworkView:
+    """Return the agents of a shown Mission Control page, where the last of the lead's helpers waits for an answer."""
+    host = MissionWidget()
+    host.resize(width, 1200)
+    host.apply_style()
+    host.show()
+    agents = [_agent_view("lead", is_lead=True)]
+    for index in range(helpers):
+        agents.append(_agent_view(f"h{index}", parent_id="lead"))
+
+    agents[-1] = dataclasses.replace(
+        _agent_view(f"h{helpers - 1}", parent_id="lead", activity="waiting"),
+        speech="I need your approval: The AI is requesting to GET https://api.example.com/v1/forecast", decision_id="d1",
+    )
+    host.set_mission(dataclasses.replace(_view(completed=False, stage=2), agents=agents))
+    QTest.qWait(50)
+    network = host._agent_network  # pylint: disable=protected-access
+    network._phase += 10  # pylint: disable=protected-access
+    network._place_buttons()  # pylint: disable=protected-access
+    return network
+
+
+class TestBubbleButtons:
+    """A waiting agent's bubble answers its request without leaving the agents."""
+
+    def test_reject_reports_the_decision_once(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Reject reports a rejection only, and no answer can be given twice."""
+        network = _waiting_network(1, 2000)
+        approved: list[str] = []
+        rejected: list[str] = []
+        network.decision_approved.connect(approved.append)
+        network.decision_rejected.connect(rejected.append)
+        _key, (approve, unsure, reject, _more) = network._buttons["h0"]  # pylint: disable=protected-access
+
+        reject.click()
+        assert rejected == ["d1"] and not approved
+        assert not approve.isEnabled() and not unsure.isEnabled() and not reject.isEnabled()
+        network.window().deleteLater()
+
+    def test_buttons_take_new_labels(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Changing language relabels a bubble's buttons in place."""
+        network = _waiting_network(1, 2000)
+        _key, buttons = network._buttons["h0"]  # pylint: disable=protected-access
+        agents = network._nodes  # pylint: disable=protected-access
+        views = [node.agent for node in agents if node.agent is not None]
+        network.set_agents(views, "Vous", "Approuver", "Rejeter", "Terminer", "{0}", "Lire la suite", "Pas sûr")
+
+        assert network._buttons["h0"][1] == buttons  # pylint: disable=protected-access
+        assert [button.text() for button in buttons] == ["Approuver", "Pas sûr", "Rejeter", "Lire la suite"]
+        network.window().deleteLater()
+
+    def test_wide_bubble_keeps_every_button_on_one_row(self, qapp) -> None:  # pylint: disable=unused-argument
+        """With room to spare, Read more sits beside the answer buttons."""
+        network = _waiting_network(1, 2000)
+        _key, buttons = network._buttons["h0"]  # pylint: disable=protected-access
+        assert len({button.y() for button in buttons}) == 1
+        assert all(button.width() >= button.sizeHint().width() for button in buttons)
+        network.window().deleteLater()
+
+    def test_narrow_bubble_moves_read_more_to_its_own_row(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Sharing a level, the answer buttons keep their full width and Read more goes above them, inside the card."""
+        network = _waiting_network(3, 1300)
+        _key, (approve, unsure, reject, more) = network._buttons["h2"]  # pylint: disable=protected-access
+        node = next(n for n in network._nodes if n.node_id == "h2")  # pylint: disable=protected-access
+        card = network._bubble_rect(node)  # pylint: disable=protected-access
+
+        assert approve.y() == unsure.y() == reject.y()
+        assert more.geometry().bottom() < approve.y()
+        assert all(button.width() >= button.sizeHint().width() for button in (approve, unsure, reject))
+        for button in (approve, unsure, reject, more):
+            assert card.contains(QRectF(button.geometry()))
+
+        network.window().deleteLater()
+
+    def test_answering_keeps_focus_on_the_agents(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A focused button that is answered hands focus to the picture, not to the next button on the page."""
+        network = _waiting_network(1, 2000)
+        network.show()
+        network.activateWindow()
+        _key, (approve, _unsure, _reject, _more) = network._buttons["h0"]  # pylint: disable=protected-access
+        approve.setFocus()
+        QApplication.processEvents()
+        assert approve.hasFocus()
+
+        approve.click()
+        assert network.hasFocus()
+        network.window().deleteLater()
+
+    def test_finish_waiting_keeps_focus_on_the_agents(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Cutting a wait short also keeps focus on the picture."""
+        network = AgentNetworkView()
+        network.resize(800, 600)
+        sleeping = dataclasses.replace(
+            _agent_view("a", parent_id="lead", activity="working"), speech="Taking a pause", wait_started=1.0,
+            wait_seconds=60.0,
+        )
+        network.set_agents([_agent_view("lead", is_lead=True), sleeping], "You", finish_label="Finish waiting")
+        network._phase += 10  # pylint: disable=protected-access
+        network._place_buttons()  # pylint: disable=protected-access
+        network.show()
+        network.activateWindow()
+        finished: list[str] = []
+        network.wait_finish_requested.connect(finished.append)
+        finish = network._buttons["a"][1][0]  # pylint: disable=protected-access
+        finish.setFocus()
+        QApplication.processEvents()
+
+        finish.click()
+        assert finished == ["a"]
+        assert network.hasFocus() and not finish.isEnabled()
+        network.deleteLater()
+
+    def test_link_to_a_helper_starts_at_the_bottom_of_the_speaking_agents_bubble(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A delegator that is talking is joined to its helper from under its bubble."""
+        network = _waiting_network(1, 2000)
+        lead = dataclasses.replace(_agent_view("lead", is_lead=True), speech="Bringing in a helper")
+        helper = _agent_view("h0", parent_id="lead", activity="working")
+        network.set_agents([lead, helper], "You")
+        nodes = {node.node_id: node for node in network._nodes}  # pylint: disable=protected-access
+        painter = mock.MagicMock()
+
+        network._paint_edge(painter, nodes["lead"], nodes["h0"])  # pylint: disable=protected-access
+        path = next(call.args[0] for call in painter.drawPath.call_args_list if isinstance(call.args[0], QPainterPath))
+        start = path.elementAt(0)
+        assert start.x == nodes["lead"].center.x()
+        assert start.y == network._bubble_rect(nodes["lead"]).bottom()  # pylint: disable=protected-access
+        network.window().deleteLater()
+
+
+def _held_widget() -> MissionWidget:
+    """Return a shown widget with a waiting helper, scrolled so the agents are part way down the screen."""
+    widget = MissionWidget()
+    widget.resize(900, 600)
+    widget.apply_style()
+    widget.show()
+    widget.set_mission(_waiting_view())
+    widget.set_decisions([_decision()])
+    QTest.qWait(50)
+    network = widget._agent_network  # pylint: disable=protected-access
+    scrollbar = widget._scroll.verticalScrollBar()  # pylint: disable=protected-access
+    scrollbar.setValue(network.mapTo(widget._scroll.widget(), QPoint(0, 0)).y() - 40)  # pylint: disable=protected-access
+    return widget
+
+
+class TestHoldingThePage:
+    """Every answer given in a bubble holds the agents still; the hold ends on its own or when the user is taken elsewhere."""
+
+    @pytest.mark.parametrize("network_signal, widget_signal, key", [
+        ("decision_approved", "decision_approved", "d1"),
+        ("decision_unsure", "decision_unsure", "d1"),
+        ("decision_rejected", "decision_rejected", "d1"),
+        ("wait_finish_requested", "wait_finish_requested", "a"),
+    ])
+    def test_each_answer_is_passed_on_and_holds_the_agents(self, qapp, network_signal, widget_signal, key) -> None:  # pylint: disable=unused-argument
+        """Approve, Unsure, Reject and Finish waiting all reach the owner and hold the page."""
+        widget = _held_widget()
+        received: list[str] = []
+        getattr(widget, widget_signal).connect(received.append)
+
+        getattr(widget._agent_network, network_signal).emit(key)  # pylint: disable=protected-access
+        assert received == [key]
+        assert widget._hold_offset == 40  # pylint: disable=protected-access
+        assert widget._hold_timer.isActive()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_hold_ends_by_itself(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Once the hold has run out, a change above the agents moves the page as usual."""
+        widget = _held_widget()
+        scrollbar = widget._scroll.verticalScrollBar()  # pylint: disable=protected-access
+        widget._agent_network.decision_approved.emit("d1")  # pylint: disable=protected-access
+        widget._hold_timer.timeout.emit()  # pylint: disable=protected-access
+        assert widget._hold_offset is None  # pylint: disable=protected-access
+
+        before = scrollbar.value()
+        widget.set_decisions([])
+        QTest.qWait(50)
+        assert scrollbar.value() == before
+        widget.deleteLater()
+
+    def test_read_more_after_answering_is_not_held_back(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Being taken to a request ends any hold, so the glide is not undone."""
+        widget = _held_widget()
+        widget.set_decisions([_decision(), dataclasses.replace(_decision(), decision_id="d2")])
+        QTest.qWait(20)
+        widget._agent_network.decision_approved.emit("d1")  # pylint: disable=protected-access
+        widget.show_decision("d2")
+        QApplication.processEvents()
+        assert widget._hold_offset is None  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_nothing_is_held_while_the_agents_are_hidden(self, qapp) -> None:  # pylint: disable=unused-argument
+        """With no agents on screen there is nothing to hold, but the answer is still passed on."""
+        widget = MissionWidget()
+        approved: list[str] = []
+        widget.decision_approved.connect(approved.append)
+        widget._agent_network.decision_approved.emit("d1")  # pylint: disable=protected-access
+        assert approved == ["d1"]
+        assert widget._hold_offset is None  # pylint: disable=protected-access
+        widget.deleteLater()
+
+
+class TestGliding:
+    """The page glides only as far as it must, in either direction."""
+
+    def test_glides_up_to_something_above(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Something above the screen is glided down to."""
+        widget = MissionWidget()
+        widget.resize(420, 500)
+        widget.apply_style()
+        widget.show()
+        widget.set_mission(_waiting_view())
+        QTest.qWait(50)
+        scrollbar = widget._scroll.verticalScrollBar()  # pylint: disable=protected-access
+        scrollbar.setValue(scrollbar.maximum())
+
+        widget.glide_to(widget._journey)  # pylint: disable=protected-access
+        QApplication.processEvents()
+        animation = widget._scroll_animations[widget._scroll]  # pylint: disable=protected-access
+        assert animation.state() == QPropertyAnimation.State.Running
+        assert animation.endValue() < animation.startValue()
+        widget.deleteLater()
+
+    def test_no_move_when_already_in_view(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Something already on screen does not move the page."""
+        widget = MissionWidget()
+        widget.resize(900, 900)
+        widget.apply_style()
+        widget.show()
+        widget.set_mission(_waiting_view())
+        QTest.qWait(50)
+
+        widget.glide_to(widget._journey)  # pylint: disable=protected-access
+        QApplication.processEvents()
+        assert widget._scroll not in widget._scroll_animations  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    @pytest.mark.parametrize("target, card", [
+        (MissionStatTarget.INBOX, "_inbox_card"), (MissionStatTarget.AGENTS, "_agents_card"),
+    ])
+    def test_statistics_glide_to_their_cards(self, qapp, target, card) -> None:  # pylint: disable=unused-argument
+        """The approvals and agents figures glide to the inbox and the agents."""
+        widget = MissionWidget()
+        widget._on_stat_clicked(target)  # pylint: disable=protected-access
+        assert widget._glide_target is getattr(widget, card)  # pylint: disable=protected-access
+        assert widget._glide_timer.isActive()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_unknown_request_goes_nowhere(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Asking to see a request that has gone moves and highlights nothing."""
+        widget = MissionWidget()
+        widget.set_decisions([_decision()])
+        widget.show_decision("gone")
+        assert widget._glide_target is None  # pylint: disable=protected-access
+        assert widget._highlighted_card is None  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_choosing_an_earlier_mission_glides_the_chips_back(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The strip glides back towards the start when an earlier mission is selected."""
+        widget = _shown_strip(600, _many_chips(10, 9))
+        QTest.qWait(500)
+        scrollbar = widget._chip_strip.horizontalScrollBar()  # pylint: disable=protected-access
+        assert scrollbar.value() > 0
+
+        widget.set_missions(_many_chips(10, 0), new_mission_selected=False)
+        QTest.qWait(500)
+        assert scrollbar.value() == scrollbar.minimum()
+        widget.deleteLater()
+
+
+class TestDesignSystemButtons:
+    """Mission Control's buttons are painted in the application's button colours."""
+
+    @pytest.mark.parametrize("name, role", [
+        ("MissionApprove", ColorRole.BUTTON_BACKGROUND_RECOMMENDED),
+        ("MissionReplyButton", ColorRole.BUTTON_BACKGROUND_RECOMMENDED),
+        ("MissionSecondaryButton", ColorRole.BUTTON_SECONDARY_BACKGROUND),
+        ("MissionGhostButton", ColorRole.BUTTON_SECONDARY_BACKGROUND),
+        ("MissionApproveDestructive", ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE),
+        ("MissionStopButton", ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE),
+        ("MissionStopTaskButton", ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE),
+    ])
+    def test_button_uses_its_colour_role(self, qapp, name, role) -> None:  # pylint: disable=unused-argument
+        """Each kind of button fills with the colour the rest of the application uses for it."""
+        widget = MissionWidget()
+        widget.resize(900, 700)
+        widget.apply_style()
+        widget.show()
+        button = QPushButton("Approve", widget)
+        button.setObjectName(name)
+        button.show()
+        button.adjustSize()
+        QApplication.processEvents()
+
+        image = button.grab().toImage()
+        assert image.pixelColor(5, image.height() // 2).name() == StyleManager().get_color(role).name()
+
+        button.setEnabled(False)
+        QApplication.processEvents()
+        image = button.grab().toImage()
+        disabled = StyleManager().get_color(ColorRole.BUTTON_BACKGROUND_DISABLED).name()
+        assert image.pixelColor(5, image.height() // 2).name() == disabled
+        widget.deleteLater()
+
+
+class TestMoreActions:
+    """Switching to classic and deleting are kept in the mission's ⋯ menu."""
+
+    @staticmethod
+    def _choose(widget: MissionWidget, monkeypatch, label: str) -> list[str]:
+        """Open the ⋯ menu, pick the entry with a label, and return the labels offered."""
+        offered: list[str] = []
+        menu = mock.MagicMock()
+        menu.addAction.side_effect = lambda text: offered.append(text) or text
+        menu.exec.side_effect = lambda _position: label
+        monkeypatch.setattr(widget._style_manager, "create_menu", lambda _parent: menu)  # pylint: disable=protected-access
+        widget._show_more_actions()  # pylint: disable=protected-access
+        return offered
+
+    def test_delete_is_in_the_menu(self, qapp, monkeypatch) -> None:  # pylint: disable=unused-argument
+        """Choosing Delete asks for the mission to be removed."""
+        widget = MissionWidget()
+        widget.set_mission(_view(completed=False, stage=2))
+        removed: list[bool] = []
+        widget.remove_requested.connect(lambda: removed.append(True))
+        strings = widget._language_manager.strings()  # pylint: disable=protected-access
+
+        offered = self._choose(widget, monkeypatch, strings.mission_delete)
+        assert offered == [strings.mission_switch_to_classic, strings.mission_delete]
+        assert removed == [True]
+        widget.deleteLater()
+
+    def test_switch_to_classic_is_offered_only_in_autonomous_mode(self, qapp, monkeypatch) -> None:  # pylint: disable=unused-argument
+        """An autonomous mission can be switched to classic from the menu; a classic one is not offered it."""
+        widget = MissionWidget()
+        widget.set_mission(_view(completed=False, stage=2))
+        switched: list[bool] = []
+        widget.switch_to_classic_requested.connect(lambda: switched.append(True))
+        strings = widget._language_manager.strings()  # pylint: disable=protected-access
+
+        self._choose(widget, monkeypatch, strings.mission_switch_to_classic)
+        assert switched == [True]
+
+        classic = _view(completed=False, stage=2)
+        classic = dataclasses.replace(classic, header=dataclasses.replace(classic.header, is_classic=True))
+        widget.set_mission(classic)
+        assert self._choose(widget, monkeypatch, "") == [strings.mission_delete]
+        widget.deleteLater()
+
+
+class TestClickableRows:
+    """Rows that open something answer the keyboard as well as the mouse."""
+
+    @pytest.mark.parametrize("key", [Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space])
+    def test_return_enter_and_space_click_a_row(self, qapp, key) -> None:  # pylint: disable=unused-argument
+        """Each of the usual keys opens the row."""
+        row = mission_widget_module._ClickableFrame()  # pylint: disable=protected-access
+        clicked: list[bool] = []
+        row.clicked.connect(lambda: clicked.append(True))
+        QTest.keyClick(row, key)
+        assert clicked == [True]
+        row.deleteLater()
+
+    def test_other_keys_do_not_click(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Typing a letter on a row does nothing."""
+        row = mission_widget_module._ClickableFrame()  # pylint: disable=protected-access
+        clicked: list[bool] = []
+        row.clicked.connect(lambda: clicked.append(True))
+        QTest.keyClick(row, Qt.Key.Key_A)
+        assert not clicked
+        row.deleteLater()
+
+
+class TestScenePainting:
+    """The journey and the confetti really draw what they promise."""
+
+    @staticmethod
+    def _journey(live: bool) -> MissionJourney:
+        journey = MissionJourney()
+        journey.set_labels(["You asked", "AI plans it", "AI team works", "Job done"])
+        journey.set_stage(1, MissionTone.ACCENT, live)
+        journey._shown_stage = 1.0  # pylint: disable=protected-access
+        journey.resize(600, journey.sizeHint().height())
+        return journey
+
+    @staticmethod
+    def _painted(widget: QWidget) -> QImage:
+        image = QImage(widget.size(), QImage.Format.Format_ARGB32)
+        image.fill(Qt.GlobalColor.transparent)
+        widget.render(image, QPoint(), QRegion(), QWidget.RenderFlag.DrawChildren)
+        return image
+
+    def test_working_stage_draws_its_orbit_and_still_stage_does_not(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Only while the AI works is the current stage circled by its orbit and moon."""
+        live = self._journey(True)
+        still = self._journey(False)
+        live._start = still._start  # pylint: disable=protected-access
+        assert self._painted(live) != self._painted(still)
+        live.deleteLater()
+        still.deleteLater()
+
+    def test_nothing_is_cut_off_at_the_top(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The glow above the current stage fades out before it reaches the top edge."""
+        image = self._painted(self._journey(True))
+        assert all(image.pixelColor(x, 0).alpha() < 40 for x in range(image.width()))
+
+    def test_fill_glides_towards_the_current_stage(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Each frame moves the fill part of the way, until it arrives."""
+        journey = self._journey(False)
+        journey._shown_stage = 0.0  # pylint: disable=protected-access
+        journey._tick()  # pylint: disable=protected-access
+        assert 0.0 < journey._shown_stage < 1.0  # pylint: disable=protected-access
+
+        journey._shown_stage = 0.999  # pylint: disable=protected-access
+        journey._tick()  # pylint: disable=protected-access
+        assert journey._shown_stage == 1.0  # pylint: disable=protected-access
+        journey.deleteLater()
+
+    def test_confetti_draws_pieces(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A burst puts coloured pieces on screen."""
+        host = QWidget()
+        host.resize(600, 400)
+        overlay = ConfettiOverlay(host)
+        overlay.burst(QPointF(300, 150))
+        image = self._painted(overlay)
+        assert any(image.pixelColor(x, y).alpha() > 0 for x in range(0, 600, 3) for y in range(0, 400, 3))
+        host.deleteLater()
+
+
+class TestWaitingElsewhereText:
+    """The notice about other missions names one, counts several, and never points at the mission on screen."""
+
+    @staticmethod
+    def _tab(selected: str | None, waiting: list[str]) -> MissionTab:
+        missions = [
+            types.SimpleNamespace(mission_id=m, title=m.upper(), mode=MissionMode.AUTONOMOUS, auto_approve=AutoApproveLevel.OFF)
+            for m in ("m1", "m2", "m3")
+        ]
+        decisions = [
+            MissionDecision(
+                decision_id=f"d-{m}", context_id=f"c-{m}", conversation_title="Helper", mission_id=m, tool_name="system",
+                reason="Open a tab", detail=None, destructive=False, requested_at=datetime.now(timezone.utc),
+            )
+            for m in waiting
+        ]
+        service = types.SimpleNamespace(
+            missions=lambda: missions, snapshot=lambda _mission_id: None,
+            status=lambda mission_id: MissionStatus.NEEDS_YOU if mission_id in waiting else MissionStatus.RUNNING,
+            resume_automatically=lambda: False, decisions=lambda: decisions,
+        )
+        tab = MissionTab("mission-tab")
+        tab._service = service  # pylint: disable=protected-access
+        tab._selected_mission_id = selected  # pylint: disable=protected-access
+        tab._starting_new = selected is None  # pylint: disable=protected-access
+        tab._refresh()  # pylint: disable=protected-access
+        return tab
+
+    def test_several_waiting_missions_are_counted(self, qapp) -> None:  # pylint: disable=unused-argument
+        """With more than one other mission waiting, the notice counts them and goes to the first."""
+        tab = self._tab("m1", ["m2", "m3"])
+        widget = tab._widget  # pylint: disable=protected-access
+        assert widget._elsewhere_text.text() == "2 other missions are waiting for your decisions"  # pylint: disable=protected-access
+        assert widget._elsewhere_mission_id == "m2"  # pylint: disable=protected-access
+        assert widget._decisions == []  # pylint: disable=protected-access
+        tab._service = None  # pylint: disable=protected-access
+        tab.deleteLater()
+
+    def test_the_mission_on_screen_is_not_pointed_at(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A request from the mission on screen goes in its inbox, with no notice about other missions."""
+        tab = self._tab("m2", ["m2"])
+        widget = tab._widget  # pylint: disable=protected-access
+        assert widget._elsewhere.isHidden()  # pylint: disable=protected-access
+        assert [d.decision_id for d in widget._decisions] == ["d-m2"]  # pylint: disable=protected-access
+        tab._service = None  # pylint: disable=protected-access
+        tab.deleteLater()
+
+    def test_no_notice_without_waiting_missions(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Nothing waiting, no notice and no counts on the chips."""
+        tab = self._tab("m1", [])
+        widget = tab._widget  # pylint: disable=protected-access
+        assert widget._elsewhere.isHidden()  # pylint: disable=protected-access
+        assert all(not chip.waiting_text for chip in widget._chips)  # pylint: disable=protected-access
         tab._service = None  # pylint: disable=protected-access
         tab.deleteLater()

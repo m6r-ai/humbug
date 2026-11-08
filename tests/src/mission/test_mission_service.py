@@ -962,6 +962,38 @@ class TestAutoApprove:
 
         asyncio.run(run())
 
+    def test_journalled_change_is_not_approved_if_the_level_is_lowered_first(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Approval is checked again when it runs, so a level turned off in the meantime leaves it to the user."""
+        async def run() -> None:
+            reviewer = _FakeReviewer(approve=True)
+            service = MissionService(mindspace, reviewer=reviewer)  # type: ignore[arg-type]
+            approve_reversible = service._approve_reversible  # pylint: disable=protected-access
+
+            async def lowered_first(mission, pending) -> None:
+                service.set_auto_approve(mission.mission_id, AutoApproveLevel.OFF)
+                await approve_reversible(mission, pending)
+
+            service._approve_reversible = lowered_first  # type: ignore[method-assign]  # pylint: disable=protected-access
+            service.start()
+            mission = await service.create_mission("Write the docs")
+            service.set_auto_approve(mission.mission_id, AutoApproveLevel.ALL)
+            conversation = _lead(service, mission).inner_conversation()
+            request = asyncio.create_task(conversation._request_tool_authorization(  # pylint: disable=protected-access
+                "filesystem", {"operation": "write_file", "path": "docs/a.md"}, "Write docs/a.md", "+ hello", False,
+                AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+            ))
+            for _ in range(10):
+                await asyncio.sleep(0)
+
+            assert not request.done()
+            decisions = service.decisions()
+            assert len(decisions) == 1 and not decisions[0].reviewing
+            assert not conversation.auto_approve_file_changes()
+            request.cancel()
+            service.stop()
+
+        asyncio.run(run())
+
     def test_destructive_journalled_change_at_safe_comes_to_the_user(self, mindspace, submitted):  # pylint: disable=unused-argument
         """At Safe, a destructive change waits for the user even when the journal records it."""
         async def run() -> None:
@@ -1370,6 +1402,33 @@ class TestBackgroundWork:
             details = {entry.kind: entry.detail for entry in snapshot.activity}
             assert details[MissionActivityKind.MISSION_STARTED] == "Write the release notes"
             assert details[MissionActivityKind.GUIDANCE_SENT] == "Keep them short"
+            service.stop()
+
+        asyncio.run(run())
+
+
+class TestBackgroundFailures:
+    """Work a mission does in the background that fails is reported in its feed, in full."""
+
+    def test_failed_background_work_is_in_the_feed(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """The error appears in Recent Activity with its whole message to open."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Write the docs")
+
+            async def fail() -> None:
+                raise RuntimeError("The reviewer could not be reached")
+
+            service._run_task(fail(), mission.mission_id)  # pylint: disable=protected-access
+            for _ in range(5):
+                await asyncio.sleep(0)
+
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            errors = [a for a in snapshot.activity if a.kind == MissionActivityKind.ERROR]
+            assert len(errors) == 1
+            assert errors[0].more == "The reviewer could not be reached"
             service.stop()
 
         asyncio.run(run())
