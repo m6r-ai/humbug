@@ -47,8 +47,9 @@ notes review.conv  —  projects/alpha  ·  2h ago
 ```
 
 The row shows the item's **name**, the **folder it was deleted from**, and **how long ago** it was
-deleted — *Just now*, then minutes, hours, and days. Hovering over a row shows the item's full
-original path.
+deleted — *Just now*, then minutes, hours, and days. Hovering over a row shows the opening of the
+first prompt you sent in that conversation, above the item's original path within the mindspace —
+the prompt trimmed to a few lines, so a name you never changed is still recognisable.
 
 Items are listed newest first.
 

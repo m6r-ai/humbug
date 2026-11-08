@@ -452,6 +452,10 @@ class JournalSidebar(SidebarBase):
 
         Row labels show only the file name because paths are routinely too long
         for the panel, so everything else the row encodes is reported here.
+        The path is the mindspace-relative one the entry records, and a
+        conversation recorded as a transcript path is reported the same way;
+        the mindspace root is the same for every row and would only lengthen
+        each of them.
 
         Args:
             entry: The entry to describe.
@@ -469,12 +473,32 @@ class JournalSidebar(SidebarBase):
 
         lines = [entry.path, f"{entry.operation.value} · {actor} · {when}"]
         if entry.conversation:
-            lines.append(f"conversation {entry.conversation}")
+            lines.append(f"conversation {self._relative_conversation(entry.conversation)}")
 
         if not entry.is_revertable():
             lines.append("this change cannot be reverted")
 
         return "\n".join(lines)
+
+    def _relative_conversation(self, conversation: str) -> str:
+        """
+        Name the conversation a change belongs to, relative to the mindspace.
+
+        A conversation is identified by the identifier its transcript carries,
+        which is not a path at all.  Entries written before transcripts carried
+        identifiers hold the transcript's path instead, and that is reported
+        relative to the mindspace root like every other path in the panel.
+
+        Args:
+            conversation: The conversation value recorded with the entry.
+
+        Returns:
+            The identifier unchanged, or the transcript path made relative.
+        """
+        if not os.path.isabs(conversation):
+            return conversation
+
+        return self._mindspace_manager.get_relative_path(conversation)
 
     def _icon_for(self, entry: JournalEntry) -> QIcon:
         """

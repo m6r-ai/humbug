@@ -345,6 +345,112 @@ class TestFileSystemAIToolAnalyseFile:
         # SHA-256 of 00010203, returned as raw text
         assert result.content == "054edec1d0211f624fed0cbca9d4f9400b0e491c43742af2c5b0abebf0c990d8"
 
+    def test_analyse_binary_byte_range(
+        self, transform_tool, mock_authorization, make_tool_call, tmp_path
+    ):
+        """analyse_file with form 'binary' analyses only the requested byte range."""
+        target = tmp_path / "blob.bin"
+        target.write_bytes(b"\x00\x01\x02\x03")
+
+        tool_call = make_tool_call(
+            "filesystem",
+            {
+                "operation": "analyse_file",
+                "path": str(target),
+                "program": '(bytes->string-hex (dict-get inputs "input-bytes"))',
+                "form": "binary",
+                "offset": 2,
+                "length": 2
+            }
+        )
+        result = asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
+        assert result.content == "0203"
+
+    def test_analyse_byte_range_requires_binary_form(
+        self, transform_tool, mock_authorization, make_tool_call, tmp_path
+    ):
+        """A byte range is meaningless for text, so it is rejected for form 'text'."""
+        target = tmp_path / "data.txt"
+        target.write_text("hello", encoding='utf-8')
+
+        tool_call = make_tool_call(
+            "filesystem",
+            {
+                "operation": "analyse_file",
+                "path": str(target),
+                "program": '(dict-get inputs "input-text")',
+                "offset": 0
+            }
+        )
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
+        assert "only valid with form 'binary'" in str(exc_info.value)
+
+    def test_analyse_offset_beyond_end_of_file(
+        self, transform_tool, mock_authorization, make_tool_call, tmp_path
+    ):
+        """An offset past the end of the file is reported rather than silently reading nothing."""
+        target = tmp_path / "blob.bin"
+        target.write_bytes(b"\x00\x01")
+
+        tool_call = make_tool_call(
+            "filesystem",
+            {
+                "operation": "analyse_file",
+                "path": str(target),
+                "program": '(bytes-length (dict-get inputs "input-bytes"))',
+                "form": "binary",
+                "offset": 5
+            }
+        )
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(transform_tool.execute(tool_call, MockRequester(), mock_authorization))
+        assert "beyond the end of the file" in str(exc_info.value)
+
+    def test_analyse_range_of_file_larger_than_load_limit(
+        self, real_path_resolver, real_access_settings, mock_authorization, make_tool_call, tmp_path
+    ):
+        """A byte range is analysed from a file larger than the loaded-content limit."""
+        mindspace = MagicMock()
+        mindspace.mindspace_path.return_value = str(tmp_path)
+        tool = FileSystemAITool(
+            resolve_path=real_path_resolver,
+            get_access_settings=real_access_settings,
+            mindspace=mindspace,
+            max_load_size_mb=1
+        )
+
+        target = tmp_path / "blob.bin"
+        target.write_bytes(b"\x00" * (2 * 1024 * 1024))
+        program = '(bytes-length (dict-get inputs "input-bytes"))'
+
+        whole_file = make_tool_call(
+            "filesystem",
+            {
+                "operation": "analyse_file",
+                "path": str(target),
+                "program": program,
+                "form": "binary"
+            }
+        )
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(tool.execute(whole_file, MockRequester(), mock_authorization))
+        assert "Operation would hold 2.0MB of content in memory" in str(exc_info.value)
+
+        ranged = make_tool_call(
+            "filesystem",
+            {
+                "operation": "analyse_file",
+                "path": str(target),
+                "program": program,
+                "form": "binary",
+                "offset": 0,
+                "length": 4
+            }
+        )
+        result = asyncio.run(tool.execute(ranged, MockRequester(), mock_authorization))
+        assert result.content == "4"
+
     def test_analyse_binary_does_not_bind_input_text(
         self, transform_tool, mock_authorization, make_tool_call, tmp_path
     ):

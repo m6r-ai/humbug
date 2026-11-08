@@ -192,14 +192,14 @@ class TestFileSystemAIToolParametrized:
         (10, 10 * 1024 * 1024),
         (50, 50 * 1024 * 1024),
     ])
-    def test_custom_max_file_sizes(self, max_size_mb, expected_bytes, mock_path_resolver, mock_access_settings):
-        """Test filesystem tool with different max file sizes."""
-        tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings, mindspace=MagicMock(), max_file_size_mb=max_size_mb)
+    def test_custom_load_sizes(self, max_size_mb, expected_bytes, mock_path_resolver, mock_access_settings):
+        """Test filesystem tool with different loaded-content limits."""
+        tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings, mindspace=MagicMock(), max_load_size_mb=max_size_mb)
 
-        assert tool._max_file_size_bytes == expected_bytes
+        assert tool._max_load_bytes == expected_bytes
 
         definition = tool.get_definition()
-        assert f"Maximum file size: {max_size_mb}MB" in definition.description
+        assert f"is limited to {max_size_mb}MB of it" in definition.description
 
     @pytest.mark.parametrize("path_input,expected_error", [
         ("", "path: parameter must not be empty"),

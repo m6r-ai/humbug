@@ -1,5 +1,5 @@
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from datetime import datetime, timezone
 import difflib
 import fnmatch
@@ -35,6 +35,16 @@ from filesystem_ai_tool.filesystem_access_settings import FilesystemAccessSettin
 from filesystem_ai_tool.filesystem_diff_applier import FilesystemDiffApplier
 
 
+class _UnreadableFileError(Exception):
+    """
+    A file cannot be read as lines of text, with a reason fit to show the AI.
+
+    Line-oriented operations treat this as a property of the file rather than a
+    failure of the call: a single-file read reports it as an error, while a search
+    across files records the file as skipped and carries on.
+    """
+
+
 class FileSystemAITool(AITool):
     """
     Comprehensive filesystem tool.
@@ -46,13 +56,18 @@ class FileSystemAITool(AITool):
     _MAX_RESPONSE_BYTES = 64 * 1024
     _DEFAULT_MAX_RESULTS = 100
     _DEFAULT_SEARCH_FILES_MAX_RESULTS = 50
+    _ESCAPED_PIPE_WARNING = (
+        "Pattern contained '\\|' which matches a literal '|' character, not alternation. "
+        "It was automatically corrected to use '|' for alternation. "
+        "Use '|' (not '\\|') for alternation in future regex patterns."
+    )
 
     def __init__(
         self,
         resolve_path: Callable[[str], tuple[Path, str]],
         get_access_settings: Callable[[], FilesystemAccessSettings],
         mindspace: Mindspace,
-        max_file_size_mb: int = 10
+        max_load_size_mb: int = 1024
     ):
         """
         Initialize the filesystem tool.
@@ -61,12 +76,14 @@ class FileSystemAITool(AITool):
             resolve_path: Callback to resolve and validate paths, returns (absolute_path, display_path)
             get_access_settings: Callback to get current filesystem access settings
             mindspace: The active mindspace, used for audit logging
-            max_file_size_mb: Maximum file size in MB for read/write operations
+            max_load_size_mb: Maximum content in MB an operation may hold in memory at once.  This guards
+                against exhausting the process; it is not a limit on what may be read, and is set well
+                above the size of any file a user is likely to load whole.
         """
         self._resolve_path = resolve_path
         self._get_access_settings = get_access_settings
         self._mindspace = mindspace
-        self._max_file_size_bytes = max_file_size_mb * 1024 * 1024
+        self._max_load_bytes = max_load_size_mb * 1024 * 1024
         self._logger = logging.getLogger("FileSystemAITool")
         self._active_menai: set[Menai] = set()
         self._menai_lock = threading.Lock()
@@ -270,7 +287,11 @@ class FileSystemAITool(AITool):
 
         prefix += (
             f"The denied paths list applies to all file access, including within the mindspace. "
-            f"Maximum file size: {self._max_file_size_bytes // (1024 * 1024)}MB. "
+            f"Text returned to you is limited to {self._MAX_RESPONSE_BYTES // 1024}KB per call. "
+            f"read_file, write_file, append_to_file and transform_file hold their content in memory, so each "
+            f"is limited to {self._max_load_bytes // (1024 * 1024)}MB of it; analyse_file is limited to the same "
+            f"unless you pass offset and length with form 'binary'. "
+            f"read_file_lines, search_file, search_files and copy_file read incrementally and have no such limit. "
             f"PDF and DOCX files are supported: text is extracted automatically on read."
         )
         return prefix
@@ -300,7 +321,9 @@ class FileSystemAITool(AITool):
                 description="Read file contents. PDF files (.pdf) are supported: text is extracted automatically. "
                     "Encrypted PDFs will return an error. "
                     "DOCX files (.docx) are supported: text is extracted automatically. "
-                    "Encrypted DOCX files will return an error."
+                    "Encrypted DOCX files will return an error. "
+                    f"An error is raised if the content, or the text extracted from a PDF or DOCX, "
+                    f"exceeds {self._MAX_RESPONSE_BYTES // 1024} KB."
             ),
             "read_file_lines": AIToolOperationDefinition(
                 name="read_file_lines",
@@ -313,7 +336,10 @@ class FileSystemAITool(AITool):
                     "lines or when line numbers are important. Returns a dictionary with integer "
                     "line numbers as keys and line content as string values. Note: line content is returned as JSON-encoded "
                     "strings, so special characters (double quotes, backslashes, etc.) will appear escaped — these escape "
-                    "sequences are not present in the source."
+                    "sequences are not present in the source. "
+                    "Only the requested lines are read, so a range can be read from a file of any size. "
+                    f"An error is raised if the returned lines exceed {self._MAX_RESPONSE_BYTES // 1024} KB; "
+                    "narrow the range to reduce the result."
             ),
             "write_file": AIToolOperationDefinition(
                 name="write_file",
@@ -426,6 +452,8 @@ class FileSystemAITool(AITool):
                     f"(default {self._DEFAULT_SEARCH_FILES_MAX_RESULTS}) or the response exceeds "
                     f"{self._MAX_RESPONSE_BYTES // 1024} KB. "
                     "Each file encountered obeys the same external file access rules as read_file. "
+                    "Files that cannot be read as text are listed under 'skipped' with the reason, "
+                    "so a search states what it did not look at. "
                     "Note: match content is returned as JSON-encoded strings, so special characters "
                     "(double quotes, backslashes, etc.) will appear escaped — these escape sequences "
                     "are not present in the source."
@@ -450,7 +478,7 @@ class FileSystemAITool(AITool):
                 name="analyse_file",
                 handler=self._analyse_file,
                 extract_context=self._analyse_file_context,
-                allowed_parameters={"path", "program", "form", "encoding"},
+                allowed_parameters={"path", "program", "form", "encoding", "offset", "length"},
                 required_parameters={"path", "program"},
                 description=(
                     "Read a file, apply a Menai program to its content, and return the program's "
@@ -458,6 +486,9 @@ class FileSystemAITool(AITool):
                     "The file content is bound to the name 'inputs' as a dict. "
                     "For form 'text', read it with (dict-get inputs \"input-text\"); "
                     "for form 'binary', read it with (dict-get inputs \"input-bytes\"). "
+                    "For form 'binary' only, offset and length select a byte range to analyse, so a file "
+                    "of any size can be read in pieces; a computation over the whole file needs the file "
+                    "to fit the loaded-content limit. "
                     "The program may return any Menai value. A string result is returned as its "
                     "raw text; any other result is returned in Menai notation. "
                     "The result is subject to the response size limit; use the program to select "
@@ -796,6 +827,168 @@ class FileSystemAITool(AITool):
             # Ignore errors during context extraction
             return None
 
+    def _ensure_response_fits(self, content: str, narrow_hint: str) -> None:
+        """
+        Raise if text about to be returned to the AI exceeds the response size limit.
+
+        The limit protects the conversation's context window, so it applies to text
+        returned to the AI and not to content written elsewhere or shown to the user
+        for approval.
+
+        Args:
+            content: The text about to be returned to the AI.
+            narrow_hint: How the caller can narrow the request.
+
+        Raises:
+            AIToolExecutionError: If the content exceeds the limit.
+        """
+        content_bytes = len(content.encode("utf-8"))
+        if content_bytes > self._MAX_RESPONSE_BYTES:
+            raise AIToolExecutionError(
+                f"Result exceeds the {self._MAX_RESPONSE_BYTES // 1024} KB response size limit "
+                f"({content_bytes // 1024} KB). {narrow_hint}"
+            )
+
+    def _ensure_within_load_bound(self, loaded_bytes: int, hint: str) -> None:
+        """
+        Raise if an operation would hold more content in memory than the load bound allows.
+
+        The load bound protects the process's memory, not the conversation.  Content
+        that is streamed is not subject to it, and content that is returned to the AI
+        is separately subject to the response bound.
+
+        Args:
+            loaded_bytes: The number of bytes the operation would hold at once.
+            hint: What the caller can do instead.
+
+        Raises:
+            AIToolExecutionError: If the content exceeds the limit.
+        """
+        if loaded_bytes <= self._max_load_bytes:
+            return
+
+        size_mb = loaded_bytes / (1024 * 1024)
+        max_mb = self._max_load_bytes / (1024 * 1024)
+        raise AIToolExecutionError(
+            f"Operation would hold {size_mb:.1f}MB of content in memory "
+            f"(limit: {max_mb:.1f}MB). {hint}"
+        )
+
+    def _iter_file_lines(self, path: Path, encoding: str) -> Iterator[tuple[int, str]]:
+        """
+        Yield (line number, line) pairs from a file, reading one line at a time.
+
+        Lines are 1-indexed and keep their terminator.  A line longer than the load
+        bound is refused rather than read, because holding it is the memory cost the
+        bound exists to bound.
+
+        Args:
+            path: The file to read.
+            encoding: The encoding to decode with.
+
+        Yields:
+            A tuple of line number and line.
+
+        Raises:
+            _UnreadableFileError: The file cannot be decoded, read, or split into lines
+                that fit the load bound.
+        """
+        try:
+            with open(path, 'r', encoding=encoding) as f:
+                line_num = 0
+                while True:
+                    line = f.readline(self._max_load_bytes + 1)
+                    if not line:
+                        return
+
+                    if len(line) > self._max_load_bytes:
+                        raise _UnreadableFileError(
+                            f"A single line exceeds the {self._max_load_bytes // (1024 * 1024)}MB "
+                            "loaded-content limit; use analyse_file with form 'binary' and a "
+                            "byte range to read it in pieces."
+                        )
+
+                    line_num += 1
+                    yield line_num, line
+
+        except UnicodeDecodeError as e:
+            raise _UnreadableFileError(
+                f"Failed to decode file with encoding '{encoding}': {str(e)}. Try a different encoding."
+            ) from e
+
+        except PermissionError as e:
+            raise _UnreadableFileError(f"Permission denied reading file: {str(e)}") from e
+
+        except OSError as e:
+            raise _UnreadableFileError(f"Failed to read file: {str(e)}") from e
+
+    def _matching_lines(
+        self,
+        path: Path,
+        encoding: str,
+        pattern: re.Pattern[str]
+    ) -> Iterator[tuple[int, str]]:
+        """
+        Yield the line number and content of each line of a file matching a pattern.
+
+        Args:
+            path: The file to search.
+            encoding: The encoding to decode with.
+            pattern: The compiled pattern to match.
+
+        Yields:
+            A tuple of line number and the line without its terminator.
+
+        Raises:
+            _UnreadableFileError: The file cannot be read as lines of text.
+        """
+        for line_num, line in self._iter_file_lines(path, encoding):
+            if pattern.search(line):
+                yield line_num, line.rstrip("\n")
+
+    def _collect_matches(
+        self,
+        path: Path,
+        encoding: str,
+        pattern: re.Pattern[str],
+        max_results: int
+    ) -> list[dict[str, Any]]:
+        """
+        Return the lines of a file matching a pattern, within the response limits.
+
+        Args:
+            path: The file to search.
+            encoding: The encoding to decode with.
+            pattern: The compiled pattern to match.
+            max_results: The maximum number of matches to return.
+
+        Returns:
+            One entry per match, holding the line number and content.
+
+        Raises:
+            _UnreadableFileError: The file cannot be read as lines of text.
+            AIToolExecutionError: The matches exceed the response or max_results limit.
+        """
+        matches: list[dict[str, Any]] = []
+        response_bytes = 0
+        for line_num, content in self._matching_lines(path, encoding, pattern):
+            match_bytes = len(json.dumps({"line": line_num, "content": content}).encode("utf-8"))
+            if response_bytes + match_bytes > self._MAX_RESPONSE_BYTES:
+                raise AIToolExecutionError(
+                    f"Search results exceed the {self._MAX_RESPONSE_BYTES // 1024} KB response size limit. "
+                    "Use a more specific search pattern or reduce max_results."
+                )
+
+            response_bytes += match_bytes
+            matches.append({"line": line_num, "content": content})
+            if len(matches) >= max_results:
+                raise AIToolExecutionError(
+                    f"Search results exceed the max_results limit of {max_results}. "
+                    "Use a more specific search pattern, the include filter, or adjust max_results."
+                )
+
+        return matches
+
     async def _read_file(
         self,
         tool_call: AIToolCall,
@@ -815,12 +1008,10 @@ class FileSystemAITool(AITool):
         if not path.is_file():
             raise AIToolExecutionError(f"Path is not a file: {arguments['path']}")
 
-        # Check file size
-        file_size = path.stat().st_size
-        if file_size > self._max_file_size_bytes:
-            size_mb = file_size / (1024 * 1024)
-            max_mb = self._max_file_size_bytes / (1024 * 1024)
-            raise AIToolExecutionError(f"File too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)")
+        self._ensure_within_load_bound(
+            path.stat().st_size,
+            "Use read_file_lines to read a range of lines, or analyse_file to summarise the content."
+        )
 
         if path.suffix.lower() == ".pdf":
             try:
@@ -839,6 +1030,11 @@ class FileSystemAITool(AITool):
             except OSError as e:
                 raise AIToolExecutionError(f"Failed to read file: {e}") from e
 
+            self._ensure_response_fits(
+                content,
+                "The extracted text of a PDF cannot be read in parts, so a document "
+                "this large cannot be read with this tool."
+            )
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI read file (PDF): '{display_path}'",
@@ -862,6 +1058,11 @@ class FileSystemAITool(AITool):
             except OSError as e:
                 raise AIToolExecutionError(f"Failed to read file: {e}") from e
 
+            self._ensure_response_fits(
+                content,
+                "The extracted text of a DOCX cannot be read in parts, so a document "
+                "this large cannot be read with this tool."
+            )
             self._mindspace.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI read file (DOCX): '{display_path}'",
@@ -890,6 +1091,11 @@ class FileSystemAITool(AITool):
         language = ProgrammingLanguageUtils.from_file_extension(path.name)
         language_str = ProgrammingLanguageUtils.get_name(language)
 
+        self._ensure_response_fits(
+            content,
+            "Use read_file_lines with start_line and end_line to read part of the file, "
+            "or analyse_file to summarise it."
+        )
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
             f"AI read file: '{display_path}'",
@@ -921,60 +1127,48 @@ class FileSystemAITool(AITool):
         if not path.is_file():
             raise AIToolExecutionError(f"Path is not a file: {arguments['path']}")
 
-        # Check file size
-        file_size = path.stat().st_size
-        if file_size > self._max_file_size_bytes:
-            size_mb = file_size / (1024 * 1024)
-            max_mb = self._max_file_size_bytes / (1024 * 1024)
-            raise AIToolExecutionError(f"File too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)")
-
-        encoding = self._get_optional_str_value("encoding", arguments, "utf-8")
+        encoding = cast(str, self._get_optional_str_value("encoding", arguments, "utf-8"))
         start_line = self._get_optional_int_value("start_line", arguments)
         end_line = self._get_optional_int_value("end_line", arguments)
 
-        # Read file content
+        actual_start = start_line if start_line is not None else 1
+        if actual_start < 1:
+            raise AIToolExecutionError(f"'start_line' must be >= 1, got {actual_start}")
+
+        if end_line is not None and end_line < actual_start:
+            raise AIToolExecutionError(f"'end_line' ({end_line}) must be >= 'start_line' ({actual_start})")
+
+        context_object: dict[int, str] = {}
+        last_line = 0
+        result_bytes = 0
+
         try:
-            with open(path, 'r', encoding=encoding) as f:
-                content = f.read()
+            for line_num, line in self._iter_file_lines(path, encoding):
+                last_line = line_num
+                if line_num < actual_start:
+                    continue
 
-        except UnicodeDecodeError as e:
-            raise AIToolExecutionError(
-                f"Failed to decode file with encoding '{encoding}': {str(e)}. Try a different encoding."
-            ) from e
+                if end_line is not None and line_num > end_line:
+                    break
 
-        except PermissionError as e:
-            raise AIToolExecutionError(f"Permission denied reading file: {str(e)}") from e
+                context_object[line_num] = line.rstrip("\n")
+                result_bytes += len(line.encode("utf-8"))
+                if result_bytes > self._MAX_RESPONSE_BYTES:
+                    # The exact check below reports the limit.  Stop reading here so
+                    # that a large file cannot make the result grow without bound.
+                    break
 
-        except OSError as e:
-            raise AIToolExecutionError(f"Failed to read file: {str(e)}") from e
+        except _UnreadableFileError as e:
+            raise AIToolExecutionError(str(e)) from e
 
-        # Build line-numbered content
-        context_object = {}
-        if not content:
-            context_object[1] = ""
+        if not context_object:
+            if last_line == 0 and actual_start == 1:
+                context_object[1] = ""
 
-        else:
-            content_lines = content.splitlines()
-            total_lines = len(content_lines)
-
-            # Apply line range if specified
-            actual_start = (start_line if start_line is not None else 1)
-            actual_end = (end_line if end_line is not None else total_lines)
-
-            # Validate range
-            if actual_start < 1:
-                raise AIToolExecutionError(f"'start_line' must be >= 1, got {actual_start}")
-
-            if actual_end < actual_start:
-                raise AIToolExecutionError(f"'end_line' ({actual_end}) must be >= 'start_line' ({actual_start})")
-
-            if actual_start > total_lines:
-                raise AIToolExecutionError(f"'start_line' ({actual_start}) exceeds file length ({total_lines} lines)")
-
-            # Build result (end_line can exceed total_lines, just truncate)
-            last_line = min(actual_end, total_lines)
-            for line_num in range(actual_start, last_line + 1):
-                context_object[line_num] = content_lines[line_num - 1]
+            else:
+                raise AIToolExecutionError(
+                    f"'start_line' ({actual_start}) exceeds file length ({last_line} lines)"
+                )
 
         # Build result object with metadata
         range_value = "all lines"
@@ -986,6 +1180,11 @@ class FileSystemAITool(AITool):
             "lines": context_object
         }
 
+        result_json = json.dumps(result_object, indent=2)
+        self._ensure_response_fits(
+            result_json,
+            "Use start_line and end_line to read a smaller range of lines."
+        )
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
             f"AI read file lines: '{display_path}' ({range_value})",
@@ -994,7 +1193,7 @@ class FileSystemAITool(AITool):
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
-            content=json.dumps(result_object, indent=2),
+            content=result_json,
             context="json"
         )
 
@@ -1130,10 +1329,10 @@ class FileSystemAITool(AITool):
 
         # Check content size
         content_size = len(content.encode(encoding))
-        if content_size > self._max_file_size_bytes:
-            size_mb = content_size / (1024 * 1024)
-            max_mb = self._max_file_size_bytes / (1024 * 1024)
-            raise AIToolExecutionError(f"'content' too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)")
+        self._ensure_within_load_bound(
+            content_size,
+            "The content is held in memory to be written, so it cannot exceed the limit."
+        )
 
         # Build authorization context
         if path.exists():
@@ -1277,14 +1476,10 @@ class FileSystemAITool(AITool):
             content = '\n' + content
 
         content_size = len(content.encode(encoding))
-        total_size = current_size + content_size
-
-        if total_size > self._max_file_size_bytes:
-            total_mb = total_size / (1024 * 1024)
-            max_mb = self._max_file_size_bytes / (1024 * 1024)
-            raise AIToolExecutionError(
-                f"File would be too large after append: {total_mb:.1f}MB (max: {max_mb:.1f}MB)"
-            )
+        self._ensure_within_load_bound(
+            content_size,
+            "The content is held in memory to be appended, so it cannot exceed the limit."
+        )
 
         # Build authorization context
         context = f"This will append content to the end of '{display_path}'. It will modify the existing file."
@@ -1633,13 +1828,6 @@ class FileSystemAITool(AITool):
         destination_path, dest_display_path = await self._validate_and_resolve_path(
             "destination", destination_arg, tool_call, request_authorization
         )
-
-        # Check source file size
-        source_size = source_path.stat().st_size
-        if source_size > self._max_file_size_bytes:
-            size_mb = source_size / (1024 * 1024)
-            max_mb = self._max_file_size_bytes / (1024 * 1024)
-            raise AIToolExecutionError(f"Source file too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)")
 
         # Build authorization context
         if destination_path.exists():
@@ -2096,12 +2284,6 @@ class FileSystemAITool(AITool):
         if not path.is_file():
             raise AIToolExecutionError(f"Path is not a file: {path_arg}")
 
-        file_size = path.stat().st_size
-        if file_size > self._max_file_size_bytes:
-            size_mb = file_size / (1024 * 1024)
-            max_mb = self._max_file_size_bytes / (1024 * 1024)
-            raise AIToolExecutionError(f"File too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)")
-
         search_text = self._get_required_str_value("search_text", arguments)
         case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
         regexp = self._get_optional_bool_value("regexp", arguments, False)
@@ -2111,69 +2293,20 @@ class FileSystemAITool(AITool):
         pattern = self._compile_search_pattern(search_text, case_sensitive, regexp)
 
         try:
-            with open(path, 'r', encoding=encoding) as f:
-                lines = f.readlines()
+            matches = self._collect_matches(path, encoding, pattern, cast(int, max_results))
 
-        except UnicodeDecodeError as e:
-            raise AIToolExecutionError(
-                f"Failed to decode file with encoding '{encoding}': {str(e)}. Try a different encoding."
-            ) from e
-
-        except PermissionError as e:
-            raise AIToolExecutionError(f"Permission denied reading file: {str(e)}") from e
-
-        except OSError as e:
-            raise AIToolExecutionError(f"Failed to read file: {str(e)}") from e
-
-        matches = []
-        max_response_bytes = self._MAX_RESPONSE_BYTES
-        response_bytes = 0
-        for line_num, line in enumerate(lines, 1):
-            if pattern.search(line):
-                content = line.rstrip("\n")
-                match_bytes = len(json.dumps({"line": line_num, "content": content}).encode("utf-8"))
-                if response_bytes + match_bytes > max_response_bytes:
-                    raise AIToolExecutionError(
-                        f"Search results exceed the {max_response_bytes // 1024} KB response size limit. "
-                        "Use a more specific search pattern or reduce max_results."
+            warning = None
+            if not matches and regexp:
+                fixed_pattern = self._fix_escaped_pipe_pattern(search_text, case_sensitive)
+                if fixed_pattern is not None:
+                    matches = self._collect_matches(
+                        path, encoding, fixed_pattern, cast(int, max_results)
                     )
+                    if matches:
+                        warning = self._ESCAPED_PIPE_WARNING
 
-                response_bytes += match_bytes
-                matches.append({"line": line_num, "content": content})
-                if len(matches) >= cast(int, max_results):
-                    raise AIToolExecutionError(
-                        f"Search results exceed the max_results limit of {max_results}. "
-                        "Use a more specific search pattern or increase max_results."
-                    )
-
-        warning = None
-        if not matches and regexp:
-            fixed_pattern = self._fix_escaped_pipe_pattern(search_text, case_sensitive)
-            if fixed_pattern is not None:
-                for line_num, line in enumerate(lines, 1):
-                    if fixed_pattern.search(line):
-                        content = line.rstrip("\n")
-                        match_bytes = len(json.dumps({"line": line_num, "content": content}).encode("utf-8"))
-                        if response_bytes + match_bytes > max_response_bytes:
-                            raise AIToolExecutionError(
-                                f"Search results exceed the {max_response_bytes // 1024} KB response size limit. "
-                                "Use a more specific search pattern or reduce max_results."
-                            )
-
-                        response_bytes += match_bytes
-                        matches.append({"line": line_num, "content": content})
-                        if len(matches) >= cast(int, max_results):
-                            raise AIToolExecutionError(
-                                f"Search results exceed the max_results limit of {max_results}. "
-                                "Use a more specific search pattern or increase max_results."
-                            )
-
-                if matches:
-                    warning = (
-                        "Pattern contained '\\|' which matches a literal '|' character, not alternation. "
-                        "It was automatically corrected to use '|' for alternation. "
-                        "Use '|' (not '\\|') for alternation in future regex patterns."
-                    )
+        except _UnreadableFileError as e:
+            raise AIToolExecutionError(str(e)) from e
 
         result = {
             "path": display_path,
@@ -2284,60 +2417,38 @@ class FileSystemAITool(AITool):
         response_bytes = 0
         pattern = self._compile_search_pattern(search_text, case_sensitive, regexp)
 
+        patterns: list[tuple[re.Pattern[str], str | None]] = [(pattern, None)]
+        if regexp:
+            fixed_pattern = self._fix_escaped_pipe_pattern(search_text, case_sensitive)
+            if fixed_pattern is not None:
+                patterns.append((fixed_pattern, self._ESCAPED_PIPE_WARNING))
+
         total_matches = 0
         files_with_matches: list[dict[str, Any]] = []
+        skipped: list[dict[str, str]] = []
+        warning = None
 
-        for file_path in candidate_files:
-            if not file_path.is_file():
-                continue
-
-            if include and not fnmatch.fnmatch(file_path.name, include):
-                continue
-
-            if file_path.stat().st_size > self._max_file_size_bytes:
-                continue
-
-            if is_external:
-                if not self._is_external_candidate_allowed(file_path, base_path):
+        for search_pattern, correction_warning in patterns:
+            for file_path in candidate_files:
+                if not file_path.is_file():
                     continue
 
-            else:
-                try:
-                    await self._validate_and_resolve_path(
-                        "path", str(file_path), tool_call, request_authorization, allow_external=True
-                    )
-
-                except (AIToolExecutionError, AIToolAuthorizationDenied):
+                if include and not fnmatch.fnmatch(file_path.name, include):
                     continue
 
-            try:
-                with open(file_path, 'r', encoding=encoding) as f:
-                    lines = f.readlines()
+                if is_external:
+                    if not self._is_external_candidate_allowed(file_path, base_path):
+                        continue
 
-            except (UnicodeDecodeError, PermissionError, OSError):
-                continue
-
-            file_matches = []
-            for line_num, line in enumerate(lines, 1):
-                if pattern.search(line):
-                    content = line.rstrip("\n")
-                    match_bytes = len(json.dumps({"line": line_num, "content": content}).encode("utf-8"))
-                    if response_bytes + match_bytes > max_response_bytes:
-                        raise AIToolExecutionError(
-                            f"Search results exceed the {max_response_bytes // 1024} KB response size limit. "
-                            "Use a more specific search pattern, the include filter, or reduce max_results."
+                else:
+                    try:
+                        await self._validate_and_resolve_path(
+                            "path", str(file_path), tool_call, request_authorization, allow_external=True
                         )
 
-                    response_bytes += match_bytes
-                    file_matches.append({"line": line_num, "content": content})
-                    total_matches += 1
-                    if total_matches >= cast(int, max_results):
-                        raise AIToolExecutionError(
-                            f"Search results exceed the max_results limit of {max_results}. "
-                            "Use a more specific search pattern, the include filter, or reduce max_results."
-                        )
+                    except (AIToolExecutionError, AIToolAuthorizationDenied):
+                        continue
 
-            if file_matches:
                 try:
                     rel = file_path.relative_to(base_path)
                     file_display_path = str(Path(display_path) / rel)
@@ -2345,86 +2456,46 @@ class FileSystemAITool(AITool):
                 except ValueError:
                     file_display_path = str(file_path)
 
+                try:
+                    file_matches = self._collect_matches(
+                        file_path, encoding, search_pattern, cast(int, max_results)
+                    )
+
+                except _UnreadableFileError as e:
+                    if not any(entry["path"] == file_display_path for entry in skipped):
+                        skipped.append({"path": file_display_path, "reason": str(e)})
+
+                    continue
+
+                if not file_matches:
+                    continue
+
+                for match in file_matches:
+                    match_bytes = len(json.dumps(match).encode("utf-8"))
+                    if response_bytes + match_bytes > max_response_bytes:
+                        raise AIToolExecutionError(
+                            f"Search results exceed the {max_response_bytes // 1024} KB response size limit. "
+                            "Use a more specific search pattern, the include filter, or reduce max_results."
+                        )
+
+                    response_bytes += match_bytes
+                    total_matches += 1
+
                 files_with_matches.append({
                     "path": file_display_path,
                     "match_count": len(file_matches),
                     "matches": file_matches
                 })
 
-        warning = None
-        if total_matches == 0 and regexp:
-            fixed_pattern = self._fix_escaped_pipe_pattern(search_text, case_sensitive)
-            if fixed_pattern is not None:
-                for file_path in candidate_files:
-                    if not file_path.is_file():
-                        continue
-
-                    if include and not fnmatch.fnmatch(file_path.name, include):
-                        continue
-
-                    if file_path.stat().st_size > self._max_file_size_bytes:
-                        continue
-
-                    if is_external:
-                        if not self._is_external_candidate_allowed(file_path, base_path):
-                            continue
-
-                    else:
-                        try:
-                            await self._validate_and_resolve_path(
-                                "path", str(file_path), tool_call, request_authorization, allow_external=True
-                            )
-
-                        except (AIToolExecutionError, AIToolAuthorizationDenied):
-                            continue
-
-                    try:
-                        with open(file_path, 'r', encoding=encoding) as f:
-                            lines = f.readlines()
-
-                    except (UnicodeDecodeError, PermissionError, OSError):
-                        continue
-
-                    file_matches = []
-                    for line_num, line in enumerate(lines, 1):
-                        if fixed_pattern.search(line):
-                            content = line.rstrip("\n")
-                            match_bytes = len(json.dumps({"line": line_num, "content": content}).encode("utf-8"))
-                            if response_bytes + match_bytes > max_response_bytes:
-                                raise AIToolExecutionError(
-                                    f"Search results exceed the {max_response_bytes // 1024} KB response size limit. "
-                                    "Use a more specific search pattern, the include filter, or reduce max_results."
-                                )
-
-                            response_bytes += match_bytes
-                            file_matches.append({"line": line_num, "content": content})
-                            total_matches += 1
-                            if total_matches >= cast(int, max_results):
-                                raise AIToolExecutionError(
-                                    f"Search results exceed the max_results limit of {max_results}. "
-                                    "Use a more specific search pattern, the include filter, or reduce max_results."
-                                )
-
-                    if file_matches:
-                        try:
-                            rel = file_path.relative_to(base_path)
-                            file_display_path = str(Path(display_path) / rel)
-
-                        except ValueError:
-                            file_display_path = str(file_path)
-
-                        files_with_matches.append({
-                            "path": file_display_path,
-                            "match_count": len(file_matches),
-                            "matches": file_matches,
-                        })
-
-                if total_matches > 0:
-                    warning = (
-                        "Pattern contained '\\|' which matches a literal '|' character, not alternation. "
-                        "It was automatically corrected to use '|' for alternation. "
-                        "Use '|' (not '\\|') for alternation in future regex patterns."
+                if total_matches >= cast(int, max_results):
+                    raise AIToolExecutionError(
+                        f"Search results exceed the max_results limit of {max_results}. "
+                        "Use a more specific search pattern, the include filter, or reduce max_results."
                     )
+
+            if total_matches > 0:
+                warning = correction_warning
+                break
 
         result = {
             "directory": display_path,
@@ -2439,10 +2510,14 @@ class FileSystemAITool(AITool):
         if warning is not None:
             result["warning"] = warning
 
+        if skipped:
+            result["skipped"] = skipped
+
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
             f"AI searched files in: '{display_path}' for '{search_text}'"
-            f" ({total_matches} matches in {len(files_with_matches)} files)",
+            f" ({total_matches} matches in {len(files_with_matches)} files,"
+            f" {len(skipped)} files skipped)",
             context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
@@ -2775,7 +2850,9 @@ class FileSystemAITool(AITool):
         self,
         path: Path,
         form: str,
-        encoding: str
+        encoding: str,
+        offset: int = 0,
+        length: int | None = None
     ) -> MenaiDict:
         """
         Read a file and build the Menai 'inputs' dict for a transform program.
@@ -2784,6 +2861,9 @@ class FileSystemAITool(AITool):
             path: Resolved path to the file.
             form: Content form, 'text' or 'binary'.
             encoding: File encoding to use when decoding text content.
+            offset: Byte offset to read from, for form 'binary'.
+            length: Number of bytes to read, or None for the rest of the file,
+                for form 'binary'.  Ignored for form 'text'.
 
         Returns:
             MenaiDict binding input-text (form 'text') or input-bytes (form 'binary').
@@ -2791,16 +2871,24 @@ class FileSystemAITool(AITool):
         Raises:
             AIToolExecutionError: If the file cannot be read or decoded.
         """
+        if form == "binary":
+            try:
+                with open(path, "rb") as f:
+                    f.seek(offset)
+                    raw_bytes = f.read(length)
+
+            except OSError as e:
+                raise AIToolExecutionError(f"Cannot read file: {e}") from e
+
+            return MenaiDict((
+                (MenaiString('input-bytes'), MenaiBytes(raw_bytes)),
+            ))
+
         try:
             raw_bytes = path.read_bytes()
 
         except OSError as e:
             raise AIToolExecutionError(f"Cannot read file: {e}") from e
-
-        if form == "binary":
-            return MenaiDict((
-                (MenaiString('input-bytes'), MenaiBytes(raw_bytes)),
-            ))
 
         try:
             text = raw_bytes.decode(encoding)
@@ -2925,9 +3013,20 @@ class FileSystemAITool(AITool):
         program = self._get_required_str_value("program", arguments)
         form = cast(str, self._get_optional_str_value("form", arguments, "text"))
         encoding = cast(str, self._get_optional_str_value("encoding", arguments, "utf-8"))
+        offset = self._get_optional_int_value("offset", arguments)
+        length = self._get_optional_int_value("length", arguments)
 
         if form not in ("text", "binary"):
             raise AIToolExecutionError(f"'form' must be 'text' or 'binary', got '{form}'")
+
+        if form != "binary" and (offset is not None or length is not None):
+            raise AIToolExecutionError("'offset' and 'length' are only valid with form 'binary'")
+
+        if offset is not None and offset < 0:
+            raise AIToolExecutionError(f"'offset' must be >= 0, got {offset}")
+
+        if length is not None and length < 1:
+            raise AIToolExecutionError(f"'length' must be >= 1, got {length}")
 
         if not path.exists():
             raise AIToolExecutionError(f"File does not exist: {path_arg}")
@@ -2935,15 +3034,24 @@ class FileSystemAITool(AITool):
         if not path.is_file():
             raise AIToolExecutionError(f"Path is not a file: {path_arg}")
 
-        if path.stat().st_size > self._max_file_size_bytes:
-            size_mb = path.stat().st_size / (1024 * 1024)
-            max_mb = self._max_file_size_bytes / (1024 * 1024)
-            raise AIToolExecutionError(f"File too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)")
+        file_size = path.stat().st_size
+        first_byte = offset or 0
+        if first_byte > file_size:
+            raise AIToolExecutionError(
+                f"'offset' ({first_byte}) is beyond the end of the file ({file_size} bytes)"
+            )
+
+        available = file_size - first_byte
+        loaded_bytes = available if length is None else min(length, available)
+        self._ensure_within_load_bound(
+            loaded_bytes,
+            "Use offset and length with form 'binary' to analyse part of the file."
+        )
 
         if not program.strip():
             raise AIToolExecutionError("'program' must not be empty")
 
-        inputs = self._build_menai_inputs(path, form, encoding)
+        inputs = self._build_menai_inputs(path, form, encoding, first_byte, length)
 
         raw_result = await self._evaluate_menai_over_file(
             lambda: Menai(self._module_path()),
@@ -2965,9 +3073,13 @@ class FileSystemAITool(AITool):
                 "Use the program to select or summarise a smaller result."
             )
 
+        range_note = ""
+        if offset is not None or length is not None:
+            range_note = f", bytes {first_byte}-{first_byte + loaded_bytes}"
+
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI analysed file: '{display_path}' (form: {form})",
+            f"AI analysed file: '{display_path}' (form: {form}{range_note})",
             context=self._mindspace.conversation_log_context(requester_ref)
         )
         return AIToolResult(
@@ -3004,10 +3116,10 @@ class FileSystemAITool(AITool):
         if not path.is_file():
             raise AIToolExecutionError(f"Path is not a file: {path_arg}")
 
-        if path.stat().st_size > self._max_file_size_bytes:
-            size_mb = path.stat().st_size / (1024 * 1024)
-            max_mb = self._max_file_size_bytes / (1024 * 1024)
-            raise AIToolExecutionError(f"File too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)")
+        self._ensure_within_load_bound(
+            path.stat().st_size,
+            "A transform reads its whole input, so the content cannot exceed the limit."
+        )
 
         if not program.strip():
             raise AIToolExecutionError("'program' must not be empty")

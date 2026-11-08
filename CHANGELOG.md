@@ -1,6 +1,17 @@
 # Change log for Humbug
 
-## v59 (2026-11-xx)
+## v60 (2026-11-xx)
+
+New features:
+
+- The editor AI tool now writes a file automatically as part of the edit: applying a diff to an open file, or
+  rewriting its buffer with a Menai program.
+- Resting the pointer on a conversation in the Conversations panel now describes it as well as naming its path.
+- Panel tooltips now give a path as it sits in the mindspace instead of in full.
+- Editor auto backup now keeps its copies under `.humbug/backups`, rather than saving one as `file.txt.backup`
+  beside the file itself.
+
+## v59 (2026-11-07)
 
 New features:
 
@@ -27,6 +38,12 @@ New features:
 - Improved the rendering of the mindspace VCS entries so they aren't as wide horizontally.
 - As we now have journalling, filesystem writes within a single conversation turn can now be set to auto-approve on
   the first approval call.
+- The filesystem tool no longer refuses a file because of its size where the content is not held in memory.  A range
+  of lines can be read from a file of any size, a search streams each file and lists the ones it could not read as
+  text under `skipped` with the reason, and copying a file has no size limit.  `analyse_file` gains `offset` and
+  `length` for binary files, so a range of bytes can be analysed from a file larger than the limit.  The 64KB limit
+  on what enters the conversation is unchanged, and an operation that does hold a file whole now says that is why it
+  refused it.
 
 Bug fixes:
 
@@ -34,6 +51,7 @@ Bug fixes:
   you can detach before submitting.  Previously the box showed the text alone and the files were lost
   from the revised message.
 - Fixed issues with various sidebar panels not scaling correctly with zoom size.
+- All filesystem read operations now protect against polluting the context window.
 
 Internal structure changes:
 

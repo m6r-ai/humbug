@@ -114,11 +114,22 @@ The AI can interact with editor tabs directly as part of its work. It can:
 - Apply changes using unified diffs
 - Rewrite the buffer with a Menai program, which is useful for changes that are tedious or risky
   to express as a diff
-- Save files, which requires your approval
 
-Changes to a buffer — whether a diff or a Menai transform — do not require approval, and do not
-reach your disk until they are saved. Saving is the moment Humbug asks you, and the save itself is
-recorded in the [Journal panel](journal.md) like any other file mutation.
+Both kinds of change are writes. The AI's edit is made to the buffer and saved to the file as one
+operation, and you are asked once, seeing the difference the write makes to the file. There is no
+separate save to forget, and the write is recorded in the [Journal panel](journal.md) like any other
+file mutation.
+
+If the buffer already held unsaved work — your own typing, or an earlier change that was never
+saved — the write carries that too, and the approval shows it and says so. If you refuse, or the
+write fails, the buffer is put back as it was.
+
+The AI cannot edit a file that is a read-only view of an earlier version, or a tab that has never
+been saved, because neither can be written back. Save the tab to a file first if the AI needs to
+work on it.
+
+Because the write happens with the edit, undo behaves as it does after any save: pressing **Ctrl+Z**
+undoes the change in the buffer, and the tab shows unsaved changes until you save again.
 
 When the AI applies a diff to an editor tab, the cursor moves to the last edited line so you can
 see what changed. If the tab being edited is not currently visible, its label turns a distinct

@@ -1,8 +1,11 @@
 """Tests for the journal panel's presentation of recorded mutations."""
 
+import os
+
 from PySide6.QtWidgets import QTreeWidget
 
 from mindspace.journal_entry import JournalActor, JournalEntry, JournalOperation
+from mindspace.mindspace import Mindspace
 
 from desktop.journal_sidebar.journal_sidebar import JournalSidebar
 from desktop.style_manager import StyleManager
@@ -201,3 +204,36 @@ class TestVersionActions:
 
         assert JournalSidebar._this_version_available(entry)  # pylint: disable=protected-access
         assert JournalSidebar._replaced_version_available(entry)  # pylint: disable=protected-access
+
+
+class TestTooltipPaths:
+    """A row's tooltip names paths as they sit in the mindspace, never in full."""
+
+    def test_the_recorded_path_is_shown_as_recorded(self):
+        """The path an entry records is already mindspace-relative and is reported unchanged."""
+        panel = JournalSidebar()
+        recorded = os.path.join("src", "notes.txt")
+
+        tooltip = panel._tooltip_text(_entry(path=recorded))  # pylint: disable=protected-access
+
+        assert tooltip.splitlines()[0] == recorded
+
+    def test_an_absolute_transcript_path_is_shown_relative_to_the_mindspace(self, mindspace_sandbox):
+        """An entry naming a conversation by its transcript path reports the path's place in the mindspace."""
+        panel = JournalSidebar()
+        transcript = os.path.join(mindspace_sandbox.conversations_dir, "chat.conv")
+        entry = _entry(conversation=transcript)
+
+        tooltip = panel._tooltip_text(entry)  # pylint: disable=protected-access
+
+        relative = os.path.join(Mindspace.MINDSPACE_DIR, Mindspace.CONVERSATIONS_DIR, "chat.conv")
+        assert f"conversation {relative}" in tooltip
+        assert mindspace_sandbox.path not in tooltip
+
+    def test_a_conversation_identifier_is_shown_unchanged(self):
+        """A conversation named by its identifier is not a path and is reported as it is."""
+        panel = JournalSidebar()
+
+        tooltip = panel._tooltip_text(_entry(conversation="conversation-1"))  # pylint: disable=protected-access
+
+        assert "conversation conversation-1" in tooltip

@@ -76,13 +76,13 @@ What costs, risks, or constraints does this decision impose?
 | [0004](0004-minimal-dependencies.md) | Minimal dependencies | Accepted |
 | [0005](0005-desktop-ui-toolkit-qt.md) | Desktop UI toolkit — Qt | Accepted |
 | [0006](0006-humans-and-ais-are-equal-actors.md) | Humans and AIs are equal actors | Accepted |
-| [0007](0007-tool-approval-policy.md) | Tool approval policy — persistent vs ephemeral state | Accepted |
+| [0007](0007-tool-approval-policy.md) | Tool approval policy — persistent vs ephemeral state | Superseded by ADR-0025 (editor operations) |
 | [0008](0008-workspace-state-ownership.md) | Workspace state ownership — layout, content, and view | Accepted |
 | [0009](0009-logging-level-policy.md) | Logging level policy | Accepted |
 | [0010](0010-openai-responses-api.md) | OpenAI backend uses the Responses API | Accepted |
 | [0011](0011-conversation-relationships.md) | Conversation relationships and delegated-session authorisation | Accepted |
 | [0012](0012-message-edit-and-delete.md) | Message edit and delete — deferred truncation and a single editing surface | Accepted |
-| [0013](0013-filesystem-transform-and-bounds.md) | Filesystem transforms, binary content, context-window bounds, and transform symmetry | Accepted |
+| [0013](0013-filesystem-transform-and-bounds.md) | Filesystem transforms, binary content, context-window bounds, and transform symmetry | Superseded by ADR-0024 (bounds only) |
 | [0014](0014-multiple-instances-and-mindspaces.md) | Multiple instances and multiple mindspaces | Accepted |
 | [0015](0015-interruptible-tool-waits.md) | Interruptible tool waits | Accepted |
 | [0016](0016-http-access-allowlist.md) | HTTP access allowlist for read-only requests | Accepted |
@@ -94,3 +94,5 @@ What costs, risks, or constraints does this decision impose?
 | [0021](0021-one-home-per-removal.md) | One home per removal — the trash keeps conversations, the journal keeps everything else | Accepted |
 | [0022](0022-turn-scoped-file-change-approval.md) | A turn-scoped standing approval for journalled file changes | Accepted |
 | [0023](0023-journalling-a-creation.md) | Journalling a creation, so a directory can be reversed | Accepted |
+| [0024](0024-two-bounds-context-and-load.md) | Two bounds — context and load | Accepted |
+| [0025](0025-editor-writes-are-file-writes.md) | An editor write is a file write | Accepted |

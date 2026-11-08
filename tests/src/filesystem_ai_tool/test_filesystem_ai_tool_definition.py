@@ -79,12 +79,12 @@ class TestFileSystemAIToolDefinition:
         assert encoding_param.enum == ["utf-8", "utf-16", "ascii", "latin-1"]
         assert encoding_param.required is False
 
-    def test_custom_max_file_size_in_definition(self, mock_path_resolver, mock_access_settings):
-        """Test that custom max file size is reflected in definition."""
-        custom_tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings, mindspace=MagicMock(), max_file_size_mb=5)
+    def test_custom_load_size_in_definition(self, mock_path_resolver, mock_access_settings):
+        """Test that the configured loaded-content limit is reflected in the definition."""
+        custom_tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings, mindspace=MagicMock(), max_load_size_mb=5)
         definition = custom_tool.get_definition()
 
-        assert "Maximum file size: 5MB" in definition.description
+        assert "is limited to 5MB of it" in definition.description
 
 
 class TestFileSystemAIToolValidation:
@@ -180,8 +180,8 @@ class TestFileSystemAIToolInheritance:
         assert callable(filesystem_tool.get_definition)
         assert callable(filesystem_tool.execute)
 
-    def test_custom_max_file_sizes(self, mock_path_resolver, mock_access_settings):
-        """Test filesystem tool with different max file sizes."""
+    def test_custom_load_sizes(self, mock_path_resolver, mock_access_settings):
+        """Test filesystem tool with different loaded-content limits."""
         test_cases = [
             (1, 1024 * 1024),
             (5, 5 * 1024 * 1024),
@@ -190,8 +190,8 @@ class TestFileSystemAIToolInheritance:
         ]
 
         for max_size_mb, expected_bytes in test_cases:
-            tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings, mindspace=MagicMock(), max_file_size_mb=max_size_mb)
-            assert tool._max_file_size_bytes == expected_bytes
+            tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings, mindspace=MagicMock(), max_load_size_mb=max_size_mb)
+            assert tool._max_load_bytes == expected_bytes
 
             definition = tool.get_definition()
-            assert f"Maximum file size: {max_size_mb}MB" in definition.description
+            assert f"is limited to {max_size_mb}MB of it" in definition.description

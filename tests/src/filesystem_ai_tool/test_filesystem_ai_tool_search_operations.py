@@ -230,8 +230,8 @@ class TestSearchFile:
 
         assert "not a file" in str(exc_info.value)
 
-    def test_file_too_large_raises_execution_error(self, tmp_path, make_tool_call):
-        """A file exceeding the size limit raises AIToolExecutionError."""
+    def test_file_larger_than_load_limit_is_searched(self, tmp_path, make_tool_call):
+        """A file larger than the loaded-content limit is searched rather than refused."""
         f = tmp_path / "big.txt"
         f.write_text("content\n")
         tool = make_tool_with_tmp(tmp_path)
@@ -246,10 +246,10 @@ class TestSearchFile:
             "search_text": "content"
         })
         with patch("pathlib.Path.stat", return_value=mock_stat):
-            with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(tool.execute(tool_call, "", None))
+            result = asyncio.run(tool.execute(tool_call, "", None))
 
-        assert "too large" in str(exc_info.value)
+        data = json.loads(result.content)
+        assert data["match_count"] == 1
 
     def test_unicode_decode_error_raises_execution_error(self, tmp_path, make_tool_call):
         """A file that cannot be decoded with the given encoding raises AIToolExecutionError."""
@@ -707,8 +707,8 @@ class TestSearchFiles:
         assert data["files_with_matches"] == 1
         assert "text.txt" in data["results"][0]["path"]
 
-    def test_oversized_files_are_silently_skipped(self, tmp_path, make_tool_call):
-        """Files that exceed the size limit are skipped without raising an error."""
+    def test_large_files_are_searched(self, tmp_path, make_tool_call):
+        """A file larger than the loaded-content limit is searched, not skipped."""
         (tmp_path / "normal.txt").write_text("needle\n")
         big = tmp_path / "big.txt"
         big.write_text("needle\n")
@@ -733,8 +733,28 @@ class TestSearchFiles:
             result = asyncio.run(tool.execute(tool_call, "", None))
 
         data = json.loads(result.content)
+        assert data["files_with_matches"] == 2
+        assert "skipped" not in data
+
+    def test_undecodable_files_are_reported_as_skipped(self, tmp_path, make_tool_call):
+        """A file that cannot be decoded is listed under 'skipped' with the reason."""
+        (tmp_path / "text.txt").write_text("needle\n")
+        (tmp_path / "binary.bin").write_bytes(b"\xff\xfe needle \x00")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_files",
+            "path": ".",
+            "search_text": "needle",
+            "encoding": "utf-8"
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+
+        data = json.loads(result.content)
         assert data["files_with_matches"] == 1
-        assert "normal.txt" in data["results"][0]["path"]
+        assert len(data["skipped"]) == 1
+        assert "binary.bin" in data["skipped"][0]["path"]
+        assert "decode" in data["skipped"][0]["reason"]
 
     def test_result_json_structure(self, tmp_path, make_tool_call):
         """The result JSON contains all required top-level and per-file keys."""

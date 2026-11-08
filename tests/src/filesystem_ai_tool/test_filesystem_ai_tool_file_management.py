@@ -255,25 +255,35 @@ class TestFileSystemAIToolCopyFile:
             error = exc_info.value
             assert "destination" in str(error).lower() and "missing" in str(error).lower()
 
-    def test_copy_file_source_too_large(self, filesystem_tool, mock_authorization, make_tool_call):
-        """Test copying file that exceeds size limit."""
+    def test_copy_file_larger_than_load_limit_succeeds(
+        self, custom_path_resolver, mock_access_settings, mock_authorization, make_tool_call
+    ):
+        """Copying streams the source, so a file larger than the loaded-content limit is copied."""
+        path_mapping = {
+            "large.txt": ("/test/sandbox/large.txt", "large.txt"),
+            "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
+        }
+        resolver = custom_path_resolver(path_mapping=path_mapping)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings, mindspace=MagicMock())
+
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
-             patch('pathlib.Path.stat') as mock_stat:
+             patch('pathlib.Path.stat') as mock_stat, \
+             patch('pathlib.Path.mkdir'), \
+             patch('shutil.copy2') as mock_copy2:
 
             mock_exists.return_value = True
             mock_is_file.return_value = True
 
             mock_stat_result = MagicMock()
-            mock_stat_result.st_size = 11 * 1024 * 1024  # 11MB, exceeds 10MB limit
+            mock_stat_result.st_size = 11 * 1024 * 1024
             mock_stat.return_value = mock_stat_result
 
             tool_call = make_tool_call("filesystem", {"operation": "copy_file", "path": "large.txt", "destination": "dest.txt"})
-            with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            error = exc_info.value
-            assert "Source file too large: 11.0MB (max: 10.0MB)" in str(error)
+            assert "File copied successfully: large.txt -> dest.txt" in result.content
+            mock_copy2.assert_called_once()
 
     def test_copy_file_authorization_denied(self, custom_path_resolver, mock_access_settings, mock_authorization_denied, make_tool_call):
         """Test copying file when authorization is denied."""

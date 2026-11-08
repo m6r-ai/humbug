@@ -1,7 +1,11 @@
 # ADR-0007: Tool approval policy — persistent vs ephemeral state
 
 Date: 2026-09-07  
-Status: Accepted
+Status: Superseded by ADR-0025 (editor operations)
+
+This ADR's principle still holds: an operation asks when it can persist something.  What has
+changed is the editor, where a buffer change and the write that follows it are now one operation,
+so there is no separate persistence step to gate.  See ADR-0025.
 
 ## Context
 

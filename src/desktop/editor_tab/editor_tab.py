@@ -9,6 +9,7 @@ from PySide6.QtCore import Qt, QTimer, QRegularExpression
 
 from context.context_registry import ContextRegistry
 from editor_context.editor_context import EditorContext
+from mindspace.journal_entry import JournalActor
 
 from desktop.editor_tab.editor_goto_line_dialog import EditorGotoLineDialog
 from desktop.language.language_manager import LanguageManager
@@ -101,7 +102,7 @@ class EditorTab(TabBase):
             get_cursor_info_cb=self._editor_widget.get_cursor_info,
             get_selected_text_cb=self._editor_widget.get_selected_text,
             get_editor_info_cb=self._editor_widget.get_editor_info,
-            save_cb=self._editor_widget.save_file,
+            save_cb=self.save_for_actor,
             on_goto_line=self._editor_widget.goto_line,
             on_apply_diff=self._editor_widget.apply_unified_diff,
         )
@@ -377,11 +378,27 @@ class EditorTab(TabBase):
         Returns:
             bool: True if save was successful
         """
+        return self.save_for_actor(JournalActor.HUMAN, "")
+
+    def save_for_actor(self, actor: JournalActor, conversation: str) -> bool:
+        """
+        Save the current file on behalf of an actor.
+
+        Args:
+            actor: Who is performing the save, recorded in the change journal.
+            conversation: Identifier of the conversation the save belongs to, or
+                an empty string when it was not made on a conversation's behalf.
+
+        Returns:
+            bool: True if save was successful
+        """
         # Disable file watching during save to avoid false change notifications
         self.stop_file_watching()
-        result = self._editor_widget.save_file()
-        self._start_file_watching(self._path)
-        return result
+        try:
+            return self._editor_widget.save_file(actor, conversation)
+
+        finally:
+            self._start_file_watching(self._path)
 
     def can_save_as(self) -> bool:
         """Check if the file can be saved as."""

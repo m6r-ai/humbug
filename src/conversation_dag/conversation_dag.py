@@ -23,6 +23,36 @@ class ForkEdge:
     fork_message_id: str
 
 
+def first_user_prompt(path: str) -> str | None:
+    """
+    Read the first prompt the user sent in a conversation file.
+
+    Only the first user message is wanted, so the file is parsed for it and the
+    rest of the transcript is ignored.
+
+    Args:
+        path: Absolute path to the .conv file.
+
+    Returns:
+        The first user message's content, or None when the conversation holds no
+        user message yet or the file cannot be read.
+    """
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        messages = data.get('conversation', []) if isinstance(data, dict) else []
+        for msg in messages:
+            if isinstance(msg, dict) and msg.get('type') == 'user_message':
+                content = msg.get('content')
+                return content if isinstance(content, str) else None
+
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    return None
+
+
 class ConversationDag:
     """
     A DAG of conversation files in a conversations directory.

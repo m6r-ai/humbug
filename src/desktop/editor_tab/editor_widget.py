@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import os
 import time
@@ -28,6 +29,9 @@ from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.mindspace.mindspace_vcs_poller import MindspaceVCSPoller
 from desktop.style_manager import StyleManager
 from desktop.widgets import LineNumberArea, SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
+
+
+BACKUP_LIFETIME_SECONDS = 24 * 60 * 60
 
 
 class EditorWidget(QPlainTextEdit):
@@ -334,58 +338,21 @@ class EditorWidget(QPlainTextEdit):
                 self._auto_backup_timer.stop()
 
     def _auto_backup(self) -> None:
-        """Handle auto-backup functionality."""
+        """Write the buffer to this editor's backup file."""
         if not self._is_modified:
             return
 
-        # All backups should now go in mindspace .humbug/backups
         if not self._mindspace_manager.has_mindspace():
             return  # No backups without a mindspace
 
-        backup_dir = self._mindspace_manager.get_absolute_path(os.path.join(".humbug", "backups"))
-        os.makedirs(backup_dir, exist_ok=True)
+        backup_file = self._backup_file_path()
 
-        if not self._path:
-            # For untitled files, use timestamp-based backup in mindspace
-            prefix = f"backup-{self._untitled_number}-"
-            current_time = int(time.time())
-            try:
-                # Clean up old backups for this untitled file
-                for file in os.listdir(backup_dir):
-                    if file.startswith(prefix):
-                        file_path = os.path.join(backup_dir, file)
+        try:
+            os.makedirs(os.path.dirname(backup_file), exist_ok=True)
+            self._prune_stale_backups(os.path.dirname(backup_file))
 
-                        # Keep only backups from last hour
-                        if current_time - os.path.getctime(file_path) > 3600:
-                            try:
-                                os.remove(file_path)
-
-                            except OSError as e:
-                                self._logger.warning("Failed to remove old backup %s: %s", file_path, str(e))
-
-            except OSError as e:
-                self._logger.warning("Failed to clean up old backups: %s", str(e))
-
-            backup_file = os.path.join(
-                backup_dir,
-                f"{prefix}{current_time}.txt"
-            )
-
-        else:
-            backup_file = f"{self._path}.backup"
-
-            # Clean up any very old backups that might have been left behind
-            try:
-                if os.path.exists(backup_file):
-                    if time.time() - os.path.getctime(backup_file) > 86400:  # 24 hours
-                        try:
-                            os.remove(backup_file)
-
-                        except OSError:
-                            pass  # Ignore cleanup errors for old files
-
-            except OSError:
-                pass  # Ignore stat errors
+        except OSError as e:
+            self._logger.warning("Failed to prepare the backup directory: %s", str(e))
 
         try:
             with open(backup_file, 'w', encoding='utf-8') as f:
@@ -394,36 +361,61 @@ class EditorWidget(QPlainTextEdit):
         except Exception as e:
             self._logger.error("Failed to create backup file '%s': %s", backup_file, str(e))
 
-    def _cleanup_backup_files(self) -> None:
-        """Clean up any backup files for this editor."""
-        if not self._mindspace_manager.has_mindspace():
-            return
+    def _backup_file_path(self) -> str:
+        """
+        Return the path of this editor's backup file.
 
-        if self._path:
-            # Clean up backup for saved file
-            backup_file = f"{self._path}.backup"
+        A backup is Humbug's own working state, so it lives in the mindspace's
+        ``.humbug/backups`` directory rather than beside the file being edited.
+        A saved file's backup is named after a digest of its path, so two tabs
+        holding files of the same name cannot overwrite each other's backup.
+
+        Returns:
+            Absolute path of the backup file, whether or not it exists.
+        """
+        backup_dir = self._mindspace_manager.get_absolute_path(os.path.join(".humbug", "backups"))
+
+        if not self._path:
+            return os.path.join(backup_dir, f"backup-untitled-{self._untitled_number}.txt")
+
+        digest = hashlib.sha256(self._path.encode('utf-8')).hexdigest()[:16]
+        return os.path.join(backup_dir, f"backup-{digest}-{os.path.basename(self._path)}.txt")
+
+    def _prune_stale_backups(self, backup_dir: str) -> None:
+        """
+        Remove backups left behind by an editor that never cleaned up.
+
+        A backup is rewritten on every interval while its editor is open, so only
+        files orphaned by a crash reach the age limit.
+
+        Args:
+            backup_dir: Directory holding the backups.
+        """
+        now = time.time()
+
+        for name in os.listdir(backup_dir):
+            backup_file = os.path.join(backup_dir, name)
+
             try:
-                if os.path.exists(backup_file):
+                if now - os.path.getctime(backup_file) > BACKUP_LIFETIME_SECONDS:
                     os.remove(backup_file)
 
             except OSError as e:
-                self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
+                self._logger.warning("Failed to remove stale backup %s: %s", backup_file, str(e))
 
-        elif self._untitled_number:
-            # Clean up backups for untitled file
-            backup_dir = self._mindspace_manager.get_absolute_path(os.path.join(".humbug", "backups"))
-            prefix = f"backup-{self._untitled_number}-"
-            try:
-                for file in os.listdir(backup_dir):
-                    if file.startswith(prefix):
-                        try:
-                            os.remove(os.path.join(backup_dir, file))
+    def _cleanup_backup_files(self) -> None:
+        """Remove this editor's backup file."""
+        if not self._mindspace_manager.has_mindspace():
+            return
 
-                        except OSError as e:
-                            self._logger.warning("Failed to remove backup %s: %s", file, str(e))
+        backup_file = self._backup_file_path()
 
-            except OSError as e:
-                self._logger.warning("Failed to clean up backups: %s", str(e))
+        try:
+            if os.path.exists(backup_file):
+                os.remove(backup_file)
+
+        except OSError as e:
+            self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
 
     def path(self) -> str:
         """Get the current file path."""
@@ -481,9 +473,7 @@ class EditorWidget(QPlainTextEdit):
 
     def close_widget(self) -> None:
         """Close the editor widget and clean up resources."""
-        # Delete any backup files when we close
-        if self._auto_backup_timer.isActive():
-            self._cleanup_backup_files()
+        self._cleanup_backup_files()
 
     def set_content(self, content: str) -> None:
         """
@@ -550,14 +540,7 @@ class EditorWidget(QPlainTextEdit):
         self._last_save_content = content
         self._set_modified(False)
 
-        # Delete any backup files
-        backup_file = f"{self._path}.backup"
-        try:
-            if os.path.exists(backup_file):
-                os.remove(backup_file)
-
-        except OSError as e:
-            self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
+        self._cleanup_backup_files()
 
         self.file_saved.emit(self._path)
         return True
@@ -2251,9 +2234,12 @@ class EditorWidget(QPlainTextEdit):
             self.setTextCursor(cursor)
             self._start_smooth_scroll_to_cursor(cursor)
 
-            # Sync the Qt document state to the plain-Python model
+            # Sync the Qt document state to the plain-Python model.  The modified
+            # flag follows from the resulting text rather than being assumed: a
+            # diff can leave the buffer identical to the file on disk, which is
+            # what a reverted change does.
             self._editor_document.set_text(self.toPlainText())
-            self._set_modified(True)
+            self._set_modified(self.toPlainText() != self._last_save_content)
 
         # Convert DiffApplicationResult to dict format
         return {

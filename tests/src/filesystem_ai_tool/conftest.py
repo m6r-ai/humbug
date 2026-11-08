@@ -95,6 +95,21 @@ def filesystem_tool(mock_path_resolver, mock_access_settings):
 
 
 @pytest.fixture
+def bounded_filesystem_tool(mock_path_resolver, mock_access_settings):
+    """Fixture providing a filesystem tool whose loaded-content limit is cheap to reach."""
+    mock = MagicMock()
+    mock.has_mindspace.return_value = True
+    mock.add_interaction.return_value = None
+    mock.mindspace_path.return_value = "/test/sandbox"
+    return FileSystemAITool(
+        resolve_path=mock_path_resolver,
+        get_access_settings=mock_access_settings,
+        mindspace=mock,
+        max_load_size_mb=10
+    )
+
+
+@pytest.fixture
 def mock_authorization():
     """Fixture providing a mocked authorization callback."""
     mock = MagicMock()

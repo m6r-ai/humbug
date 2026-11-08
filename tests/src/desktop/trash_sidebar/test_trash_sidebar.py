@@ -15,12 +15,23 @@ from desktop.style_manager import StyleManager
 from desktop.sidebar.sidebar_row_spacing_delegate import SidebarRowSpacingDelegate
 from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
 from desktop.trash_sidebar.trash_sidebar import TrashSidebar, _TRASH_NAME_ROLE
+from mindspace.mindspace import Mindspace
 
 
-def _write_conv_file(path: str) -> None:
-    """Write a minimal root .conv file (no delegate parent)."""
+def _message(message_id: str, message_type: str, content: str) -> dict:
+    """Build a transcript message of the given type."""
+    return {
+        "id": message_id,
+        "timestamp": "2024-01-01T00:00:00+00:00",
+        "type": message_type,
+        "content": content,
+    }
+
+
+def _write_conv_file(path: str, messages: list[dict] | None = None) -> None:
+    """Write a minimal root .conv file (no delegate parent) holding the given messages."""
     with open(path, 'w', encoding='utf-8') as f:
-        json.dump({"metadata": {"version": "0.1", "parent": None}, "conversation": []}, f)
+        json.dump({"metadata": {"version": "0.1", "parent": None}, "conversation": messages or []}, f)
 
 
 @pytest.fixture
@@ -45,10 +56,15 @@ def panel(sidebar_env):
     widget.deleteLater()
 
 
-def _trash_a_file(mgr: MindspaceManager, conv_dir: str, name: str = "chat.conv") -> str:
+def _trash_a_file(
+    mgr: MindspaceManager,
+    conv_dir: str,
+    name: str = "chat.conv",
+    messages: list[dict] | None = None,
+) -> str:
     """Trash a fresh conversation file and return its original path."""
     chat = os.path.join(conv_dir, name)
-    _write_conv_file(chat)
+    _write_conv_file(chat, messages)
     trash_path = mgr.mindspace().new_trash_path(chat)
     os.rename(chat, trash_path)
     mgr.mindspace().record_trashed(chat, trash_path)
@@ -210,3 +226,45 @@ class TestSidebarRowSpacingDelegate:
         fm_height = option.fontMetrics.height()
         expected_height = max(fm_height + round(10 * zoom), round(24 * zoom))
         assert size.height() == expected_height
+
+
+class TestTrashSidebarTooltips:
+    """A row's tooltip carries what the trimmed label cannot."""
+
+    def test_a_trashed_conversation_shows_the_prompt_that_opened_it(self, sidebar_env, panel):
+        """A conversation's tooltip opens with the first prompt, above where it came from."""
+        mgr, _ms_path, conv_dir = sidebar_env
+        _trash_a_file(mgr, conv_dir, messages=[_message("m1", "user_message", "Explain the build")])
+
+        panel.refresh()
+
+        item = panel._tree.topLevelItem(0)  # pylint: disable=protected-access
+        relative_path = os.path.join(Mindspace.MINDSPACE_DIR, Mindspace.CONVERSATIONS_DIR, "chat.conv")
+        assert item.toolTip(0) == f"Explain the build\n\n{relative_path}"
+
+    def test_a_conversation_with_no_prompt_shows_only_where_it_came_from(self, sidebar_env, panel):
+        """A conversation holding no user message yet is described by its original location."""
+        mgr, _ms_path, conv_dir = sidebar_env
+        _trash_a_file(mgr, conv_dir)
+
+        panel.refresh()
+
+        item = panel._tree.topLevelItem(0)  # pylint: disable=protected-access
+        relative_path = os.path.join(Mindspace.MINDSPACE_DIR, Mindspace.CONVERSATIONS_DIR, "chat.conv")
+        assert item.toolTip(0) == relative_path
+
+    def test_a_trashed_file_that_is_not_a_conversation_has_no_prompt(self, sidebar_env, panel):
+        """An item that is not a transcript is described by its original location alone."""
+        mgr, _ms_path, conv_dir = sidebar_env
+        notes = os.path.join(conv_dir, "notes.txt")
+        with open(notes, "w", encoding="utf-8") as f:
+            f.write("scratch")
+        trash_path = mgr.mindspace().new_trash_path(notes)
+        os.rename(notes, trash_path)
+        mgr.mindspace().record_trashed(notes, trash_path)
+
+        panel.refresh()
+
+        item = panel._tree.topLevelItem(0)  # pylint: disable=protected-access
+        relative_path = os.path.join(Mindspace.MINDSPACE_DIR, Mindspace.CONVERSATIONS_DIR, "notes.txt")
+        assert item.toolTip(0) == relative_path

@@ -100,6 +100,9 @@ From this view you can:
   duplicate, delete, or open conversations in a preview view
 - **Pin** a conversation to keep it at the top of the view, in the **Pinned** section, however the
   rest of the list changes
+- **Rest the pointer** on a conversation to see the opening of the first prompt you sent in it, with
+  the file's path within the mindspace beneath. The prompt is cut to a few lines, and is often the
+  quickest way to recognise a conversation whose name you never changed
 
 Conversations can be organised into **folders**: the new-folder action in the context menu creates
 one, and a new conversation started inside a folder is created in that folder. Folders keep a long

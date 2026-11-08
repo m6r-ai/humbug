@@ -11,6 +11,7 @@ from PySide6.QtCore import QAbstractItemModel, QModelIndex, Qt, QPersistentModel
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtCore import QFileInfo
 
+from conversation_dag import first_user_prompt
 from desktop.conversation_sidebar.conversation_sidebar_index import ConversationSidebarIndex
 from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
@@ -110,6 +111,7 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
         self._mindspace_manager.settings_changed.connect(self._rebuild)
         self._language_manager = LanguageManager()
         self._timestamp_cache: dict[str, float] = {}
+        self._prompt_cache: dict[str, tuple[tuple[int, int], str | None]] = {}
 
         # Node registry: int key -> _DirNode | _ConvNode | _PinnedSectionNode | _PinnedGroupNode
         self._nodes: dict[int, _DirNode | _ConvNode | _PinnedSectionNode | _PinnedGroupNode] = {}
@@ -198,6 +200,57 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
         self._timestamp_cache[path] = timestamp
         return timestamp
 
+    def first_prompt_for_index(self, index: QModelIndex | QPersistentModelIndex) -> str | None:
+        """
+        Get the content of the first prompt the user sent in a conversation.
+
+        Args:
+            index: Model index to look up.
+
+        Returns:
+            The first user message's content, or None if the index is not a
+            conversation or the conversation holds no user message yet.
+        """
+        if not index.isValid():
+            return None
+
+        node = self._nodes.get(index.internalId())
+        if not isinstance(node, _ConvNode):
+            return None
+
+        return self._read_first_prompt(node.path)
+
+    def _read_first_prompt(self, path: str) -> str | None:
+        """
+        Read a conversation's first user message, caching by file version.
+
+        The whole file has to be parsed to find the message, so the result is
+        cached against the file's modification time and size: a conversation
+        gains its first message after the model last rebuilt, and the cache
+        must not keep reporting an older, emptier answer.
+
+        Args:
+            path: Absolute path to the .conv file.
+
+        Returns:
+            The first user message's content, or None if there is not one or
+            the file cannot be read.
+        """
+        try:
+            stat_info = os.stat(path)
+
+        except OSError:
+            return None
+
+        version = (stat_info.st_mtime_ns, stat_info.st_size)
+        cached = self._prompt_cache.get(path)
+        if cached is not None and cached[0] == version:
+            return cached[1]
+
+        prompt = first_user_prompt(path)
+        self._prompt_cache[path] = (version, prompt)
+        return prompt
+
     def _sort_key(self, path: str, is_dir: bool) -> tuple:
         """
         Return a sort key for a filesystem entry.
@@ -231,6 +284,7 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
         self._children.clear()
         self._next_key = 0
         self._timestamp_cache.clear()
+        self._prompt_cache.clear()
 
         conversations_dir = self._index.conversations_dir()
         if not conversations_dir or not os.path.isdir(conversations_dir):

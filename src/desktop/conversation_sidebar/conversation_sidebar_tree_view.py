@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QStyleOptionViewItem, QWidget
 from desktop.color_role import ColorRole
 from desktop.conversation_sidebar.conversation_sidebar_dag_model import ConversationSidebarDAGModel
 from desktop.conversation_sidebar.conversation_sidebar_tree_delegate import ConversationSidebarTreeDelegate
+from desktop.sidebar.conversation_prompt_preview import format_prompt_preview
 from desktop.sidebar.sidebar_tree_view import SidebarTreeView
 from desktop.style_manager import StyleManager
 
@@ -190,6 +191,38 @@ class ConversationSidebarTreeView(SidebarTreeView):
             return None
 
         return dag_model.path_for_index(index)
+
+    def get_tooltip_text(self, index: QModelIndex) -> str:
+        """
+        Describe a conversation by the opening of its first prompt and its path.
+
+        The path alone does not say what a conversation was about.  The preview
+        is a convenience: a conversation with no user message yet, or one whose
+        file cannot be read, still shows its path.
+
+        Args:
+            index: The model index under the pointer.
+
+        Returns:
+            Tooltip text, or an empty string for no tooltip.
+        """
+        item_path = super().get_tooltip_text(index)
+        if not item_path:
+            return ""
+
+        dag_model = self.model()
+        if not isinstance(dag_model, ConversationSidebarDAGModel):
+            return item_path
+
+        prompt = dag_model.first_prompt_for_index(index)
+        if not prompt:
+            return item_path
+
+        preview = format_prompt_preview(prompt)
+        if not preview:
+            return item_path
+
+        return f"{preview}\n\n{item_path}"
 
     def collapse_path(self, path: str) -> QModelIndex:
         """
