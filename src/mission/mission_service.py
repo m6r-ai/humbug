@@ -280,7 +280,7 @@ class MissionService:
     Front ends subscribe with add_listener and read snapshots; they hold no
     mission state of their own.
 
-    See ADR-0021.
+    See ADR-0026.
     """
 
     def __init__(self, mindspace: Mindspace, reviewer: MissionApprovalReviewer | None = None) -> None:
