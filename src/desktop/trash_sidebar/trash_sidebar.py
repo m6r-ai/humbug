@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
 )
 
+from conversation_dag import first_user_prompt
 from mindspace.mindspace_error import MindspaceError
 from mindspace.trash_manifest import TrashEntry, strip_trash_prefix
 
@@ -19,6 +20,7 @@ from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.sidebar.sidebar_base import SidebarBase
+from desktop.sidebar.conversation_prompt_preview import format_prompt_preview
 from desktop.sidebar.sidebar_pane_style import build_tree_pane_stylesheet
 from desktop.sidebar.sidebar_row_spacing_delegate import SidebarRowSpacingDelegate
 from desktop.sidebar.sidebar_section_header import SidebarSectionHeader
@@ -57,6 +59,7 @@ class TrashSidebar(SidebarBase):
         self._icon_provider = SidebarTreeIconProvider()
         self._mindspace_path = ""
         self._empty_state_spacer: QSpacerItem | None = None
+        self._prompt_cache: dict[str, tuple[tuple[int, int], str]] = {}
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -137,9 +140,66 @@ class TrashSidebar(SidebarBase):
 
         item = QTreeWidgetItem([f"{name}  —  {location}  ·  {self._format_deleted_at(entry.deleted_at)}"])
         item.setData(0, _TRASH_NAME_ROLE, entry.trash_name)
-        item.setToolTip(0, entry.original_path or strings.trash_unknown_location)
+        item.setToolTip(0, self._tooltip_text(entry, trash_path))
         item.setIcon(0, self._icon_provider.icon(QFileInfo(trash_path)))
         return item
+
+    def _prompt_preview(self, trash_path: str) -> str:
+        """
+        Describe a trashed conversation by the prompt that opened it.
+
+        The panel is rebuilt every time it is activated, so the preview is
+        cached against the file's modification time and size: reading a
+        transcript is work no hover should repeat.
+
+        Args:
+            trash_path: Absolute path of the trashed file.
+
+        Returns:
+            The prompt's opening, or an empty string when the file is not a
+            conversation, holds no user message yet, or cannot be read.
+        """
+        if not is_conversation_file(trash_path):
+            return ""
+
+        try:
+            stat_info = os.stat(trash_path)
+
+        except OSError:
+            return ""
+
+        version = (stat_info.st_mtime_ns, stat_info.st_size)
+        cached = self._prompt_cache.get(trash_path)
+        if cached is not None and cached[0] == version:
+            return cached[1]
+
+        prompt = first_user_prompt(trash_path)
+        preview = format_prompt_preview(prompt) if prompt else ""
+        self._prompt_cache[trash_path] = (version, preview)
+        return preview
+
+    def _tooltip_text(self, entry: TrashEntry, trash_path: str) -> str:
+        """
+        Describe a trashed item in full, for the row's tooltip.
+
+        Row labels are trimmed to fit the panel, so the tooltip carries where the
+        item came from.  A trashed conversation also says what it was about: the
+        opening of the prompt that started it, as the Conversations panel does,
+        which is usually how you recognise one whose name you never changed.
+
+        Args:
+            entry: The trashed item.
+            trash_path: Absolute path of the trashed file.
+
+        Returns:
+            Tooltip text.
+        """
+        location = entry.original_path or self._language_manager.strings().trash_unknown_location
+        preview = self._prompt_preview(trash_path)
+        if not preview:
+            return location
+
+        return f"{preview}\n\n{location}"
 
     def _refresh_row_icons(self) -> None:
         """

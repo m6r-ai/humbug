@@ -10,6 +10,11 @@ from PySide6.QtCore import QModelIndex
 from desktop.conversation_sidebar.conversation_sidebar_dag_model import ConversationSidebarDAGModel
 from desktop.conversation_sidebar.conversation_sidebar_index import ConversationSidebarIndex
 from desktop.conversation_sidebar.conversation_sidebar_tree_view import ConversationSidebarTreeView
+from desktop.sidebar.conversation_prompt_preview import (
+    PROMPT_PREVIEW_CHARACTERS,
+    PROMPT_PREVIEW_LINE_CHARACTERS,
+    PROMPT_PREVIEW_LINES,
+)
 from desktop.sidebar.sidebar_tree_icon_provider import SidebarTreeIconProvider
 from mindspace.mindspace import Mindspace
 
@@ -87,15 +92,15 @@ class TestTooltipText:
 
     def test_long_prompt_is_wrapped_and_truncated(self, conv_dir, make_view):
         """An unbroken prompt fills whole preview lines and ends with an ellipsis."""
-        prompt = "a" * (ConversationSidebarTreeView.PROMPT_PREVIEW_CHARACTERS + 100)
+        prompt = "a" * (PROMPT_PREVIEW_CHARACTERS + 100)
         chat = os.path.join(conv_dir, "chat.conv")
         _write_conv_file(chat, [_message("m1", "user_message", prompt)])
         view = make_view()
 
         tooltip = view.get_tooltip_text(view.model().index_for_path(chat))
 
-        line = "a" * ConversationSidebarTreeView.PROMPT_PREVIEW_LINE_CHARACTERS
-        expected_lines = [line] * ConversationSidebarTreeView.PROMPT_PREVIEW_LINES
+        line = "a" * PROMPT_PREVIEW_LINE_CHARACTERS
+        expected_lines = [line] * PROMPT_PREVIEW_LINES
         expected_lines[-1] += "…"
         expected_preview = "\n".join(expected_lines)
 
@@ -112,10 +117,10 @@ class TestTooltipText:
 
         preview, path = tooltip.split("\n\n")
         lines = preview.split("\n")
-        assert len(lines) == ConversationSidebarTreeView.PROMPT_PREVIEW_LINES
+        assert len(lines) == PROMPT_PREVIEW_LINES
         assert lines[-1].endswith("…")
         assert all(
-            len(line) <= ConversationSidebarTreeView.PROMPT_PREVIEW_LINE_CHARACTERS + 1
+            len(line) <= PROMPT_PREVIEW_LINE_CHARACTERS + 1
             for line in lines
         )
         assert path == _relative_conversations_path("chat.conv")

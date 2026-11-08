@@ -11,6 +11,7 @@ from PySide6.QtCore import QAbstractItemModel, QModelIndex, Qt, QPersistentModel
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtCore import QFileInfo
 
+from conversation_dag import first_user_prompt
 from desktop.conversation_sidebar.conversation_sidebar_index import ConversationSidebarIndex
 from desktop.language.language_manager import LanguageManager
 from desktop.mindspace.mindspace_manager import MindspaceManager
@@ -246,35 +247,9 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
         if cached is not None and cached[0] == version:
             return cached[1]
 
-        prompt = self._parse_first_prompt(path)
+        prompt = first_user_prompt(path)
         self._prompt_cache[path] = (version, prompt)
         return prompt
-
-    def _parse_first_prompt(self, path: str) -> str | None:
-        """
-        Extract the first user message's content from a .conv file.
-
-        Args:
-            path: Absolute path to the .conv file.
-
-        Returns:
-            The first user message's content, or None if there is not one or
-            the file cannot be read.
-        """
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-
-            messages = data.get('conversation', []) if isinstance(data, dict) else []
-            for msg in messages:
-                if isinstance(msg, dict) and msg.get('type') == 'user_message':
-                    content = msg.get('content')
-                    return content if isinstance(content, str) else None
-
-        except (OSError, json.JSONDecodeError):
-            return None
-
-        return None
 
     def _sort_key(self, path: str, is_dir: bool) -> tuple:
         """

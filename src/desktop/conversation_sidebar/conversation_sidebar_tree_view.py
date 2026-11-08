@@ -2,7 +2,6 @@
 
 from collections.abc import Callable
 import os
-import textwrap
 
 from PySide6.QtCore import QModelIndex, QPersistentModelIndex, Qt, QTimer
 from PySide6.QtGui import QBrush, QColor, QLinearGradient, QPaintEvent, QPainter, QPen
@@ -11,16 +10,13 @@ from PySide6.QtWidgets import QStyleOptionViewItem, QWidget
 from desktop.color_role import ColorRole
 from desktop.conversation_sidebar.conversation_sidebar_dag_model import ConversationSidebarDAGModel
 from desktop.conversation_sidebar.conversation_sidebar_tree_delegate import ConversationSidebarTreeDelegate
+from desktop.sidebar.conversation_prompt_preview import format_prompt_preview
 from desktop.sidebar.sidebar_tree_view import SidebarTreeView
 from desktop.style_manager import StyleManager
 
 
 class ConversationSidebarTreeView(SidebarTreeView):
     """Custom tree view for conversations with drag and drop support, auto-scroll, and inline editing."""
-
-    PROMPT_PREVIEW_CHARACTERS = 300
-    PROMPT_PREVIEW_LINES = 5
-    PROMPT_PREVIEW_LINE_CHARACTERS = 60
 
     def __init__(self, parent: QWidget | None = None):
         """Initialize the conversations tree view."""
@@ -222,46 +218,11 @@ class ConversationSidebarTreeView(SidebarTreeView):
         if not prompt:
             return item_path
 
-        preview = self._format_prompt_preview(prompt)
+        preview = format_prompt_preview(prompt)
         if not preview:
             return item_path
 
         return f"{preview}\n\n{item_path}"
-
-    def _format_prompt_preview(self, prompt: str) -> str:
-        """
-        Wrap the opening of a prompt into a few short lines.
-
-        The tooltip is sized by its longest line, so an unwrapped prompt would
-        stretch it across the screen.  Wrapping keeps it beside the item it
-        describes while still showing enough of the prompt to recognise the
-        conversation.  A prompt that does not fit is cut short with an
-        ellipsis.
-
-        Args:
-            prompt: The full text of the conversation's first prompt.
-
-        Returns:
-            The preview, with its lines separated by newlines, or an empty
-            string if the prompt holds nothing but whitespace.
-        """
-        collapsed = " ".join(prompt.split())
-        if not collapsed:
-            return ""
-
-        truncated = len(collapsed) > self.PROMPT_PREVIEW_CHARACTERS
-        lines = textwrap.wrap(
-            collapsed[:self.PROMPT_PREVIEW_CHARACTERS],
-            self.PROMPT_PREVIEW_LINE_CHARACTERS,
-        )
-        if len(lines) > self.PROMPT_PREVIEW_LINES:
-            del lines[self.PROMPT_PREVIEW_LINES:]
-            truncated = True
-
-        if truncated:
-            lines[-1] += "…"
-
-        return "\n".join(lines)
 
     def collapse_path(self, path: str) -> QModelIndex:
         """
