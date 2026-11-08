@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 import os
+import textwrap
 
 from PySide6.QtCore import QModelIndex, QPersistentModelIndex, Qt, QTimer
 from PySide6.QtGui import QBrush, QColor, QLinearGradient, QPaintEvent, QPainter, QPen
@@ -16,6 +17,10 @@ from desktop.style_manager import StyleManager
 
 class ConversationSidebarTreeView(SidebarTreeView):
     """Custom tree view for conversations with drag and drop support, auto-scroll, and inline editing."""
+
+    PROMPT_PREVIEW_CHARACTERS = 300
+    PROMPT_PREVIEW_LINES = 5
+    PROMPT_PREVIEW_LINE_CHARACTERS = 60
 
     def __init__(self, parent: QWidget | None = None):
         """Initialize the conversations tree view."""
@@ -190,6 +195,73 @@ class ConversationSidebarTreeView(SidebarTreeView):
             return None
 
         return dag_model.path_for_index(index)
+
+    def get_tooltip_text(self, index: QModelIndex) -> str:
+        """
+        Describe a conversation by the opening of its first prompt and its path.
+
+        The path alone does not say what a conversation was about.  The preview
+        is a convenience: a conversation with no user message yet, or one whose
+        file cannot be read, still shows its path.
+
+        Args:
+            index: The model index under the pointer.
+
+        Returns:
+            Tooltip text, or an empty string for no tooltip.
+        """
+        item_path = super().get_tooltip_text(index)
+        if not item_path:
+            return ""
+
+        dag_model = self.model()
+        if not isinstance(dag_model, ConversationSidebarDAGModel):
+            return item_path
+
+        prompt = dag_model.first_prompt_for_index(index)
+        if not prompt:
+            return item_path
+
+        preview = self._format_prompt_preview(prompt)
+        if not preview:
+            return item_path
+
+        return f"{preview}\n\n{item_path}"
+
+    def _format_prompt_preview(self, prompt: str) -> str:
+        """
+        Wrap the opening of a prompt into a few short lines.
+
+        The tooltip is sized by its longest line, so an unwrapped prompt would
+        stretch it across the screen.  Wrapping keeps it beside the item it
+        describes while still showing enough of the prompt to recognise the
+        conversation.  A prompt that does not fit is cut short with an
+        ellipsis.
+
+        Args:
+            prompt: The full text of the conversation's first prompt.
+
+        Returns:
+            The preview, with its lines separated by newlines, or an empty
+            string if the prompt holds nothing but whitespace.
+        """
+        collapsed = " ".join(prompt.split())
+        if not collapsed:
+            return ""
+
+        truncated = len(collapsed) > self.PROMPT_PREVIEW_CHARACTERS
+        lines = textwrap.wrap(
+            collapsed[:self.PROMPT_PREVIEW_CHARACTERS],
+            self.PROMPT_PREVIEW_LINE_CHARACTERS,
+        )
+        if len(lines) > self.PROMPT_PREVIEW_LINES:
+            del lines[self.PROMPT_PREVIEW_LINES:]
+            truncated = True
+
+        if truncated:
+            lines[-1] += "…"
+
+        return "\n".join(lines)
 
     def collapse_path(self, path: str) -> QModelIndex:
         """

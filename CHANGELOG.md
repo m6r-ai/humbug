@@ -2,6 +2,11 @@
 
 ## v60 (2026-11-xx)
 
+New features:
+
+- Resting the pointer on a conversation in the Conversations panel now describes it as well as naming its path.
+- Panel tooltips now give a path as it sits in the mindspace instead of in full.
+
 ## v59 (2026-11-07)
 
 New features:

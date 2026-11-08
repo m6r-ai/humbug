@@ -18,6 +18,22 @@ def _write_conv_file(path: str) -> None:
         json.dump({"metadata": {"version": "0.1", "parent": None}, "conversation": []}, f)
 
 
+def _message(message_id: str, message_type: str, content: str) -> dict:
+    """Build a transcript message of the given type."""
+    return {
+        "id": message_id,
+        "timestamp": "2024-01-01T00:00:00+00:00",
+        "type": message_type,
+        "content": content,
+    }
+
+
+def _write_conv_file_with_messages(path: str, messages: list[dict]) -> None:
+    """Write a root .conv file holding the given messages."""
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump({"metadata": {"version": "0.1", "parent": None}, "conversation": messages}, f)
+
+
 @pytest.fixture
 def sidebar_env(mindspace_sandbox):
     """The sandboxed mindspace, as (mindspace_manager, conv_dir)."""
@@ -464,3 +480,59 @@ class TestNaturalCopyPinIndicator:
 
         assert model.natural_index_for_path(folder).isValid()
         assert not model.pinned_index_for_path(folder).isValid()
+
+
+class TestFirstPrompt:
+    """The opening prompt that describes what a conversation is about."""
+
+    def test_returns_the_first_user_message(self, sidebar_env):
+        """The first prompt is the earliest message the user sent."""
+        _mgr, conv_dir = sidebar_env
+        chat = os.path.join(conv_dir, "chat.conv")
+        _write_conv_file_with_messages(chat, [
+            _message("m1", "system_message", "Connected"),
+            _message("m2", "user_message", "Explain the build"),
+            _message("m3", "ai_response", "Of course"),
+            _message("m4", "user_message", "And the tests"),
+        ])
+
+        model = _build_model(conv_dir)
+
+        assert model.first_prompt_for_index(model.index_for_path(chat)) == "Explain the build"
+
+    def test_returns_none_when_the_user_has_not_spoken_yet(self, sidebar_env):
+        """A conversation holding only system messages has no first prompt."""
+        _mgr, conv_dir = sidebar_env
+        chat = os.path.join(conv_dir, "chat.conv")
+        _write_conv_file_with_messages(chat, [
+            _message("m1", "system_message", "Connected"),
+        ])
+
+        model = _build_model(conv_dir)
+
+        assert model.first_prompt_for_index(model.index_for_path(chat)) is None
+
+    def test_returns_none_for_a_folder(self, sidebar_env):
+        """A folder has no prompt of its own."""
+        _mgr, conv_dir = sidebar_env
+        folder = os.path.join(conv_dir, "folder")
+        os.makedirs(folder)
+
+        model = _build_model(conv_dir)
+
+        assert model.first_prompt_for_index(model.index_for_path(folder)) is None
+
+    def test_reflects_a_prompt_added_after_the_first_read(self, sidebar_env):
+        """A prompt that arrives after an earlier read is reported, not a cached absence."""
+        _mgr, conv_dir = sidebar_env
+        chat = os.path.join(conv_dir, "chat.conv")
+        _write_conv_file(chat)
+        model = _build_model(conv_dir)
+        index = model.index_for_path(chat)
+        assert model.first_prompt_for_index(index) is None
+
+        _write_conv_file_with_messages(chat, [
+            _message("m1", "user_message", "Explain the build"),
+        ])
+
+        assert model.first_prompt_for_index(index) == "Explain the build"

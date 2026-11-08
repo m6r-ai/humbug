@@ -12,6 +12,8 @@ from PySide6.QtGui import (
     QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent, QCursor, QKeyEvent, QWheelEvent
 )
 
+from desktop.mindspace.mindspace_manager import MindspaceManager
+
 class SidebarTreeView(QTreeView):
     """Base tree view with drag and drop support, auto-scroll, and inline editing."""
 
@@ -156,6 +158,29 @@ class SidebarTreeView(QTreeView):
             actual_index = index
 
         return self.get_path_from_index(actual_index)
+
+    def get_tooltip_text(self, index: QModelIndex) -> str:
+        """
+        Get the tooltip text shown while the pointer rests on an item.
+
+        An item is described by where it sits in the mindspace rather than by
+        its full filesystem path: the mindspace root is the same for every row,
+        so repeating it spends the width the rest of the path needs.  A path
+        outside the mindspace has no shorter form and is shown as it is.
+
+        Subclasses override this to describe an item in more than where it sits.
+
+        Args:
+            index: The model index under the pointer.
+
+        Returns:
+            Tooltip text, or an empty string for no tooltip.
+        """
+        path = self.get_path_from_index(index)
+        if not path:
+            return ""
+
+        return MindspaceManager().get_relative_path(path)
 
     def get_path_from_index(self, index: QModelIndex) -> str | None:
         """
@@ -655,10 +680,9 @@ class SidebarTreeView(QTreeView):
         """Handle mouse move events."""
         # Get the file path from the source model
         index = self.indexAt(event.pos())
-        path = self.get_path_from_index(index)
 
         # Get the item under the mouse to work out tool tips.
-        self.setToolTip(path if path else "")
+        self.setToolTip(self.get_tooltip_text(index))
 
         if not event.buttons() & Qt.MouseButton.LeftButton:
             return
