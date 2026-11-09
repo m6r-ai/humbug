@@ -89,6 +89,7 @@ modules:
       - markdown_
       - menai_ai_tool
       - mindspace
+      - mission
       - pdf
       - docx
       - system_ai_tool
@@ -235,6 +236,17 @@ modules:
 
   path_matching:
     internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+
+  mission:
+    internal_dependencies:
+      - ai
+      - ai_tool
+      - ai_transcript_conversation
+      - context
+      - conversation_context
+      - mindspace
     external_dependencies:
       - "standard_library"
 

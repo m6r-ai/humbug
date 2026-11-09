@@ -19,6 +19,7 @@ differences and are noted in their rows.
 | Mindspace Log | Cmd+Shift+L | Ctrl+Shift+L |
 | Humbug Shell | Cmd+Shift+Y | Ctrl+Shift+Y |
 | Token Usage | Cmd+Shift+U | Ctrl+Shift+U |
+| Mission Control | Cmd+Shift+M | Ctrl+Shift+M |
 
 ## File
 
