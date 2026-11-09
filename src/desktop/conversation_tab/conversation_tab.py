@@ -655,6 +655,12 @@ class ConversationTab(TabBase):
                 padding: 0;
                 margin: 0;
             }}
+            #ConversationWidget #ConversationMessage #_approval_auto_approve_label {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: transparent;
+                padding: 0;
+                margin: 0;
+            }}
             #ConversationWidget #ConversationMessage #_wait_text_edit {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;

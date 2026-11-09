@@ -11,6 +11,10 @@ New features:
 - Editor auto backup now keeps its copies under `.humbug/backups`, rather than saving one as `file.txt.backup`
   beside the file itself.
 
+Bug fixes:
+
+- The "approve all writes in this message turn" text label did not use the correct background colour.
+
 ## v59 (2026-11-07)
 
 New features:
