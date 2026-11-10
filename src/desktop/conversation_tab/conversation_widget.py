@@ -3932,10 +3932,16 @@ class ConversationWidget(QWidget):
         if "cursor" in state:
             self._set_cursor_position(state["cursor"])
 
-        # If a batch load is still in progress, defer restoration until it
-        # completes so that every message widget is in place when we apply it.
+        # If a batch load is still in progress, defer only what needs every message
+        # widget to be in place.  The input draft and cursor are already applied, and
+        # must be dropped here so they are not applied a second time when the deferred
+        # state is reapplied: doing that would put the draft into the input long after
+        # the tab was opened, and move focus with it.
         if self._load_queue:
-            self._load_pending_state = state
+            deferred = dict(state)
+            deferred.pop("content", None)
+            deferred.pop("cursor", None)
+            self._load_pending_state = deferred
             self._load_pending_is_migration = False
             return
 

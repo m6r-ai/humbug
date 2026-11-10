@@ -89,6 +89,29 @@ class TestConversationViewState:
         assert widget._load_pending_state is not None  # pylint: disable=protected-access
         assert widget._load_pending_state["message_expansion"] == [True]  # pylint: disable=protected-access
 
+    def test_restore_view_state_does_not_defer_the_input_draft(self, conv_env) -> None:
+        """
+        The draft is applied once, at restore, and not again when loading finishes.
+
+        Reapplying it at the end of the load would move focus into the input box
+        seconds after the tab was opened, taking it from wherever the user had moved.
+        """
+        _mgr, transcript_path = conv_env
+        widget = _make_widget(transcript_path)
+
+        widget._load_queue = [AIMessage.create(AIMessageSource.USER, "queued")]  # pylint: disable=protected-access
+
+        widget.restore_view_state({"content": "visible now", "message_expansion": [True]})
+
+        assert "content" not in widget._load_pending_state  # pylint: disable=protected-access
+        assert widget._input.hasFocus() is False  # pylint: disable=protected-access
+
+        widget._load_pending_state = None  # pylint: disable=protected-access
+        widget._finalise_load()  # pylint: disable=protected-access
+
+        assert widget._input.to_plain_text() == "visible now"  # pylint: disable=protected-access
+        assert widget._input.hasFocus() is False  # pylint: disable=protected-access
+
 
 class TestMessageExpansionState:
     """Tests that each message's expansion state survives a view-state round trip."""

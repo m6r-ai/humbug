@@ -127,16 +127,23 @@ class TabManager(QWidget):
         self._activation_timer.timeout.connect(self._activate_current_tab)
         self._activation_timer.setInterval(1)
 
-        # Zero-delay deferral timers. Parented to self so they are torn down with the
-        # manager and can never fire after the widgets they touch are deleted.
-        self._focus_restore_timer = QTimer(self)
-        self._focus_restore_timer.setSingleShot(True)
-        self._focus_restore_timer.timeout.connect(self._on_deferred_focus_restore)
-        self._deferred_focus_widget: QWidget | None = None
+        # True while the manager is making a tab current itself.  Qt reports that as
+        # currentChanged exactly as it reports the user selecting a tab, so the handler
+        # has to be told which it is: only a user selection may decide focus.
+        self._selecting_tab = False
 
+        # Deferral timer. Parented to self so it is torn down with the manager and can
+        # never fire after the widgets it touches are deleted.
         self._thumbnail_refresh_timer = QTimer(self)
         self._thumbnail_refresh_timer.setSingleShot(True)
         self._thumbnail_refresh_timer.timeout.connect(self._refresh_current_tab_thumbnails)
+
+        # Column sizes are recomputed once the event loop has settled, so the change
+        # that made them stale is complete before they are measured.  One timer serves
+        # every request, so changes made in the same turn cost one layout pass.
+        self._layout_pass_timer = QTimer(self)
+        self._layout_pass_timer.setSingleShot(True)
+        self._layout_pass_timer.timeout.connect(self.show_all_columns)
 
         # Set initial state
         self._stack.setCurrentWidget(self._welcome_widget)
@@ -581,7 +588,7 @@ class TabManager(QWidget):
 
         column.removeTab(index)
         tab.deleteLater()
-        QTimer.singleShot(0, self.show_all_columns)
+        self._schedule_layout_pass()
 
     def _on_mindspace_settings_changed(self) -> None:
         """Wire or unwire registry callbacks when a mindspace opens or closes."""
@@ -925,21 +932,14 @@ class TabManager(QWidget):
 
         self._tabs[tab_id] = tab
 
-        index = column.addTab(tab, "")
-        tab_bar = column.tabBar()
-        assert isinstance(tab_bar, TabBar)
-        tab_bar.add_tab_data(
-            index, tab_id, tab.tab_icon(), title, tool_tip,
-            is_ephemeral=tab.is_ephemeral(),
-            is_file_missing=tab.is_path_missing(),
-        )
+        # Capture focus before the tab is added, because adding it makes it current and
+        # Qt moves focus as it does so.
         focus_widget = QApplication.focusWidget()
 
         # If focus is on a transient delegate editor (e.g. the sidebar inline rename
         # editor), walk up to the persistent QAbstractItemView ancestor.  The editor
-        # widget is destroyed by Qt when editing ends, so storing a reference to it
-        # and calling setFocus() later would crash with "Internal C++ object already
-        # deleted".
+        # widget is destroyed by Qt when editing ends, so returning focus to it would
+        # crash with "Internal C++ object already deleted".
         if focus_widget is not None:
             view = focus_widget.parent()
             while view is not None and not isinstance(view, QAbstractItemView):
@@ -948,11 +948,27 @@ class TabManager(QWidget):
             if view is not None:
                 focus_widget = view
 
-        column.setCurrentWidget(tab)
+        # Adding the tab and making it current are the manager's own decision, so the
+        # currentChanged they emit must not be read as the user selecting a tab.
+        self._selecting_tab = True
+        try:
+            index = column.addTab(tab, "")
+            tab_bar = column.tabBar()
+            assert isinstance(tab_bar, TabBar)
+            tab_bar.add_tab_data(
+                index, tab_id, tab.tab_icon(), title, tool_tip,
+                is_ephemeral=tab.is_ephemeral(),
+                is_file_missing=tab.is_path_missing(),
+            )
+
+            column.setCurrentWidget(tab)
+
+        finally:
+            self._selecting_tab = False
 
         self._update_tabs(change_focus=False)
         self._update_mru_order(tab, column)
-        QTimer.singleShot(0, self.show_all_columns)
+        self._schedule_layout_pass()
 
         # Keep the registry's column and position state in sync with the Qt layout.
         # Position must be written too: a tab arriving from another column still
@@ -964,25 +980,13 @@ class TabManager(QWidget):
                 tab_id, column=column_index, position=index
             )
 
-        # Only restore focus to the prior widget when the open was not user-initiated
-        # and focus was outside the target column (e.g. the sidebar).  If focus was
-        # already inside the column, let it move to the new tab.  Deciding this here,
-        # rather than scheduling a restore and cancelling it later, removes the race
-        # between the focus-restore and activation timers.
+        # Focus is decided here, once, and never revisited: nothing schedules a later
+        # focus change, so whatever the user does after this returns stands.  A
+        # non-user-initiated open that displaced focus from outside the target column
+        # puts it back; an open in the column the user was already in leaves focus on
+        # the new tab.
         if restore_focus and focus_widget is not None and not column.isAncestorOf(focus_widget):
-            self._deferred_focus_widget = focus_widget
-            self._focus_restore_timer.start(0)
-
-        else:
-            self._deferred_focus_widget = None
-            self._focus_restore_timer.stop()
-
-    def _on_deferred_focus_restore(self) -> None:
-        """Restore focus to the widget saved by the tab activation path."""
-        if self._deferred_focus_widget is not None:
-            self._deferred_focus_widget.setFocus()
-
-            self._deferred_focus_widget = None
+            focus_widget.setFocus()
 
     def _move_tab_between_columns(
         self,
@@ -1489,7 +1493,7 @@ class TabManager(QWidget):
         self._sync_registry_layout()
 
         # Defer resizing to allow the column to be removed first.
-        QTimer.singleShot(0, self.show_all_columns)
+        self._schedule_layout_pass()
 
     def _sync_registry_layout(self) -> None:
         """
@@ -1590,9 +1594,18 @@ class TabManager(QWidget):
         """
         Handle tab selection changes.
 
+        The manager changes a column's current widget itself when it opens, moves or
+        restores a tab, and Qt reports that through the same signal.  Those changes
+        carry no intent about focus: an AI-initiated open in another column must not
+        take focus, and a restore must not let each tab it rebuilds overwrite the
+        focused context it is restoring.  Only a change the user made is acted on.
+
         Args:
             index: Index of the newly selected tab
         """
+        if self._selecting_tab:
+            return
+
         # Find which column triggered the change
         sender = self.sender()
         column = cast(ColumnWidget, sender)
@@ -1704,6 +1717,13 @@ class TabManager(QWidget):
 
         self._add_tab_to_column(tab, title, target_column, restore_focus=bool(requester_id))
 
+        # A user-initiated open makes the new tab the context the user is looking at.  A
+        # tab opened for another context leaves that alone, however it was placed, and a
+        # restore defers to the focus the saved state names rather than the last tab it
+        # happened to rebuild.
+        if not requester_id and not self._restoring and self._mindspace_manager.has_mindspace():
+            self._mindspace_manager.mindspace().contexts().focus(tab.tab_id())
+
         # If the new tab landed in a column that wasn't already active, restore the previously
         # active column so that opening a tab doesn't implicitly steal column activation
         if target_column != prior_active_column:
@@ -1772,7 +1792,11 @@ class TabManager(QWidget):
             if len(self._tab_columns) > 1:
                 column_number = self._tab_columns.index(column)
                 self._remove_column_and_resize(column_number, column)
-                self._update_tabs()
+
+            # The tab is only scheduled for deletion, so the manager must let go of its
+            # own references to it now.  Otherwise it holds a wrapper whose C++ object Qt
+            # has deleted, and clearing that wrapper later crashes.
+            self._update_tabs()
 
         # If no tabs remain clean up the display
         if not self._tabs:
@@ -1908,7 +1932,7 @@ class TabManager(QWidget):
         """Recompute column sizes when a tab's preferred width may have changed."""
         # Defer so that multiple width changes in the same event-loop tick coalesce
         # into a single layout pass.
-        QTimer.singleShot(0, self.show_all_columns)
+        self._schedule_layout_pass()
 
     def current_tab_path(self) -> str:
         """
@@ -2268,20 +2292,17 @@ class TabManager(QWidget):
         finally:
             self._restoring = False
 
-        # Capture the focused context id before restoring the visible tabs.
-        # _restore_current_tabs drives currentChanged, whose handler calls
-        # contexts().focus(), overwriting the registry's focused id with the
-        # last column it processes.
+        # The registry's focused context is whatever the saved state restored, because
+        # _restore_current_tabs only changes which tab is visible and never decides
+        # focus.  Reading it here, once, is what the active column is chosen from.
         focused_id = registry.current_context_id()
 
         # Restore which tab is visible in each column.  This must happen after
         # every tab exists.
         self._restore_current_tabs(registry.get_current_by_column())
 
-        # Set the active column from the context that was focused when the
-        # session was saved.  Without this, _active_column is left pointing at
-        # whichever column _restore_current_tabs processed last, so focus ends
-        # up on the wrong column's tab.
+        # Set the active column from the context that was focused when the session was
+        # saved, and focus its tab.  This is the single focus decision a restore makes.
         focused_tab = self._tabs.get(focused_id) if focused_id else None
         focused_column = self._find_column_for_tab(focused_tab) if focused_tab else None
         self._active_column = focused_column if focused_column is not None else self._tab_columns[0]
@@ -2307,7 +2328,13 @@ class TabManager(QWidget):
 
             column = self._tab_columns[column_index]
             if column.indexOf(tab) != -1:
-                column.setCurrentWidget(tab)
+                self._selecting_tab = True
+                try:
+                    column.setCurrentWidget(tab)
+
+                finally:
+                    self._selecting_tab = False
+
                 self._update_mru_order(tab, column)
 
     def apply_style(self) -> None:
@@ -2383,6 +2410,16 @@ class TabManager(QWidget):
 
         elif self._tab_carousel is not None and self._tab_carousel.isVisible():
             self.show_tab_carousel()
+
+    def _schedule_layout_pass(self) -> None:
+        """
+        Recompute the column sizes once the current turn has finished.
+
+        A tab or column that has just been added or removed has not been laid out
+        yet, so its size would be measured from stale geometry.  Requests made in
+        the same turn share one pass.
+        """
+        self._layout_pass_timer.start(0)
 
     def show_all_columns(self, reset_layout: bool = False) -> None:
         """

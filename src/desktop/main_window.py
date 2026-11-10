@@ -338,6 +338,13 @@ class MainWindow(QMainWindow):
         self._zoom_levels: list[float] = []
         self._zoom_base_index: int = 0
 
+        # Created first because changeEvent can deliver a window state change at any
+        # point in construction.  Every deferred update uses an instance timer parented
+        # to the window, so a pending callback cannot outlive the widgets it touches.
+        self._window_controls_timer = QTimer(self)
+        self._window_controls_timer.setSingleShot(True)
+        self._window_controls_timer.timeout.connect(self._update_window_controls_state)
+
         if self._use_custom_title_bar:
             self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
             self.setMouseTracking(True)
@@ -883,12 +890,23 @@ class MainWindow(QMainWindow):
             TerminalAITool(mindspace), "Terminal: operations for interacting with terminal tabs"
         )
 
-        QTimer.singleShot(0, self._restore_last_mindspace)
-        QTimer.singleShot(0, self._load_user_ai_config)
+        self._startup_timer = QTimer(self)
+        self._startup_timer.setSingleShot(True)
+        self._startup_timer.timeout.connect(self._on_startup_deferred)
+
+        self._update_check_timer = QTimer(self)
+        self._update_check_timer.setSingleShot(True)
+        self._update_check_timer.timeout.connect(self._run_startup_update_check)
+
+        self._status_clear_timer = QTimer(self)
+        self._status_clear_timer.setSingleShot(True)
+        self._status_clear_timer.timeout.connect(self._status_message_label.clear)
+
+        self._startup_timer.start(0)
 
         self._update_checker = UpdateChecker(self)
         self._update_checker.update_available.connect(self._on_update_available)
-        QTimer.singleShot(5000, self._run_startup_update_check)
+        self._update_check_timer.start(5000)
 
         self._tour_controller = TourController(self)
         self._tour_start_timer = QTimer(self)
@@ -902,7 +920,7 @@ class MainWindow(QMainWindow):
         if event.type() == QEvent.Type.WindowStateChange:
             self._tab_manager.apply_style()
             if self._window_controls is not None:
-                QTimer.singleShot(0, self._update_window_controls_state)
+                self._window_controls_timer.start(0)
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         """Keep the Quick Switcher overlay covering the content area if it is open."""
@@ -1443,7 +1461,12 @@ class MainWindow(QMainWindow):
         """Update status bar with new message."""
         self._status_message_label.setText(message.text)
         if message.timeout:
-            QTimer.singleShot(message.timeout, self._status_message_label.clear)
+            self._status_clear_timer.start(message.timeout)
+
+    def _on_startup_deferred(self) -> None:
+        """Restore the last mindspace and load the AI configuration once the window is up."""
+        self._restore_last_mindspace()
+        self._load_user_ai_config()
 
     def _restore_last_mindspace(self) -> None:
         """
