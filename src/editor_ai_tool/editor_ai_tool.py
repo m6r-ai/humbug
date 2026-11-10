@@ -283,6 +283,11 @@ class EditorAITool(AITool):
         """
         Extract context information from the tool call.
 
+        The context is shown alongside the tool call itself. A change the user
+        approves is shown by the approval, so an operation that asks repeats
+        nothing here: the diff the user judges is the file change, and showing
+        the requested diff beside it would offer the same change twice.
+
         Args:
             tool_call: Tool call containing arguments and metadata
 
@@ -292,18 +297,11 @@ class EditorAITool(AITool):
         arguments = tool_call.arguments
         operation = arguments.get("operation")
 
-        if operation == "transform":
-            program = arguments.get("program", "")
-            return f"`program` is:\n```menai\n{program}\n```"
-
-        if operation != "apply_diff":
+        if operation != "transform":
             return None
 
-        if "diff_content" not in arguments:
-            return None
-
-        diff_content = arguments["diff_content"]
-        return f"Diff content:\n```diff\n{diff_content}\n```"
+        program = arguments.get("program", "")
+        return f"`program` is:\n```menai\n{program}\n```"
 
     def _get_editor_context(self, arguments: dict[str, Any]) -> EditorContext:
         """
@@ -683,6 +681,8 @@ class EditorAITool(AITool):
                 "Ask the user to save it to a file first"
             )
 
+        display_path = self._mindspace.get_relative_path(file_path)
+
         # The write carries the whole buffer rather than this change alone, so
         # the approval shows the whole buffer's difference from the file.
         unsaved_before = context.get_diff(3)
@@ -712,7 +712,7 @@ class EditorAITool(AITool):
                 " so nothing was written"
             )
 
-        context_str = f"Apply {operation} to editor file: {file_path} (tab {context_id}) and save it"
+        context_str = f"Apply {operation} to editor file: {display_path} (tab {context_id}) and save it"
         if unsaved_before:
             context_str += (
                 "\nThe buffer also holds unsaved changes made outside this tool,"
@@ -729,7 +729,7 @@ class EditorAITool(AITool):
         authorized = await request_authorization("editor", arguments, context_str, diff, True, kind)
         if not authorized:
             restored = self._undo_buffer_change(context, before_text, after_text, operation)
-            message = f"User denied permission to change '{file_path}'"
+            message = f"User denied permission to change '{display_path}'"
             if not restored:
                 message += (
                     " and the buffer could not be restored to its previous"
@@ -746,25 +746,25 @@ class EditorAITool(AITool):
         except Exception as e:
             self._undo_buffer_change(context, before_text, after_text, operation)
             raise AIToolExecutionError(
-                f"Failed to save '{file_path}': {str(e)}. The change has been undone in"
+                f"Failed to save '{display_path}': {str(e)}. The change has been undone in"
                 " the editor, so the file was not written"
             ) from e
 
         if not saved:
             self._undo_buffer_change(context, before_text, after_text, operation)
             raise AIToolExecutionError(
-                f"Failed to save '{file_path}': the write did not happen. The change"
+                f"Failed to save '{display_path}': the write did not happen. The change"
                 " has been undone in the editor"
             )
 
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"AI applied {operation} to editor and saved: {file_path}"
+            f"AI applied {operation} to editor and saved: {display_path}"
             f" ({hunks_applied} hunks)\ntab ID: {context_id}",
             context=self._mindspace.conversation_log_context(requester_ref)
         )
 
-        return f"Applied {hunks_applied} hunk(s) to '{file_path}' and saved it"
+        return f"Applied {hunks_applied} hunk(s) to '{display_path}' and saved it"
 
     def _undo_buffer_change(
         self,

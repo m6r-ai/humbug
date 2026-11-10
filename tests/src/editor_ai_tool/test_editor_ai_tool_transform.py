@@ -50,9 +50,9 @@ class TestEditorAIToolTransform:
     def test_transform_reports_saved_file_path(
         self, editor_tool, mock_authorization, make_tool_call, tmp_path
     ):
-        """The result names the file the change was written to."""
+        """The result names the file the change was written to, within the mindspace."""
         tool, mindspace = editor_tool
-        editor = make_editor(tmp_path, mindspace, "hello")
+        make_editor(tmp_path, mindspace, "hello")
 
         result = asyncio.run(tool.execute(
             transform_call(make_tool_call, '(string-upcase (dict-get inputs "input-text"))'),
@@ -61,7 +61,8 @@ class TestEditorAIToolTransform:
         ))
 
         data = json.loads(result.content)
-        assert editor.path in data["message"]
+        assert "file.txt" in data["message"]
+        assert str(tmp_path) not in data["message"]
 
     def test_transform_list_result(self, editor_tool, mock_authorization, make_tool_call, tmp_path):
         """Transform returning a list of strings is joined with newlines and saved."""
@@ -301,6 +302,8 @@ class TestEditorAIToolTransform:
         assert is_write
         assert kind == AIToolApprovalKind.MINDSPACE_FILE_CHANGE
         assert "Menai transform" in context
+        assert "file.txt" in context
+        assert str(tmp_path) not in context
 
     def test_transform_asks_to_write_unsaved_buffer_changes(
         self, editor_tool, make_tool_call, tmp_path

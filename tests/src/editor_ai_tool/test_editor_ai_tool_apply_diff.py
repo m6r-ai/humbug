@@ -75,6 +75,15 @@ class TestEditorAIToolApplyDiff:
         assert is_write
         assert kind == AIToolApprovalKind.MINDSPACE_FILE_CHANGE
         assert "diff" in context
+        assert "file.txt" in context
+        assert str(tmp_path) not in context
+
+    def test_apply_diff_shows_the_change_once(self, editor_tool, make_tool_call):
+        """The approval shows the file change, so the tool call adds no diff of its own."""
+        tool, _ = editor_tool
+        tool_call = apply_diff_call(make_tool_call, BETA_TO_UPPER)
+
+        assert tool.extract_context(tool_call) is None
 
     def test_apply_diff_refused_leaves_everything_alone(
         self, editor_tool, make_tool_call, tmp_path
