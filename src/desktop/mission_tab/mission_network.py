@@ -8,13 +8,15 @@ import time
 
 from PySide6.QtCore import QEvent, QPointF, QRectF, QSize, Qt, QTimer, Signal, SignalInstance
 from PySide6.QtGui import (
-    QBrush, QColor, QFont, QFontMetrics, QHideEvent, QLinearGradient, QMouseEvent, QPainter, QPainterPath,
-    QPaintEvent, QPen, QRadialGradient, QResizeEvent, QShowEvent
+    QAccessible, QAccessibleEvent, QBrush, QColor, QFocusEvent, QFont, QFontMetrics, QHideEvent, QKeyEvent,
+    QLinearGradient, QMouseEvent,
+    QPainter, QPainterPath, QPaintEvent, QPen, QRadialGradient, QResizeEvent, QShowEvent
 )
 from PySide6.QtWidgets import QPushButton, QSizePolicy, QToolTip, QWidget
 
 from desktop.color_role import ColorRole
 from desktop.mission_tab.mission_display import MissionAgentView, MissionTone
+from desktop.mission_tab.mission_motion import MissionMotion
 from desktop.mission_tab.mission_painted import readable, surface_colors, tone_color
 from desktop.style_manager import StyleManager
 
@@ -22,6 +24,11 @@ from desktop.style_manager import StyleManager
 # Frame interval while agents are working, and while everything is at rest.
 _BUSY_FRAME_MS = 33
 _IDLE_FRAME_MS = 90
+
+# With motion reduced, how often a wait's countdown is redrawn, and how far back a remark is said to have
+# started so that it is shown whole at once.
+_STILL_FRAME_MS = 1000
+_STILL_PAST = 1.0e6
 
 _USER_ID = "__user__"
 
@@ -77,6 +84,9 @@ class AgentNetworkView(QWidget):
         super().__init__(parent)
         self.setObjectName("MissionAgentNetwork")
         self.setMouseTracking(True)
+        # The robots are drawn rather than being widgets, so the view itself takes focus and moves a
+        # highlight between them, which is what lets the picture be read without a mouse.
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self._style_manager = StyleManager()
@@ -106,7 +116,8 @@ class AgentNetworkView(QWidget):
         finish_label: str = "",
         left_label: str = "{0}",
         more_label: str = "",
-        unsure_label: str = ""
+        unsure_label: str = "",
+        review_label: str = ""
     ) -> None:
         """
         Show a mission's agents.
@@ -120,11 +131,13 @@ class AgentNetworkView(QWidget):
             left_label: Format for the time a wait has left, such as "{0} left"
             more_label: Label of the button that shows a waiting agent's whole request
             unsure_label: Label of the Unsure button shown in a waiting agent's card
+            review_label: Label of the button that opens a destructive request in the inbox, offered in
+                place of Approve so that it is approved only where its target and consequence are shown
         """
         self._user_label = user_label
         self._labels = {
             "approve": approve_label, "reject": reject_label, "finish": finish_label, "left": left_label,
-            "more": more_label, "unsure": unsure_label
+            "more": more_label, "unsure": unsure_label, "review": review_label
         }
         speech: dict[str, tuple[str, float]] = {}
         for agent in agents:
@@ -134,7 +147,7 @@ class AgentNetworkView(QWidget):
             previous = self._speech.get(agent.context_id)
             # A new remark is typed out afresh; the same remark carries on where it was.
             speech[agent.context_id] = previous if previous and previous[0] == agent.speech else (
-                agent.speech, self._phase
+                agent.speech, self._said_at()
             )
 
         self._speech = speech
@@ -171,6 +184,7 @@ class AgentNetworkView(QWidget):
 
         self._nodes = list(nodes.values())
         self._edges = edges
+        self._update_accessible_description()
         self._layout_nodes()
         self.updateGeometry()
         self._update_timer()
@@ -202,19 +216,40 @@ class AgentNetworkView(QWidget):
         for context_id, (key, agent) in wanted.items():
             if context_id in self._buttons:
                 buttons = self._buttons[context_id][1]
-                texts = [
-                    self._labels["approve"], self._labels["unsure"], self._labels["reject"], self._labels["more"]
-                ] if agent.decision_id else [self._labels["finish"]]
+                texts = (
+                    [self._labels["review"], self._labels["unsure"], self._labels["reject"]]
+                    if agent.decision_id and agent.decision_destructive
+                    else [self._labels["approve"], self._labels["unsure"], self._labels["reject"], self._labels["more"]]
+                    if agent.decision_id else [self._labels["finish"]]
+                )
                 for button, text in zip(buttons, texts):
                     button.setText(text)
 
                 continue
 
+            if agent.decision_id and agent.decision_destructive:
+                # A destructive request is approved in the inbox, where its target and whether it can be
+                # undone are shown, so the card offers to take the user there rather than to approve it.
+                decision_id = agent.decision_id
+                review = self._make_button(
+                    self._labels["review"], "MissionReplyButton",
+                    partial(self.decision_details_requested.emit, decision_id)
+                )
+                unsure = self._make_button(
+                    self._labels["unsure"], "MissionSecondaryButton",
+                    partial(self._answer, decision_id, self.decision_unsure)
+                )
+                reject = self._make_button(
+                    self._labels["reject"], "MissionSecondaryButton",
+                    partial(self._answer, decision_id, self.decision_rejected)
+                )
+                self._buttons[context_id] = (key, [review, unsure, reject])
+                continue
+
             if agent.decision_id:
                 decision_id = agent.decision_id
                 approve = self._make_button(
-                    self._labels["approve"],
-                    "MissionApproveDestructive" if agent.decision_destructive else "MissionApprove",
+                    self._labels["approve"], "MissionApprove",
                     partial(self._answer, decision_id, self.decision_approved)
                 )
                 unsure = self._make_button(
@@ -520,10 +555,36 @@ class AgentNetworkView(QWidget):
             for node in self._nodes
         )
 
+    def _said_at(self) -> float:
+        """Return when a new remark starts, as far back as needed for it to be shown whole if motion is reduced."""
+        return self._phase - _STILL_PAST if MissionMotion().reduced() else self._phase
+
+    def apply_motion(self) -> None:
+        """Animate or stand still, as the user's choice to reduce motion says."""
+        if MissionMotion().reduced():
+            # Whatever is being typed out is shown whole, with its buttons.
+            self._speech = {node_id: (text, self._phase - _STILL_PAST) for node_id, (text, _at) in self._speech.items()}
+            self._place_buttons()
+
+        self._update_timer()
+        self.update()
+
     def _update_timer(self) -> None:
         """Animate quickly while agents work and slowly at rest; not at all when there is nothing to show."""
         if not self._nodes or len(self._nodes) == 1 or not self.isVisible():
             self._timer.stop()
+            return
+
+        if MissionMotion().reduced():
+            # Nothing moves, but a wait's countdown is still kept up to date.
+            if any(node.agent is not None and node.agent.wait_started for node in self._nodes):
+                self._timer.setInterval(_STILL_FRAME_MS)
+                if not self._timer.isActive():
+                    self._timer.start()
+
+            else:
+                self._timer.stop()
+
             return
 
         self._timer.setInterval(_BUSY_FRAME_MS if self._any_active() else _IDLE_FRAME_MS)
@@ -532,6 +593,10 @@ class AgentNetworkView(QWidget):
 
     def _tick(self) -> None:
         """Advance the animation."""
+        if MissionMotion().reduced():
+            self.update()
+            return
+
         was_typing = {node_id for node_id in self._speech if self._typing(node_id)}
         self._phase += self._timer.interval() / 1000.0
         if any(not self._typing(node_id) for node_id in was_typing):
@@ -566,11 +631,7 @@ class AgentNetworkView(QWidget):
 
         if node is not None and node.agent is not None:
             QToolTip.showText(
-                event.globalPosition().toPoint(),
-                f"{node.label} · {node.caption}"
-                + (f" · {node.agent.model_text}" if node.agent.model_text else "")
-                + f"\n{node.agent.speech or node.agent.state_text}",
-                self
+                event.globalPosition().toPoint(), self._describe(node), self
             )
 
         super().mouseMoveEvent(event)
@@ -580,6 +641,114 @@ class AgentNetworkView(QWidget):
         self._hover_id = ""
         self.update()
         super().leaveEvent(event)
+
+    def focusInEvent(self, event: QFocusEvent) -> None:
+        """Highlight the first agent, so the keyboard user can see where they are."""
+        super().focusInEvent(event)
+        if not self._hover_id and self._nodes:
+            self._focus_node(0)
+
+    def focusOutEvent(self, event: QFocusEvent) -> None:
+        """Drop the highlight when the view is left."""
+        super().focusOutEvent(event)
+        self._hover_id = ""
+        self._update_accessible_description()
+        self.update()
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        """
+        Move the highlight between agents, and open or act on the one under it.
+
+        Down and Up step through the agents in the order they are drawn, Home and End jump to the
+        ends, Return opens the highlighted agent's conversation and Escape drops the highlight.
+        """
+        keys: dict[int, int] = {
+            Qt.Key.Key_Down: 1, Qt.Key.Key_Right: 1, Qt.Key.Key_Tab: 1,
+            Qt.Key.Key_Up: -1, Qt.Key.Key_Left: -1, Qt.Key.Key_Backtab: -1,
+        }
+        if event.key() in keys:
+            self._step_focus(keys[event.key()])
+            event.accept()
+            return
+
+        if event.key() == Qt.Key.Key_Home:
+            self._focus_node(0)
+            event.accept()
+            return
+
+        if event.key() == Qt.Key.Key_End:
+            self._focus_node(len(self._nodes) - 1)
+            event.accept()
+            return
+
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
+            node = self._node_by_id(self._hover_id)
+            if node is not None and node.agent is not None and node.agent.clickable:
+                self.agent_clicked.emit(node.agent.context_id)
+                event.accept()
+                return
+
+        if event.key() == Qt.Key.Key_Escape:
+            self._hover_id = ""
+            self.update()
+            event.accept()
+            return
+
+        super().keyPressEvent(event)
+
+    def _step_focus(self, step: int) -> None:
+        """Move the highlight by a number of agents, wrapping round the ends."""
+        if not self._nodes:
+            return
+
+        current = next(
+            (index for index, node in enumerate(self._nodes) if node.node_id == self._hover_id), -1
+        )
+        self._focus_node((current + step) % len(self._nodes))
+
+    def _focus_node(self, index: int) -> None:
+        """Highlight the agent at an index, and say what it is doing."""
+        if not 0 <= index < len(self._nodes):
+            return
+
+        node = self._nodes[index]
+        self._hover_id = node.node_id
+        self.update()
+        if node.agent is not None:
+            QToolTip.showText(self.mapToGlobal(self.rect().center()), self._describe(node), self)
+
+        # A screen reader cannot see the drawing, so the highlighted agent is announced in words.
+        self._update_accessible_description()
+        QAccessible.updateAccessibility(QAccessibleEvent(self, QAccessible.Event.DescriptionChanged))
+
+    def _update_accessible_description(self) -> None:
+        """
+        Describe the picture in words for assistive technology.
+
+        The highlighted agent comes first, then every agent in the order it is drawn, each with
+        what it is doing, so the picture carries the same information as the agents list.
+        """
+        agents = [node for node in self._nodes if node.agent is not None]
+        highlighted = self._node_by_id(self._hover_id)
+        lines = [self._describe(highlighted).replace("\n", " — ")] if highlighted in agents else []
+        lines += [self._describe(node).replace("\n", " — ") for node in agents if node is not highlighted]
+        self.setAccessibleDescription("\n".join(lines))
+
+    def _node_by_id(self, node_id: str) -> _Node | None:
+        """Return the node with an identifier, if there is one."""
+        return next((node for node in self._nodes if node.node_id == node_id), None)
+
+    def _describe(self, node: _Node) -> str:
+        """Return the summary shown when an agent is hovered over or focused."""
+        agent = node.agent
+        if agent is None:
+            return node.label
+
+        return (
+            f"{node.label} · {node.caption}"
+            + (f" · {agent.model_text}" if agent.model_text else "")
+            + f"\n{agent.speech or agent.state_text}"
+        )
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Open the conversation of a clicked agent."""

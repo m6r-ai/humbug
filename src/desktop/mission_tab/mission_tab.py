@@ -9,17 +9,21 @@ import os
 import zlib
 from typing import Any
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, Signal
 from PySide6.QtWidgets import QInputDialog, QVBoxLayout, QWidget
 
+from ai import AIConversationSettings
+
+from desktop.attachment_reader import choose_attachment, read_attachment
+from desktop.conversation_tab.conversation_settings_dialog import ConversationSettingsDialog
 from desktop.language.language_manager import LanguageManager
 from desktop.language.language_strings import LanguageStrings
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.mission_tab.mission_display import (
     MissionActivityView, MissionAgentView, MissionChatView, MissionChipView, MissionDecisionView, MissionHeaderView,
-    MissionPhaseView, MissionResultView, MissionStatTarget, MissionStatView, MissionStepState, MissionStepView,
-    MissionTone, MissionView
+    MissionGlanceView, MissionPhaseView, MissionResultView, MissionStatTarget, MissionStatView, MissionStepState,
+    MissionStepView, MissionTone, MissionView
 )
 from desktop.mission_tab.mission_service_holder import MissionServiceHolder
 from desktop.mission_tab.mission_widget import MissionWidget
@@ -41,7 +45,9 @@ _STATUS_TONES = {
     MissionStatus.COMPLETED: MissionTone.SUCCESS,
     MissionStatus.STOPPED: MissionTone.DANGER,
     MissionStatus.INTERRUPTED: MissionTone.WARNING,
+    MissionStatus.PAUSED: MissionTone.WARNING,
     MissionStatus.REPLIED: MissionTone.SUCCESS,
+    MissionStatus.FAILED: MissionTone.DANGER,
 }
 
 _TASK_STATES = {
@@ -68,10 +74,14 @@ _ACTIVITY_STYLES = {
     MissionActivityKind.AUTO_CONTINUED: ("↻", MissionTone.ACCENT),
     MissionActivityKind.AUTO_PAUSED: ("‖", MissionTone.WARNING),
     MissionActivityKind.RESUMED: ("↻", MissionTone.SUCCESS),
+    MissionActivityKind.RETRIED: ("↻", MissionTone.INFO),
+    MissionActivityKind.PAUSED: ("‖", MissionTone.WARNING),
+    MissionActivityKind.UNPAUSED: ("▶", MissionTone.ACCENT),
     MissionActivityKind.TASK_STOPPED: ("■", MissionTone.DANGER),
     MissionActivityKind.MODE_CHANGED: ("⇄", MissionTone.INFO),
     MissionActivityKind.AUTO_APPROVED: ("✓", MissionTone.ACCENT),
     MissionActivityKind.REVERSIBLE_APPROVED: ("↺", MissionTone.SUCCESS),
+    MissionActivityKind.EVERYTHING_APPROVED: ("✓", MissionTone.ACCENT),
     MissionActivityKind.REVIEW_DEFERRED: ("?", MissionTone.WARNING),
     MissionActivityKind.PLAN_ARCHIVED: ("▣", MissionTone.INFO),
     MissionActivityKind.ERROR: ("!", MissionTone.DANGER),
@@ -82,8 +92,12 @@ _STAGE_TONES = {
     MissionStatus.PLANNING: MissionTone.ACCENT,
     MissionStatus.RUNNING: MissionTone.ACCENT,
     MissionStatus.IDLE: MissionTone.WARNING,
+    MissionStatus.INTERRUPTED: MissionTone.WARNING,
+    MissionStatus.PAUSED: MissionTone.WARNING,
+    MissionStatus.STOPPED: MissionTone.DANGER,
     MissionStatus.COMPLETED: MissionTone.SUCCESS,
     MissionStatus.REPLIED: MissionTone.SUCCESS,
+    MissionStatus.FAILED: MissionTone.DANGER,
 }
 
 
@@ -191,6 +205,10 @@ class MissionTab(TabBase):
     not the tab, so it keeps following missions while the tab is closed.
     """
 
+    # Emitted with the absolute path of the selected mission's lead conversation, or "" when
+    # no mission is selected, so the conversation can be highlighted in the sidebar.
+    lead_conversation_changed = Signal(str)
+
     def __init__(self, tab_id: str, parent: QWidget | None = None, selected_mission_id: str = "") -> None:
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("MissionTab")
@@ -202,6 +220,13 @@ class MissionTab(TabBase):
         self._starting_new = False
         self._tasks: set[asyncio.Task] = set()
         self._agent_display_names: dict[str, str] = {}
+        self._lead_conversation_path = ""
+        self._new_mission_auto_approve = AutoApproveLevel.OFF
+        # AI settings the user chose for the next mission's lead, if they chose any.
+        self._new_mission_settings: AIConversationSettings | None = None
+        self._settings_dialog: ConversationSettingsDialog | None = None
+        # Missions shown here while still going, whose completion the user can watch and so see celebrated.
+        self._seen_unfinished: set[str] = set()
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -217,13 +242,20 @@ class MissionTab(TabBase):
         self._widget.mission_selected.connect(self._on_mission_selected)
         self._widget.new_mission_requested.connect(self._on_new_mission_requested)
         self._widget.submit_requested.connect(self._on_submit_requested)
+        self._widget.attach_requested.connect(self._on_attach_requested)
+        self._widget.settings_requested.connect(self._on_settings_requested)
         self._widget.switch_to_classic_requested.connect(self._on_switch_to_classic_requested)
         self._widget.switch_to_autonomous_requested.connect(self._on_switch_to_autonomous_requested)
         self._widget.task_stop_requested.connect(self._on_task_stop_requested)
         self._widget.auto_approve_selected.connect(self._on_auto_approve_selected)
+        self._widget.new_mission_auto_approve_selected.connect(self._on_new_mission_auto_approve_selected)
         self._widget.resume_requested.connect(self._on_resume_requested)
+        self._widget.retry_requested.connect(self._on_retry_requested)
         self._widget.auto_resume_toggled.connect(self._on_auto_resume_toggled)
+        self._widget.reduce_motion_toggled.connect(self._on_reduce_motion_toggled)
         self._widget.stop_requested.connect(self._on_stop_requested)
+        self._widget.pause_requested.connect(self._on_pause_requested)
+        self._widget.unpause_requested.connect(self._on_unpause_requested)
         self._widget.remove_requested.connect(self._on_remove_requested)
         self._widget.mission_rename_requested.connect(self._rename_mission)
         self._widget.mission_delete_requested.connect(self._delete_mission)
@@ -285,7 +317,9 @@ class MissionTab(TabBase):
             MissionStatus.COMPLETED: strings.mission_status_completed,
             MissionStatus.STOPPED: strings.mission_status_stopped,
             MissionStatus.INTERRUPTED: strings.mission_status_interrupted,
+            MissionStatus.PAUSED: strings.mission_status_paused,
             MissionStatus.REPLIED: strings.mission_status_replied,
+            MissionStatus.FAILED: strings.mission_status_failed,
         }[status]
 
     def _task_text(self, status: MissionTaskStatus) -> str:
@@ -457,8 +491,10 @@ class MissionTab(TabBase):
             MissionStatus.COMPLETED: strings.mission_say_done,
             MissionStatus.STOPPED: strings.mission_say_stopped,
             MissionStatus.INTERRUPTED: strings.mission_say_interrupted,
+            MissionStatus.PAUSED: strings.mission_say_paused,
             MissionStatus.NEEDS_YOU: strings.mission_say_helper_waiting,
             MissionStatus.REPLIED: strings.mission_say_replied,
+            MissionStatus.FAILED: strings.mission_say_error,
         }
         if snapshot.status in idle_speech:
             return idle_speech[snapshot.status]
@@ -493,9 +529,13 @@ class MissionTab(TabBase):
             MissionActivityKind.AUTO_CONTINUED: strings.mission_activity_auto_continued,
             MissionActivityKind.AUTO_PAUSED: strings.mission_activity_auto_paused.format(entry.detail),
             MissionActivityKind.RESUMED: strings.mission_activity_resumed,
+            MissionActivityKind.RETRIED: strings.mission_activity_retried,
+            MissionActivityKind.PAUSED: strings.mission_activity_paused,
+            MissionActivityKind.UNPAUSED: strings.mission_activity_unpaused,
             MissionActivityKind.TASK_STOPPED: strings.mission_activity_task_stopped.format(subject),
             MissionActivityKind.AUTO_APPROVED: strings.mission_activity_auto_approved.format(entry.detail),
             MissionActivityKind.REVERSIBLE_APPROVED: strings.mission_activity_reversible_approved.format(entry.detail),
+            MissionActivityKind.EVERYTHING_APPROVED: strings.mission_activity_everything_approved.format(entry.detail),
             MissionActivityKind.REVIEW_DEFERRED: strings.mission_activity_review_deferred.format(entry.detail),
             MissionActivityKind.PLAN_ARCHIVED: strings.mission_activity_plan_archived,
             MissionActivityKind.MODE_CHANGED: (
@@ -516,11 +556,12 @@ class MissionTab(TabBase):
 
     def _decision_view(self, decision: MissionDecision) -> MissionDecisionView:
         """Turn a decision into its display record."""
+        strings = self._strings()
         return MissionDecisionView(
             decision_id=decision.decision_id,
             context_id=decision.context_id,
             tool_name=decision.tool_name,
-            source_text=self._strings().mission_decision_from.format(
+            source_text=strings.mission_decision_from.format(
                 self._agent_display_names.get(decision.conversation_title, decision.conversation_title)
             ),
             time_text=_local_time(decision.requested_at, with_seconds=False),
@@ -530,6 +571,12 @@ class MissionTab(TabBase):
             reviewing=decision.reviewing,
             review_note=decision.review_note,
             auto_note=self._auto_approve_note(decision),
+            target_text=strings.mission_decision_target.format(decision.target) if decision.target else "",
+            undo_text=(
+                "" if not decision.destructive
+                else strings.mission_decision_undoable if decision.reversible
+                else strings.mission_decision_not_undoable
+            ),
         )
 
     def _auto_approve_note(self, decision: MissionDecision) -> str:
@@ -567,7 +614,8 @@ class MissionTab(TabBase):
             progress=mission.progress(),
             progress_text=strings.mission_progress.format(percent),
             can_stop=snapshot.status in (
-                MissionStatus.PLANNING, MissionStatus.RUNNING, MissionStatus.NEEDS_YOU, MissionStatus.INTERRUPTED
+                MissionStatus.PLANNING, MissionStatus.RUNNING, MissionStatus.NEEDS_YOU, MissionStatus.INTERRUPTED,
+                MissionStatus.PAUSED
             ),
             can_resume=snapshot.status == MissionStatus.INTERRUPTED and not classic,
             is_classic=classic,
@@ -575,6 +623,15 @@ class MissionTab(TabBase):
             auto_approve=mission.auto_approve.value,
             stage=_stage(snapshot.status, bool(mission.tasks)),
             stage_tone=_STAGE_TONES.get(snapshot.status, tone),
+            lead_context_id=next(
+                (agent.context_id for agent in snapshot.agents if agent.is_lead), ""
+            ),
+            can_retry=snapshot.status == MissionStatus.FAILED and not classic,
+            milestone_text="" if classic else self._milestone_text(snapshot),
+            can_pause=not classic and not mission.paused and snapshot.status in (
+                MissionStatus.PLANNING, MissionStatus.RUNNING, MissionStatus.NEEDS_YOU, MissionStatus.IDLE
+            ),
+            paused=not classic and mission.paused and not mission.stopped,
         )
         stats = [
             MissionStatView("✓", str(mission.completed_count()), strings.mission_stat_completed, MissionTone.SUCCESS,
@@ -628,6 +685,7 @@ class MissionTab(TabBase):
                 header, now_text=f"{lead_view.name}: {lead_view.speech}",
                 now_tone=(
                     MissionTone.SUCCESS if snapshot.status in (MissionStatus.COMPLETED, MissionStatus.REPLIED)
+                    else MissionTone.DANGER if snapshot.status == MissionStatus.FAILED
                     else MissionTone.ACCENT
                 )
             )
@@ -660,7 +718,117 @@ class MissionTab(TabBase):
             results=results,
             report_message=report_message,
             conversation=conversation,
+            glance=None if classic else self._glance_view(snapshot, header.now_text),
+            working_on_text="" if classic else self._working_on_text(snapshot),
         )
+
+    def _with_celebration(self, service: MissionService, snapshot: MissionSnapshot, view: MissionView) -> MissionView:
+        """
+        Celebrate a mission's completion once, and only when the user watched it finish.
+
+        A mission opened after it finished is not celebrated, nor is one celebrated before, so the
+        confetti is never seen again when the mission is opened or a follow-up is answered.
+        """
+        mission_id = snapshot.mission.mission_id
+        if not view.completed:
+            self._seen_unfinished.add(mission_id)
+            return view
+
+        if mission_id not in self._seen_unfinished or snapshot.mission.celebrated or not self._widget.isVisible():
+            return view
+
+        self._seen_unfinished.discard(mission_id)
+        service.mark_celebrated(mission_id)
+        return dataclasses.replace(view, celebrate=True)
+
+    def _milestone_text(self, snapshot: MissionSnapshot) -> str:
+        """
+        Say how far a mission that is still going has got, and what comes next.
+
+        A finished step is reported as a step done, never as the mission done: only a mission with
+        nothing left to do is shown as completed.
+        """
+        mission = snapshot.mission
+        if snapshot.status in (MissionStatus.COMPLETED, MissionStatus.REPLIED, MissionStatus.STOPPED):
+            return ""
+
+        strings = self._strings()
+        tasks = mission.tasks
+        done = [task for task in tasks if task.status == MissionTaskStatus.COMPLETED]
+        upcoming = next(
+            (task for task in tasks if task.status == MissionTaskStatus.IN_PROGRESS),
+            next((task for task in tasks if task.status == MissionTaskStatus.PENDING), None)
+        )
+        if done:
+            text = strings.mission_milestone_step.format(len(done), len(tasks), done[-1].title)
+
+        elif mission.history:
+            text = strings.mission_milestone_round.format(mission.history[-1].title)
+
+        else:
+            return ""
+
+        if upcoming is not None:
+            return f"{text}  ·  {strings.mission_milestone_next.format(upcoming.title)}"
+
+        # Every task is done, and the lead is working out what comes next: what the user has just
+        # asked for, or what is left of a goal the finished plan did not meet.
+        planning = strings.mission_milestone_follow_up if mission.follow_up else strings.mission_milestone_planning
+        return f"{text}  ·  {planning}"
+
+    def _glance_view(self, snapshot: MissionSnapshot, now_text: str) -> MissionGlanceView:
+        """Sum the mission up: what it is doing, what holds it up, what waits and what it last finished."""
+        strings = self._strings()
+        mission = snapshot.mission
+        blocked_step = next((t.title for t in mission.tasks if t.status == MissionTaskStatus.BLOCKED), "")
+        blocking = {
+            MissionStatus.NEEDS_YOU: (strings.mission_glance_blocked_decision, MissionTone.WARNING),
+            MissionStatus.PAUSED: (strings.mission_glance_blocked_paused, MissionTone.WARNING),
+            MissionStatus.FAILED: (strings.mission_glance_blocked_failed, MissionTone.DANGER),
+            MissionStatus.INTERRUPTED: (strings.mission_glance_blocked_interrupted, MissionTone.WARNING),
+            MissionStatus.STOPPED: (strings.mission_glance_blocked_stopped, MissionTone.DANGER),
+        }.get(snapshot.status)
+        if blocking is None and blocked_step:
+            blocking = (strings.mission_glance_blocked_step.format(blocked_step), MissionTone.WARNING)
+
+        if blocking is None:
+            blocking = (strings.mission_glance_nothing, MissionTone.SUCCESS)
+
+        # Steps finish in plan order, so the last completed one in the plan is the latest; before
+        # any step of this plan is done, the plan finished before it is.
+        done = [task.title for task in mission.tasks if task.status == MissionTaskStatus.COMPLETED]
+        last_done = done[-1] if done else mission.history[-1].title if mission.history else ""
+        waiting = len(snapshot.decisions)
+        return MissionGlanceView(
+            now_text=now_text or strings.mission_glance_idle,
+            blocking_text=blocking[0],
+            blocking_tone=blocking[1],
+            approvals_text=strings.mission_glance_approvals_count.format(waiting) if waiting
+            else strings.mission_glance_approvals_none,
+            approvals_tone=MissionTone.WARNING if waiting else MissionTone.NEUTRAL,
+            last_done_text=last_done or strings.mission_glance_last_done_none,
+        )
+
+    def _working_on_text(self, snapshot: MissionSnapshot) -> str:
+        """
+        Say that the lead is working on the user's latest message, or return "" if it is not.
+
+        That is so from the moment the user sends a message, such as a follow-up to a finished
+        mission, until the lead replies to it, unless the lead's turn failed or the mission was
+        stopped or interrupted, when the mission says so instead.
+        """
+        lead = next((agent for agent in snapshot.agents if agent.is_lead), None)
+        if lead is None or lead.state == MissionAgentState.ERROR or snapshot.status in (
+            MissionStatus.FAILED, MissionStatus.STOPPED, MissionStatus.INTERRUPTED
+        ):
+            return ""
+
+        spoken = [entry for entry in snapshot.conversation if entry.speaker != MissionSpeaker.TOOL]
+        if not spoken or spoken[-1].speaker != MissionSpeaker.USER or len(spoken) == 1:
+            # The first message is the mission's objective, which the journey already shows being worked on.
+            return ""
+
+        return self._strings().mission_working_on_message.format(_first_line(spoken[-1].text))
 
     def _chat_view(self, entry: MissionExchange, lead_name: str) -> MissionChatView:
         """Turn an entry in the conversation with the lead into its display record."""
@@ -671,7 +839,7 @@ class MissionTab(TabBase):
             MissionSpeaker.TOOL: ("tool", ""),
         }[entry.speaker]
         time_text = _local_time(entry.at, with_seconds=False) if entry.at is not None else ""
-        return MissionChatView(kind=kind, speaker=speaker, text=entry.text, time_text=time_text)
+        return MissionChatView(kind=kind, speaker=speaker, text=entry.text, time_text=time_text, model_text=entry.model)
 
     def _result_view(self, number: int, phase: MissionPhase) -> MissionResultView:
         """Turn a finished round kept in a mission's history into its display record."""
@@ -750,6 +918,7 @@ class MissionTab(TabBase):
         """Redraw everything from the service's current state."""
         service = self._service
         if service is None:
+            self._set_lead_conversation_path("")
             self._widget.set_missions([], True)
             self._widget.set_mission(None)
             self._widget.set_decisions([])
@@ -771,6 +940,10 @@ class MissionTab(TabBase):
 
         if self._selected_mission_id is None and not self._starting_new and missions:
             self._selected_mission_id = missions[0].mission_id
+
+        self._set_lead_conversation_path(
+            service.lead_conversation_path(self._selected_mission_id) if self._selected_mission_id else ""
+        )
 
         decisions = service.decisions()
         waiting: dict[str, int] = {}
@@ -795,9 +968,14 @@ class MissionTab(TabBase):
 
         self._widget.set_missions(chips, self._selected_mission_id is None)
         self._widget.set_auto_resume(service.resume_automatically())
+        self._widget.set_reduce_motion(service.reduce_motion())
 
         snapshot = service.snapshot(self._selected_mission_id) if self._selected_mission_id else None
-        self._widget.set_mission(self._mission_view(snapshot) if snapshot is not None else None)
+        view = self._mission_view(snapshot) if snapshot is not None else None
+        if snapshot is not None and view is not None:
+            view = self._with_celebration(service, snapshot, view)
+
+        self._widget.set_mission(view)
         # Each mission's inbox holds its own requests, and those from conversations outside any
         # mission; requests from other missions are pointed out instead.
         self._widget.set_decisions([
@@ -862,16 +1040,84 @@ class MissionTab(TabBase):
         if self._service is None:
             return
 
+        attachments = self._widget.take_attachments()
         if self._selected_mission_id is None:
-            self._run(self._create_mission(self._service, text))
+            self._run(self._create_mission(self._service, text, attachments))
             return
 
-        self._run(self._send_guidance(self._service, self._selected_mission_id, text))
+        self._run(self._send_guidance(self._service, self._selected_mission_id, text, attachments))
 
-    async def _create_mission(self, service: MissionService, objective: str) -> None:
+    def _on_attach_requested(self) -> None:
+        """Attach a file the user chooses to the next message, as a conversation tab does."""
+        path = choose_attachment(self)
+        if not path:
+            return
+
+        content = read_attachment(self, path)
+        if content is not None:
+            self._widget.add_attachment(os.path.basename(path), content)
+
+    def _on_settings_requested(self) -> None:
+        """
+        Show the AI settings the composer's message will go with, as a conversation tab does.
+
+        With a mission selected these are its lead's settings; otherwise they are the settings the
+        next mission's lead starts with.
+        """
+        service = self._service
+        if service is None:
+            return
+
+        if self._settings_dialog is not None and self._settings_dialog.isVisible():
+            self._settings_dialog.raise_()
+            self._settings_dialog.activateWindow()
+            return
+
+        mission_id = self._selected_mission_id
+        settings = (
+            service.lead_settings(mission_id) if mission_id is not None
+            else self._new_mission_settings or service.default_settings()
+        )
+        if settings is None:
+            return
+
+        dialog = ConversationSettingsDialog(self)
+        self._settings_dialog = dialog
+        dialog.set_settings(settings)
+
+        def _on_accepted() -> None:
+            if mission_id is None:
+                self._new_mission_settings = dialog.get_settings()
+                return
+
+            service.update_lead_settings(mission_id, dialog.get_settings())
+
+        def _on_finished(_result: int) -> None:
+            self._settings_dialog = None
+
+        dialog.accepted.connect(_on_accepted)
+        dialog.apply_to_all_requested.connect(self._on_apply_settings_to_all)
+        dialog.finished.connect(_on_finished)
+        dialog.show()
+        dialog.raise_()
+        dialog.activateWindow()
+
+    def _on_apply_settings_to_all(self, new_settings: AIConversationSettings) -> None:
+        """Apply settings to every conversation and make them the mindspace default, as a conversation tab does."""
+        if self._mindspace_manager.has_mindspace():
+            self._mindspace_manager.mindspace().apply_ai_settings_to_all(new_settings)
+
+    async def _create_mission(
+        self,
+        service: MissionService,
+        objective: str,
+        attachments: list[tuple[str, str]]
+    ) -> None:
         """Start a mission and show it."""
         try:
-            mission = await service.create_mission(objective)
+            mission = await service.create_mission(
+                objective, self._new_mission_auto_approve, attachments, self._new_mission_settings
+            )
 
         except MissionError as e:
             self._show_error(self._strings().mission_error_start.format(str(e)))
@@ -879,12 +1125,22 @@ class MissionTab(TabBase):
 
         self._selected_mission_id = mission.mission_id
         self._starting_new = False
+        # Each new mission starts from Off unless the user chooses again, as auto-approval is opt-in.
+        self._new_mission_auto_approve = AutoApproveLevel.OFF
+        self._widget.set_new_mission_auto_approve(AutoApproveLevel.OFF.value)
+        self._new_mission_settings = None
         self._on_service_changed()
 
-    async def _send_guidance(self, service: MissionService, mission_id: str, text: str) -> None:
+    async def _send_guidance(
+        self,
+        service: MissionService,
+        mission_id: str,
+        text: str,
+        attachments: list[tuple[str, str]]
+    ) -> None:
         """Send the user's message to a mission's lead."""
         try:
-            await service.send_guidance(mission_id, text, requester_id=self._tab_id)
+            await service.send_guidance(mission_id, text, requester_id=self._tab_id, attachments=attachments)
 
         except MissionError as e:
             self._show_error(self._strings().mission_error_send.format(str(e)))
@@ -928,19 +1184,9 @@ class MissionTab(TabBase):
             self._refresh()
             return
 
-        if level == AutoApproveLevel.ALL:
-            strings = self._strings()
-            answer = MessageBox.show_message(
-                self,
-                MessageBoxType.WARNING,
-                strings.mission_auto_approve_all_title,
-                strings.mission_auto_approve_all_confirm,
-                [MessageBoxButton.YES, MessageBoxButton.NO],
-                destructive=True
-            )
-            if answer != MessageBoxButton.YES:
-                self._refresh()
-                return
+        if not self._confirm_auto_approve(level):
+            self._refresh()
+            return
 
         try:
             self._service.set_auto_approve(self._selected_mission_id, level)
@@ -949,6 +1195,30 @@ class MissionTab(TabBase):
             self._show_error(str(e))
 
         self._refresh()
+
+    def _on_new_mission_auto_approve_selected(self, value: str) -> None:
+        """Choose the auto-approve level the next mission starts with, confirming before approving everything."""
+        level = next((lvl for lvl in AutoApproveLevel if lvl.value == value), None)
+        if level is not None and self._confirm_auto_approve(level):
+            self._new_mission_auto_approve = level
+
+        self._widget.set_new_mission_auto_approve(self._new_mission_auto_approve.value)
+
+    def _confirm_auto_approve(self, level: AutoApproveLevel) -> bool:
+        """Return whether the user wants this level, asking first if it approves everything."""
+        if level != AutoApproveLevel.ALL:
+            return True
+
+        strings = self._strings()
+        answer = MessageBox.show_message(
+            self,
+            MessageBoxType.WARNING,
+            strings.mission_auto_approve_all_title,
+            strings.mission_auto_approve_all_confirm,
+            [MessageBoxButton.YES, MessageBoxButton.NO],
+            destructive=True
+        )
+        return answer == MessageBoxButton.YES
 
     def _on_task_stop_requested(self, task_id: str) -> None:
         """Stop one task of the selected mission."""
@@ -985,6 +1255,19 @@ class MissionTab(TabBase):
         except MissionError as e:
             self._show_error(self._strings().mission_error_resume.format(str(e)))
 
+    def _on_retry_requested(self) -> None:
+        """Send the selected failed mission's last request to its lead again."""
+        if self._service is not None and self._selected_mission_id is not None:
+            self._run(self._retry_mission(self._service, self._selected_mission_id))
+
+    async def _retry_mission(self, service: MissionService, mission_id: str) -> None:
+        """Retry a failed mission, telling the user if that fails."""
+        try:
+            await service.retry_mission(mission_id)
+
+        except MissionError as e:
+            self._show_error(self._strings().mission_error_retry.format(str(e)))
+
     def _on_auto_resume_toggled(self, enabled: bool) -> None:
         """Save whether interrupted missions are resumed automatically."""
         if self._service is None:
@@ -997,10 +1280,40 @@ class MissionTab(TabBase):
             self._show_error(str(e))
             self._widget.set_auto_resume(self._service.resume_automatically())
 
+    def _on_reduce_motion_toggled(self, reduced: bool) -> None:
+        """Save whether Mission Control draws everything still."""
+        if self._service is None:
+            return
+
+        try:
+            self._service.set_reduce_motion(reduced)
+
+        except MissionError as e:
+            self._show_error(str(e))
+            self._widget.set_reduce_motion(self._service.reduce_motion())
+
     def _on_stop_requested(self) -> None:
         """Stop the selected mission."""
         if self._service is not None and self._selected_mission_id is not None:
             self._service.stop_mission(self._selected_mission_id)
+
+    def _on_pause_requested(self) -> None:
+        """Pause the selected mission."""
+        if self._service is not None and self._selected_mission_id is not None:
+            try:
+                self._service.pause_mission(self._selected_mission_id)
+
+            except MissionError as e:
+                self._show_error(str(e))
+
+    def _on_unpause_requested(self) -> None:
+        """Let the selected paused mission carry on."""
+        if self._service is not None and self._selected_mission_id is not None:
+            try:
+                self._service.unpause_mission(self._selected_mission_id)
+
+            except MissionError as e:
+                self._show_error(str(e))
 
     def _on_remove_requested(self) -> None:
         """Delete the selected mission after confirmation."""
@@ -1058,6 +1371,18 @@ class MissionTab(TabBase):
 
     def tool_name(self) -> str:
         return "mission"
+
+    def lead_conversation_path(self) -> str:
+        """Return the absolute path of the selected mission's lead conversation, or "" if none is selected."""
+        return self._lead_conversation_path
+
+    def _set_lead_conversation_path(self, path: str) -> None:
+        """Note which lead conversation the selected mission has, and say so when it changes."""
+        if path == self._lead_conversation_path:
+            return
+
+        self._lead_conversation_path = path
+        self.lead_conversation_changed.emit(path)
 
     def tab_title_from_path(self) -> str:
         return self._strings().mission_control

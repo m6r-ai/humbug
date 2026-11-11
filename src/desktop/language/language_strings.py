@@ -677,11 +677,55 @@ class LanguageStrings:
     mission_activity_auto_paused: str
     mission_status_interrupted: str
     mission_status_replied: str
+    mission_status_failed: str
     mission_resume: str
     mission_interrupted_notice: str
     mission_auto_resume: str
+    mission_milestone_step: str
+    mission_milestone_round: str
+    mission_milestone_next: str
+    mission_milestone_planning: str
+    mission_milestone_follow_up: str
+    mission_glance_title: str
+    mission_glance_now: str
+    mission_glance_blocking: str
+    mission_glance_approvals: str
+    mission_glance_last_done: str
+    mission_glance_idle: str
+    mission_glance_nothing: str
+    mission_glance_blocked_decision: str
+    mission_glance_blocked_paused: str
+    mission_glance_blocked_failed: str
+    mission_glance_blocked_interrupted: str
+    mission_glance_blocked_stopped: str
+    mission_glance_blocked_step: str
+    mission_glance_approvals_count: str
+    mission_glance_approvals_none: str
+    mission_glance_last_done_none: str
+    mission_details_show: str
+    mission_details_hide: str
+    mission_working_on_message: str
+    mission_reduce_motion: str
+    mission_reduce_motion_tip: str
     mission_activity_resumed: str
     mission_error_resume: str
+    mission_decision_target: str
+    mission_decision_undoable: str
+    mission_decision_not_undoable: str
+    mission_review_request: str
+    mission_status_paused: str
+    mission_say_paused: str
+    mission_pause: str
+    mission_pause_tip: str
+    mission_unpause: str
+    mission_paused_notice: str
+    mission_activity_paused: str
+    mission_activity_unpaused: str
+    mission_everything_banner: str
+    mission_everything_turn_off: str
+    mission_retry: str
+    mission_activity_retried: str
+    mission_error_retry: str
     mission_switch_to_autonomous: str
     mission_switch_to_classic: str
     mission_mode_autonomous: str
@@ -746,15 +790,14 @@ class LanguageStrings:
     mission_say_replied: str
     mission_say_ready: str
     mission_say_error: str
+    mission_failed_notice: str
+    mission_show_lead_conversation: str
     mission_say_sleeping: str
     mission_results_title: str
     mission_chat_title: str
     mission_chat_hint: str
     mission_chat_you: str
     mission_chat_lead: str
-    mission_chat_show: str
-    mission_chat_hide: str
-    mission_chat_toggle_tip: str
     mission_results_hint: str
     mission_result_number: str
     mission_result_asked: str
@@ -784,6 +827,7 @@ class LanguageStrings:
     mission_report_stats: str
     mission_follow_up: str
     mission_activity_reversible_approved: str
+    mission_activity_everything_approved: str
     mission_activity_user_message: str
     mission_say_waiting_helpers: str
     mission_read_more: str

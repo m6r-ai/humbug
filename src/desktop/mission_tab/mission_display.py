@@ -61,6 +61,11 @@ class MissionHeaderView:
     stage_tone: MissionTone = MissionTone.ACCENT
     now_text: str = ""
     now_tone: MissionTone = MissionTone.ACCENT
+    lead_context_id: str = ""
+    can_retry: bool = False
+    can_pause: bool = False
+    paused: bool = False
+    milestone_text: str = ""
 
 
 @dataclass(frozen=True)
@@ -151,7 +156,12 @@ class MissionAgentView:
 
 @dataclass(frozen=True)
 class MissionDecisionView:
-    """A decision waiting in the inbox."""
+    """
+    A decision waiting in the inbox.
+
+    `target_text` says what the request acts on, and `undo_text` whether a
+    destructive request can be undone once approved; either is "" when not shown.
+    """
     decision_id: str
     context_id: str
     tool_name: str
@@ -163,6 +173,8 @@ class MissionDecisionView:
     reviewing: bool
     review_note: str
     auto_note: str
+    target_text: str = ""
+    undo_text: str = ""
 
 
 @dataclass(frozen=True)
@@ -230,11 +242,34 @@ class MissionChatView:
         speaker: Who it comes from, or "" for a tool the lead used
         text: The message in full (Markdown for the lead's replies), or what a tool was used for
         time_text: When it was written
+        model_text: The AI model that wrote a reply from the lead, or ""
     """
     kind: str
     speaker: str
     text: str
     time_text: str
+    model_text: str = ""
+
+
+@dataclass(frozen=True)
+class MissionGlanceView:
+    """
+    The mission at a glance: what it is doing, what holds it up, what waits for the user and what it last finished.
+
+    Attributes:
+        now_text: What is happening now, in the lead's words
+        blocking_text: What is holding the mission up, or a word saying nothing is
+        blocking_tone: Colour of that, by how much it needs the user
+        approvals_text: How many requests wait for the user
+        approvals_tone: Colour of that
+        last_done_text: The step or plan the mission last finished
+    """
+    now_text: str
+    blocking_text: str
+    blocking_tone: MissionTone
+    approvals_text: str
+    approvals_tone: MissionTone
+    last_done_text: str
 
 
 @dataclass(frozen=True)
@@ -244,6 +279,10 @@ class MissionView:
 
     `lead_message` is the lead's latest reply, shown where the user replies,
     and `report_message` the final report shown once the mission is done.
+    `glance` is the mission at a glance, or None where it is not shown, and
+    `working_on_text` says the lead is working on the user's latest message,
+    or is "" when it is not.  `celebrate` is set the one time the mission's
+    completion is to be celebrated.
     """
     header: MissionHeaderView
     stats: list[MissionStatView]
@@ -260,3 +299,6 @@ class MissionView:
     results: list[MissionResultView] = field(default_factory=list)
     report_message: str = ""
     conversation: list[MissionChatView] = field(default_factory=list)
+    glance: MissionGlanceView | None = None
+    working_on_text: str = ""
+    celebrate: bool = False

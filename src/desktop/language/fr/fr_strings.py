@@ -786,14 +786,72 @@ def get_french_strings() -> LanguageStrings:
         mission_activity_auto_paused="En pause : aucune étape terminée après {0} relances automatiques",
         mission_status_interrupted="Interrompue",
         mission_status_replied="Répondu",
+        mission_status_failed="Échouée",
         mission_resume="Reprendre",
         mission_interrupted_notice=(
             "Humbug a été fermé pendant que cette mission était en cours. Reprenez-la pour continuer "
             "là où elle s'est arrêtée."
         ),
         mission_auto_resume="Reprise auto après redémarrage",
+        mission_milestone_step="Étape {0} sur {1} terminée : {2}",
+        mission_milestone_round="Terminé : {0}",
+        mission_milestone_next="Ensuite : {0}",
+        mission_milestone_planning="Ensuite : planifier ce qui reste de l'objectif",
+        mission_milestone_follow_up="Ensuite : planifier votre nouvelle demande",
+        mission_glance_title="En bref",
+        mission_glance_now="Maintenant",
+        mission_glance_blocking="Ce qui bloque",
+        mission_glance_approvals="Vous attend",
+        mission_glance_last_done="Dernier terminé",
+        mission_glance_idle="Rien en cours",
+        mission_glance_nothing="Rien",
+        mission_glance_blocked_decision="Votre décision sur une demande",
+        mission_glance_blocked_paused="Mise en pause par vous",
+        mission_glance_blocked_failed="La dernière réponse du responsable s'est terminée par une erreur",
+        mission_glance_blocked_interrupted="Humbug a été fermé pendant le travail",
+        mission_glance_blocked_stopped="Arrêtée par vous",
+        mission_glance_blocked_step="Étape bloquée : {0}",
+        mission_glance_approvals_count="{0} demande(s)",
+        mission_glance_approvals_none="Aucune",
+        mission_glance_last_done_none="Rien pour l'instant",
+        mission_details_show="Afficher les détails",
+        mission_details_hide="Masquer les détails",
+        mission_working_on_message="Je traite votre message : « {0} »",
+        mission_reduce_motion="Réduire les animations",
+        mission_reduce_motion_tip=(
+            "Afficher Mission Control sans mouvement : rien ne glisse, n'apparaît en fondu, ne pulse, "
+            "ne tourne ni ne s'écrit lettre à lettre, et aucune mission terminée n'est fêtée par des confettis"
+        ),
         mission_activity_resumed="Reprise après la fermeture de Humbug",
         mission_error_resume="Impossible de reprendre la mission : {0}",
+        mission_decision_target="Porte sur : {0}",
+        mission_decision_undoable=(
+            "Réversible : le journal des modifications de fichiers de Humbug enregistre ce changement."
+        ),
+        mission_decision_not_undoable="Humbug ne pourra pas l'annuler une fois approuvé.",
+        mission_review_request="Examiner",
+        mission_status_paused="En pause",
+        mission_say_paused="En pause. Je termine ce que je fais, puis je vous attends.",
+        mission_pause="Pause",
+        mission_pause_tip=(
+            "Laisser se terminer ce qui est en cours, puis attendre : rien n'est approuvé "
+            "automatiquement et le responsable ne continue pas seul tant que vous ne reprenez pas"
+        ),
+        mission_unpause="Continuer",
+        mission_paused_notice=(
+            "Cette mission est en pause. Rien n'est approuvé automatiquement et le responsable "
+            "ne continuera pas seul tant que vous n'appuyez pas sur Continuer."
+        ),
+        mission_activity_paused="Mise en pause",
+        mission_activity_unpaused="Reprise après une pause",
+        mission_everything_banner=(
+            "L'approbation automatique Tout est active pour « {0} » : chaque demande d'outil, y compris la "
+            "suppression de fichiers et l'exécution de commandes, est approuvée sans vous demander."
+        ),
+        mission_everything_turn_off="Désactiver",
+        mission_retry="Réessayer",
+        mission_activity_retried="Requête échouée relancée",
+        mission_error_retry="Impossible de relancer la mission : {0}",
         mission_switch_to_autonomous="Passer en mode autonome",
         mission_switch_to_classic="Passer en mode classique",
         mission_mode_autonomous="Autonome",
@@ -815,19 +873,21 @@ def get_french_strings() -> LanguageStrings:
         mission_auto_approve_safe="Actions sûres",
         mission_auto_approve_all="Tout",
         mission_auto_approve_tip=(
-            "Les modifications de fichiers que le journal enregistre sont approuvées aussitôt ; avec Tout, "
-            "pour le reste de chaque tour. Le reste passe par un relecteur IA, qui ne l'approuve que si cela "
-            "correspond clairement à l'objectif ; tout ce dont il n'est pas sûr vous est soumis. Les "
-            "actions sûres n'incluent jamais la suppression, le déplacement, l'écrasement, les commandes "
-            "de terminal ni les envois réseau."
+            "Avec Actions sûres, les modifications de fichiers que le journal enregistre sont approuvées "
+            "aussitôt, et les autres demandes sûres passent par un relecteur IA, qui ne les approuve que si "
+            "elles correspondent clairement à l'objectif ; tout ce dont il n'est pas sûr vous est soumis. Les "
+            "actions sûres n'incluent jamais la suppression, le déplacement, l'écrasement, les commandes de "
+            "terminal ni les envois réseau. Avec Tout, chaque demande est approuvée sans vous consulter."
         ),
         mission_auto_approve_all_title="Tout approuver automatiquement ?",
         mission_auto_approve_all_confirm=(
-            "Un relecteur IA approuvera les demandes de cette mission sans vous consulter, y compris "
-            "la suppression de fichiers, les commandes de terminal et l'envoi de données sur le "
-            "réseau. Les demandes dont il n'est pas sûr vous sont soumises et chaque décision est "
-            "journalisée. N'activez cette option que pour un travail que vous acceptez de ne pas "
-            "superviser."
+            "Pour cette mission uniquement, chaque demande sera approuvée sans vous consulter ni passer par "
+            "un relecteur, y compris la suppression, le déplacement et l'écrasement de fichiers, les commandes "
+            "de terminal (qui ne peuvent pas être limitées à certains fichiers), la délégation à des assistants "
+            "et l'envoi de données sur le réseau. Cela dure tant que la mission s'exécute en mode autonome : "
+            "choisir un autre niveau, passer en mode classique ou arrêter la mission le désactive. Votre "
+            "confirmation et chaque approbation sont journalisées. N'activez cette option que pour un travail "
+            "que vous acceptez de ne pas superviser."
         ),
         mission_decision_reviewing="Relecture IA…",
         mission_decision_review_note="Relecteur IA : {0}",
@@ -882,15 +942,17 @@ def get_french_strings() -> LanguageStrings:
             "Je vous ai répondu ci-dessous. Posez-moi d'autres questions ou confiez-moi une tâche."
         ),
         mission_say_ready="Prêt quand vous l'êtes.",
-        mission_say_error="Un problème est survenu. Ouvrez ma conversation pour voir pourquoi.",
+        mission_say_error="Un problème est survenu. Appuyez sur Réessayer, ou envoyez-moi un message.",
+        mission_failed_notice=(
+            "Ma dernière réponse s'est terminée par une erreur. Réessayez pour renvoyer la même requête, "
+            "ouvrez ma conversation pour voir pourquoi, ou envoyez-moi un message."
+        ),
+        mission_show_lead_conversation="Ouvrir la conversation du responsable",
         mission_say_sleeping="Je fais une pause prévue de {0}. Je reprendrai ensuite…",
         mission_chat_title="Conversation",
         mission_chat_hint="Vos messages et les réponses du responsable, comme dans un onglet de conversation",
         mission_chat_you="Vous",
         mission_chat_lead="Responsable de mission",
-        mission_chat_show="Afficher la conversation",
-        mission_chat_hide="Masquer la conversation",
-        mission_chat_toggle_tip="Cliquez pour afficher ou masquer la conversation avec le responsable",
         mission_results_title="Résultats précédents",
         mission_results_hint=(
             "Chaque étape terminée avant une question de suivi est conservée ici, la plus récente en premier. "
@@ -924,6 +986,7 @@ def get_french_strings() -> LanguageStrings:
         mission_report_stats="Étapes terminées : {0} sur {1}  ·  Agents dans l'équipe : {2}",
         mission_follow_up="Poser une question de suivi",
         mission_activity_reversible_approved="{0} approuvé — enregistré dans le journal",
+        mission_activity_everything_approved="{0} approuvé — l'approbation automatique est réglée sur Tout",
         mission_activity_user_message="Vous, à {0} : « {1} »",
         mission_say_waiting_helpers="J'attends que {0} termine et me fasse son rapport…",
         mission_read_more="En savoir plus",
@@ -942,8 +1005,8 @@ def get_french_strings() -> LanguageStrings:
             "; tout ce qui est destructif vous attend."
         ),
         mission_auto_approve_all_note=(
-            "L'équipe travaille sans s'arrêter ; seul ce dont le "
-            "relecteur IA doute vous est soumis."
+            "L'équipe travaille de bout en bout sans s'arrêter ; "
+            "rien n'attend votre approbation."
         ),
         mission_scroll_left="Faire défiler les missions vers la gauche",
         mission_scroll_right="Faire défiler les missions vers la droite",

@@ -12,6 +12,7 @@ from ai_transcript_conversation import AITranscriptConversation
 from ai_tool import AIToolApprovalKind, AIToolCall
 from mindspace.mindspace import Mindspace
 from mission import mission_service as mission_service_module
+from mission.mission_error import MissionError
 from mission.mission_service import MAX_CONTINUES_WITHOUT_PROGRESS, MISSION_REQUESTER, MissionService
 from mission.mission_snapshot import MissionActivityKind, MissionAgentState, MissionSpeaker, MissionStatus
 from mission.mission import AutoApproveLevel, MissionMode, MissionTaskStatus
@@ -69,11 +70,16 @@ def _request_approval(transcript: AITranscriptConversation) -> asyncio.Task:
     ))
 
 
-def _plan_message(statuses: list[str]) -> AIMessage:
+def _plan_message(statuses: list[str], goal_met: bool | None = None) -> AIMessage:
+    """Return a lead reply carrying a plan; a lead that has finished every task reports the goal met unless told not to."""
+    met = all(status == "completed" for status in statuses) if goal_met is None else goal_met
     tasks = ", ".join(
         f'{{"id": "{i}", "title": "Task {i}", "status": "{status}"}}' for i, status in enumerate(statuses, start=1)
     )
-    content = f'Plan:\n```mission-plan\n{{"title": "Better title", "summary": "S", "tasks": [{tasks}]}}\n```'
+    content = (
+        f'Plan:\n```mission-plan\n{{"title": "Better title", "summary": "S", "goal_met": {str(met).lower()}, '
+        f'"tasks": [{tasks}]}}\n```'
+    )
     return AIMessage.create(source=AIMessageSource.AI, content=content, completed=True)
 
 
@@ -496,6 +502,27 @@ class TestInterruptedMissions:
 
         asyncio.run(run())
 
+    def test_mission_without_a_plan_resumes_its_request(self, mindspace, submitted):
+        """A lead interrupted before it planned is asked to carry on with the request, not with a next task."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Please review this PR")
+            service.stop()
+
+            restarted = MissionService(mindspace)
+            restarted.start()
+            assert restarted.is_interrupted(mission.mission_id)
+            await restarted.resume_mission(mission.mission_id)
+
+            message = submitted[-1][1]
+            assert "before you had reported a plan" in message
+            assert "If it is a big task, report a mission-plan block first" in message
+            assert "next unfinished task" not in message
+            restarted.stop()
+
+        asyncio.run(run())
+
     def test_mission_waiting_for_the_user_is_not_interrupted(self, mindspace, submitted):  # pylint: disable=unused-argument
         """A mission whose lead finished its turn and is waiting for the user is not treated as interrupted."""
         async def run() -> None:
@@ -768,8 +795,527 @@ async def _mission_waiting_on_approval(
     return service, mission, request
 
 
+class TestReduceMotionPreference:
+    """The choice to reduce motion is kept for the mindspace."""
+
+    def test_choice_survives_a_restart(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A service started later reads back the saved choice."""
+        service = MissionService(mindspace)
+        service.start()
+        assert not service.reduce_motion()
+        service.set_reduce_motion(True)
+        service.stop()
+
+        restarted = MissionService(mindspace)
+        restarted.start()
+        assert restarted.reduce_motion()
+        restarted.stop()
+
+
+class TestDecisionTargets:
+    """A request in the inbox says what it acts on."""
+
+    def test_request_records_its_target(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A terminal request's command is recorded as its target."""
+        async def run() -> None:
+            service, _mission, request = await _mission_waiting_on_approval(
+                mindspace, _FakeReviewer(approve=True), AutoApproveLevel.OFF, destructive=True
+            )
+            assert service.decisions()[0].target == "make docs"
+            request.cancel()
+            service.stop()
+
+        asyncio.run(run())
+
+
+class TestTheGoalCompletesTheMission:
+    """A mission is accomplished when the lead reports the user's goal met, not when a plan runs out of tasks."""
+
+    def test_lead_is_told_to_report_the_goal(self, mindspace, submitted):
+        """The brief asks the lead to keep goal_met false until the whole request is done."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Build the thing")
+            assert mission.reports_goal
+            assert '"goal_met"' in submitted[0][1]
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_finished_plan_without_the_goal_carries_on(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """Every task done but the goal not met: not accomplished, and the lead is asked to plan what is left."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Objective")
+            conversation = _lead(service, mission).inner_conversation()
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["completed", "completed"], goal_met=False)
+            )
+            await _finish_turn(conversation)
+
+            assert service.status(mission.mission_id) != MissionStatus.COMPLETED
+            assert submitted[-1][0] == MISSION_REQUESTER and "goal_met" in submitted[-1][1]
+
+            # The lead plans the next part: the finished plan is kept as an earlier phase.
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["pending"], goal_met=False)
+            )
+            assert len(mission.history) == 1 and mission.tasks[0].status == MissionTaskStatus.PENDING
+
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["completed"], goal_met=True)
+            )
+            await _finish_turn(conversation)
+            assert service.status(mission.mission_id) == MissionStatus.COMPLETED
+            service.stop()
+
+        asyncio.run(run())
+
+
+class _HeldReviewer(_FakeReviewer):
+    """A reviewer that keeps thinking until it is released, as a real one takes a while."""
+
+    def __init__(self) -> None:
+        super().__init__(approve=True)
+        self.release = asyncio.Event()
+
+    async def review(self, request: ReviewRequest) -> ReviewVerdict:
+        await self.release.wait()
+        return await super().review(request)
+
+
+class TestFollowUpNeverLooksFinished:
+    """Once the user asks a finished mission for more, nothing on the way makes it look finished again."""
+
+    @staticmethod
+    async def _finished_mission(mindspace, reviewer: _FakeReviewer | None = None):
+        service = MissionService(mindspace, reviewer=reviewer)  # type: ignore[arg-type]
+        service.start()
+        mission = await service.create_mission("Objective")
+        conversation = _lead(service, mission).inner_conversation()
+        await conversation._trigger_event(  # pylint: disable=protected-access
+            AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["completed"])
+        )
+        await _finish_turn(conversation)
+        assert service.status(mission.mission_id) == MissionStatus.COMPLETED
+        return service, mission, conversation
+
+    def test_follow_up_is_planned_not_shown_as_the_old_plan_running(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """While the lead works on a follow-up, the mission is planning; the finished plan is not running again."""
+        async def run() -> None:
+            service, mission, conversation = await self._finished_mission(mindspace)
+            await service.send_guidance(mission.mission_id, "Now add a changelog")
+            await conversation._trigger_event(AIConversationEvent.AI_CONNECTED)  # pylint: disable=protected-access
+            assert service.status(mission.mission_id) == MissionStatus.PLANNING
+
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["in_progress", "pending"])
+            )
+            assert service.status(mission.mission_id) == MissionStatus.RUNNING
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_request_being_reviewed_does_not_make_the_follow_up_look_finished(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A request the reviewer is still deciding leaves the mission working, not completed."""
+        async def run() -> None:
+            reviewer = _HeldReviewer()
+            service, mission, conversation = await self._finished_mission(mindspace, reviewer)
+            service.set_auto_approve(mission.mission_id, AutoApproveLevel.SAFE)
+            await service.send_guidance(mission.mission_id, "Now add a changelog")
+            await conversation._trigger_event(AIConversationEvent.AI_CONNECTED)  # pylint: disable=protected-access
+            request = asyncio.create_task(conversation._request_tool_authorization(  # pylint: disable=protected-access
+                "terminal", {"operation": "send_command", "command": "make docs"}, "Run make docs", "$ make docs",
+                False, AIToolApprovalKind.STANDARD
+            ))
+            for _ in range(5):
+                await asyncio.sleep(0)
+
+            assert service.decisions()[0].reviewing
+            assert service.status(mission.mission_id) not in (MissionStatus.COMPLETED, MissionStatus.IDLE)
+
+            reviewer.release.set()
+            assert await asyncio.wait_for(request, timeout=1) is True
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_mission_about_to_continue_is_still_working(self, mindspace, submitted, monkeypatch):  # pylint: disable=unused-argument
+        """In the pause before the lead is asked to carry on, the mission is working, not waiting for the user."""
+        monkeypatch.setattr(mission_service_module, "AUTO_CONTINUE_DELAY_SECONDS", 60)
+
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["completed", "pending"])
+            await _finish_turn(conversation)
+            assert mission.mission_id in service._scheduled_continues  # pylint: disable=protected-access
+            assert service.status(mission.mission_id) == MissionStatus.RUNNING
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_follow_up_cut_off_by_a_restart_can_be_resumed(self, mindspace, submitted):
+        """A finished mission closed while answering a follow-up comes back interrupted, and resumes the follow-up."""
+        async def run() -> None:
+            service, mission, _conversation = await self._finished_mission(mindspace)
+            await service.send_guidance(mission.mission_id, "Now add a changelog")
+            service.stop()
+
+            restarted = MissionService(mindspace)
+            restarted.start()
+            assert restarted.status(mission.mission_id) == MissionStatus.INTERRUPTED
+
+            await restarted.resume_mission(mission.mission_id)
+            assert "latest request" in submitted[-1][1]
+            restarted.stop()
+
+        asyncio.run(run())
+
+    def test_follow_up_plan_starts_from_nothing(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """While the lead plans a follow-up, the finished plan is shown as history and progress starts again."""
+        async def run() -> None:
+            service, mission, conversation = await self._finished_mission(mindspace)
+            await service.send_guidance(mission.mission_id, "Now add a changelog")
+            await conversation._trigger_event(AIConversationEvent.AI_CONNECTED)  # pylint: disable=protected-access
+
+            shown = service.snapshot(mission.mission_id).mission
+            assert not shown.tasks
+            assert shown.progress() == 0.0
+            assert [t.status for t in shown.history[-1].tasks] == [MissionTaskStatus.COMPLETED]
+            assert len(mission.tasks) == 1 and not mission.history
+
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["in_progress", "pending"])
+            )
+            shown = service.snapshot(mission.mission_id).mission
+            assert [t.status for t in shown.tasks] == [MissionTaskStatus.IN_PROGRESS, MissionTaskStatus.PENDING]
+            assert len(shown.history) == 1
+            assert shown.history[0].request == "Objective"
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_question_answered_shows_the_finished_plan_again(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A follow-up the lead only answers leaves the finished plan as the mission's plan."""
+        async def run() -> None:
+            service, mission, conversation = await self._finished_mission(mindspace)
+            await service.send_guidance(mission.mission_id, "What did you change?")
+            await TestQuestionsAreAnswered._answer(conversation, "Only the docs.")  # pylint: disable=protected-access
+
+            shown = service.snapshot(mission.mission_id).mission
+            assert service.status(mission.mission_id) == MissionStatus.COMPLETED
+            assert len(shown.tasks) == 1 and not shown.history
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_unmet_goal_plans_its_next_part_from_nothing(self, mindspace, submitted, monkeypatch):  # pylint: disable=unused-argument
+        """A finished plan that did not meet the goal is history while the lead plans what is left."""
+        monkeypatch.setattr(mission_service_module, "AUTO_CONTINUE_DELAY_SECONDS", 60)
+
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Objective")
+            conversation = _lead(service, mission).inner_conversation()
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["completed"], goal_met=False)
+            )
+            await _finish_turn(conversation)
+            assert service.status(mission.mission_id) == MissionStatus.PLANNING
+            assert not service.snapshot(mission.mission_id).mission.tasks
+            service.stop()
+
+        asyncio.run(run())
+
+
+class TestCompletionIsShownOnce:
+    """A mission is done only when nothing is left to answer, and its completion is celebrated once."""
+
+    def test_finished_plan_is_not_done_while_a_message_awaits_a_reply(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A message sent to a finished mission keeps it running until the lead replies."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["completed"])
+            assert service.status(mission.mission_id) == MissionStatus.COMPLETED
+
+            history = conversation.get_conversation_history()
+            history.add_message(AIMessage.create(source=AIMessageSource.USER, content="Now add a changelog"))
+            assert service.status(mission.mission_id) == MissionStatus.RUNNING
+
+            await TestQuestionsAreAnswered._answer(conversation, "Added it.")  # pylint: disable=protected-access
+            assert service.status(mission.mission_id) == MissionStatus.COMPLETED
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_requests_from_mission_control_do_not_count_as_waiting(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Mission Control's own requests to carry on are not messages from the user."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["completed"])
+            conversation.get_conversation_history().add_message(AIMessage.create(
+                source=AIMessageSource.USER, content="Continue", user_name=MISSION_REQUESTER
+            ))
+            assert service.status(mission.mission_id) == MissionStatus.COMPLETED
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_celebration_is_remembered(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Once shown, a completion is marked celebrated, and that survives a restart."""
+        async def run() -> None:
+            service, mission, _conversation = await _start_mission_with_plan(mindspace, ["completed"])
+            assert not mission.celebrated
+            service.mark_celebrated(mission.mission_id)
+            service.stop()
+
+            assert _store(mindspace).load_all()[0].celebrated
+
+        asyncio.run(run())
+
+
+class TestPausingAMission:
+    """A paused mission finishes what it is doing, then nothing more happens in it without the user."""
+
+    def test_paused_mission_is_not_asked_to_continue_until_continued(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """While paused the lead is not asked to carry on; continuing asks it again."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["completed", "pending"])
+            service.pause_mission(mission.mission_id)
+
+            await _finish_turn(conversation)
+            assert _continues(submitted) == 0
+            assert service.status(mission.mission_id) == MissionStatus.PAUSED
+
+            service.unpause_mission(mission.mission_id)
+            for _ in range(5):
+                await asyncio.sleep(0)
+
+            assert _continues(submitted) == 1
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            kinds = [a.kind for a in snapshot.activity]
+            assert MissionActivityKind.PAUSED in kinds and MissionActivityKind.UNPAUSED in kinds
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_paused_mission_approves_nothing_automatically(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Even at Everything a request waits for the user while paused, and is approved on continuing."""
+        async def run() -> None:
+            service = MissionService(mindspace, reviewer=_FakeReviewer(approve=True))  # type: ignore[arg-type]
+            service.start()
+            mission = await service.create_mission("Write the docs", AutoApproveLevel.ALL)
+            service.pause_mission(mission.mission_id)
+            conversation = _lead(service, mission).inner_conversation()
+            request = asyncio.create_task(conversation._request_tool_authorization(  # pylint: disable=protected-access
+                "terminal", {"operation": "send_command", "command": "make docs"}, "Run make docs", "$ make docs",
+                True, AIToolApprovalKind.STANDARD
+            ))
+            for _ in range(5):
+                await asyncio.sleep(0)
+
+            assert not request.done()
+            assert service.status(mission.mission_id) == MissionStatus.NEEDS_YOU
+
+            service.unpause_mission(mission.mission_id)
+            assert await asyncio.wait_for(request, timeout=1) is True
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_pausing_withdraws_the_standing_approval(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """The next file change in the turn comes to the user rather than being approved by the standing approval."""
+        async def run() -> None:
+            service, mission, request = await _mission_waiting_on_approval(
+                mindspace, _FakeReviewer(approve=True), AutoApproveLevel.ALL, destructive=False,
+                kind=AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+            )
+            assert await asyncio.wait_for(request, timeout=1) is True
+            conversation = _lead(service, mission).inner_conversation()
+            assert conversation.auto_approve_file_changes()
+
+            service.pause_mission(mission.mission_id)
+            assert not conversation.auto_approve_file_changes()
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_pause_survives_a_restart_and_is_not_resumed_automatically(self, mindspace, submitted):
+        """A paused mission comes back paused, and automatic resume leaves it waiting for the user."""
+        async def run() -> None:
+            service, mission, _conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            service.set_resume_automatically(True)
+            service.pause_mission(mission.mission_id)
+            service.stop()
+            briefed = len(submitted)
+
+            restarted = MissionService(mindspace)
+            restarted.start()
+            for _ in range(5):
+                await asyncio.sleep(0)
+
+            assert len(submitted) == briefed
+            assert {m.mission_id: m.paused for m in restarted.missions()}[mission.mission_id]
+            restarted.stop()
+
+        asyncio.run(run())
+
+    def test_stopping_ends_the_pause(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A stopped mission is no longer paused, so a message starts it again as usual."""
+        async def run() -> None:
+            service, mission, _conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            service.pause_mission(mission.mission_id)
+            service.stop_mission(mission.mission_id)
+
+            assert not mission.paused
+            assert not _store(mindspace).load_all()[0].paused
+            service.stop()
+
+        asyncio.run(run())
+
+
+class TestEverythingIsAnExplicitApproval:
+    """Everything rests on a recorded confirmation, and ends when the mission leaves autonomous mode or stops."""
+
+    def test_confirmation_is_recorded_with_its_scope_and_authority(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Choosing Everything saves when it was confirmed and logs the mission and the authority granted."""
+        async def run() -> None:
+            service = MissionService(mindspace, reviewer=_FakeReviewer(approve=True))  # type: ignore[arg-type]
+            service.start()
+            mission = await service.create_mission("Write the docs")
+            assert not mission.everything_confirmed_at
+
+            service.set_auto_approve(mission.mission_id, AutoApproveLevel.ALL)
+            assert mission.everything_confirmed_at
+            assert _store(mindspace).load_all()[0].everything_confirmed_at == mission.everything_confirmed_at
+            logged = [m.content for m in mindspace.interactions().newest(10)]
+            record = next(c for c in logged if c.startswith("Human confirmed Everything auto-approve"))
+            assert mission.mission_id in record
+            assert mission.everything_confirmed_at in record
+            assert "terminal commands" in record and "delegation" in record and "network writes" in record
+
+            service.set_auto_approve(mission.mission_id, AutoApproveLevel.SAFE)
+            assert not mission.everything_confirmed_at
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_starting_at_everything_records_the_confirmation(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A mission started at Everything has its confirmation from the start."""
+        async def run() -> None:
+            service = MissionService(mindspace, reviewer=_FakeReviewer(approve=True))  # type: ignore[arg-type]
+            service.start()
+            mission = await service.create_mission("Write the docs", AutoApproveLevel.ALL)
+            assert mission.everything_confirmed_at
+            logged = [m.content for m in mindspace.interactions().newest(10)]
+            assert any(c.startswith("Human confirmed Everything auto-approve") for c in logged)
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_each_approval_names_the_confirmation(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """An approval made under Everything says which confirmation it rests on."""
+        async def run() -> None:
+            service, mission, request = await _mission_waiting_on_approval(
+                mindspace, _FakeReviewer(approve=True), AutoApproveLevel.ALL, destructive=True
+            )
+            assert await asyncio.wait_for(request, timeout=1) is True
+            logged = [m.content for m in mindspace.interactions().newest(20)]
+            assert any(f"Everything confirmed at {mission.everything_confirmed_at}" in c for c in logged)
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_stopping_the_mission_revokes_it(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A stopped mission goes back to Off, its standing approval is withdrawn, and the revocation is logged."""
+        async def run() -> None:
+            service, mission, request = await _mission_waiting_on_approval(
+                mindspace, _FakeReviewer(approve=True), AutoApproveLevel.ALL, destructive=False,
+                kind=AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+            )
+            assert await asyncio.wait_for(request, timeout=1) is True
+            conversation = _lead(service, mission).inner_conversation()
+            assert conversation.auto_approve_file_changes()
+
+            service.stop_mission(mission.mission_id)
+            assert mission.auto_approve == AutoApproveLevel.OFF
+            assert not mission.everything_confirmed_at
+            assert not conversation.auto_approve_file_changes()
+            assert _store(mindspace).load_all()[0].auto_approve == AutoApproveLevel.OFF
+            logged = [m.content for m in mindspace.interactions().newest(10)]
+            assert any("was revoked, as the mission was stopped" in c for c in logged)
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_switching_to_classic_revokes_it_before_the_tab_takes_over(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """The conversation reaches its tab with no standing approval, and switching back does not bring Everything back."""
+        async def run() -> None:
+            service, mission, request = await _mission_waiting_on_approval(
+                mindspace, _FakeReviewer(approve=True), AutoApproveLevel.ALL, destructive=False,
+                kind=AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+            )
+            assert await asyncio.wait_for(request, timeout=1) is True
+            conversation = _lead(service, mission).inner_conversation()
+
+            context_id = service.switch_to_classic(mission.mission_id)
+            assert context_id is not None
+            assert mission.auto_approve == AutoApproveLevel.OFF
+            assert not conversation.auto_approve_file_changes()
+
+            service.switch_to_autonomous(mission.mission_id)
+            assert mission.auto_approve == AutoApproveLevel.OFF
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_restored_mission_keeps_everything_only_with_a_saved_confirmation(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A record at Everything with no confirmation, or no longer autonomous, comes back at Off."""
+        async def run() -> None:
+            service = MissionService(mindspace, reviewer=_FakeReviewer(approve=True))  # type: ignore[arg-type]
+            service.start()
+            confirmed = await service.create_mission("Confirmed", AutoApproveLevel.ALL)
+            unconfirmed = await service.create_mission("Unconfirmed")
+            classic = await service.create_mission("Classic", AutoApproveLevel.ALL)
+            service.stop()
+
+            store = _store(mindspace)
+            records = {m.mission_id: m for m in store.load_all()}
+            records[unconfirmed.mission_id].auto_approve = AutoApproveLevel.ALL
+            store.save(records[unconfirmed.mission_id])
+            records[classic.mission_id].mode = MissionMode.CLASSIC
+            store.save(records[classic.mission_id])
+
+            restored = MissionService(mindspace, reviewer=_FakeReviewer(approve=True))  # type: ignore[arg-type]
+            restored.start()
+            levels = {m.mission_id: m.auto_approve for m in restored.missions()}
+            assert levels[confirmed.mission_id] == AutoApproveLevel.ALL
+            assert levels[unconfirmed.mission_id] == AutoApproveLevel.OFF
+            assert levels[classic.mission_id] == AutoApproveLevel.OFF
+            assert {m.mission_id: m.auto_approve for m in store.load_all()}[unconfirmed.mission_id] == AutoApproveLevel.OFF
+            restored.stop()
+
+        asyncio.run(run())
+
+
 class TestAutoApprove:
     """An AI reviewer approves a mission's requests within the chosen level, and leaves the rest for the user."""
+
+    def test_level_chosen_at_the_start_is_kept(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A mission started with a level has it from the start, saved with the mission."""
+        async def run() -> None:
+            service = MissionService(mindspace, reviewer=_FakeReviewer(approve=True))  # type: ignore[arg-type]
+            service.start()
+            mission = await service.create_mission("Write the docs", AutoApproveLevel.SAFE)
+
+            assert mission.auto_approve == AutoApproveLevel.SAFE
+            assert _store(mindspace).load_all()[0].auto_approve == AutoApproveLevel.SAFE
+            logged = [m.content for m in mindspace.interactions().newest(10)]
+            assert any("auto-approve: safe" in content for content in logged)
+            service.stop()
+
+        asyncio.run(run())
 
     def test_safe_request_is_approved_by_the_reviewer(self, mindspace, submitted):  # pylint: disable=unused-argument
         """At Safe, a non-destructive request the reviewer approves goes ahead and is logged."""
@@ -808,16 +1354,24 @@ class TestAutoApprove:
 
         asyncio.run(run())
 
-    def test_everything_level_lets_the_reviewer_approve_destructive_requests(self, mindspace, submitted):  # pylint: disable=unused-argument
-        """At Everything, even a destructive request is decided by the reviewer."""
+    def test_everything_level_approves_every_request_without_asking(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """At Everything, even a destructive request the journal does not record goes ahead, without a review."""
         async def run() -> None:
-            reviewer = _FakeReviewer(approve=True)
-            service, _mission, request = await _mission_waiting_on_approval(
+            reviewer = _FakeReviewer(approve=False, reason="Not sure")
+            service, mission, request = await _mission_waiting_on_approval(
                 mindspace, reviewer, AutoApproveLevel.ALL, destructive=True
             )
 
-            assert await request is True
-            assert reviewer.requests[0].destructive
+            assert await asyncio.wait_for(request, timeout=1) is True
+            assert not reviewer.requests
+            assert not service.decisions()
+            assert service.status(mission.mission_id) != MissionStatus.NEEDS_YOU
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            approved = [a for a in snapshot.activity if a.kind == MissionActivityKind.EVERYTHING_APPROVED]
+            assert approved[0].detail == "terminal.send_command"
+            logged = [m.content for m in mindspace.interactions().newest(20)]
+            assert any("auto-approve is set to Everything" in c for c in logged)
             service.stop()
 
         asyncio.run(run())
@@ -827,7 +1381,7 @@ class TestAutoApprove:
         async def run() -> None:
             reviewer = _FakeReviewer(approve=False, reason="Touches files outside the docs")
             service, mission, request = await _mission_waiting_on_approval(
-                mindspace, reviewer, AutoApproveLevel.ALL, destructive=False
+                mindspace, reviewer, AutoApproveLevel.SAFE, destructive=False
             )
 
             assert not request.done()
@@ -1070,8 +1624,8 @@ class TestAutoApprove:
 
         asyncio.run(run())
 
-    def test_raising_the_level_reviews_a_request_left_for_the_user(self, mindspace, submitted):  # pylint: disable=unused-argument
-        """A destructive request waiting at Safe is reviewed and approved as soon as the level becomes Everything."""
+    def test_raising_the_level_approves_a_request_left_for_the_user(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A destructive request waiting at Safe is approved as soon as the level becomes Everything."""
         async def run() -> None:
             reviewer = _FakeReviewer(approve=True)
             service, mission, request = await _mission_waiting_on_approval(
@@ -1085,13 +1639,13 @@ class TestAutoApprove:
                 await asyncio.sleep(0)
 
             assert await request is True
-            assert reviewer.requests[0].destructive
+            assert not reviewer.requests
             service.stop()
 
         asyncio.run(run())
 
-    def test_changing_the_level_reviews_a_request_the_reviewer_left_again(self, mindspace, submitted):  # pylint: disable=unused-argument
-        """A request the reviewer left for the user is reviewed afresh when the level changes."""
+    def test_changing_the_level_reconsiders_a_request_the_reviewer_left(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A request the reviewer left for the user is looked at afresh when the level changes."""
         async def run() -> None:
             reviewer = _FakeReviewer(approve=False, reason="Not sure")
             service, mission, request = await _mission_waiting_on_approval(
@@ -1099,13 +1653,12 @@ class TestAutoApprove:
             )
             assert service.decisions()[0].review_note == "Not sure"
 
-            reviewer._verdict = ReviewVerdict(True, "Fits the plan")  # pylint: disable=protected-access
             service.set_auto_approve(mission.mission_id, AutoApproveLevel.ALL)
             for _ in range(5):
                 await asyncio.sleep(0)
 
             assert await request is True
-            assert len(reviewer.requests) == 2
+            assert len(reviewer.requests) == 1
             service.stop()
 
         asyncio.run(run())
@@ -1353,8 +1906,11 @@ class TestQuestionsAreAnswered:
 
             brief = submitted[-1][1]
             assert "First work out what the user actually wants" in brief
+            assert "If it is a simple question" in brief
             assert "just answer it" in brief and "Do not make a plan" in brief
-            assert "run it as a mission" in brief
+            assert "If it is a big task, run it as a mission as described below, with a plan" in brief
+            assert "reviewing a pull request" in brief
+            assert "even when nothing will be changed" in brief
             assert brief.endswith("What does the mission service do?")
             service.stop()
 
@@ -1514,6 +2070,27 @@ class TestMissionConversation:
 
         asyncio.run(run())
 
+    def test_each_reply_names_the_model_that_wrote_it(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A reply carries the model recorded with it; one without a recorded model names none."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Which model are you?")
+            history = _lead(service, mission).inner_conversation().get_conversation_history()
+            history.add_message(AIMessage.create(
+                source=AIMessageSource.AI, content="First", model="deepseek-v4.1-flash", provider="ollama-cloud"
+            ))
+            history.add_message(AIMessage.create(source=AIMessageSource.AI, content="Second"))
+
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            assert [e.model for e in snapshot.conversation] == [
+                AIConversationSettings.get_display_name("deepseek-v4.1-flash", "ollama-cloud"), ""
+            ]
+            service.stop()
+
+        asyncio.run(run())
+
     def test_long_replies_are_kept_whole(self, mindspace, submitted):  # pylint: disable=unused-argument
         """Nothing the lead wrote is shortened, in the conversation or as its latest message."""
         async def run() -> None:
@@ -1529,6 +2106,113 @@ class TestMissionConversation:
             assert snapshot is not None
             assert snapshot.lead_message == essay
             assert snapshot.conversation[-1].text == essay
+            service.stop()
+
+        asyncio.run(run())
+
+
+class TestFailedMissions:
+    """A lead whose latest turn failed shows the mission as failed, not as answered or done."""
+
+    def test_failed_turn_after_an_answer_is_failed(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """An earlier answer does not make a failed turn look answered."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Please review this PR")
+            conversation = _lead(service, mission).inner_conversation()
+            await TestQuestionsAreAnswered._answer(conversation, "Looking at the PR.")  # pylint: disable=protected-access
+            assert service.status(mission.mission_id) == MissionStatus.REPLIED
+
+            await conversation._trigger_event(AIConversationEvent.ERROR, True, None)  # pylint: disable=protected-access
+
+            assert service.status(mission.mission_id) == MissionStatus.FAILED
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_failure_outranks_a_finished_plan_and_is_known_after_a_restart(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """The error the lead's conversation recorded marks the mission failed, even with every step done."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["completed"])
+            conversation.get_conversation_history().add_message(AIMessage.create(
+                source=AIMessageSource.SYSTEM, content="Request failed", error={"code": "server_error"}
+            ))
+
+            assert service.status(mission.mission_id) == MissionStatus.FAILED
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_retried_error_and_a_new_message_are_not_failures(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """An error that will be retried is not a failure, and once the user writes again the lead is working on it."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["completed"])
+            await conversation._trigger_event(AIConversationEvent.ERROR, False, None)  # pylint: disable=protected-access
+            assert service.status(mission.mission_id) == MissionStatus.COMPLETED
+
+            history = conversation.get_conversation_history()
+            history.add_message(AIMessage.create(
+                source=AIMessageSource.SYSTEM, content="Request failed", error={"code": "server_error"}
+            ))
+            history.add_message(AIMessage.create(source=AIMessageSource.USER, content="Try again"))
+            # Not failed, and not done either: the user's new message is being worked on.
+            assert service.status(mission.mission_id) == MissionStatus.RUNNING
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_classic_mission_keeps_its_existing_status(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Failed is shown only in autonomous mode."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            await conversation._trigger_event(AIConversationEvent.ERROR, True, None)  # pylint: disable=protected-access
+            mission.mode = MissionMode.CLASSIC
+
+            assert service.status(mission.mission_id) != MissionStatus.FAILED
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_retry_sends_the_failed_request_again(self, mindspace, submitted, monkeypatch):  # pylint: disable=unused-argument
+        """Retrying removes the error, asks the AI again from the same message and records that it was retried."""
+        started: list[AIConversation] = []
+
+        async def fake_start_ai(self) -> None:
+            started.append(self)
+
+        monkeypatch.setattr(AIConversation, "_start_ai", fake_start_ai)
+
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            history = conversation.get_conversation_history()
+            history.add_message(AIMessage.create(source=AIMessageSource.USER, content="Carry on"))
+            history.add_message(AIMessage.create(
+                source=AIMessageSource.SYSTEM, content="Request failed", error={"code": "server_error"}
+            ))
+            assert service.status(mission.mission_id) == MissionStatus.FAILED
+
+            await service.retry_mission(mission.mission_id)
+            await asyncio.sleep(0)
+
+            assert started == [conversation]
+            assert history.get_messages()[-1].content == "Carry on"
+            assert service.status(mission.mission_id) != MissionStatus.FAILED
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            assert snapshot.activity[0].kind == MissionActivityKind.RETRIED
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_only_a_failed_mission_can_be_retried(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A mission that has not failed has nothing to retry."""
+        async def run() -> None:
+            service, mission, _conversation = await _start_mission_with_plan(mindspace, ["pending"])
+
+            with pytest.raises(MissionError):
+                await service.retry_mission(mission.mission_id)
+
             service.stop()
 
         asyncio.run(run())
@@ -1876,6 +2560,73 @@ class TestAgentProgress:
             assert MissionActivityKind.USER_MESSAGE not in kinds
             guidance = next(a for a in snapshot.activity if a.kind == MissionActivityKind.GUIDANCE_SENT)
             assert guidance.more == "Use British spelling"
+            service.stop()
+
+        asyncio.run(run())
+
+
+class TestAttachmentsAndLeadSettings:
+    """Files and AI settings reach a mission's lead as they reach a conversation from its own tab."""
+
+    @staticmethod
+    def _record_attachments(monkeypatch) -> list[list[str] | None]:
+        """Record the attachment IDs each submitted message carries."""
+        sent: list[list[str] | None] = []
+
+        async def fake_submit(_self, _requester, _user_message, attachment_guids=None):
+            sent.append(attachment_guids)
+
+        monkeypatch.setattr(AIConversation, "submit_message", fake_submit)
+        return sent
+
+    def test_new_mission_brief_carries_its_attachments(self, mindspace, monkeypatch):
+        """Files given when a mission starts are stored with the lead and sent with its brief."""
+        sent = self._record_attachments(monkeypatch)
+
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Objective", attachments=[("notes.md", "Use tabs")])
+
+            history = _lead(service, mission).get_conversation_history()
+            attachment = history.get_attachment(sent[-1][0])
+            assert (attachment["filename"], attachment["content"]) == ("notes.md", "Use tabs")
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_guidance_carries_its_attachments(self, mindspace, monkeypatch):
+        """Files sent with a message to a mission reach its lead with the message."""
+        sent = self._record_attachments(monkeypatch)
+
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Objective")
+            assert sent[-1] is None
+
+            await service.send_guidance(mission.mission_id, "See the spec", attachments=[("spec.txt", "Spec")])
+            history = _lead(service, mission).get_conversation_history()
+            assert history.get_attachment(sent[-1][0])["content"] == "Spec"
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_lead_settings_can_be_chosen_and_changed(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A new mission's lead uses the settings chosen for it, and they can be changed later."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            defaults = service.default_settings()
+            assert defaults is not None
+
+            chosen = AIConversationSettings(model="custom-model", provider=defaults.provider, temperature=0.3)
+            mission = await service.create_mission("Objective", settings=chosen)
+            assert service.lead_settings(mission.mission_id).model == "custom-model"
+
+            changed = AIConversationSettings(model="other-model", provider=defaults.provider, temperature=0.5)
+            service.update_lead_settings(mission.mission_id, changed)
+            assert service.lead_settings(mission.mission_id).model == "other-model"
             service.stop()
 
         asyncio.run(run())

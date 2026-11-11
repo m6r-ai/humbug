@@ -89,6 +89,73 @@ class TestMissionStore:
         assert loaded.follow_up == "Which file did you change?"
         assert loaded.report == "**All done.** The docs are in docs/."
 
+    def test_everything_confirmation_survives_a_round_trip(self, tmp_path):
+        """When the user confirmed Everything is saved, and an older record without it loads with none."""
+        store = MissionStore(str(tmp_path / "missions"))
+        mission = _mission()
+        mission.everything_confirmed_at = "2026-11-10T09:00:00+00:00"
+        store.save(mission)
+        assert store.load_all()[0].everything_confirmed_at == "2026-11-10T09:00:00+00:00"
+
+        data = _mission().to_dict()
+        del data["everythingConfirmedAt"]
+        assert Mission.from_dict(data).everything_confirmed_at == ""
+
+    def test_pause_survives_a_round_trip(self, tmp_path):
+        """A paused mission is saved paused, and an older record without the flag loads unpaused."""
+        store = MissionStore(str(tmp_path / "missions"))
+        mission = _mission()
+        mission.paused = True
+        store.save(mission)
+        assert store.load_all()[0].paused
+
+        data = _mission().to_dict()
+        del data["paused"]
+        assert not Mission.from_dict(data).paused
+
+    def test_older_finished_record_counts_as_celebrated(self):
+        """A record from before celebrations were remembered is celebrated if it is finished, so it is not again."""
+        finished = _mission()
+        for task in finished.tasks:
+            task.status = MissionTaskStatus.COMPLETED
+
+        data = finished.to_dict()
+        del data["celebrated"]
+        assert Mission.from_dict(data).celebrated
+
+        unfinished = _mission().to_dict()
+        del unfinished["celebrated"]
+        assert not Mission.from_dict(unfinished).celebrated
+
+    def test_goal_survives_a_round_trip_and_older_records_complete_as_before(self, tmp_path):
+        """Whether the goal is reported and met is saved; a record from before is complete when its plan is."""
+        store = MissionStore(str(tmp_path / "missions"))
+        mission = _mission()
+        for task in mission.tasks:
+            task.status = MissionTaskStatus.COMPLETED
+
+        mission.reports_goal = True
+        store.save(mission)
+        loaded = store.load_all()[0]
+        assert loaded.reports_goal and not loaded.goal_met
+        assert loaded.plan_finished() and not loaded.is_complete()
+
+        data = mission.to_dict()
+        del data["reportsGoal"], data["goalMet"]
+        assert Mission.from_dict(data).is_complete()
+
+    def test_preferences_are_kept_side_by_side(self, tmp_path):
+        """Saving one preference keeps the other, and both default to off."""
+        store = MissionStore(str(tmp_path / "missions"))
+        assert not store.load_resume_automatically() and not store.load_reduce_motion()
+
+        store.save_resume_automatically(True)
+        store.save_reduce_motion(True)
+        assert store.load_resume_automatically() and store.load_reduce_motion()
+
+        store.save_resume_automatically(False)
+        assert store.load_reduce_motion()
+
     def test_missions_load_oldest_first(self, tmp_path):
         """Missions are returned in creation order."""
         store = MissionStore(str(tmp_path / "missions"))

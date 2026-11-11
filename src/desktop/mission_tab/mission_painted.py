@@ -3,11 +3,12 @@
 import math
 
 from PySide6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, QSize, Qt, QTimer
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPaintEvent, QPen
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPaintEvent, QPen, QShowEvent
 from PySide6.QtWidgets import QGraphicsOpacityEffect, QSizePolicy, QWidget
 
 from desktop.color_role import ColorRole
 from desktop.mission_tab.mission_display import MissionStepState, MissionTone
+from desktop.mission_tab.mission_motion import MissionMotion
 from desktop.style_manager import StyleManager
 
 
@@ -114,6 +115,9 @@ def fade_in(widget: QWidget, duration_ms: int = 220) -> None:
         widget: The widget to fade in
         duration_ms: Length of the fade
     """
+    if MissionMotion().reduced():
+        return
+
     effect = QGraphicsOpacityEffect(widget)
     effect.setOpacity(0.0)
     widget.setGraphicsEffect(effect)
@@ -286,7 +290,10 @@ class BusySpinner(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
     def advance(self) -> None:
-        """Rotate the arc one step."""
+        """Rotate the arc one step, unless motion is reduced."""
+        if MissionMotion().reduced():
+            return
+
         self._angle = (self._angle + 30) % 360
         self.update()
 
@@ -336,15 +343,29 @@ class StatusPill(QWidget):
             self.updateGeometry()
             self.update()
 
-        if pulsing and not self._pulse_timer.isActive():
+        if pulsing and not self._pulse_timer.isActive() and not MissionMotion().reduced():
             self._pulse_timer.start()
 
         elif not pulsing:
             self._pulse_timer.stop()
 
+    def showEvent(self, event: QShowEvent) -> None:
+        """Pulse again once shown, if the pill is live."""
+        super().showEvent(event)
+        if self._pulsing and not self._pulse_timer.isActive() and not MissionMotion().reduced():
+            self._pulse_timer.start()
+
     def _advance_pulse(self) -> None:
-        """Advance the pulse, pausing while the pill is not on screen."""
+        """Advance the pulse, pausing while the pill is not on screen and stopping if motion is reduced."""
+        if MissionMotion().reduced():
+            self._pulse_timer.stop()
+            self._phase = 0.0
+            self.update()
+            return
+
         if not self.isVisible():
+            # Hidden pills do not keep a timer running; showing the pill again starts it.
+            self._pulse_timer.stop()
             return
 
         self._phase = (self._phase + 0.12) % (2 * math.pi)

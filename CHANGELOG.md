@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v60 (2026-11-xx)
+## v60 (2026-11-09)
 
 New features:
 
@@ -10,6 +10,70 @@ New features:
 - Panel tooltips now give a path as it sits in the mindspace instead of in full.
 - Editor auto backup now keeps its copies under `.humbug/backups`, rather than saving one as `file.txt.backup`
   beside the file itself.
+- Mission Control stays responsive while the mission lead writes a long reply: updating a busy mission now takes
+  a few milliseconds instead of more than 40, because the conversation's messages are no longer measured again on
+  every update. The stage journey also redraws only the parts that move while the AI works.
+- Mission Control's message box can now attach files and change the AI settings, with the same paperclip and
+  cog as a conversation's input box. It no longer repeats the selected mission's name, and its scrollbar now
+  matches the others.
+- Mission Control's conversation card now shows, beside the lead's name, the AI model that wrote each reply, since
+  a mission may be answered by a different model from the one set now.
+- The conversation card in Mission Control takes only the room its messages need, up to a set height, and scrolls
+  beyond that with the newest message in view unless you have scrolled up to read an earlier one.
+- The lead's latest message card in Mission Control is always just as tall as the message, growing for a long one
+  and shrinking again for a short one that follows it.
+- The conversation card in Mission Control is no longer folded behind a heading: it is always open, so the
+  conversation with the lead is there to read without a click.
+- The picture of who is working in Mission Control can now be used without a mouse: tab to it and use the arrow
+  keys to move between agents, Home and End to jump to the ends, Enter to open the highlighted agent's
+  conversation and Esc to drop the highlight, with the same summary a hover gives.
+- A mission whose lead's latest turn ended in an error now shows as **Failed**, rather than as answered or
+  completed, and offers **Retry** to send the same request again and **Open the lead's conversation** to see
+  why. **Resume**, and the notice that Humbug was closed, are now kept for missions that really were interrupted.
+- While the mission shown in Mission Control is at **Everything** auto-approve, a red banner under the title
+  says so, stays in view as the page scrolls, and offers **Turn off** to set the mission back to **Off**.
+- A mission in Autonomous mode can now be paused. Whatever is running finishes, then nothing is approved
+  automatically and the lead does not carry on by itself until you click **Continue**. The pause is kept across
+  restarts, and automatic resume leaves a paused mission alone.
+- Approval requests in Mission Control's Decision Inbox now say what they act on (a file, a move, a command or a
+  URL), and a destructive request says whether Humbug can undo it before you approve it. An agent's bubble no
+  longer approves a destructive request in one click: it offers **Review**, which opens the request in the inbox.
+- Mission Control has a **Reduce motion** option for people who find movement on screen uncomfortable or
+  distracting: everything is drawn still and in its final state, with nothing hidden.
+- Screen readers can now follow the picture of who is working in Mission Control: it describes every agent and
+  what it is doing, and announces the highlighted agent as it moves.
+- Mission Control sums each autonomous mission up **At a glance**: what is happening now, what is holding it up,
+  what waits for you and what it last finished. **Hide details** folds the rest of the dashboard away.
+- When you send the lead a message, including a follow-up to a finished mission, a strip at the top of Mission
+  Control names your message and says it is being worked on until the lead replies.
+- Mission Control no longer stalls while a mission is busy: an update now keeps the conversation messages and
+  activity lines already on screen and adds only what is new, instead of rebuilding them all each time.
+- A mission in Mission Control is shown as completed only when every step is done and nothing you sent is still
+  waiting for a reply; until then, a line says which step is done and what comes next. The confetti for a
+  finished mission now plays once, when you watch it finish, and never again for that mission.
+- **Mission accomplished** in Mission Control now means the goal you asked for is met, as the lead reports it,
+  not just that one plan has run out of steps. A lead that finishes part of the work keeps it as a finished
+  phase and is asked to plan what is left.
+- A finished mission you ask for more no longer flashes **Mission accomplished** while the lead works on it: a
+  request being approved automatically, or the moment before the lead is asked to carry on, no longer counts as
+  the mission being idle, and the mission shows **Planning** until the lead has planned the new work. If Humbug
+  closes while the lead is on such a follow-up, the mission now comes back **Interrupted** and can be resumed.
+- When the lead starts planning new work after a finished plan, the Mission Plan now starts again at 0% for the
+  new plan and shows the finished plan under **History**, instead of showing the finished plan at 100% until the
+  new plan arrives.
+- A mission interrupted before its lead had reported a plan is now resumed by carrying on with the request
+  rather than with a next unfinished task, of which there were none.
+- While Mission Control is the current tab, the conversations sidebar now highlights the selected mission's lead
+  conversation, as a conversation tab highlights its own.
+
+Behaviour changes:
+
+- Auto-approve set to **Everything** now approves every request straight away, without the AI reviewer, so a
+  mission runs end to end without stopping. Previously the reviewer still decided, so a request it was unsure
+  about came back to you.
+- The mission lead now plans any big task, even one that changes nothing, such as reviewing a pull request, a
+  branch or several files, investigating a problem or researching a topic in depth. Only a simple question, or a
+  quick explanation or opinion that needs at most a brief look at a file or two, is answered without a plan.
 
 ## v59 (2026-11-07)
 

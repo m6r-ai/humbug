@@ -768,7 +768,7 @@ class MainWindow(QMainWindow):
         tab_manager.register_context_factory("log", _create_log_tab)
         tab_manager.register_context_factory("shell", _create_shell_tab)
         tab_manager.register_context_factory("usage", _create_usage_tab)
-        tab_manager.register_context_factory("mission", _create_mission_tab)
+        tab_manager.register_context_factory("mission", self._create_mission_tab)
 
         # Mission conversations offer to switch between classic and autonomous mode.
         self._mission_mode_menus = MissionModeMenus(self, self._show_mission)
@@ -1453,10 +1453,29 @@ class MainWindow(QMainWindow):
         except UserError as e:
             self._logger.error("Failed to persist theme change: %s", str(e))
 
+    def _create_mission_tab(self, info: ContextInfo, registry: ContextRegistry, parent: QWidget) -> MissionTab:
+        """Create Mission Control, following the mission it shows in the sidebar."""
+        tab = _create_mission_tab(info, registry, parent)
+        tab.lead_conversation_changed.connect(lambda path: self._on_mission_lead_conversation_changed(tab, path))
+        return tab
+
+    def _on_mission_lead_conversation_changed(self, tab: MissionTab, path: str) -> None:
+        """Highlight the selected mission's lead conversation, while Mission Control is the current tab."""
+        if path and self._tab_manager.get_current_tab() is tab:
+            self._sidebar_manager.reveal_and_select_file("conversations", path)
+
     def _on_tab_manager_tab_changed(self) -> None:
         """Handle tab change events."""
         current_tab = self._tab_manager.get_current_tab()
         if current_tab is None:
+            return
+
+        if isinstance(current_tab, MissionTab):
+            # Mission Control has no file of its own; the mission it shows is led by a conversation.
+            lead_path = current_tab.lead_conversation_path()
+            if lead_path:
+                self._sidebar_manager.reveal_and_select_file("conversations", lead_path)
+
             return
 
         path = current_tab.path()

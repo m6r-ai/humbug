@@ -109,6 +109,17 @@ class MissionStore:
         except OSError as e:
             raise MissionError(f"Failed to save mission: {e}") from e
 
+    def _load_preferences(self) -> dict:
+        """Return the saved preferences, or none if they cannot be read."""
+        try:
+            with open(os.path.join(self._missions_dir, _PREFERENCES_FILE), "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+        except (OSError, ValueError):
+            return {}
+
+        return data if isinstance(data, dict) else {}
+
     def load_resume_automatically(self) -> bool:
         """
         Return whether interrupted missions should be resumed when Humbug opens.
@@ -116,14 +127,7 @@ class MissionStore:
         Returns:
             The saved preference, or False if none has been saved
         """
-        try:
-            with open(os.path.join(self._missions_dir, _PREFERENCES_FILE), "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-        except (OSError, ValueError):
-            return False
-
-        return isinstance(data, dict) and data.get("resumeAutomatically") is True
+        return self._load_preferences().get("resumeAutomatically") is True
 
     def save_resume_automatically(self, enabled: bool) -> None:
         """
@@ -135,7 +139,28 @@ class MissionStore:
         Raises:
             MissionError: If the preference cannot be written
         """
-        self._write_json(_PREFERENCES_FILE, {"resumeAutomatically": enabled})
+        self._write_json(_PREFERENCES_FILE, {**self._load_preferences(), "resumeAutomatically": enabled})
+
+    def load_reduce_motion(self) -> bool:
+        """
+        Return whether Mission Control should draw everything still.
+
+        Returns:
+            The saved preference, or False if none has been saved
+        """
+        return self._load_preferences().get("reduceMotion") is True
+
+    def save_reduce_motion(self, reduced: bool) -> None:
+        """
+        Save whether Mission Control should draw everything still.
+
+        Args:
+            reduced: The preference
+
+        Raises:
+            MissionError: If the preference cannot be written
+        """
+        self._write_json(_PREFERENCES_FILE, {**self._load_preferences(), "reduceMotion": reduced})
 
     def delete(self, mission_id: str) -> None:
         """

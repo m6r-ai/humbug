@@ -5,7 +5,7 @@ import math
 import random
 import time
 
-from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QTimer
+from PySide6.QtCore import QEvent, QObject, QPointF, QRect, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import (
     QBrush, QColor, QFont, QFontMetrics, QHideEvent, QLinearGradient, QPainter, QPaintEvent, QPen,
     QRadialGradient, QShowEvent
@@ -14,6 +14,7 @@ from PySide6.QtWidgets import QSizePolicy, QWidget
 
 from desktop.color_role import ColorRole
 from desktop.mission_tab.mission_display import MissionTone
+from desktop.mission_tab.mission_motion import MissionMotion
 from desktop.mission_tab.mission_painted import surface_colors, tone_color
 from desktop.style_manager import StyleManager
 
@@ -108,9 +109,18 @@ class MissionOrb(QWidget):
         return self.sizeHint()
 
     def showEvent(self, event: QShowEvent) -> None:
-        """Animate while shown."""
+        """Animate while shown, unless motion is reduced."""
         super().showEvent(event)
-        self._timer.start()
+        self.apply_motion()
+
+    def apply_motion(self) -> None:
+        """Animate or rest, as the user's choice to reduce motion says."""
+        if MissionMotion().reduced() or not self.isVisible():
+            self._timer.stop()
+            self.update()
+
+        else:
+            self._timer.start()
 
     def hideEvent(self, event: QHideEvent) -> None:
         """Rest while hidden."""
@@ -133,7 +143,7 @@ class MissionOrb(QWidget):
         super().paintEvent(event)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        phase = time.monotonic() - self._start
+        phase = 0.0 if MissionMotion().reduced() else time.monotonic() - self._start
         size = min(self.width(), self.height())
         center = QPointF(self.width() / 2, self.height() / 2 + math.sin(phase * 1.6) * size * 0.015)
         radius = size * 0.24
@@ -223,6 +233,7 @@ class ConfettiOverlay(QWidget):
         self._started = 0.0
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        parent.installEventFilter(self)
         self._timer = QTimer(self)
         self._timer.setInterval(_FRAME_MS)
         self._timer.timeout.connect(self._tick)
@@ -235,6 +246,9 @@ class ConfettiOverlay(QWidget):
         Args:
             origin: Where the confetti comes from, in this widget's coordinates
         """
+        if MissionMotion().reduced():
+            return
+
         colors = [tone_color(tone) for tone in (
             MissionTone.ACCENT, MissionTone.SUCCESS, MissionTone.WARNING, MissionTone.INFO, MissionTone.DANGER
         )]
@@ -250,13 +264,23 @@ class ConfettiOverlay(QWidget):
 
         self._origin = origin
         self._started = time.monotonic()
+        self._cover_parent()
+        self.raise_()
+        self.show()
+        self._timer.start()
+
+    def _cover_parent(self) -> None:
+        """Take the whole of the parent, so confetti can fly across the page rather than be clipped."""
         parent = self.parentWidget()
         if parent is not None:
             self.setGeometry(parent.rect())
 
-        self.raise_()
-        self.show()
-        self._timer.start()
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        """Follow the parent when the page is resized while the confetti is in the air."""
+        if watched is self.parentWidget() and event.type() == QEvent.Type.Resize:
+            self._cover_parent()
+
+        return super().eventFilter(watched, event)
 
     def is_celebrating(self) -> bool:
         """Return whether confetti is still in the air."""
@@ -327,6 +351,8 @@ class MissionJourney(QWidget):
         self._tone = MissionTone.ACCENT
         self._live = False
         self._start = time.monotonic()
+        # Where the spark was last drawn, so that it can be wiped from there when it moves on.
+        self._spark_rect = QRect()
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._timer = QTimer(self)
         self._timer.setInterval(_FRAME_MS)
@@ -372,8 +398,19 @@ class MissionJourney(QWidget):
         """Return whether the fill is still gliding to where the mission is."""
         return abs(self._shown_stage - self._fill_target()) > 0.01
 
+    def apply_motion(self) -> None:
+        """Animate or rest, as the user's choice to reduce motion says."""
+        self._update_timer()
+        self.update()
+
     def _update_timer(self) -> None:
-        """Run the animation only while something moves."""
+        """Run the animation only while something moves, and never while motion is reduced."""
+        if MissionMotion().reduced():
+            # The fill goes straight to where the mission is, and the glow stands still.
+            self._shown_stage = self._fill_target()
+            self._timer.stop()
+            return
+
         if self.isVisible() and (self._live or self._moving()):
             if not self._timer.isActive():
                 self._timer.start()
@@ -385,12 +422,41 @@ class MissionJourney(QWidget):
         """Advance the glide and the glow."""
         if self._moving():
             self._shown_stage += (self._fill_target() - self._shown_stage) * 0.12
+            self._update_timer()
+            self.update()
+            return
 
-        else:
-            self._shown_stage = self._fill_target()
-
+        self._shown_stage = self._fill_target()
         self._update_timer()
-        self.update()
+        # Only the glow round the current stage and the spark on the track move, so only they are drawn
+        # again: redrawing the whole journey many times a second keeps a busy mission's processor busy.
+        count = len(self._labels)
+        if count < 2:
+            return
+
+        bead, xs, y, span = self._layout(count)
+        reach = max(bead * _CURRENT_SCALE * _GLOW_REACH, span / 2)
+        current = xs[max(0, min(count - 1, self._stage))]
+        self.update(QRectF(current - reach, 0, reach * 2, self.height()).toAlignedRect())
+        self.update(self._spark_rect)
+        self.update(self._spark_area(xs, y, span, time.monotonic() - self._start))
+
+    def _spark_x(self, xs: list[float], span: float, phase: float) -> float:
+        """Return where along the filled track the spark is."""
+        fill_to = xs[0] + span * max(0.0, min(len(xs) - 1.0, self._shown_stage))
+        return xs[0] + (fill_to - xs[0]) * ((phase * 0.5) % 1.0)
+
+    def _spark_area(self, xs: list[float], y: float, span: float, phase: float) -> QRect:
+        """Return the area the spark covers."""
+        reach = _scaled(4) * 2.5 + 1
+        return QRectF(self._spark_x(xs, span, phase) - reach, y - reach, reach * 2, reach * 2).toAlignedRect()
+
+    def _layout(self, count: int) -> tuple[float, list[float], float, float]:
+        """Return the bead radius, where each stage sits across, the track's height, and the space between stages."""
+        bead = self._bead()
+        margin = max(bead * _CURRENT_SCALE * _GLOW_REACH, self.width() / count / 2)
+        span = (self.width() - margin * 2) / (count - 1)
+        return bead, [margin + span * index for index in range(count)], self._track_y(), span
 
     def showEvent(self, event: QShowEvent) -> None:
         """Animate while shown."""
@@ -435,12 +501,9 @@ class MissionJourney(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         style = StyleManager()
-        phase = time.monotonic() - self._start
-        bead = self._bead()
-        margin = max(bead * _CURRENT_SCALE * _GLOW_REACH, self.width() / count / 2)
-        y = self._track_y()
-        span = (self.width() - margin * 2) / (count - 1)
-        xs = [margin + span * index for index in range(count)]
+        phase = 0.0 if MissionMotion().reduced() else time.monotonic() - self._start
+        bead, xs, y, span = self._layout(count)
+        dirty = event.region()
         done_color = tone_color(MissionTone.SUCCESS)
         current = tone_color(self._tone)
         inactive = QColor(style.get_color(ColorRole.TEXT_INACTIVE))
@@ -462,7 +525,8 @@ class MissionJourney(QWidget):
 
             if self._live:
                 # A spark travels along the filled track, so the work reads as flowing forward.
-                spark_x = xs[0] + (fill_to - xs[0]) * ((phase * 0.5) % 1.0)
+                spark_x = self._spark_x(xs, span, phase)
+                self._spark_rect = self._spark_area(xs, y, span, phase)
                 spark = QRadialGradient(QPointF(spark_x, y), thickness * 2.5)
                 spark.setColorAt(0.0, QColor(255, 255, 255, 200))
                 spark.setColorAt(1.0, QColor(255, 255, 255, 0))
@@ -474,6 +538,10 @@ class MissionJourney(QWidget):
         metrics = QFontMetrics(font)
         text_color = QColor(style.get_color(ColorRole.TEXT_PRIMARY))
         for index, x in enumerate(xs):
+            if index != self._stage and not dirty.intersects(QRectF(x - span / 2, 0, span, self.height()).toAlignedRect()):
+                # A stage outside what is being redrawn is already on screen as it is.
+                continue
+
             center = QPointF(x, y)
             if index < self._stage:
                 color, glyph = done_color, "✓"

@@ -16,7 +16,9 @@ class MissionStatus(Enum):
     COMPLETED = auto()
     STOPPED = auto()
     INTERRUPTED = auto()
+    PAUSED = auto()
     REPLIED = auto()
+    FAILED = auto()
 
 
 class MissionAgentState(Enum):
@@ -44,10 +46,14 @@ class MissionActivityKind(Enum):
     AUTO_CONTINUED = auto()
     AUTO_PAUSED = auto()
     RESUMED = auto()
+    RETRIED = auto()
+    PAUSED = auto()
+    UNPAUSED = auto()
     TASK_STOPPED = auto()
     MODE_CHANGED = auto()
     AUTO_APPROVED = auto()
     REVERSIBLE_APPROVED = auto()
+    EVERYTHING_APPROVED = auto()
     USER_MESSAGE = auto()
     REVIEW_DEFERRED = auto()
     PLAN_ARCHIVED = auto()
@@ -108,6 +114,7 @@ class MissionDecision:
         reviewing: Whether an AI reviewer is deciding on it now
         review_note: Why the AI reviewer left it for the user, if it did
         reversible: Whether the change is one the file change journal records, so can be undone
+        target: What the request acts on, such as a file, a command or a URL, or "" if it names none
     """
     decision_id: str
     context_id: str
@@ -121,6 +128,7 @@ class MissionDecision:
     reviewing: bool = False
     review_note: str = ""
     reversible: bool = False
+    target: str = ""
 
 
 @dataclass(frozen=True)
@@ -160,10 +168,12 @@ class MissionExchange:
         speaker: Who it comes from
         text: What the user asked or the lead replied, in full, or for a tool, what it was used for
         at: When it was written
+        model: Display name of the AI model that wrote a reply from the lead, or ""
     """
     speaker: MissionSpeaker
     text: str
     at: datetime | None = None
+    model: str = ""
 
 
 @dataclass(frozen=True)
@@ -172,7 +182,7 @@ class MissionSnapshot:
     Everything a front end needs to show one mission.
 
     Attributes:
-        mission: The mission record
+        mission: The mission record, or a copy showing a finished plan as history while the next is planned
         status: Derived overall status
         agents: Conversations taking part, lead first
         decisions: Decisions waiting on this mission's conversations

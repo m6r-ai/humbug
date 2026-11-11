@@ -756,11 +756,67 @@ def get_english_strings() -> LanguageStrings:
         mission_activity_auto_paused="Paused: no step finished after {0} automatic continues",
         mission_status_interrupted="Interrupted",
         mission_status_replied="Answered",
+        mission_status_failed="Failed",
         mission_resume="Resume",
         mission_interrupted_notice="Humbug was closed while this mission was running. Resume to carry on from where it stopped.",
         mission_auto_resume="Auto-resume after restart",
+        mission_milestone_step="Step {0} of {1} done: {2}",
+        mission_milestone_round="Finished: {0}",
+        mission_milestone_next="Next: {0}",
+        mission_milestone_planning="Next: planning what is left of the goal",
+        mission_milestone_follow_up="Next: planning your new request",
+        mission_glance_title="At a glance",
+        mission_glance_now="Now",
+        mission_glance_blocking="Holding it up",
+        mission_glance_approvals="Waiting for you",
+        mission_glance_last_done="Last finished",
+        mission_glance_idle="Nothing running",
+        mission_glance_nothing="Nothing",
+        mission_glance_blocked_decision="Your decision on a request",
+        mission_glance_blocked_paused="Paused by you",
+        mission_glance_blocked_failed="The lead's last reply ended in an error",
+        mission_glance_blocked_interrupted="Humbug closed while it was working",
+        mission_glance_blocked_stopped="Stopped by you",
+        mission_glance_blocked_step="Blocked step: {0}",
+        mission_glance_approvals_count="{0} request(s)",
+        mission_glance_approvals_none="None",
+        mission_glance_last_done_none="Nothing yet",
+        mission_details_show="Show details",
+        mission_details_hide="Hide details",
+        mission_working_on_message="Working on your message: “{0}”",
+        mission_reduce_motion="Reduce motion",
+        mission_reduce_motion_tip=(
+            "Draw Mission Control still: nothing glides, fades, pulses, spins or types itself out, "
+            "and finished missions are not celebrated with confetti"
+        ),
         mission_activity_resumed="Resumed after Humbug was closed",
         mission_error_resume="Could not resume the mission: {0}",
+        mission_decision_target="Acts on: {0}",
+        mission_decision_undoable="Can be undone: Humbug's file change journal records this change.",
+        mission_decision_not_undoable="Cannot be undone by Humbug once approved.",
+        mission_review_request="Review",
+        mission_status_paused="Paused",
+        mission_say_paused="Paused. I'll finish what I'm doing now, then wait for you.",
+        mission_pause="Pause",
+        mission_pause_tip=(
+            "Let what is running now finish, then wait: nothing is approved automatically and "
+            "the lead does not carry on by itself until you continue"
+        ),
+        mission_unpause="Continue",
+        mission_paused_notice=(
+            "This mission is paused. Nothing is approved automatically and the lead won't "
+            "carry on by itself until you press Continue."
+        ),
+        mission_activity_paused="Paused",
+        mission_activity_unpaused="Continued after a pause",
+        mission_everything_banner=(
+            "Everything auto-approve is on for \"{0}\": every tool request, including deleting files and running "
+            "commands, is approved without asking you."
+        ),
+        mission_everything_turn_off="Turn off",
+        mission_retry="Retry",
+        mission_activity_retried="Failed request retried",
+        mission_error_retry="Could not retry the mission: {0}",
         mission_switch_to_autonomous="Switch to Autonomous mode",
         mission_switch_to_classic="Switch to Classic mode",
         mission_mode_autonomous="Autonomous",
@@ -782,17 +838,20 @@ def get_english_strings() -> LanguageStrings:
         mission_auto_approve_safe="Safe actions",
         mission_auto_approve_all="Everything",
         mission_auto_approve_tip=(
-            "File changes the journal records are approved straight away; at Everything, for the rest of each turn. "
-            "Anything else goes to an AI reviewer, which approves it only when it clearly fits the "
-            "objective; whatever it is unsure about still comes to you. Safe actions never includes "
-            "deleting, moving, overwriting, terminal commands or network writes."
+            "At Safe actions, file changes the journal records are approved straight away, and other safe "
+            "requests go to an AI reviewer, which approves them only when they clearly fit the objective; "
+            "whatever it is unsure about still comes to you. Safe actions never includes deleting, moving, "
+            "overwriting, terminal commands or network writes. At Everything, every request is approved "
+            "without asking you."
         ),
         mission_auto_approve_all_title="Approve everything automatically?",
         mission_auto_approve_all_confirm=(
-            "An AI reviewer will approve this mission's requests without asking you, including "
-            "deleting files, running terminal commands and sending data over the network. Requests it "
-            "is unsure about still come to you, and every decision is logged. Turn this on only for "
-            "work you are comfortable not supervising."
+            "For this mission only, every request will be approved without asking you or any reviewer, "
+            "including deleting, moving and overwriting files, running terminal commands (which cannot be "
+            "limited to particular files), delegating to helpers and sending data over the network. "
+            "It lasts while the mission runs in Autonomous mode: choosing another level, switching to "
+            "Classic mode or stopping the mission turns it off. Your confirmation and every approval are "
+            "logged. Turn this on only for work you are comfortable not supervising."
         ),
         mission_decision_reviewing="AI reviewing…",
         mission_decision_review_note="AI reviewer: {0}",
@@ -837,15 +896,17 @@ def get_english_strings() -> LanguageStrings:
         mission_say_helper_waiting="One of my helpers needs your approval.",
         mission_say_replied="I've replied below. Ask me more, or give me something to work on.",
         mission_say_ready="Ready when you are.",
-        mission_say_error="Something went wrong. Open my conversation to see why.",
+        mission_say_error="Something went wrong. Press Retry, or send me a message.",
+        mission_failed_notice=(
+            "My last reply ended in an error. Retry to send the same request again, open my conversation to see "
+            "why, or send me a message."
+        ),
+        mission_show_lead_conversation="Open the lead's conversation",
         mission_say_sleeping="Taking a planned pause of {0}. I'll carry on when it's up…",
         mission_chat_title="Conversation",
         mission_chat_hint="Your messages and the lead's replies, as in a conversation tab",
         mission_chat_you="You",
         mission_chat_lead="Mission lead",
-        mission_chat_show="Show the conversation",
-        mission_chat_hide="Hide the conversation",
-        mission_chat_toggle_tip="Click to show or hide the conversation with the lead",
         mission_results_title="Earlier results",
         mission_results_hint=(
             "Each round that finished before a follow-up is kept here, newest first. "
@@ -879,6 +940,7 @@ def get_english_strings() -> LanguageStrings:
         mission_report_stats="Steps done: {0} of {1}  ·  Agents on the team: {2}",
         mission_follow_up="Ask a follow-up",
         mission_activity_reversible_approved="Approved {0} — recorded in the journal",
+        mission_activity_everything_approved="Approved {0} — auto-approve is set to Everything",
         mission_activity_user_message="You, to {0}: “{1}”",
         mission_say_waiting_helpers="Waiting for {0} to finish and report back…",
         mission_read_more="Read more",
@@ -894,8 +956,8 @@ def get_english_strings() -> LanguageStrings:
             "anything destructive still waits for you."
         ),
         mission_auto_approve_all_note=(
-            "The team works without stopping; only what the AI "
-            "reviewer is unsure about comes to you."
+            "The team works end to end without stopping; "
+            "nothing waits for your approval."
         ),
         mission_scroll_left="Scroll missions left",
         mission_scroll_right="Scroll missions right",

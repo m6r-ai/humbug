@@ -4,7 +4,7 @@ from mission.mission_plan_parser import PLAN_FENCE
 
 
 _PLAN_EXAMPLE = (
-    '{"title": "<short mission title>", "summary": "<one sentence>", "tasks": '
+    '{"title": "<short mission title>", "summary": "<one sentence>", "goal_met": false, "tasks": '
     '[{"id": "1", "title": "<task>", "detail": "<what done looks like>", "status": "pending", '
     '"progress": "<latest note on this task>", "evidence": "<what shows it is done>", '
     '"agent": "<session_id of the delegate working on it, if any>"}]}'
@@ -41,12 +41,16 @@ def build_lead_prompt(objective: str, model_name: str = "") -> str:
 First work out what the user actually wants. Do this for the request below and for every later message from the
 user:
 
-- If it is a question, or asks for an explanation, an opinion or a review, or anything else you can give in a
-  reply, just answer it. Reading files to find the answer is fine. Do not make a plan, do not include a
-  `{PLAN_FENCE}` block and do not delegate: Mission Control shows your answer to the user as it is.
-- If it needs work carried out, such as changing files, running commands, or building or fixing something, or if
-  the user asks for a plan or a mission, run it as a mission as described below.
-- If you cannot tell, answer, and offer to carry out the work if the user wants it.
+- If it is a simple question, or asks for a quick explanation or opinion that you can give in one reply after at
+  most a brief look at a file or two, just answer it. Do not make a plan, do not include a `{PLAN_FENCE}` block
+  and do not delegate: Mission Control shows your answer to the user as it is.
+- If it is a big task, run it as a mission as described below, with a plan, even when nothing will be changed.
+  A big task is anything that takes several steps: for example reviewing a pull request, a branch or several
+  files, investigating a problem, researching a topic in depth, or changing files, running commands, or building
+  or fixing something. A review's plan might be: read the changes, check each area, run the tests, and write up
+  the findings. Also run it as a mission if the user asks for a plan or a mission.
+- If you cannot tell, treat it as a big task when answering would take more than a brief look, and otherwise
+  answer it.
 - If the user asks a question while a mission is under way, answer it in your reply and carry on with the plan.
 
 To run a mission:
@@ -62,7 +66,10 @@ To run a mission:
    Valid task statuses are `pending`, `in_progress`, `completed` and `blocked`. Keep `progress` to one or two
    sentences on what has happened and what is next, fill in `evidence` when a task is completed, and set
    `agent` to the delegate's session_id while a delegate works on the task. Leave a field empty if it does not
-   apply.
+   apply. `goal_met` says whether the user's whole request is achieved: keep it `false` until it is, even when
+   every task in the current plan is done. If the plan is done but the goal is not, report a new plan for the
+   next part of the work and carry on. Set it to `true` only when everything the user asked for is done and
+   checked; Mission Control shows the mission as accomplished only then.
 3. Carry out the tasks. Where tasks are independent you may hand them to delegated AI conversations with the
    delegate tool so they run in parallel. Give each delegate a self-contained brief and a clear definition of done,
    and keep the number of delegates small.
@@ -76,7 +83,8 @@ To run a mission:
    around an approval.
 7. Before marking a task completed, check the result (for example, read back the change or run the relevant
    tests) and say what evidence you have.
-8. When everything is done, give a short summary of what changed and anything the user should follow up.
+8. When everything is done, report the plan with `"goal_met": true` and give a short summary of what changed and
+   anything the user should follow up.
 
 Request:
 

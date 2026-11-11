@@ -194,7 +194,16 @@ class Mission:
     Once the plan is finished, `follow_up` is the user's latest message and
     `report` the lead's report on the finished plan: the lead decides whether
     the message asks for new work, and only a new plan moves the finished one
-    to `history`, taking them with it.
+    to `history`, taking them with it.  `everything_confirmed_at` is when the
+    user confirmed the Everything auto-approve level, the approval in advance that
+    level rests on; it is empty unless the level is Everything.  `paused` is set
+    while the user has paused the mission: nothing is approved for it
+    automatically and its lead is not asked to continue.  `celebrated` is set
+    once the user has been shown the mission's completion, which is celebrated
+    only that once.  `goal_met` is whether the lead's latest plan reports the
+    user's goal achieved; a mission whose lead was asked to report that
+    (`reports_goal`) is complete only once it has, not merely when its plan's
+    tasks are done.
     """
     mission_id: str
     objective: str
@@ -213,6 +222,11 @@ class Mission:
     request: str = ""
     follow_up: str = ""
     report: str = ""
+    everything_confirmed_at: str = ""
+    paused: bool = False
+    celebrated: bool = False
+    reports_goal: bool = False
+    goal_met: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         """Return the mission as a JSON-safe dictionary."""
@@ -235,6 +249,11 @@ class Mission:
             "request": self.request,
             "followUp": self.follow_up,
             "report": self.report,
+            "everythingConfirmedAt": self.everything_confirmed_at,
+            "paused": self.paused,
+            "celebrated": self.celebrated,
+            "reportsGoal": self.reports_goal,
+            "goalMet": self.goal_met,
         }
 
     @classmethod
@@ -257,7 +276,7 @@ class Mission:
             raise ValueError("Mission record is missing its id or lead conversation")
 
         tasks = data.get("tasks", [])
-        return cls(
+        mission = cls(
             mission_id=mission_id,
             objective=str(data.get("objective", "")),
             title=str(data.get("title", "")),
@@ -278,17 +297,37 @@ class Mission:
             request=str(data.get("request", "")),
             follow_up=str(data.get("followUp", "")),
             report=str(data.get("report", "")),
+            everything_confirmed_at=str(data.get("everythingConfirmedAt", "")),
+            paused=bool(data.get("paused", False)),
+            celebrated=bool(data.get("celebrated", False)),
+            reports_goal=bool(data.get("reportsGoal", False)),
+            goal_met=bool(data.get("goalMet", False)),
         )
+        if "celebrated" not in data:
+            # A record from before completions were remembered: one already finished has been seen finished.
+            mission.celebrated = mission.is_complete()
+
+        return mission
 
     def completed_count(self) -> int:
         """Return how many tasks are completed."""
         return sum(1 for task in self.tasks if task.status == MissionTaskStatus.COMPLETED)
 
-    def is_complete(self) -> bool:
+    def plan_finished(self) -> bool:
         """Return True when there is a plan and every task in it is completed or stopped."""
         return bool(self.tasks) and all(
             task.status in (MissionTaskStatus.COMPLETED, MissionTaskStatus.STOPPED) for task in self.tasks
         )
+
+    def is_complete(self) -> bool:
+        """
+        Return True when the mission is done: its plan is finished and, where the lead reports it, the goal is met.
+
+        A lead may finish one plan and still have more to do for the user's goal, so a finished plan
+        alone completes only a mission whose lead was never asked to report the goal, or one the user
+        cut short by stopping a task: asking the lead for more would undo that choice.
+        """
+        return self.plan_finished() and (self.goal_met or not self.reports_goal or bool(self.stopped_tasks))
 
     def progress(self) -> float:
         """

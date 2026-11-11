@@ -22,7 +22,7 @@ from mindspace.mindspace import Mindspace
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mission.mission import AutoApproveLevel, Mission, MissionMode, MissionPhase, MissionTaskStatus
 from mission.mission_audit import MissionConversationAuditor
-from mission.mission_tool_label import tool_call_label
+from mission.mission_tool_label import tool_call_label, tool_call_target
 from mission.mission_error import MissionError
 from mission.mission_plan_parser import parse_mission_plan, strip_mission_plan
 from mission.mission_prompt import build_lead_prompt
@@ -57,6 +57,18 @@ _CONTINUE_MESSAGE = (
     "and mark a task blocked if you truly need a decision or information that only the user can give."
 )
 
+_CONTINUE_TO_GOAL_MESSAGE = (
+    "Every task in your plan is done, but you have not reported the user's goal as met. If the whole request "
+    "is now achieved, check it and report the plan once more with \"goal_met\": true and a short summary. "
+    "Otherwise plan the next part of the work as a new mission-plan block and carry on with it."
+)
+
+_RESUME_WITHOUT_PLAN_MESSAGE = (
+    "Humbug was closed while you were working on the user's latest request, before you had reported a plan for it. "
+    "Review the conversation so far to see what you had done, then carry on with that request. If it is a big "
+    "task, report a mission-plan block first and work through it; if it only needs an answer, give the answer."
+)
+
 _RESUME_MESSAGE = (
     "Humbug was closed while this mission was in progress, so the work stopped part way. Review the "
     "conversation so far and check what was actually completed: an action may not have finished, and a "
@@ -73,6 +85,13 @@ _REVIEW_TEXT_LIMIT = 800
 
 # Notes Mission Control adds to the user's messages start like this, so they can be left out when shown.
 _NOTE_START = "\n\n(Mission Control:"
+
+# What the user grants by confirming the Everything auto-approve level (ADR-0026), recorded with the confirmation.
+_EVERYTHING_AUTHORITY = (
+    "every tool request made while the mission is autonomous, without review, including destructive file "
+    "operations, terminal commands (which cannot be limited to particular files), delegation and network writes; "
+    "revoked by choosing another level, switching the mission to classic mode, or stopping it"
+)
 
 _FOLLOW_UP_NOTE = (
     "(Mission Control: the previous plan is finished. If the message above asks for more work, report a new "
@@ -343,6 +362,7 @@ class MissionService:
         self._continue_tasks: set[asyncio.Task] = set()
         self._interrupted: set[str] = set()
         self._resume_automatically = False
+        self._reduce_motion = False
         self._auditors: dict[str, MissionConversationAuditor] = {}
 
     def mindspace_path(self) -> str:
@@ -357,10 +377,20 @@ class MissionService:
         self._started = True
         for mission in self._store.load_all():
             self._missions[mission.mission_id] = mission
-            if mission.active and not mission.stopped and not mission.is_complete():
+            # A finished mission was still working if it was answering a follow-up, or planning the next
+            # part of a goal its plan did not meet, when Humbug closed.
+            if mission.active and not mission.stopped and (not mission.is_complete() or mission.follow_up):
                 self._interrupted.add(mission.mission_id)
 
+            if mission.auto_approve == AutoApproveLevel.ALL and (
+                not mission.everything_confirmed_at or mission.mode != MissionMode.AUTONOMOUS or mission.stopped
+            ):
+                # Everything rests on a confirmation the user gave for an autonomous mission that
+                # is still going; one that was not saved, or no longer applies, is never assumed.
+                self._revoke_everything(mission, "no saved confirmation applies to it")
+
         self._resume_automatically = self._store.load_resume_automatically()
+        self._reduce_motion = self._store.load_reduce_motion()
 
         self._registry.register_callback(ContextEvent.OPENED, self._on_context_opened)
         self._registry.register_callback(ContextEvent.CLOSED, self._on_context_closed)
@@ -368,8 +398,10 @@ class MissionService:
         self._sync()
 
         if self._resume_automatically:
+            # A paused mission waits for the user, even after Humbug restarts.
             for mission_id in sorted(self._interrupted):
-                self._start_resume(mission_id)
+                if not self._missions[mission_id].paused:
+                    self._start_resume(mission_id)
 
     def stop(self) -> None:
         """Stop observing the mindspace.  Missions on disk are unaffected."""
@@ -466,15 +498,50 @@ class MissionService:
         activity = [entry for entry in reversed(self._activity) if entry.mission_id == mission_id]
         lead_message, lead_message_at = self._latest_lead_message(mission)
         decisions = self.decisions()
+        status = self._status_for(mission, decisions)
         return MissionSnapshot(
-            mission=mission,
-            status=self._status_for(mission, decisions),
+            mission=self._shown_mission(mission, status),
+            status=status,
             agents=agents,
             decisions=[d for d in decisions if d.mission_id == mission_id],
             activity=activity[:_SNAPSHOT_ACTIVITY],
             lead_message=lead_message,
             lead_message_at=lead_message_at,
             conversation=self._conversation(mission),
+        )
+
+    def _shown_mission(self, mission: Mission, status: MissionStatus) -> Mission:
+        """
+        Return a mission as its user should see it.
+
+        Once the lead is planning new work after a finished plan, for a follow-up or for what is left
+        of the goal, the finished plan is shown in history and the plan starts again from nothing.
+        The record keeps the finished plan until the new one arrives, as a follow-up may only be a
+        question, so this is a copy.
+        """
+        if status not in (
+            MissionStatus.PLANNING, MissionStatus.NEEDS_YOU, MissionStatus.PAUSED, MissionStatus.INTERRUPTED
+        ) or not mission.plan_finished() or (mission.is_complete() and not mission.follow_up):
+            return mission
+
+        return replace(
+            mission,
+            tasks=[],
+            stopped_tasks=[],
+            history=[*mission.history, self._finished_phase(mission, mission.report, "")],
+        )
+
+    def _finished_phase(self, mission: Mission, report: str, finished_at: str) -> MissionPhase:
+        """Return a mission's finished plan as a phase of its history."""
+        # Records from before requests were kept only know the objective, which started the first plan.
+        request = mission.request or (mission.objective if not mission.history else "")
+        return MissionPhase(
+            title=mission.title,
+            summary=mission.summary,
+            tasks=list(mission.tasks),
+            finished_at=finished_at,
+            request=request,
+            report=report,
         )
 
     def _conversation(self, mission: Mission) -> list[MissionExchange]:
@@ -507,7 +574,12 @@ class MissionService:
             elif message.source == AIMessageSource.AI and message.completed:
                 text = strip_mission_plan(message.content).strip()
                 if text:
-                    entries.append(MissionExchange(MissionSpeaker.LEAD, text, message.timestamp))
+                    # Each reply names the model that wrote it, which may differ from the one set now.
+                    model = (
+                        AIConversationSettings.get_display_name(message.model, message.provider or "")
+                        if message.model else ""
+                    )
+                    entries.append(MissionExchange(MissionSpeaker.LEAD, text, message.timestamp, model))
 
             elif message.source == AIMessageSource.TOOL_CALL:
                 for tool_call in message.tool_calls or []:
@@ -561,6 +633,19 @@ class MissionService:
         mission = self._missions.get(mission_id)
         return self._status_for(mission) if mission is not None else None
 
+    def lead_conversation_path(self, mission_id: str) -> str:
+        """
+        Return the absolute path of a mission's lead conversation file.
+
+        Args:
+            mission_id: Mission to look up
+
+        Returns:
+            The path, or "" if there is no such mission
+        """
+        mission = self._missions.get(mission_id)
+        return self._mindspace.get_absolute_path(mission.lead_path) if mission is not None else ""
+
     def decisions(self) -> list[MissionDecision]:
         """
         Return every decision waiting for the user in this mindspace, oldest first.
@@ -580,15 +665,25 @@ class MissionService:
 
         return sorted(live, key=lambda d: d.requested_at)
 
-    async def create_mission(self, objective: str) -> Mission:
+    async def create_mission(
+        self,
+        objective: str,
+        auto_approve: AutoApproveLevel = AutoApproveLevel.OFF,
+        attachments: list[tuple[str, str]] | None = None,
+        settings: AIConversationSettings | None = None
+    ) -> Mission:
         """
         Start an autonomous mission: record it, start its lead conversation and brief the lead.
 
         The lead conversation has no tab; the mission is followed in Mission
-        Control until the user switches it to classic mode.
+        Control until the user switches it to classic mode.  The auto-approve
+        level is set before the lead is briefed, so it covers the lead's first request.
 
         Args:
             objective: What the user wants to achieve
+            auto_approve: Which of the mission's requests may be approved without the user
+            attachments: Files for the lead, as (filename, content) pairs
+            settings: AI settings for the lead, instead of the mindspace's
 
         Returns:
             The new mission
@@ -600,17 +695,9 @@ class MissionService:
         if not objective:
             raise MissionError("Describe what you want to achieve")
 
-        settings = self._mindspace.settings()
-        if settings is None:
+        conversation_settings = settings or self.default_settings()
+        if conversation_settings is None:
             raise MissionError("No mindspace is open")
-
-        conversation_settings = AIConversationSettings(
-            model=settings.model,
-            provider=settings.provider,
-            temperature=settings.temperature,
-            reasoning=settings.reasoning,
-            reasoning_effort=settings.reasoning_effort,
-        )
 
         try:
             conversations_rel = self._mindspace.conversations_rel_path()
@@ -635,6 +722,10 @@ class MissionService:
             created_at=timestamp.isoformat(),
             active=True,
             request=objective,
+            auto_approve=auto_approve,
+            everything_confirmed_at=timestamp.isoformat() if auto_approve == AutoApproveLevel.ALL else "",
+            # The lead's brief asks it to report when the goal is met, so that, not a finished plan, completes it.
+            reports_goal=True,
         )
         self._store.save(mission)
         self._missions[mission.mission_id] = mission
@@ -645,18 +736,30 @@ class MissionService:
         )
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"Human started mission '{mission.title}'\nobjective: '{objective[:200]}'",
+            f"Human started mission '{mission.title}'\nobjective: '{objective[:200]}'\n"
+            f"auto-approve: {auto_approve.value}",
             context=self._mindspace.conversation_log_context(conversation)
         )
+        if auto_approve == AutoApproveLevel.ALL:
+            self._log_everything_confirmed(mission)
 
         model_name = (
-            AIConversationSettings.get_display_name(settings.model, settings.provider) if settings.model else ""
+            AIConversationSettings.get_display_name(conversation_settings.model, conversation_settings.provider)
+            if conversation_settings.model else ""
         )
-        await transcript.submit_message(MISSION_REQUESTER, build_lead_prompt(objective, model_name))
+        await transcript.submit_message(
+            MISSION_REQUESTER, build_lead_prompt(objective, model_name), self._add_attachments(transcript, attachments)
+        )
         self._notify()
         return mission
 
-    async def send_guidance(self, mission_id: str, text: str, requester_id: str = "") -> None:
+    async def send_guidance(
+        self,
+        mission_id: str,
+        text: str,
+        requester_id: str = "",
+        attachments: list[tuple[str, str]] | None = None
+    ) -> None:
         """
         Send the user's message to a mission's lead conversation.
 
@@ -668,6 +771,7 @@ class MissionService:
             text: The user's message
             requester_id: Context sending the guidance, used to place the lead
                 conversation if it has to be opened
+            attachments: Files sent with the message, as (filename, content) pairs
 
         Raises:
             MissionError: If the mission or its lead conversation is unavailable
@@ -689,7 +793,7 @@ class MissionService:
 
         mission.stopped = False
         self._set_active(mission, True)
-        if mission.is_complete():
+        if mission.plan_finished():
             # The lead decides whether this asks for new work or is only a question.  The finished
             # plan stays current until a new plan arrives; the report on it is kept for then.
             if not mission.follow_up:
@@ -709,7 +813,55 @@ class MissionService:
             f"Human sent guidance to mission '{mission.title}'",
             context=self._mindspace.conversation_log_context(tracked.conversation)
         )
-        await tracked.transcript.submit_message(None, text)
+        await tracked.transcript.submit_message(None, text, self._add_attachments(tracked.transcript, attachments))
+        self._notify()
+
+    def _add_attachments(
+        self,
+        transcript: AITranscriptConversation,
+        attachments: list[tuple[str, str]] | None
+    ) -> list[str] | None:
+        """Store files in a conversation, as a conversation tab does, returning their IDs for the message."""
+        if not attachments:
+            return None
+
+        history = transcript.get_conversation_history()
+        return [history.add_attachment(content, filename, "file") for filename, content in attachments]
+
+    def default_settings(self) -> AIConversationSettings | None:
+        """Return the AI settings a new mission's lead starts with, or None if no mindspace is open."""
+        settings = self._mindspace.settings()
+        if settings is None:
+            return None
+
+        return AIConversationSettings(
+            model=settings.model,
+            provider=settings.provider,
+            temperature=settings.temperature,
+            reasoning=settings.reasoning,
+            reasoning_effort=settings.reasoning_effort,
+        )
+
+    def lead_settings(self, mission_id: str) -> AIConversationSettings | None:
+        """Return the AI settings of a mission's lead, or None if its lead is unavailable."""
+        mission = self._missions.get(mission_id)
+        tracked = self._lead_for(mission) if mission is not None else None
+        return tracked.conversation.conversation_settings() if tracked is not None else None
+
+    def update_lead_settings(self, mission_id: str, settings: AIConversationSettings) -> None:
+        """
+        Change the AI settings of a mission's lead, as a conversation tab's settings do.
+
+        Args:
+            mission_id: Mission whose lead to change
+            settings: The new settings
+        """
+        mission = self._missions.get(mission_id)
+        tracked = self._lead_for(mission) if mission is not None else None
+        if tracked is None:
+            return
+
+        tracked.transcript.update_conversation_settings(settings)
         self._notify()
 
     def stop_mission(self, mission_id: str) -> None:
@@ -727,6 +879,11 @@ class MissionService:
             return
 
         mission.stopped = True
+        if mission.paused:
+            # Stopping ends the pause too: a stopped mission is started again by sending it a message.
+            mission.paused = False
+            self._save(mission)
+
         self._set_active(mission, False)
         self._interrupted.discard(mission_id)
         self._cancel_continue(mission_id)
@@ -739,6 +896,7 @@ class MissionService:
 
         self._record(MissionActivityKind.MISSION_STOPPED, mission.title, "", mission_id)
         self._mindspace.add_interaction(MindspaceLogLevel.INFO, f"Human stopped mission '{mission.title}'")
+        self._revoke_everything(mission, "the mission was stopped")
         self._notify()
 
     def remove_mission(self, mission_id: str) -> None:
@@ -1061,6 +1219,24 @@ class MissionService:
         self._resume_automatically = enabled
         self._notify()
 
+    def reduce_motion(self) -> bool:
+        """Return whether Mission Control should draw everything still."""
+        return self._reduce_motion
+
+    def set_reduce_motion(self, reduced: bool) -> None:
+        """
+        Choose whether Mission Control draws everything still, for users who find motion uncomfortable.
+
+        Args:
+            reduced: True to reduce motion
+
+        Raises:
+            MissionError: If the preference cannot be saved
+        """
+        self._store.save_reduce_motion(reduced)
+        self._reduce_motion = reduced
+        self._notify()
+
     def is_interrupted(self, mission_id: str) -> bool:
         """
         Return True if a mission was working when Humbug last closed and has not been resumed.
@@ -1108,7 +1284,128 @@ class MissionService:
             f"Mission '{mission.title}' resumed after Humbug was closed",
             context=self._mindspace.conversation_log_context(tracked.conversation)
         )
-        await tracked.transcript.submit_message(MISSION_REQUESTER, _RESUME_MESSAGE)
+        # Without unfinished work in a plan there is no next task to continue with: the lead carries on
+        # with the user's latest request instead, such as a follow-up to a finished plan.
+        message = (
+            _RESUME_MESSAGE if mission.tasks and not mission.plan_finished() and not mission.follow_up
+            else _RESUME_WITHOUT_PLAN_MESSAGE
+        )
+        await tracked.transcript.submit_message(MISSION_REQUESTER, message)
+        self._notify()
+
+    def mark_celebrated(self, mission_id: str) -> None:
+        """
+        Record that the user has been shown a mission's completion, so it is celebrated only once.
+
+        Args:
+            mission_id: Mission whose completion was shown
+        """
+        mission = self._missions.get(mission_id)
+        if mission is None or mission.celebrated:
+            return
+
+        mission.celebrated = True
+        self._save(mission)
+
+    def pause_mission(self, mission_id: str) -> None:
+        """
+        Pause a mission so that nothing more happens in it without the user.
+
+        Whatever the mission's conversations are doing now is left to finish, but no
+        request is approved automatically, whatever the auto-approve level, and the lead
+        is not asked to continue.  Standing approvals for file changes are withdrawn, so
+        the next change comes to the user too.
+
+        Args:
+            mission_id: Mission to pause
+
+        Raises:
+            MissionError: If there is no such mission
+        """
+        mission = self._missions.get(mission_id)
+        if mission is None:
+            raise MissionError("There is no such mission")
+
+        if mission.paused:
+            return
+
+        mission.paused = True
+        self._cancel_continue(mission_id)
+        self._withdraw_standing_approvals(mission_id)
+        self._save(mission)
+        self._record(MissionActivityKind.PAUSED, mission.title, "", mission_id)
+        self._mindspace.add_interaction(MindspaceLogLevel.INFO, f"Human paused mission '{mission.title}'")
+        self._notify()
+
+    def unpause_mission(self, mission_id: str) -> None:
+        """
+        Let a paused mission carry on.
+
+        Requests that waited during the pause are considered again under the mission's
+        auto-approve level, and the lead is asked to continue if it would have been.
+
+        Args:
+            mission_id: Mission to carry on with
+
+        Raises:
+            MissionError: If there is no such mission
+        """
+        mission = self._missions.get(mission_id)
+        if mission is None:
+            raise MissionError("There is no such mission")
+
+        if not mission.paused:
+            return
+
+        mission.paused = False
+        self._save(mission)
+        self._record(MissionActivityKind.UNPAUSED, mission.title, "", mission_id)
+        self._mindspace.add_interaction(MindspaceLogLevel.INFO, f"Human continued paused mission '{mission.title}'")
+
+        # The user has stepped in, so automatic continuing starts afresh.
+        self._continues_without_progress.pop(mission_id, None)
+        for context_id, pending in list(self._decisions.items()):
+            if pending.decision.mission_id == mission_id:
+                self._consider_review(context_id)
+
+        self._consider_continuing(mission)
+        if mission_id in self._scheduled_continues:
+            self._set_active(mission, True)
+
+        self._notify()
+
+    async def retry_mission(self, mission_id: str) -> None:
+        """
+        Send a failed mission's last request to its lead again.
+
+        The error and any partial reply are removed from the lead's conversation, which
+        then carries on from the message or tool result it was answering.
+
+        Args:
+            mission_id: Mission to retry
+
+        Raises:
+            MissionError: If the mission has not failed or its last request cannot be retried
+        """
+        mission = self._missions.get(mission_id)
+        if mission is None or self._status_for(mission) != MissionStatus.FAILED:
+            raise MissionError("This mission has not failed")
+
+        tracked = self._lead_for(mission)
+        if tracked is None:
+            raise MissionError("The mission's lead conversation could not be opened")
+
+        if not await tracked.transcript.retry_last_request():
+            raise MissionError("The lead's last request cannot be retried; send it a message instead")
+
+        self._continues_without_progress.pop(mission_id, None)
+        self._set_active(mission, True)
+        self._record(MissionActivityKind.RETRIED, mission.title, "", mission_id)
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"Human retried the failed request of mission '{mission.title}'",
+            context=self._mindspace.conversation_log_context(tracked.conversation)
+        )
         self._notify()
 
     def _start_resume(self, mission_id: str) -> None:
@@ -1177,7 +1474,7 @@ class MissionService:
         if not self._started or mission.stopped or not mission.tasks or mission.is_complete():
             return False
 
-        if mission.mission_id in self._interrupted or mission.mode == MissionMode.CLASSIC:
+        if mission.mission_id in self._interrupted or mission.mode == MissionMode.CLASSIC or mission.paused:
             return False
 
         if any(task.status == MissionTaskStatus.BLOCKED for task in mission.tasks):
@@ -1252,7 +1549,9 @@ class MissionService:
             f"Mission Control asked the lead of mission '{mission.title}' to continue",
             context=self._mindspace.conversation_log_context(lead.conversation)
         )
-        await lead.transcript.submit_message(MISSION_REQUESTER, _CONTINUE_MESSAGE)
+        # A finished plan whose goal is not yet met needs its next part planned, not its next task done.
+        message = _CONTINUE_TO_GOAL_MESSAGE if mission.plan_finished() else _CONTINUE_MESSAGE
+        await lead.transcript.submit_message(MISSION_REQUESTER, message)
         self._notify()
 
     def handle_tool_used(self, tracked: _TrackedConversation, tool_name: str) -> None:
@@ -1363,17 +1662,21 @@ class MissionService:
             return
 
         mission.auto_approve = level
-        if level != AutoApproveLevel.ALL:
+        if level == AutoApproveLevel.ALL:
+            mission.everything_confirmed_at = datetime.now(timezone.utc).isoformat()
+
+        else:
+            mission.everything_confirmed_at = ""
             # The standing approvals were granted under Everything, which the user has withdrawn.
-            for context_id, member_mission in self._members.items():
-                tracked = self._tracked.get(context_id)
-                if member_mission == mission_id and tracked is not None:
-                    tracked.transcript.set_auto_approve_file_changes(False)
+            self._withdraw_standing_approvals(mission_id)
 
         self._save(mission)
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO, f"Human set auto-approve for mission '{mission.title}' to {level.value}"
         )
+        if level == AutoApproveLevel.ALL:
+            self._log_everything_confirmed(mission)
+
         for context_id, pending in list(self._decisions.items()):
             if pending.decision.mission_id == mission_id and not pending.reviewing:
                 # A new level is a new instruction, so requests already left for the user are reconsidered.
@@ -1381,6 +1684,42 @@ class MissionService:
                 self._consider_review(context_id)
 
         self._notify()
+
+    def _withdraw_standing_approvals(self, mission_id: str) -> None:
+        """Turn off the standing approval for file changes in each of a mission's conversations."""
+        for context_id, member_mission in self._members.items():
+            tracked = self._tracked.get(context_id)
+            if member_mission == mission_id and tracked is not None:
+                tracked.transcript.set_auto_approve_file_changes(False)
+
+    def _log_everything_confirmed(self, mission: Mission) -> None:
+        """Record the user's confirmation of the Everything level: the approval in advance it rests on."""
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"Human confirmed Everything auto-approve for mission '{mission.title}'\n"
+            f"mission: {mission.mission_id}\n"
+            f"confirmed at: {mission.everything_confirmed_at}\n"
+            f"authority: {_EVERYTHING_AUTHORITY}"
+        )
+
+    def _revoke_everything(self, mission: Mission, reason: str) -> None:
+        """
+        Take a mission off the Everything level, back to Off, and say why.
+
+        Everything is the user's approval in advance for an autonomous mission that is
+        going, so it ends when the mission leaves autonomous mode or is stopped (ADR-0026).
+        """
+        if mission.auto_approve != AutoApproveLevel.ALL:
+            return
+
+        mission.auto_approve = AutoApproveLevel.OFF
+        mission.everything_confirmed_at = ""
+        self._withdraw_standing_approvals(mission.mission_id)
+        self._save(mission)
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"Everything auto-approve for mission '{mission.title}' was revoked, as {reason}; auto-approve is now off"
+        )
 
     def _user_instructions(self, mission: Mission) -> list[str]:
         """Return the most recent messages the user typed to a mission's lead, oldest first."""
@@ -1403,7 +1742,7 @@ class MissionService:
             return
 
         mission = self._missions.get(pending.decision.mission_id or "")
-        if mission is None or mission.mode != MissionMode.AUTONOMOUS:
+        if mission is None or mission.mode != MissionMode.AUTONOMOUS or mission.paused:
             return
 
         if mission.auto_approve == AutoApproveLevel.OFF:
@@ -1414,6 +1753,12 @@ class MissionService:
             # standing approval rests on, so it is approved rather than reviewed.
             pending.reviewing = True
             self._run_task(self._approve_reversible(mission, pending), mission.mission_id)
+            return
+
+        if mission.auto_approve == AutoApproveLevel.ALL:
+            # The user chose to let this mission run end to end, so nothing waits for them.
+            pending.reviewing = True
+            self._run_task(self._approve_everything(mission, pending), mission.mission_id)
             return
 
         if mission.auto_approve == AutoApproveLevel.SAFE and pending.decision.destructive:
@@ -1431,8 +1776,11 @@ class MissionService:
         comes back here, where the mission's auto-approve level is checked again.
         """
         decision = pending.decision
-        if mission.mode != MissionMode.AUTONOMOUS or not _allows(mission.auto_approve, decision.destructive):
-            # The user changed the level or the mode since this was scheduled.
+        if (
+            mission.mode != MissionMode.AUTONOMOUS or mission.paused
+            or not _allows(mission.auto_approve, decision.destructive)
+        ):
+            # The user changed the level or the mode, or paused the mission, since this was scheduled.
             pending.reviewing = False
             self._notify()
             return
@@ -1457,6 +1805,33 @@ class MissionService:
         )
         self._record(
             MissionActivityKind.REVERSIBLE_APPROVED, self._title_for(tracked.context_id), decision.tool_name,
+            mission.mission_id, more=decision.reason
+        )
+        await tracked.transcript.approve_pending_tool_calls()
+        self._notify()
+
+    async def _approve_everything(self, mission: Mission, pending: _PendingDecision) -> None:
+        """Approve a request without a review, because the mission's auto-approve level is Everything."""
+        decision = pending.decision
+        if mission.mode != MissionMode.AUTONOMOUS or mission.paused or mission.auto_approve != AutoApproveLevel.ALL:
+            # The user changed the level or the mode, or paused the mission, since this was scheduled.
+            pending.reviewing = False
+            self._notify()
+            self._consider_review(decision.context_id)
+            return
+
+        found = self._take_decision(decision.decision_id)
+        if found is None:
+            return
+
+        tracked, _ = found
+        self._log_decision(
+            tracked,
+            f"Mission '{mission.title}' auto-approve is set to Everything, so approved: {decision.tool_name}\n"
+            f"standing approval: Everything confirmed at {mission.everything_confirmed_at}"
+        )
+        self._record(
+            MissionActivityKind.EVERYTHING_APPROVED, self._title_for(tracked.context_id), decision.tool_name,
             mission.mission_id, more=decision.reason
         )
         await tracked.transcript.approve_pending_tool_calls()
@@ -1503,6 +1878,12 @@ class MissionService:
             verdict = ReviewVerdict(False, "The review could not be completed")
 
         if self._decisions.get(context_id) is not pending:
+            return
+
+        if mission.paused:
+            # Paused while the reviewer was thinking: the request waits, and is reviewed again on continuing.
+            pending.reviewing = False
+            self._notify()
             return
 
         still_allowed = mission.auto_approve == AutoApproveLevel.ALL or (
@@ -1559,6 +1940,7 @@ class MissionService:
             destructive=destructive,
             requested_at=datetime.now(timezone.utc),
             reversible=kind == AIToolApprovalKind.MINDSPACE_FILE_CHANGE,
+            target=tool_call_target(tool_call),
         )
         self._decisions[tracked.context_id] = _PendingDecision(
             decision=decision,
@@ -1724,8 +2106,9 @@ class MissionService:
             and task.task_id not in mission.stopped_tasks
             for task in plan.tasks
         )
-        if mission.is_complete() and starts_new_work:
-            # New unfinished work after the plan was done: the finished plan becomes history, with
+        if mission.plan_finished() and starts_new_work:
+            # New unfinished work after the plan was done, for a follow-up or the next part of the
+            # same goal: the finished plan becomes history, with
             # the lead's report on it.  If the user followed up, that report was kept when they did and
             # their message is what the new plan answers; otherwise the lead started the work itself
             # and its report is the message before the new plan.
@@ -1743,10 +2126,14 @@ class MissionService:
         # A name the user chose is kept; the lead's title only names missions the user has not renamed.
         title = mission.title if mission.title_locked else (plan.title or mission.title)
         summary = plan.summary or mission.summary
-        if new_tasks == old_tasks and title == mission.title and summary == mission.summary:
+        if (
+            new_tasks == old_tasks and title == mission.title and summary == mission.summary
+            and plan.goal_met == mission.goal_met
+        ):
             return
 
         mission.tasks = plan.tasks
+        mission.goal_met = plan.goal_met
         mission.title = title[:_MAX_TITLE_LENGTH * 2]
         mission.summary = summary
         self._save(mission)
@@ -1764,16 +2151,7 @@ class MissionService:
         if not mission.tasks:
             return
 
-        # Records from before requests were kept only know the objective, which started the first plan.
-        request = mission.request or (mission.objective if not mission.history else "")
-        mission.history.append(MissionPhase(
-            title=mission.title,
-            summary=mission.summary,
-            tasks=list(mission.tasks),
-            finished_at=datetime.now(timezone.utc).isoformat(),
-            request=request,
-            report=report,
-        ))
+        mission.history.append(self._finished_phase(mission, report, datetime.now(timezone.utc).isoformat()))
         mission.tasks = []
         mission.stopped_tasks = []
         mission.follow_up = ""
@@ -1968,6 +2346,8 @@ class MissionService:
             return None
 
         self._cancel_continue(mission_id)
+        # Revoked before the conversation goes to its tab, so no standing approval goes with it.
+        self._revoke_everything(mission, "the mission was switched to classic mode")
         tracked = self._detach_headless(mission_id, close_transcript=False)
         was_autonomous = mission.mode == MissionMode.AUTONOMOUS
         mission.mode = MissionMode.CLASSIC
@@ -2154,13 +2534,30 @@ class MissionService:
         if any(d.mission_id == mission.mission_id and not d.reviewing for d in live):
             return MissionStatus.NEEDS_YOU
 
-        busy = any(
-            tracked.state in (MissionAgentState.THINKING, MissionAgentState.WORKING)
+        if mission.paused and mission.mode == MissionMode.AUTONOMOUS:
+            return MissionStatus.PAUSED
+
+        # A request being reviewed or approved automatically leaves its conversation waiting for
+        # approval, and a continue about to be sent leaves the lead idle for a moment: the mission is
+        # still working through both, so neither may make it look finished or waiting for the user.
+        busy = mission.mission_id in self._scheduled_continues or any(
+            tracked.current_state() in (
+                MissionAgentState.THINKING, MissionAgentState.WORKING, MissionAgentState.WAITING_FOR_APPROVAL
+            )
             for tracked in self._tracked.values()
             if self._members.get(tracked.context_id) == mission.mission_id
         )
         if busy:
-            return MissionStatus.RUNNING if mission.tasks else MissionStatus.PLANNING
+            return self._working_status(mission)
+
+        # The lead's latest turn failing matters more than anything it finished before.
+        if mission.mode == MissionMode.AUTONOMOUS and self._lead_failed(mission):
+            return MissionStatus.FAILED
+
+        # A message the user sent is being worked on, even before the lead has started its reply, so
+        # a finished plan does not make the mission look done while it is still answering the user.
+        if mission.mode == MissionMode.AUTONOMOUS and self._awaiting_reply(mission):
+            return self._working_status(mission)
 
         if mission.is_complete():
             return MissionStatus.COMPLETED
@@ -2170,6 +2567,54 @@ class MissionService:
             return MissionStatus.REPLIED
 
         return MissionStatus.IDLE
+
+    def _working_status(self, mission: Mission) -> MissionStatus:
+        """
+        Return the status of a mission that is working: running its plan, or planning.
+
+        Until the lead has unfinished work in a plan it is planning: with no plan yet, while it works
+        out a follow-up sent after its plan was finished, or while it plans the next part of a goal
+        its finished plan did not meet.  Only the plan that completes the mission runs to its end.
+        """
+        if not mission.tasks or mission.follow_up or (mission.plan_finished() and not mission.is_complete()):
+            return MissionStatus.PLANNING
+
+        return MissionStatus.RUNNING
+
+    def _awaiting_reply(self, mission: Mission) -> bool:
+        """Return True if the user's latest message to the lead has had no reply from it yet."""
+        tracked = self._lead_for(mission)
+        if tracked is None:
+            return False
+
+        for message in reversed(tracked.transcript.get_conversation_history().get_messages()):
+            if message.source == AIMessageSource.AI and message.completed:
+                return False
+
+            if (
+                message.source == AIMessageSource.USER and message.user_name != MISSION_REQUESTER
+                and not message.tool_results and message.content.strip()
+            ):
+                return True
+
+        return False
+
+    def _lead_failed(self, mission: Mission) -> bool:
+        """
+        Return True if the lead's latest turn ended in an error it could not recover from.
+
+        The error the conversation records is checked as well as the lead's state, so a
+        failure is still known after Humbug restarts.
+        """
+        tracked = self._lead_for(mission)
+        if tracked is None:
+            return False
+
+        if tracked.current_state() == MissionAgentState.ERROR:
+            return True
+
+        messages = tracked.transcript.get_conversation_history().get_messages()
+        return bool(messages) and messages[-1].source == AIMessageSource.SYSTEM and bool(messages[-1].error)
 
     def _record(
         self, kind: MissionActivityKind, subject: str, detail: str, mission_id: str | None, more: str = ""

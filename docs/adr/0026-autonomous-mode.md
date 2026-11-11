@@ -88,21 +88,24 @@ Most of the execution machinery is already in place:
 - Safe parallel execution within enforced limits.
 - One place to see and answer every pending decision.
 - Pause, resume, cancel and take over at any time.
-- No reduction of any existing security guarantee.
+- No reduction of any existing security guarantee, except for the explicit,
+  user-confirmed pre-authorisation decided below for a mission set to
+  **Everything**.
 
 ### Non-goals
 
 - A planning or scheduling engine that decides or dispatches work without a
   conversation.
 - Missions that span mindspaces.
-- Approving state-changing actions without a human. That needs a separate decision;
-  see "Autonomy levels".
+- Silent or default approval of state-changing actions. The only pre-authorisation
+  in scope is the explicit **Everything** choice described below.
 - Remote or mobile access (ADR-0018).
 - Any change to the transcript format.
 
 ### Decision drivers
 
-1. Preserve ADR-0001, ADR-0006 and ADR-0007, rather than working around them.
+1. Preserve ADR-0001 and ADR-0006, and amend ADR-0007 only as explicitly stated
+   for a user-confirmed Everything mission.
 2. Keep one source of truth for execution: transcripts and the conversation graph.
 3. Behaviour lives in Qt-free backend modules; the desktop only renders and
    triggers.
@@ -125,18 +128,61 @@ only what a conversation cannot do for itself.
   plans the work, records the plan, and runs the tasks by delegating to child
   conversations with the existing delegate tool. Independent tasks run in parallel
   as they already do today.
+- **The goal, not the plan, completes a mission.** The lead may plan the work in
+  parts, so finishing every task of a plan does not mean the user's request is
+  done. The lead reports `goal_met` with its plan and sets it only when the whole
+  request is achieved and checked; until then a finished plan is kept as an
+  earlier phase, Mission Control asks the lead to plan what is left, and the
+  mission is not shown as accomplished. A plan the user cut short by stopping a
+  task completes the mission, since asking for more would undo that choice.
+  Missions started before the lead was asked to report the goal complete when
+  their plan does, as they always have.
 - **Only work becomes a mission.** The lead first decides, for every message the
-  user sends, whether it asks for an answer or for work. A question is answered in
-  a reply with no plan and no delegates, and the mission shows it as answered;
-  Mission Control does not ask the lead to continue while there is no plan. A
+  user sends, whether it asks for an answer or for work. A simple question is
+  answered in a reply with no plan and no delegates, and the mission shows it as
+  answered; any big task, such as a review of a pull request, is planned even when
+  it changes nothing. A lead whose latest turn failed shows the mission as failed,
+  and the user can retry that turn, which sends the same request again as a
+  conversation's own Retry does; resuming is only for a mission Humbug's closing
+  interrupted. Mission Control does not ask the lead to continue while there is no plan. A
   follow-up on a finished plan is handed to the lead the same way: the finished
   plan moves to history only when the lead reports a new plan, so a question
   leaves it, and its report, as they were. The decision is the AI's, made inside
   the conversation; Humbug only reacts to whether a plan was reported.
+- **Everything means end to end.** A mission's auto-approve level is the user's
+  choice of how much to supervise. At Safe actions an AI reviewer decides the
+  requests in scope and leaves what it doubts for the user. At Everything, which
+  the user must confirm, every request is approved straight away with no review,
+  so the mission never stops for an approval; each approval is still logged and
+  shown in the feed. A reviewer that could still send requests back would make
+  Everything only a stronger Safe actions, and not the hands-off mode the user
+  chose.
+- **Everything is an explicit policy exception.** Selecting it is a human approval
+  in advance for every tool request made while that mission remains Autonomous.
+  The confirmation must name its scope (the mission), its authority (including
+  destructive file operations, terminal commands, delegation and network writes),
+  and the way to revoke it (switch to Off, switch to Classic, stop or cancel the
+  mission). The choice, confirmation and every resulting approval are persisted
+  and audited. It is never the default, cannot be selected by an AI tool, and is
+  revoked as soon as the mission leaves Autonomous mode or is stopped.
+- **Pause holds automation, not work.** The user can pause an autonomous
+  mission. Whatever its conversations are doing is left to finish, as cancelling
+  mid-tool-call could leave work half done, but while it is paused nothing is
+  approved automatically, at any level, the conversations' standing approvals
+  are withdrawn, and the lead is not asked to continue. The pause is saved with
+  the mission, so a restart does not lift it and automatic resume skips it.
+  Continuing reconsiders waiting requests under the mission's level and asks the
+  lead to carry on if it would have been. Stopping ends a pause. Pause is the
+  reversible way to stop automatic progress while the user inspects the work;
+  Stop cancels it.
 - **Humbug's backend adds** the following:
   - **Limits**, enforced in the delegate path: depth, children per task, total
     tasks, concurrent turns, and a token budget.
   - **An approval hub** that answers existing approvals from a central inbox.
+    Each request names what it acts on, and a destructive one says whether it
+    can be undone (only changes the file change journal records can be) before it
+    is approved. A destructive request is approved only there, never from an
+    agent's card, where that is not shown.
   - **Stopping and closing children.** Cancelling cascades to children, and
     children's contexts are always closed.
   - **Detection of interrupted missions** after a restart.
@@ -184,7 +230,7 @@ keep behaviour the same, and Classic benefits from them too:
 |---|---|---|
 | Assist | Missions organise and track work; every approval behaves exactly as in Classic | Decided |
 | Supervised | As Assist, with approvals also collected in the inbox and notified | Decided |
-| Bounded Autopilot | Pre-authorisation at mission start, for a finite and displayed set of non-destructive operation classes | **Not decided here.** It replaces approval before each action with approval in advance, which changes ADR-0007. It requires a separate ADR before implementation. |
+| Everything | A user-confirmed, mission-scoped standing approval for every tool request while the mission remains Autonomous | Decided by this ADR; it is the limited exception to ADR-0007 described below. |
 
 ### Approvals: one mechanism, two surfaces
 
@@ -192,20 +238,25 @@ keep behaviour the same, and Classic benefits from them too:
   conversation in the mindspace.
 - It resolves approvals only through the existing approve and reject methods.
 - The conversation tab and the inbox show the same pending request. Whichever
-  answers first wins, and the other surface clears.
+  answers first wins, and the other surface clears. For an Everything mission,
+  the approval hub resolves the request under the recorded standing approval and
+  records that fact instead of presenting a decision.
 - An inbox decision is bound to the conversation and the tool-call message. The hub
   refuses to resolve a request that is no longer pending.
 - No AI tool can reach the hub.
 
 ### Security invariants
 
-1. **Never more than Classic.** The effective authority of an autonomous action is
-   at most what the same action has in Classic Mode. Mission policy can only narrow
-   it. No mechanism in this ADR turns a deny into an allow.
-2. **One approval path.** Every state-changing action is approved through the
-   existing primitive, by a human, at the time it happens.
-3. **Destructive operations always need a fresh human decision,** at every
-   autonomy level.
+1. **No implicit authority.** Outside Everything, the effective authority of an
+   autonomous action is at most what the same action has in Classic Mode. Mission
+   policy can only narrow it. Everything is the sole exception: the user's
+   recorded mission-level confirmation is the approval for an action in scope.
+2. **One approval primitive.** Every state-changing action reaches the existing
+   approval primitive. It is resolved by a human at the time it happens unless a
+   currently valid Everything confirmation covers that mission and action.
+3. **Destructive operations need a fresh human decision** at Assist and
+   Supervised. Under Everything they are covered only by the explicit confirmation
+   that names destructive operations as part of its authority.
 4. **Children cannot gain authority.** A child's tool set is a subset of its
    parent's and of the mission policy's. Depth, child counts and the total task
    count are bounded. The ADR-0011 rule for resuming a session is unchanged.
@@ -217,8 +268,9 @@ keep behaviour the same, and Classic benefits from them too:
    `resolve_tool_path`.
 8. **Parallel writes are scoped.** Each running task holds a write-scope lease that
    does not overlap another's, and a write fails if the file changed after the task
-   read it. Terminal commands cannot be scoped, so in a mission they always need
-   approval and are shown as unscoped.
+   read it. Terminal commands cannot be scoped: they need a per-action approval
+   at Assist and Supervised, and are explicitly identified as unscoped in the
+   Everything confirmation and audit record.
 9. **Everything is bounded.** Retries, concurrent turns and token spend each have a
    limit. When a limit is reached, the mission stops and tells the user; it never
    fails silently.
@@ -233,6 +285,10 @@ keep behaviour the same, and Classic benefits from them too:
   The transcript format does not change.
 - **Mission events** are written to the interaction log, tagged with the mission
   and the conversation.
+- **Everything confirmations** record the mission ID, that a human confirmed it
+  in the application (Humbug has no user accounts, so no identity is recorded), the
+  confirmation time and the authority granted. Restoring a mission restores the
+  selected level but never invents a confirmation that was not persisted.
 - **The interface mode default** is stored in user settings. **The autonomy
   maximum** is stored in mindspace settings.
 - **Only one writer.** A mindspace is written by one process only (ADR-0014).
@@ -301,17 +357,19 @@ the lead is resumed. Any action with side effects goes through approval again.
   mission is paused after restart, its findings are shown, and no tool call runs
   twice.
 - **Invariants are tested:** each security invariant has a test.
+- **Everything is explicit:** it is off by default; selection requires a human
+  confirmation that describes its authority; revocation takes effect before the
+  next request; and every automatic approval identifies the standing approval in
+  the audit log.
 
 ### Open questions
 
-1. Should Bounded Autopilot be pursued? If so, which operation classes would be
-   eligible?
-2. What should the default limits be?
-3. Should mission children get a narrower tool set by default (for example, no
+1. What should the default limits be?
+2. Should mission children get a narrower tool set by default (for example, no
    terminal)?
-4. Should rejection reasons reach the AI? Today they are only logged.
-5. Should mission records travel with conversation move and delete operations?
-6. Is the per-window interface switch wanted, or only a user-wide setting?
+3. Should rejection reasons reach the AI? Today they are only logged.
+4. Should mission records travel with conversation move and delete operations?
+5. Is the per-window interface switch wanted, or only a user-wide setting?
 
 ### Maintainer approval conditions
 
@@ -319,9 +377,11 @@ Implementation does not start until the maintainer:
 
 1. Confirms that mission records and enforced limits fall within ADR-0001. The
    alternative is to direct an explicit amendment of ADR-0001.
-2. Accepts the security invariants above.
+2. Accepts the security invariants above, including the narrowly specified
+   amendment to ADR-0007 for an explicitly confirmed Everything mission.
 3. Accepts that the bookkeeping moves out of the desktop come first.
-4. Agrees that Bounded Autopilot is out of scope until it has its own ADR.
+4. Approves Everything as this ADR's only pre-authorisation policy; any broader,
+   more granular, or cross-mission autopilot policy needs its own ADR.
 
 ## Alternatives considered
 
@@ -356,8 +416,8 @@ Implementation does not start until the maintainer:
   `resolve_tool_path` and the per-mindspace audit log.
 
 - **Auto-approving within a mission by default.** Rejected. It would silently grant
-  authority that Classic does not have. Pre-authorisation, if it is wanted at all,
-  needs its own decision.
+  authority that Classic does not have. Everything is different: it is an explicit,
+  per-mission human confirmation, auditable and revocable under this ADR.
 
 - **Replaying interrupted tool calls on restart.** Rejected. Terminal commands,
   HTTP writes and file moves are not safe to repeat.
@@ -383,9 +443,10 @@ Implementation does not start until the maintainer:
   touch load-bearing code (ADR-0001), so they need tests first.
 - **The model decides the plan.** Plan quality depends on it, and a poor plan is
   caught by limits and humans, not by an engine.
-- **Without Bounded Autopilot, "autonomous" still means a human approves every
-  state-changing action.** Autonomy comes from aggregation and parallelism, not
-  from removing approvals. Some users will expect more.
+- **Everything deliberately grants broad authority.** It is suitable only where
+  the user accepts unsupervised destructive, terminal and network actions inside
+  that mission. The confirmation, limits, audit trail and immediate revocation
+  reduce risk, but do not make those actions safe.
 - **Write leases reduce parallelism,** and terminal commands cannot be scoped.
 - **New state.** Mission records are a new kind of mindspace state, and file
   operations on conversations must decide how to treat them.
@@ -394,6 +455,8 @@ Implementation does not start until the maintainer:
 
 - **Regressions in Classic** from the moves out of the desktop. Mitigation: tests
   first, and one move per change.
-- **Pressure to ship autopilot early.** Mitigation: this ADR excludes it.
+- **Over-use of Everything.** Mitigation: it is off by default, requires an
+  explicit warning and confirmation, is visibly active, can be revoked at once,
+  and every resulting approval is audited.
 - **Drift towards an engine over time.** Mitigation: any component that plans or
   dispatches on its own needs a new ADR.

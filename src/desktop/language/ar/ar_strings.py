@@ -749,11 +749,67 @@ def get_arabic_strings() -> LanguageStrings:
         mission_activity_auto_paused="توقّف مؤقتًا: لم تكتمل أي خطوة بعد {0} محاولات متابعة تلقائية",
         mission_status_interrupted="متوقفة بشكل مفاجئ",
         mission_status_replied="تمت الإجابة",
+        mission_status_failed="فشلت",
         mission_resume="استئناف",
         mission_interrupted_notice="أُغلق Humbug أثناء تنفيذ هذه المهمة. استأنفها للمتابعة من حيث توقفت.",
         mission_auto_resume="استئناف تلقائي بعد إعادة التشغيل",
+        mission_milestone_step="اكتملت الخطوة {0} من {1}: {2}",
+        mission_milestone_round="اكتمل: {0}",
+        mission_milestone_next="التالي: {0}",
+        mission_milestone_planning="التالي: التخطيط لما تبقى من الهدف",
+        mission_milestone_follow_up="التالي: التخطيط لطلبك الجديد",
+        mission_glance_title="نظرة سريعة",
+        mission_glance_now="الآن",
+        mission_glance_blocking="ما يعيقها",
+        mission_glance_approvals="بانتظارك",
+        mission_glance_last_done="آخر ما أُنجز",
+        mission_glance_idle="لا شيء قيد التشغيل",
+        mission_glance_nothing="لا شيء",
+        mission_glance_blocked_decision="قرارك بشأن طلب",
+        mission_glance_blocked_paused="أوقفتها مؤقتًا",
+        mission_glance_blocked_failed="انتهى آخر رد للقائد بخطأ",
+        mission_glance_blocked_interrupted="أُغلق Humbug أثناء العمل",
+        mission_glance_blocked_stopped="أوقفتها",
+        mission_glance_blocked_step="خطوة متوقفة: {0}",
+        mission_glance_approvals_count="{0} طلب",
+        mission_glance_approvals_none="لا شيء",
+        mission_glance_last_done_none="لا شيء بعد",
+        mission_details_show="عرض التفاصيل",
+        mission_details_hide="إخفاء التفاصيل",
+        mission_working_on_message="أعمل على رسالتك: “{0}”",
+        mission_reduce_motion="تقليل الحركة",
+        mission_reduce_motion_tip=(
+            "اعرض Mission Control ثابتًا: لا شيء ينزلق أو يتلاشى أو ينبض أو يدور أو يُكتب حرفًا حرفًا، "
+            "ولا يُحتفل بالمهام المنتهية بقصاصات الورق"
+        ),
         mission_activity_resumed="استُؤنفت بعد إغلاق Humbug",
         mission_error_resume="تعذّر استئناف المهمة: {0}",
+        mission_decision_target="يعمل على: {0}",
+        mission_decision_undoable="يمكن التراجع عنه: يسجّل سجل تغييرات الملفات في Humbug هذا التغيير.",
+        mission_decision_not_undoable="لا يمكن لـ Humbug التراجع عنه بعد الموافقة.",
+        mission_review_request="مراجعة",
+        mission_status_paused="متوقفة مؤقتًا",
+        mission_say_paused="متوقف مؤقتًا. سأُنهي ما أعمل عليه الآن، ثم أنتظرك.",
+        mission_pause="إيقاف مؤقت",
+        mission_pause_tip=(
+            "دع ما يعمل الآن ينتهي، ثم انتظر: لا يُوافَق على أي شيء تلقائيًا "
+            "ولا يتابع القائد من تلقاء نفسه حتى تتابع أنت"
+        ),
+        mission_unpause="متابعة",
+        mission_paused_notice=(
+            "هذه المهمة متوقفة مؤقتًا. لا يُوافَق على أي شيء تلقائيًا "
+            "ولن يتابع القائد من تلقاء نفسه حتى تضغط متابعة."
+        ),
+        mission_activity_paused="أُوقفت مؤقتًا",
+        mission_activity_unpaused="تابعت بعد توقف مؤقت",
+        mission_everything_banner=(
+            "الموافقة التلقائية على كل شيء مفعّلة للمهمة \"{0}\": كل طلب أداة، بما في ذلك حذف الملفات وتشغيل "
+            "الأوامر، يُوافَق عليه دون سؤالك."
+        ),
+        mission_everything_turn_off="إيقاف",
+        mission_retry="إعادة المحاولة",
+        mission_activity_retried="أُعيدت محاولة الطلب الفاشل",
+        mission_error_retry="تعذّرت إعادة محاولة المهمة: {0}",
         mission_switch_to_autonomous="التبديل إلى الوضع المستقل",
         mission_switch_to_classic="التبديل إلى الوضع الكلاسيكي",
         mission_mode_autonomous="مستقل",
@@ -772,16 +828,18 @@ def get_arabic_strings() -> LanguageStrings:
         mission_auto_approve_safe="الإجراءات الآمنة",
         mission_auto_approve_all="كل شيء",
         mission_auto_approve_tip=(
-            "تتم الموافقة فورًا على تغييرات الملفات التي يسجّلها السجل، ومع «كل شيء» لبقية كل دورة. "
-            "أما غيرها فيراجعه مراجع ذكاء اصطناعي لا يوافق إلا عندما تتوافق بوضوح مع الهدف، وما لا "
+            "مع «الإجراءات الآمنة» تتم الموافقة فورًا على تغييرات الملفات التي يسجّلها السجل، أما الطلبات "
+            "الآمنة الأخرى فيراجعها مراجع ذكاء اصطناعي لا يوافق إلا عندما تتوافق بوضوح مع الهدف، وما لا "
             "يتأكد منه يُعرض عليك. لا تشمل الإجراءات الآمنة أبدًا الحذف أو النقل أو الاستبدال أو أوامر "
-            "الطرفية أو الإرسال عبر الشبكة."
+            "الطرفية أو الإرسال عبر الشبكة. ومع «كل شيء» تتم الموافقة على كل طلب دون الرجوع إليك."
         ),
         mission_auto_approve_all_title="الموافقة على كل شيء تلقائيًا؟",
         mission_auto_approve_all_confirm=(
-            "سيوافق مراجع ذكاء اصطناعي على طلبات هذه المهمة دون الرجوع إليك، بما في ذلك حذف الملفات "
-            "وتنفيذ أوامر الطرفية وإرسال البيانات عبر الشبكة. ما لا يتأكد منه يُعرض عليك، وكل قرار "
-            "يُسجَّل. فعّل هذا فقط لعمل لا تمانع عدم الإشراف عليه."
+            "لهذه المهمة فقط، ستتم الموافقة على كل طلب دون الرجوع إليك أو إلى أي مراجع، بما في ذلك حذف "
+            "الملفات ونقلها واستبدالها، وتنفيذ أوامر الطرفية (التي لا يمكن قصرها على ملفات معينة)، والتفويض "
+            "إلى المساعدين، وإرسال البيانات عبر الشبكة. يستمر ذلك ما دامت المهمة تعمل في الوضع المستقل: "
+            "اختيار مستوى آخر أو التبديل إلى الوضع الكلاسيكي أو إيقاف المهمة يوقفه. يُسجَّل تأكيدك وكل "
+            "موافقة. فعّل هذا فقط لعمل لا تمانع عدم الإشراف عليه."
         ),
         mission_decision_reviewing="مراجعة الذكاء الاصطناعي…",
         mission_decision_review_note="مراجع الذكاء الاصطناعي: {0}",
@@ -826,15 +884,17 @@ def get_arabic_strings() -> LanguageStrings:
         mission_say_helper_waiting="أحد مساعديّ يحتاج إلى موافقتك.",
         mission_say_replied="رددتُ عليك أدناه. اسألني المزيد، أو كلّفني بمهمة.",
         mission_say_ready="جاهز متى شئت.",
-        mission_say_error="حدث خطأ ما. افتح محادثتي لمعرفة السبب.",
+        mission_say_error="حدث خطأ ما. اضغط إعادة المحاولة، أو أرسل لي رسالة.",
+        mission_failed_notice=(
+            "انتهى ردي الأخير بخطأ. أعد المحاولة لإرسال الطلب نفسه مرة أخرى، أو افتح محادثتي لمعرفة السبب، "
+            "أو أرسل لي رسالة."
+        ),
+        mission_show_lead_conversation="افتح محادثة القائد",
         mission_say_sleeping="آخذ استراحة مخطط لها مدتها {0}. سأتابع بعد انتهائها…",
         mission_chat_title="المحادثة",
         mission_chat_hint="رسائلك وردود قائد المهمة، كما في علامة تبويب المحادثة",
         mission_chat_you="أنت",
         mission_chat_lead="قائد المهمة",
-        mission_chat_show="إظهار المحادثة",
-        mission_chat_hide="إخفاء المحادثة",
-        mission_chat_toggle_tip="انقر لإظهار المحادثة مع قائد المهمة أو إخفائها",
         mission_results_title="النتائج السابقة",
         mission_results_hint="تُحفظ هنا كل جولة انتهت قبل سؤال متابعة، الأحدث أولًا. انقر على جولة لقراءة تقريرها الكامل.",
         mission_result_number="الجولة {0}",
@@ -865,6 +925,7 @@ def get_arabic_strings() -> LanguageStrings:
         mission_report_stats="الخطوات المكتملة: {0} من {1}  ·  الوكلاء في الفريق: {2}",
         mission_follow_up="اطرح سؤال متابعة",
         mission_activity_reversible_approved="تمت الموافقة على {0} — مُسجَّل في السجل",
+        mission_activity_everything_approved="تمت الموافقة على {0} — الموافقة التلقائية مضبوطة على كل شيء",
         mission_activity_user_message="أنت، إلى {0}: «{1}»",
         mission_say_waiting_helpers="بانتظار أن يُنهي {0} العمل ويرفع تقريره…",
         mission_read_more="اقرأ المزيد",
@@ -877,8 +938,8 @@ def get_arabic_strings() -> LanguageStrings:
         mission_auto_approve_off_note="كل إجراء يغيّر الملفات أو ينفّذ أوامر أو يرسل بيانات ينتظرك.",
         mission_auto_approve_safe_note="تمضي تغييرات الملفات المسجّلة والطلبات الآمنة؛ وأي إجراء مُتلف ينتظرك.",
         mission_auto_approve_all_note=(
-            "يعمل الفريق دون توقف؛ ولا يُعرض عليك إلا ما لا "
-            "يتأكد منه مراجع الذكاء الاصطناعي."
+            "يعمل الفريق من البداية إلى النهاية دون توقف؛ "
+            "ولا ينتظر شيء موافقتك."
         ),
         mission_scroll_left="مرّر المهام إلى اليسار",
         mission_scroll_right="مرّر المهام إلى اليمين",

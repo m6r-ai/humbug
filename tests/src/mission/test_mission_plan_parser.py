@@ -83,3 +83,22 @@ class TestParseMissionPlan:
             "Done it", "Tests pass", ".humbug/conversations/dAI-1.conv"
         )
         assert (plan.tasks[1].progress, plan.tasks[1].evidence, plan.tasks[1].agent) == ("", "", "")
+
+
+class TestGoalMet:
+    """The lead says when the user's whole goal is met, separately from finishing the plan's tasks."""
+
+    @staticmethod
+    def _plan(goal: str) -> str:
+        return (
+            '```mission-plan\n{"title": "T", "summary": "S", ' + goal +
+            '"tasks": [{"id": "1", "title": "Do it", "status": "completed"}]}\n```'
+        )
+
+    def test_goal_met_is_read_only_when_reported_true(self) -> None:
+        """Only an explicit true reports the goal met; false, a missing field or anything else does not."""
+        for goal, met in (
+            ('"goal_met": true, ', True), ('"goal_met": false, ', False), ("", False), ('"goal_met": "yes", ', False)
+        ):
+            plan = parse_mission_plan(self._plan(goal))
+            assert plan is not None and plan.goal_met is met

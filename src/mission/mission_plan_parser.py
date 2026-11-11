@@ -14,10 +14,16 @@ _PLAN_BLOCK = re.compile(r"```" + PLAN_FENCE + r"[ \t]*\n(.*?)```", re.DOTALL)
 
 @dataclass(frozen=True)
 class MissionPlan:
-    """A plan reported by the mission lead."""
+    """
+    A plan reported by the mission lead.
+
+    `goal_met` is True only when the lead reports that the user's whole goal is achieved,
+    which finishing every task of the plan does not by itself mean.
+    """
     title: str
     summary: str
     tasks: list[MissionTask]
+    goal_met: bool = False
 
 
 def strip_mission_plan(text: str) -> str:
@@ -87,6 +93,7 @@ def parse_mission_plan(text: str) -> MissionPlan | None:
             title=title.strip() if isinstance(title, str) else "",
             summary=summary.strip() if isinstance(summary, str) else "",
             tasks=tasks,
+            goal_met=data.get("goal_met") is True,
         )
 
     return None
