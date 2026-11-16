@@ -252,6 +252,11 @@ visually distinct from inactive columns.
 The AI always opens new tabs in a column other than the one currently containing the conversation,
 so you can see them side by side without the conversation being hidden.
 
+Opening a tab that way does not move the keyboard focus — not when it appears, and not when a long
+conversation finishes loading. Whatever you were typing into, in Humbug or in another application,
+keeps it, and the new tab appears without interrupting you. A tab you open yourself does take the
+focus, and takes over the status bar.
+
 ---
 
 *[Index](index.md) · Previous: [Mindspaces](mindspaces.md) · Next: [Conversations](conversations.md)*

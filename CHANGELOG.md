@@ -75,6 +75,21 @@ Behaviour changes:
   branch or several files, investigating a problem or researching a topic in depth. Only a simple question, or a
   quick explanation or opinion that needs at most a brief look at a file or two, is answered without a plan.
 
+Bug fixes:
+
+- The "approve all writes in this message turn" text label did not use the correct background colour.
+- A tab the AI opened took the keyboard focus and made itself the current tab, even though it is opened
+  in another column so the user can keep working. Focus is now decided once, when the tab is opened, and
+  only a tab the user opened themselves takes it.
+- A conversation restored its saved input draft twice: once when the tab was opened and again when a long
+  conversation finished loading. The second time moved the keyboard focus into the input box when the
+  load completed, taking it from wherever the user had moved in the meantime.
+- Closing the last tab in a column left the tab manager holding a reference to the closed tab's widget,
+  which could crash the application when that reference was released.
+- Panel and window updates that were deferred to the end of the current event-loop turn are now held by
+  timers that belong to the widget, so a pending update cannot run after the widgets it touches are gone.
+- Don't display diffs twice when the editor AI tool is invoked.
+
 ## v59 (2026-11-07)
 
 New features:

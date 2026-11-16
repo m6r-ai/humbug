@@ -96,6 +96,15 @@ def make_editor(
     return Editor(path, context)
 
 
+def _relative_to(path: str, root: Path) -> str:
+    """Return path relative to root, or the absolute path when it is outside."""
+    absolute = os.path.abspath(os.path.expanduser(path))
+    root_absolute = os.path.abspath(str(root))
+    if os.path.commonpath([absolute, root_absolute]) != root_absolute:
+        return absolute
+    return os.path.relpath(absolute, root_absolute)
+
+
 @pytest.fixture(scope="session")
 def qapp():
     """Session-wide QApplication running on the offscreen platform."""
@@ -109,6 +118,7 @@ def mock_mindspace(tmp_path):
     mindspace = MagicMock()
     mindspace.add_interaction = MagicMock()
     mindspace.mindspace_path.return_value = str(tmp_path)
+    mindspace.get_relative_path.side_effect = lambda path: _relative_to(path, tmp_path)
     mindspace.contexts.return_value = MagicMock()
     mindspace.conversation_identifier.return_value = "conversation-id"
     return mindspace

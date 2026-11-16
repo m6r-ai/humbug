@@ -5,6 +5,7 @@ QT_QPA_PLATFORM variable must be set before the QApplication is created.
 """
 # pylint: disable=redefined-outer-name
 
+import gc
 import os
 import sys
 import time
@@ -23,6 +24,26 @@ from PySide6.QtWidgets import QApplication, QWidget
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.tab_manager.tab_overview import TabOverviewEntry
 from desktop.user.user_manager import UserManager
+
+
+@pytest.fixture(scope="module", autouse=True)
+def collect_widget_garbage():
+    """
+    Collect unreachable widgets when a module's tests have finished.
+
+    A widget wrapper left in a reference cycle is destroyed only when the garbage
+    collector reaches it, and destroying it destroys the C++ object it wraps.  If
+    that is left to chance it happens at an arbitrary point during a later test,
+    sometimes while Qt is midway through an operation the destruction disturbs, and
+    the result is a segfault blamed on a test that had nothing to do with it.
+
+    Collecting between modules puts that work at a point where no Qt operation is
+    in progress.  It is deliberately not done after every test: a full collection
+    traverses the whole heap, and most tests here leave nothing behind.
+    """
+    yield
+    gc.collect()
+
 
 _IGNORED_QT_MESSAGES = frozenset({
     "This plugin does not support propagateSizeHints()",
