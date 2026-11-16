@@ -518,10 +518,12 @@ class TestInlineEdgeCases:
         tokens, _ = parse_line("*unclosed")
         assert TokenType.ITALIC_START not in types(tokens)
 
-    def test_unclosed_inline_code_is_plain_text(self):
-        """'`unclosed' with no closing backtick is treated as plain text."""
-        tokens, _ = parse_line("`unclosed")
-        assert TokenType.INLINE_CODE_START not in types(tokens)
+    def test_unclosed_inline_code_continues_to_next_line(self):
+        """'`unclosed' opens an inline code span that continues to the next line."""
+        tokens, state = parse_line("`unclosed")
+        assert TokenType.INLINE_CODE_START in types(tokens)
+        assert TokenType.INLINE_CODE in types(tokens)
+        assert state.inline_formatting_stack == ["`"]
 
     def test_unclosed_strikethrough_is_plain_text(self):
         """'~~unclosed' opens a strikethrough span that continues to the next line."""

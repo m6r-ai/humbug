@@ -367,8 +367,18 @@ class MarkdownParser(Parser):
                     current_text_start = i
                     continue
 
-                # No closing backtick found; treat the ` as plain text
-                current_text_start = i
+                # No closing backtick found; the inline code span continues to the
+                # next line.  Emit INLINE_CODE_START, emit remaining text as code
+                # content, and record the open marker.
+                tokens.append(Token(TokenType.INLINE_CODE_START, '`', base_position + i))
+                remaining_text = text[i + 1:]
+                if remaining_text:
+                    tokens.append(Token(TokenType.INLINE_CODE, remaining_text, base_position + i + 1))
+
+                if open_markers is not None:
+                    open_markers.append('`')
+
+                return tokens
 
             # Check for bold (**text** or __text__)
             elif self._is_bold_marker(text, i):
@@ -526,6 +536,10 @@ class MarkdownParser(Parser):
             content_type = TokenType.BOLD
             end_type = TokenType.BOLD_END
 
+        elif marker == '`':
+            content_type = TokenType.INLINE_CODE
+            end_type = TokenType.INLINE_CODE_END
+
         elif marker == '~~':
             content_type = TokenType.STRIKETHROUGH
             end_type = TokenType.STRIKETHROUGH_END
@@ -538,8 +552,9 @@ class MarkdownParser(Parser):
         # Search for the closing marker.
         close_pos = text.find(marker)
 
-        # For single-char markers, skip positions that are part of a double marker.
-        if marker_len == 1:
+        # For single-char formatting markers, skip positions that are part of a
+        # double marker.  Backticks are excluded: `` is not a paired marker here.
+        if marker_len == 1 and marker != '`':
             search_from = 0
             while True:
                 candidate = text.find(marker, search_from)

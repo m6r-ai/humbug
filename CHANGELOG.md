@@ -25,6 +25,8 @@ Bug fixes:
 - Panel and window updates that were deferred to the end of the current event-loop turn are now held by
   timers that belong to the widget, so a pending update cannot run after the widgets it touches are gone.
 - Don't display diffs twice when the editor AI tool is invoked.
+- A single-backtick inline code span in Markdown now stays highlighted when it runs across a line break,
+  for example inside a list item, instead of only being styled up to the end of its first line.
 
 ## v59 (2026-11-07)
 
