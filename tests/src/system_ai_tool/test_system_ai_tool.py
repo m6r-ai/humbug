@@ -9,6 +9,7 @@ import pytest
 
 from ai_tool import AIToolExecutionError, AIToolAuthorizationDenied
 from system_ai_tool.system_ai_tool import SystemAITool
+from version import CURRENT_VERSION
 
 
 class TestSystemAIToolDefinition:
@@ -530,6 +531,17 @@ class TestGetSystemInfo:
         assert "ai" in data
         assert "shell" in data
         assert data["mindspace"]["path"] == mindspace_path
+
+    def test_system_info_reports_current_version(
+        self, system_tool: SystemAITool, mock_authorization, make_tool_call
+    ) -> None:
+        """Test that the reported version matches the shared version constant."""
+        tool_call = make_tool_call("get_system_info")
+
+        result = asyncio.run(system_tool.execute(tool_call, None, mock_authorization))
+
+        data = json.loads(result.content)
+        assert data["system"]["version"] == str(CURRENT_VERSION)
 
 
 class TestContextRegistryLayout:

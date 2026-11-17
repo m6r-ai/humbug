@@ -25,12 +25,12 @@ import syntax.parser_imports
 
 from ai.ai_backend import AIBackend
 from mindspace.mindspace import Mindspace
+from version import CURRENT_VERSION
 
 from desktop.exception_notifier import get_exception_notifier
 from desktop.main_window import MainWindow
 from desktop.style_manager import StyleManager
 from desktop.tab import TabBase
-from desktop.version import CURRENT_VERSION
 
 if sys.platform == 'win32':
     import ctypes

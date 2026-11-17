@@ -59,7 +59,7 @@ jobs:
         id: version
         shell: bash
         run: |
-          VERSION=$(python -c "from src.desktop.version import CURRENT_VERSION; print(CURRENT_VERSION)")
+          VERSION=$(python -c "from src.version import CURRENT_VERSION; print(CURRENT_VERSION)")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION"
 

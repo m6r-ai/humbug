@@ -461,6 +461,12 @@ AI tool implementation for terminal tab operations (read, write, status).
 ### `src/terminal_context/`
 Context model for open terminal tabs (`TerminalContext`).
 
+### `src/version/`
+The single source of truth for the Humbug version number (`CURRENT_VERSION`).  The
+desktop app, `system_ai_tool`'s `get_system_info`, `pyproject.toml` (via
+`[tool.hatch.version]`) and the build scripts all read it from here, so bumping the
+version is a one-line change in `src/version/version.py`.
+
 ## `tools/` Directory
 
 Development and debugging utilities:

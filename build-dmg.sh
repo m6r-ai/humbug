@@ -7,7 +7,7 @@ set -e
 #   dist/Humbug-v<version>-macos-<arch>.dmg
 
 # Get version from version.py
-VERSION=$(python -c "from src.desktop.version import CURRENT_VERSION; print(CURRENT_VERSION)")
+VERSION=$(python -c "from src.version import CURRENT_VERSION; print(CURRENT_VERSION)")
 if [ -z "$VERSION" ]; then
     echo "ERROR: Could not determine version."
     exit 1

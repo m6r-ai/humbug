@@ -98,6 +98,7 @@ modules:
       - terminal
       - terminal_ai_tool
       - terminal_context
+      - version
     external_dependencies:
       - "standard_library"
       - "PySide6"
@@ -268,6 +269,7 @@ modules:
       - ai_transcript_conversation
       - conversation_context
       - mindspace
+      - version
     external_dependencies:
       - "standard_library"
 
@@ -287,6 +289,11 @@ modules:
   terminal_context:
     internal_dependencies:
       - terminal
+    external_dependencies:
+      - "standard_library"
+
+  version:
+    internal_dependencies: []
     external_dependencies:
       - "standard_library"
 

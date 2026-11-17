@@ -5,7 +5,7 @@ import logging
 from PySide6.QtCore import QObject, Signal
 
 from http_client import HttpClient
-from desktop.version import CURRENT_VERSION
+from version import CURRENT_VERSION
 
 
 _GITHUB_API_URL = "https://api.github.com/repos/m6r-ai/humbug/releases/latest"

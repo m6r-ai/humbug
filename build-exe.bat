@@ -5,10 +5,10 @@ echo === Building Humbug ===
 
 echo.
 echo [1/4] Extracting version...
-for /f "tokens=2 delims==" %%a in ('findstr "CURRENT_VERSION" src\desktop\version.py') do set VERSION=%%a
+for /f "tokens=2 delims==" %%a in ('findstr "CURRENT_VERSION" src\version\version.py') do set VERSION=%%a
 set VERSION=%VERSION: =%
 if "%VERSION%"=="" (
-    echo ERROR: Could not extract version from src\desktop\version.py
+    echo ERROR: Could not extract version from src\version\version.py
     exit /b 1
 )
 echo Version: %VERSION%
