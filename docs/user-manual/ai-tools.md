@@ -75,7 +75,7 @@ The following tools are available to the AI in every conversation:
 | **Git** | Read-only git operations: status, diff, log, branches, file contents at a ref, and files changed in a commit | No |
 | **Help** | List available tools and get detailed documentation on any tool | No |
 | **HTTP** | Fetch URLs, make API requests (GET, HEAD, POST, PUT, PATCH, DELETE), and download files. Supports Basic Auth, cookies, multipart uploads, timeouts, and HTTP/SOCKS5 proxies | Yes |
-| **Menai** | Evaluate expressions in a pure functional programming language designed for AI use | No |
+| **Menai** | Evaluate expressions and run test suites in a pure functional programming language designed for AI use | No |
 | **Preview** | Search and navigate file/directory preview content | No |
 | **System** | Create, open, close, and organise UI tabs (editor, terminal, conversation, etc.) | No |
 | **Terminal** | Send commands and read output from terminal tabs | Yes, each command |

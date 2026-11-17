@@ -20,6 +20,12 @@ New features:
   convention work in every mindspace, without needing per-mindspace AGENTS.md instructions.
 - The Menai tool help now ends with an inventory of the mindspace's `menai-lib` modules, listing
   each module's import name and its exported names.
+- The Menai tool now has a `run_tests` operation alongside `evaluate`, which runs a
+  `*.test.menai` suite from the mindspace and reports the totals and any failures. Each test runs
+  on a fresh VM invocation, so one failing test does not stop the rest, and a failing test is a
+  result rather than an error. Suites are confined to the mindspace, like every other tool path,
+  and the operation times out after 30 seconds.
+- Humbug now requires `menai` 0.11.0 or later, which supplies the library test runner.
 - The editor AI tool now writes a file automatically as part of the edit: applying a diff to an open file, or
   rewriting its buffer with a Menai program.
 - Resting the pointer on a conversation in the Conversations panel now describes it as well as naming its path.

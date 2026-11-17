@@ -22,7 +22,18 @@ conversation can use. It sits on the Menai module search path ahead of the stand
 module here with the same name as a standard library module takes precedence. The directory is
 yours to edit — you can add modules yourself, and delete or rename anything in it. The Menai
 tool's help lists the modules in your `menai-lib`, so every conversation discovers them without
-you doing anything.
+you doing anything. It lists modules only: a test suite is a test for a module rather than a
+module itself, so it is left out.
+
+Each module's help entry ends with a description, which is read from the module's own first line:
+a comment of the form `; <name> — <one-line description>`, the convention the standard library
+follows. That is what makes the listing worth reading — a name and its exports say what a module
+offers, and the line says what it is for.
+
+A module can have a test suite beside it — a file named `<module>.test.menai`, the naming
+convention the language lays down — and the AI can run any such suite in your mindspace and report
+which tests passed. Because the suites live in the mindspace too, the tests your AI writes stay
+with the code they check and are there for the next conversation that changes it.
 
 You can have as many mindspaces as you like — one per project, or one per area of work. Humbug
 remembers the last mindspace you had open and restores it automatically on the next launch.

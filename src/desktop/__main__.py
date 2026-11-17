@@ -261,7 +261,10 @@ def setup_ai_system_prompt() -> None:
         "on the Menai module search path ahead of the standard library, so check it before writing non-trivial data "
         "processing logic, and read existing modules before writing new ones\n"
         "- If you find yourself writing logic that duplicates a module, or that would clearly be reused by other "
-        f"conversations, factor it into the {Mindspace.MENAI_LIB_DIR} directory as a module for future conversations"
+        f"conversations, factor it into the {Mindspace.MENAI_LIB_DIR} directory as a module for future conversations\n"
+        f"- Begin every module you add to {Mindspace.MENAI_LIB_DIR} with a `; <name> — <one-line description>` "
+        "comment saying what the module is for, as the Menai standard library does. The Menai tool's help shows "
+        "that line beside the module, and the comment block below it should go on to explain how to use the module\n"
     )
 
     AIBackend.set_system_prompt(system_prompt)

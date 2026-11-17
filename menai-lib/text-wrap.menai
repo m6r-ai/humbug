@@ -1,0 +1,36 @@
+; text-wrap — greedy word wrapping of text to a maximum line width.
+;
+; `wrap` splits text on spaces, drops the empty fields that runs of spaces
+; produce, and fills each line as far as it can without exceeding the width. It
+; returns the lines as a list of strings, and returns an empty list for text
+; that holds no words. A word longer than the width is returned on a line of its
+; own rather than being broken, because breaking it would change the word.
+;
+; `join` puts lines back together with newlines between them, so
+; `(join (wrap text width))` is the usual call.
+;
+; Text is expected to use single spaces between words: whitespace other than a
+; space is not treated as a break, and the width counts characters, not display
+; columns.
+
+(let ((wrap
+       (lambda (text max-width)
+         (let ((words (filter-list (lambda (word) (integer>? (string-length word) 0))
+                                   (string->list text " ")))
+               (step (lambda (state word)
+                       (let ((lines (list-nth state 0))
+                             (current (list-nth state 1)))
+                         (if (integer=? (string-length current) 0)
+                             (list lines word)
+                             (if (integer<=? (integer+ (string-length current) 1 (string-length word))
+                                             max-width)
+                                 (list lines (string-concat current " " word))
+                                 (list (list-append lines current) word))))))
+               (folded (fold-list step (list (list) "") words))
+               (lines (list-nth folded 0))
+               (current (list-nth folded 1)))
+           (if (integer=? (string-length current) 0)
+               lines
+               (list-append lines current)))))
+      (join (lambda (lines) (list->string lines "\n"))))
+  (export wrap join))

@@ -322,7 +322,8 @@ Advanced markdown support, including converting to/from a markdown AST.
 Includes `doc_ir_to_markdown.py` for serialising a doc_ir tree to Markdown text.
 
 ### `src/menai_ai_tool/`
-AI tool implementation for Menai language execution.
+AI tool implementation for Menai language execution and for running Menai test suites
+(`*.test.menai`) from the mindspace.
 
 ### `src/mindspace/`
 Front-end-agnostic mindspace model. Manages the mindspace path, settings, search,

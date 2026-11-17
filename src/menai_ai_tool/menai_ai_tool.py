@@ -1,4 +1,4 @@
-"""Menai expression evaluator tool."""
+"""Menai expression evaluator and test suite runner tool."""
 
 import asyncio
 import json
@@ -9,8 +9,11 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from menai import Menai, MenaiError, MenaiCancelledException, get_help
-from menai import MenaiTokenError, MenaiASTBuildError, MenaiCodegenError
+from menai import (
+    Menai, MenaiError, MenaiCancelledException, get_help,
+    MenaiTokenError, MenaiASTBuildError, MenaiCodegenError,
+    TestOutcome, run_test_suite
+)
 
 from ai_tool import (
     AITool, AIToolCall, AIToolDefinition, AIToolParameter, AIToolResult,
@@ -18,11 +21,15 @@ from ai_tool import (
     AIToolOperationDefinition
 )
 from mindspace.mindspace import Mindspace
+from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
 
 class MenaiAITool(AITool):
     """Menai tool with LISP-like syntax."""
+
+    TEST_SUFFIX = ".test.menai"
+    TEST_TIMEOUT_SECONDS = 30.0
 
     def __init__(self) -> None:
         """
@@ -53,6 +60,7 @@ class MenaiAITool(AITool):
             description_prefix=(
                 "The menai tool lets you to compile and execute programs written in Menai. "
                 "It is ideal for everything from simple calculations to complex algorithms. "
+                "It can also run `*.test.menai` suites from the mindspace. "
                 "Menai has no side effects, so it does not require user approvals to use it."
                 "You must call `help` with `get_help` for Menai before using this tool."
             ),
@@ -62,7 +70,14 @@ class MenaiAITool(AITool):
                     type="string",
                     description="A valid expression written in the Menai language. "
                         "Menai uses Lisp-style prefix syntax: (operator arg1 arg2 ...).",
-                    required=True
+                    required=False
+                ),
+                AIToolParameter(
+                    name="test_file",
+                    type="string",
+                    description="Path to a *.test.menai suite inside the mindspace. "
+                        "Relative paths are resolved from the mindspace root.",
+                    required=False
                 )
             ]
         )
@@ -82,6 +97,14 @@ class MenaiAITool(AITool):
                 allowed_parameters={"expression"},
                 required_parameters={"expression"},
                 description="Evaluate an expression written in the Menai language"
+            ),
+            "run_tests": AIToolOperationDefinition(
+                name="run_tests",
+                handler=self._run_tests,
+                extract_context=self._extract_run_tests_context,
+                allowed_parameters={"test_file"},
+                required_parameters={"test_file"},
+                description="Run a *.test.menai suite from the mindspace and report the outcomes"
             )
         }
 
@@ -165,7 +188,7 @@ class MenaiAITool(AITool):
 
     def get_brief_description(self) -> str:
         """Get brief one-line description for system prompt."""
-        return "Evaluates expressions using a very efficient pure functional programming language"
+        return "Evaluates expressions and runs test suites in a very efficient pure functional programming language"
 
     def get_detailed_help(self, operation: str | None = None) -> str:
         """
@@ -189,9 +212,12 @@ class MenaiAITool(AITool):
         Build the mindspace's menai-lib module inventory for tool help.
 
         Walks the menai-lib directory, collecting .menai files recursively with
-        their import names (subdirectories become path segments) and the names
-        their (export ...) forms declare. The listing is computed when the help
-        is requested, so it always reflects the library as it stands then.
+        their import names (subdirectories become path segments), the names their
+        (export ...) forms declare and the one-line description their first-line
+        comment carries. The listing is computed when the help is requested, so it
+        always reflects the library as it stands then. Suites are left out: a
+        `*.test.menai` file is a test for a module, not a module a conversation
+        imports for its own sake.
 
         Returns:
             An inventory section, empty when there is nothing to list.
@@ -207,12 +233,15 @@ class MenaiAITool(AITool):
         if not menai_lib_dir.is_dir():
             return ""
 
-        entries: list[tuple[str, list[str]]] = []
+        entries: list[tuple[str, list[str], str]] = []
         for module_path in sorted(menai_lib_dir.rglob("*.menai")):
+            if module_path.name.endswith(self.TEST_SUFFIX):
+                continue
+
             rel = module_path.relative_to(menai_lib_dir)
             module_name = str(rel.with_suffix("")).replace(os.sep, "/")
-            exports = self._module_exports(module_path)
-            entries.append((module_name, exports))
+            exports, description = self._module_summary(module_path)
+            entries.append((module_name, exports, description))
 
         if not entries:
             return ""
@@ -225,37 +254,57 @@ class MenaiAITool(AITool):
             f"Modules in this mindspace's {Mindspace.MENAI_LIB_DIR} directory, ahead of the standard library:",
             "",
         ]
-        for module_name, exports in entries:
+        for module_name, exports, description in entries:
+            summary = f" — {description}" if description else ""
+
             if exports:
-                lines.append(f"- {module_name} (exports: {', '.join(exports)})")
+                lines.append(f"- {module_name} (exports: {', '.join(exports)}){summary}")
 
             else:
-                lines.append(f"- {module_name}")
+                lines.append(f"- {module_name}{summary}")
+
+        lines.extend([
+            "",
+            "Each module's first line is a `; <name> — <one-line description>` comment, the",
+            "convention the standard library follows. Those descriptions are read from the",
+            "modules' own first lines, so give every module you add there one, saying what the",
+            "module is for, and a module's comment block should go on to explain how to use it.",
+        ])
 
         return "\n".join(lines) + "\n"
 
-    def _module_exports(self, module_path: Path) -> list[str]:
+    def _module_summary(self, module_path: Path) -> tuple[list[str], str]:
         """
-        Extract the names an export form declares.
+        Extract a module's exported names and its one-line description.
+
+        The description is the first line of the file with its leading `; ` and
+        its `<name> — ` prefix stripped, which is how the Menai standard library
+        documents itself and how `menai.get_help()` reads that documentation.
 
         Args:
             module_path: Path to a .menai module file.
 
         Returns:
-            Exported names in declaration order, empty when none are found.
+            Exported names in declaration order and the description; both are
+            empty when the file cannot be read, and the description is empty when
+            the file has no first-line comment.
         """
         try:
             with open(module_path, encoding="utf-8") as f:
                 source = f.read()
 
         except OSError:
-            return []
+            return [], ""
 
         exports: list[str] = []
         for match in re.finditer(r"\(export\s+([^)]+)\)", source):
             exports.extend(match.group(1).split())
 
-        return exports
+        first_line = source.split("\n", 1)[0]
+        if not first_line.startswith("; ") or first_line.startswith(";;"):
+            return exports, ""
+
+        return exports, first_line.removeprefix("; ").split(" — ", 1)[-1].strip()
 
     def _extract_evaluate_context(self, arguments: dict[str, Any]) -> str | None:
         """
@@ -269,6 +318,19 @@ class MenaiAITool(AITool):
         """
         expression = arguments.get("expression", "")
         return f"`expression` is:\n```menai\n{expression}\n```"
+
+    def _extract_run_tests_context(self, arguments: dict[str, Any]) -> str | None:
+        """
+        Extract context for run_tests operation.
+
+        Args:
+            arguments: Tool arguments
+
+        Returns:
+            Context string if applicable, otherwise None
+        """
+        test_file = arguments.get("test_file", "")
+        return f"`test_file` is:\n```text\n{test_file}\n```"
 
     async def _evaluate(
         self,
@@ -386,3 +448,144 @@ class MenaiAITool(AITool):
         except Exception as e:
             self._logger.error("Unexpected error evaluating Menai expression '%s': %s", expression, str(e), exc_info=True)
             raise AIToolExecutionError(f"Failed to evaluate Menai expression: {str(e)}") from e
+
+    def _resolve_test_file(self, test_file: str) -> tuple[str, str]:
+        """
+        Resolve and validate a suite path inside the active mindspace.
+
+        Args:
+            test_file: Absolute or mindspace-relative path to a suite
+
+        Returns:
+            Tuple of (absolute path, mindspace-relative path)
+
+        Raises:
+            AIToolExecutionError: If no mindspace is open, the path resolves outside
+                the mindspace or inside .humbug/, the file is not a suite, or it
+                does not exist
+        """
+        if self._mindspace is None:
+            raise AIToolExecutionError("No mindspace is open")
+
+        mindspace_path = self._mindspace.mindspace_path()
+        if not mindspace_path:
+            raise AIToolExecutionError("No mindspace is open")
+
+        if os.path.isabs(test_file):
+            abs_path = test_file
+
+        else:
+            abs_path = os.path.join(mindspace_path, test_file)
+
+        try:
+            resolved, relative_path = self._mindspace.resolve_tool_path(abs_path)
+
+        except MindspaceError as e:
+            raise AIToolExecutionError(str(e)) from e
+
+        if not Path(resolved).name.endswith(self.TEST_SUFFIX):
+            raise AIToolExecutionError(
+                f"test_file must name a {self.TEST_SUFFIX} file, got: {test_file}"
+            )
+
+        if not Path(resolved).is_file():
+            raise AIToolExecutionError(f"No such test file: {test_file}")
+
+        return resolved, relative_path
+
+    def _run_tests_sync(self, test_file: str) -> list[TestOutcome]:
+        """
+        Run one suite off the event loop.
+
+        The Menai runner makes its own instance for the run, so there is no
+        instance to track here and nothing for cancel() to reach.  The suite's own
+        directory goes first on the module path so that the requested file wins
+        over a same-named suite elsewhere, and so modules stored beside the suite
+        resolve ahead of the rest of the library.
+
+        Args:
+            test_file: Absolute path to the suite
+
+        Returns:
+            One outcome per test leaf, in the order the suite declares them
+        """
+        return run_test_suite(test_file, [str(Path(test_file).parent)] + self._module_path())
+
+    async def _run_tests(
+        self,
+        tool_call: AIToolCall,
+        requester_ref: Any,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """
+        Run a Menai test suite with timeout protection.
+
+        A failing test is an ordinary result and is reported in the payload.  Only
+        a suite that cannot be loaded or run raises an error.
+
+        Args:
+            tool_call: Tool call containing the suite path to run
+            requester_ref: The conversation making the request
+            _request_authorization: Authorization callback (not used for Menai)
+
+        Returns:
+            AIToolResult containing the totals and the failures, if any
+
+        Raises:
+            AIToolExecutionError: If the suite path is invalid or the suite cannot be run
+            AIToolTimeoutError: If the suite takes too long
+        """
+        self.require_menai_help(requester_ref)
+
+        test_file = tool_call.arguments.get("test_file", "")
+        if not isinstance(test_file, str) or not test_file:
+            raise AIToolExecutionError("test_file must be a non-empty string")
+
+        resolved, relative_path = self._resolve_test_file(test_file)
+        self._logger.info("Running Menai test suite: %s", resolved)
+
+        task = asyncio.create_task(asyncio.to_thread(self._run_tests_sync, resolved))
+        try:
+            outcomes = await asyncio.wait_for(task, timeout=self.TEST_TIMEOUT_SECONDS)
+
+        except asyncio.TimeoutError as e:
+            self._logger.warning("Menai test suite timed out: %s", resolved)
+            raise AIToolTimeoutError("Menai test run timed out", self.TEST_TIMEOUT_SECONDS) from e
+
+        except ValueError as e:
+            self._logger.warning("Invalid Menai test suite '%s': %s", resolved, str(e))
+            raise AIToolExecutionError(str(e)) from e
+
+        except MenaiError as e:
+            self._logger.warning("Menai error running test suite '%s': %s", resolved, str(e))
+            raise AIToolExecutionError(str(e)) from e
+
+        failed = [outcome for outcome in outcomes if not outcome.passed]
+        payload = {
+            "file": relative_path,
+            "total": len(outcomes),
+            "passed": len(outcomes) - len(failed),
+            "failed": len(failed),
+            "failures": [
+                {"test": " > ".join(outcome.path), "error": outcome.error}
+                for outcome in failed
+            ]
+        }
+
+        self._logger.info(
+            "Menai test suite %s: %d/%d passed", relative_path, payload["passed"], payload["total"]
+        )
+
+        if self._mindspace is not None:
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI ran Menai tests: '{relative_path}' ({payload['passed']}/{payload['total']} passed)",
+                context=self._mindspace.conversation_log_context(requester_ref)
+            )
+
+        return AIToolResult(
+            id=tool_call.id,
+            name="Menai",
+            content=json.dumps(payload, indent=2),
+            context="json"
+        )

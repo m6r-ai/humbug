@@ -1,0 +1,60 @@
+(let ((mod (import "text-wrap"))
+      (t (import "menai-test"))
+      (wrap (:: mod wrap))
+      (join (:: mod join))
+      (assert-equal (:: t assert-equal))
+      (expect-pass (:: t expect-pass))
+      (expect-fail (:: t expect-fail))
+
+      (fits-on-one-line
+       (lambda () (assert-equal (list "one two three") (wrap "one two three" 20))))
+
+      (wraps-greedily
+       (lambda () (assert-equal (list "one two" "three" "four") (wrap "one two three four" 7))))
+
+      (breaks-before-exceeding
+       (lambda () (assert-equal (list "aa bb" "cc") (wrap "aa bb cc" 5))))
+
+      (collapses-runs-of-spaces
+       (lambda () (assert-equal (list "a b c") (wrap "a   b  c" 20))))
+
+      (trims-surrounding-spaces
+       (lambda () (assert-equal (list "padded text") (wrap "  padded  text  " 20))))
+
+      (empty-text-has-no-lines
+       (lambda () (assert-equal (list) (wrap "   " 10))))
+
+      (keeps-an-overlong-word-alone
+       (lambda () (assert-equal (list "tiny" "supercalifragilistic" "tail")
+                                (wrap "tiny supercalifragilistic tail" 6))))
+
+      (joins-lines-with-newlines
+       (lambda () (assert-equal "a\nb\nc" (join (list "a" "b" "c")))))
+
+      (join-of-nothing-is-empty
+       (lambda () (assert-equal "" (join (list)))))
+
+      (rejects-a-non-string
+       (lambda () (wrap 42 10)))
+
+      (tests
+       (list
+        (list "single and short"
+              (list
+               (expect-pass "fits on one line" fits-on-one-line)))
+        (list "wrapping"
+              (list
+               (expect-pass "wraps greedily" wraps-greedily)
+               (expect-pass "breaks before exceeding the width" breaks-before-exceeding)
+               (expect-pass "keeps an overlong word alone" keeps-an-overlong-word-alone)))
+        (list "whitespace"
+              (list
+               (expect-pass "collapses runs of spaces" collapses-runs-of-spaces)
+               (expect-pass "trims surrounding spaces" trims-surrounding-spaces)
+               (expect-pass "empty text has no lines" empty-text-has-no-lines)))
+        (list "join"
+              (list
+               (expect-pass "joins lines with newlines" joins-lines-with-newlines)
+               (expect-pass "join of nothing is empty" join-of-nothing-is-empty)))
+        (expect-fail "rejects a non-string" rejects-a-non-string))))
+  (export tests))
