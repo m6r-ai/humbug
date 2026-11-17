@@ -317,7 +317,7 @@ class TestMenaiAIToolModulePath:
         assert tool._module_path() == Menai.build_module_path(None)
 
     def test_module_path_places_mindspace_modules_before_stdlib(self, tmp_path):
-        """The mindspace's menai_modules directory precedes the standard library."""
+        """The mindspace's menai-lib directory precedes the standard library."""
         mindspace = MagicMock()
         mindspace.mindspace_path.return_value = str(tmp_path)
 
@@ -325,7 +325,7 @@ class TestMenaiAIToolModulePath:
         tool.set_mindspace(mindspace)
 
         module_path = tool._module_path()
-        assert module_path[0] == str(tmp_path / "menai_modules")
+        assert module_path[0] == str(tmp_path / "menai-lib")
         assert module_path[-1] == str(Menai.stdlib_path())
 
     def test_module_path_ignores_empty_mindspace_path(self):
@@ -345,9 +345,94 @@ class TestMenaiAIToolModulePath:
         first = MagicMock()
         first.mindspace_path.return_value = str(tmp_path / "one")
         tool.set_mindspace(first)
-        assert tool._module_path()[0] == str(tmp_path / "one" / "menai_modules")
+        assert tool._module_path()[0] == str(tmp_path / "one" / "menai-lib")
 
         second = MagicMock()
         second.mindspace_path.return_value = str(tmp_path / "two")
         tool.set_mindspace(second)
-        assert tool._module_path()[0] == str(tmp_path / "two" / "menai_modules")
+        assert tool._module_path()[0] == str(tmp_path / "two" / "menai-lib")
+
+
+class TestMenaiLibInventory:
+    """Tests for the menai-lib inventory shown in the Menai tool help."""
+
+    def test_no_mindspace_means_no_inventory(self):
+        """With no mindspace open the help carries no inventory section."""
+        tool = MenaiAITool()
+
+        assert tool._menai_lib_inventory() == ""
+
+    def test_empty_menai_lib_means_no_inventory(self, tmp_path):
+        """A menai-lib with no modules adds nothing to the help."""
+        mindspace = MagicMock()
+        mindspace.mindspace_path.return_value = str(tmp_path)
+        (tmp_path / "menai-lib").mkdir()
+
+        tool = MenaiAITool()
+        tool.set_mindspace(mindspace)
+
+        assert tool._menai_lib_inventory() == ""
+
+    def test_modules_listed_with_their_exports(self, tmp_path):
+        """Each module is listed with its import name and exported names."""
+        mindspace = MagicMock()
+        mindspace.mindspace_path.return_value = str(tmp_path)
+        menai_lib = tmp_path / "menai-lib"
+        menai_lib.mkdir()
+        (menai_lib / "csv-normalise.menai").write_text(
+            "(let ((normalise (lambda (x) x)))\n  (export normalise))\n", encoding="utf-8"
+        )
+
+        tool = MenaiAITool()
+        tool.set_mindspace(mindspace)
+
+        inventory = tool._menai_lib_inventory()
+        assert "csv-normalise (exports: normalise)" in inventory
+
+    def test_subdirectory_modules_use_path_import_names(self, tmp_path):
+        """A module in a subdirectory is listed by its path import name."""
+        mindspace = MagicMock()
+        mindspace.mindspace_path.return_value = str(tmp_path)
+        helpers = tmp_path / "menai-lib" / "lib"
+        helpers.mkdir(parents=True)
+        (helpers / "helpers.menai").write_text(
+            "(let ((square (lambda (x) (integer* x x))))\n  (export square))\n", encoding="utf-8"
+        )
+
+        tool = MenaiAITool()
+        tool.set_mindspace(mindspace)
+
+        inventory = tool._menai_lib_inventory()
+        assert "lib/helpers (exports: square)" in inventory
+
+    def test_help_appends_the_inventory(self, tmp_path):
+        """The full help ends with the menai-lib inventory section."""
+        mindspace = MagicMock()
+        mindspace.mindspace_path.return_value = str(tmp_path)
+        menai_lib = tmp_path / "menai-lib"
+        menai_lib.mkdir()
+        (menai_lib / "stats-extra.menai").write_text(
+            "(let ((mean (lambda (xs) 1.0)))\n  (export mean))\n", encoding="utf-8"
+        )
+
+        tool = MenaiAITool()
+        tool.set_mindspace(mindspace)
+
+        help_text = tool.get_detailed_help()
+        assert "Mindspace library" in help_text
+        assert "stats-extra (exports: mean)" in help_text
+
+    def test_module_without_export_form_lists_name_only(self, tmp_path):
+        """A module with no export form is listed without exports."""
+        mindspace = MagicMock()
+        mindspace.mindspace_path.return_value = str(tmp_path)
+        menai_lib = tmp_path / "menai-lib"
+        menai_lib.mkdir()
+        (menai_lib / "notes.menai").write_text("(integer+ 1 2)\n", encoding="utf-8")
+
+        tool = MenaiAITool()
+        tool.set_mindspace(mindspace)
+
+        inventory = tool._menai_lib_inventory()
+        assert "- notes" in inventory
+        assert "exports:" not in inventory

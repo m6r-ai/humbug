@@ -24,6 +24,7 @@ import syntax.parser_imports
 # pylint: enable=unused-import
 
 from ai.ai_backend import AIBackend
+from mindspace.mindspace import Mindspace
 
 from desktop.exception_notifier import get_exception_notifier
 from desktop.main_window import MainWindow
@@ -232,7 +233,7 @@ def parse_mindspace_argument(argv: list[str]) -> str | None:
 def setup_ai_system_prompt() -> None:
     """Configure the global AI system prompt."""
     system_prompt = (
-        "Note the following but do not volunteer information them unless asked:\n"
+        "Note the following but do not volunteer information about them unless asked:\n"
         "- You are an assistant inside a system called Humbug, but you should identify yourself as you would if you were not\n"
         "- The Humbug system supports multiple assistants at the same time so you are potentially one of many active assistants\n"
         f"- You are operating inside v{CURRENT_VERSION} of the Humbug system\n"
@@ -249,12 +250,18 @@ def setup_ai_system_prompt() -> None:
         "- Always check for a file AGENTS.md in the current mindspace. This will tell you how to operate within the "
         "mindspace. AGENTS.md files may also exist in subdirectories, and if so they contain information about specific "
         "tools or resources relevant to that subdirectory\n"
-        "- If you update the structure of the mindspace then update any AGENTS.md file that has become stale."
+        "- If you update the structure of the mindspace then update any AGENTS.md file that has become stale.\n"
         "- Always check for a file blueprint.md in the current mindspace. This will tell you the purpose and intent of the "
         "mindspace. blueprint.md files may also exist in subdirectories, and if so they contain information about the purpose "
         "and intent of that subdirectory\n"
         "- If your discussions with the user lead you to see new purpose and intent for the mindspace then update any "
-        "relevant blueprint.md file"
+        "relevant blueprint.md file\n"
+        f"- Reusable Menai library code for this mindspace lives in the {Mindspace.MENAI_LIB_DIR} directory at the "
+        "mindspace root. It is "
+        "on the Menai module search path ahead of the standard library, so check it before writing non-trivial data "
+        "processing logic, and read existing modules before writing new ones\n"
+        "- If you find yourself writing logic that duplicates a module, or that would clearly be reused by other "
+        f"conversations, factor it into the {Mindspace.MENAI_LIB_DIR} directory as a module for future conversations"
     )
 
     AIBackend.set_system_prompt(system_prompt)

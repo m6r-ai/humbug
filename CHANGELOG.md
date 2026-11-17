@@ -4,6 +4,22 @@
 
 New features:
 
+- Renamed the mindspace's Menai module directory from `menai_modules` to `menai-lib`, matching
+  the Menai standard library's kebab-case naming convention. The module search path now uses
+  `menai-lib` for the menai, editor, and filesystem tools.
+- New mindspaces are now created with a `menai-lib` directory at their root (with a `.gitkeep`
+  so it is preserved in git). This is a convention directory, like `.humbug`, and holds the
+  mindspace's reusable Menai library modules.
+- Existing mindspaces get a `menai-lib` directory automatically when opened, so mindspaces
+  created before the convention existed are brought up to date.
+- The new-mindspace folder dialog now shows `menai-lib` alongside `.humbug` with a disabled
+  (always-on) switch, making clear that it is part of the mindspace itself rather than an
+  optional folder.
+- The system prompt now tells AIs about `menai-lib`: to check it before writing non-trivial data
+  processing logic, and to factor reusable logic into it for future conversations. This makes the
+  convention work in every mindspace, without needing per-mindspace AGENTS.md instructions.
+- The Menai tool help now ends with an inventory of the mindspace's `menai-lib` modules, listing
+  each module's import name and its exported names.
 - The editor AI tool now writes a file automatically as part of the edit: applying a diff to an open file, or
   rewriting its buffer with a Menai program.
 - Resting the pointer on a conversation in the Conversations panel now describes it as well as naming its path.

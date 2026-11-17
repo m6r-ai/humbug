@@ -3,6 +3,8 @@
 import asyncio
 import json
 import logging
+import os
+import re
 import threading
 from pathlib import Path
 from typing import Any
@@ -97,8 +99,9 @@ class MenaiAITool(AITool):
         Compose the Menai module search path for the active mindspace.
 
         The path is composed by the Menai library, which places the mindspace's
-        ``menai_modules`` directory ahead of the standard library.  When no
-        mindspace is open the path falls back to the standard library alone.
+        ``menai-lib`` directory (the mindspace's reusable Menai library) ahead
+        of the standard library.  When no mindspace is open the path falls back
+        to the standard library alone.
 
         Returns:
             The composed module search path.
@@ -107,7 +110,7 @@ class MenaiAITool(AITool):
         if self._mindspace is not None:
             mindspace_path = self._mindspace.mindspace_path()
             if mindspace_path:
-                source_dir = str(Path(mindspace_path) / "menai_modules")
+                source_dir = str(Path(mindspace_path) / Mindspace.MENAI_LIB_DIR)
 
         return Menai.build_module_path(source_dir)
 
@@ -176,8 +179,83 @@ class MenaiAITool(AITool):
             return self._get_operation_help(operation)
 
         # Full tool help with comprehensive syntax guide, sourced from the
-        # menai package so it always matches the language.
-        return get_help()
+        # menai package so it always matches the language. The mindspace's
+        # menai-lib inventory is appended so conversations discover its
+        # modules without a separate listing step.
+        return get_help() + self._menai_lib_inventory()
+
+    def _menai_lib_inventory(self) -> str:
+        """
+        Build the mindspace's menai-lib module inventory for tool help.
+
+        Walks the menai-lib directory, collecting .menai files recursively with
+        their import names (subdirectories become path segments) and the names
+        their (export ...) forms declare. The listing is computed when the help
+        is requested, so it always reflects the library as it stands then.
+
+        Returns:
+            An inventory section, empty when there is nothing to list.
+        """
+        if self._mindspace is None:
+            return ""
+
+        mindspace_path = self._mindspace.mindspace_path()
+        if not mindspace_path:
+            return ""
+
+        menai_lib_dir = Path(mindspace_path) / Mindspace.MENAI_LIB_DIR
+        if not menai_lib_dir.is_dir():
+            return ""
+
+        entries: list[tuple[str, list[str]]] = []
+        for module_path in sorted(menai_lib_dir.rglob("*.menai")):
+            rel = module_path.relative_to(menai_lib_dir)
+            module_name = str(rel.with_suffix("")).replace(os.sep, "/")
+            exports = self._module_exports(module_path)
+            entries.append((module_name, exports))
+
+        if not entries:
+            return ""
+
+        lines = [
+            "",
+            "",
+            "## Mindspace library",
+            "",
+            f"Modules in this mindspace's {Mindspace.MENAI_LIB_DIR} directory, ahead of the standard library:",
+            "",
+        ]
+        for module_name, exports in entries:
+            if exports:
+                lines.append(f"- {module_name} (exports: {', '.join(exports)})")
+
+            else:
+                lines.append(f"- {module_name}")
+
+        return "\n".join(lines) + "\n"
+
+    def _module_exports(self, module_path: Path) -> list[str]:
+        """
+        Extract the names an export form declares.
+
+        Args:
+            module_path: Path to a .menai module file.
+
+        Returns:
+            Exported names in declaration order, empty when none are found.
+        """
+        try:
+            with open(module_path, encoding="utf-8") as f:
+                source = f.read()
+
+        except OSError:
+            return []
+
+        exports: list[str] = []
+        for match in re.finditer(r"\(export\s+([^)]+)\)", source):
+            exports.extend(match.group(1).split())
+
+        return exports
 
     def _extract_evaluate_context(self, arguments: dict[str, Any]) -> str | None:
         """

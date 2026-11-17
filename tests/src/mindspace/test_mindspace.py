@@ -1,5 +1,6 @@
 """Tests for Mindspace AI settings broadcasting and session state persistence."""
 import os
+import shutil
 
 import pytest
 
@@ -405,6 +406,30 @@ class TestJournalledPath:
     def test_no_mindspace_means_nothing_is_journalled(self) -> None:
         """With no mindspace open there is no journal and no path it records."""
         assert _new_mindspace().journalled_path("/tmp/file.py") is None
+
+
+class TestConventionDirectories:
+    """Tests for the convention directories every new mindspace is created with."""
+
+    def test_a_new_mindspace_gets_a_menai_lib_directory(self, tmp_path) -> None:
+        """A new mindspace has an empty menai-lib library directory."""
+        _new_mindspace().create_mindspace(str(tmp_path), [])
+
+        menai_lib = os.path.join(str(tmp_path), "menai-lib")
+        assert os.path.isdir(menai_lib)
+        assert os.path.exists(os.path.join(menai_lib, ".gitkeep"))
+
+    def test_an_existing_mindspace_gets_the_directory_when_opened(self, tmp_path) -> None:
+        """Mindspaces created before menai-lib existed are brought up to date."""
+        mindspace = _new_mindspace()
+        mindspace.create_mindspace(str(tmp_path), [])
+        shutil.rmtree(os.path.join(str(tmp_path), "menai-lib"))
+
+        mindspace.open_mindspace(str(tmp_path))
+
+        menai_lib = os.path.join(str(tmp_path), "menai-lib")
+        assert os.path.isdir(menai_lib)
+        assert os.path.exists(os.path.join(menai_lib, ".gitkeep"))
 
 
 class TestKeepingHumbugOutOfGit:

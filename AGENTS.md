@@ -152,7 +152,7 @@ it should not be added.
 humbug/
 ├── docs/                   # Documentation
 ├── icons/                  # Application icons
-├── menai_modules/          # Humbug-specific Menai modules
+├── menai-lib/              # Reusable Menai library modules for this mindspace
 ├── src/                    # Main source code
 ├── tests/                  # Test suite
 ├── tools/                  # Development and analysis tools

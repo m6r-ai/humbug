@@ -227,6 +227,7 @@ def get_french_strings() -> LanguageStrings:
         mindspace_folders_title="Configurer les dossiers de l'espace mental",
         mindspace_path="Chemin de l'espace mental",
         humbug_folder='Créer le dossier ".humbug"',
+        menai_lib_folder='Créer le dossier "menai-lib"',
         src_folder='Créer le dossier "src"',
 
         # Mindspace settings
