@@ -95,3 +95,4 @@ What costs, risks, or constraints does this decision impose?
 | [0023](0023-journalling-a-creation.md) | Journalling a creation, so a directory can be reversed | Accepted |
 | [0024](0024-two-bounds-context-and-load.md) | Two bounds — context and load | Accepted |
 | [0025](0025-editor-writes-are-file-writes.md) | An editor write is a file write | Accepted |
+| [0026](0026-autonomous-mode.md) | Autonomous Mode — conversation-native missions alongside Classic Mode | Proposed — Pending Maintainer Review |

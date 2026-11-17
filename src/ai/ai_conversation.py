@@ -13,6 +13,7 @@ from ai.ai_manager import AIManager
 from ai.ai_message import AIMessage
 from ai.ai_message_source import AIMessageSource
 from ai.ai_model import AIReasoningCapability
+from ai.ai_pending_tool_authorization import AIPendingToolAuthorization
 from ai.ai_response import AIError
 from ai.ai_usage import AIUsage
 from ai_tool import (
@@ -81,6 +82,7 @@ class AIConversation:
         self._pending_tool_calls: list[AIToolCall] = []
         self._pending_tool_call_message: AIMessage | None = None
         self._pending_authorization_future: asyncio.Future[bool] | None = None
+        self._pending_authorization: AIPendingToolAuthorization | None = None
         self._auto_approve_file_changes = False
 
         # Interruptible tool wait state
@@ -98,6 +100,18 @@ class AIConversation:
     def is_streaming(self) -> bool:
         """Check if the conversation is currently streaming a response."""
         return self._is_streaming
+
+    def pending_tool_authorization(self) -> AIPendingToolAuthorization | None:
+        """
+        Return the tool authorization request waiting for a decision, if any.
+
+        Returns:
+            The pending request, or None when no approval is outstanding
+        """
+        if self._pending_authorization_future is None or self._pending_authorization_future.done():
+            return None
+
+        return self._pending_authorization
 
     def set_auto_approve_file_changes(self, enabled: bool) -> None:
         """
@@ -555,6 +569,14 @@ class AIConversation:
 
         # Create a future to wait for the authorization result
         self._pending_authorization_future = asyncio.Future()
+        self._pending_authorization = AIPendingToolAuthorization(
+            message=self._pending_tool_call_message,
+            tool_call=tool_call,
+            reason=reason,
+            context=context,
+            destructive=destructive,
+            kind=kind
+        )
 
         try:
             # Trigger the approval UI
@@ -580,6 +602,7 @@ class AIConversation:
 
         finally:
             self._pending_authorization_future = None
+            self._pending_authorization = None
 
     def _extract_context(self, tool_call: AIToolCall) -> str | None:
         """

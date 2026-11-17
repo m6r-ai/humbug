@@ -9,6 +9,7 @@ from ai.ai_manager import AIManager
 from ai.ai_message import AIMessage
 from ai.ai_message_source import AIMessageSource
 from ai.ai_model import AIReasoningCapability, AIReasoningEffort
+from ai.ai_pending_tool_authorization import AIPendingToolAuthorization
 
 
 __all__ = [
@@ -22,6 +23,7 @@ __all__ = [
     "AIManager",
     "AIMessage",
     "AIMessageSource",
+    "AIPendingToolAuthorization",
     "AIReasoningCapability",
     "AIReasoningEffort",
 ]
