@@ -8,7 +8,7 @@ version = "60"
 requires-python = ">=3.10"
 dependencies = [
     "certifi",
-    "menai >= 0.9.0",
+    "menai >= 0.10.0",
     "pyside6",
     "qasync"
 ]
