@@ -15,6 +15,10 @@ def test_tool_caches_are_not_scanned():
         assert name in DEFAULT_SCAN_PRUNED_PATHS
 
 
+def test_editor_swap_files_are_not_scanned():
+    assert "*.swp" in DEFAULT_SCAN_PRUNED_PATHS
+
+
 def test_everything_already_ignored_is_also_pruned():
     assert IGNORED_DIRS <= DEFAULT_SCAN_PRUNED_PATHS
 

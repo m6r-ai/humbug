@@ -32,6 +32,8 @@ New features:
 - Panel tooltips now give a path as it sits in the mindspace instead of in full.
 - Editor auto backup now keeps its copies under `.humbug/backups`, rather than saving one as `file.txt.backup`
   beside the file itself.
+- The change journal now ignores editor swap files (`*.swp`) by default, so they no longer appear in the
+  change list.
 
 Bug fixes:
 
