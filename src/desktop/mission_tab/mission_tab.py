@@ -30,6 +30,7 @@ from desktop.mission_tab.mission_widget import MissionWidget
 from desktop.status_message import StatusMessage
 from desktop.style_manager import StyleManager
 from desktop.tab import TabBase
+from mindspace.mindspace_settings import MindspaceSettings
 from mission import (
     AutoApproveLevel, MissionActivity, MissionActivityKind, MissionAgent, MissionAgentState, MissionDecision,
     MissionError, MissionExchange, MissionMode, MissionPhase, MissionService, MissionSnapshot, MissionSpeaker,
@@ -1396,6 +1397,10 @@ class MissionTab(TabBase):
 
     def activate(self) -> None:
         self._refresh()
+
+    def apply_mindspace_settings(self, settings: MindspaceSettings) -> None:
+        """Redraw with the Mission Control settings, which can also be changed in the settings dialog."""
+        self._on_service_changed()
 
     def set_path(self, path: str) -> None:
         pass

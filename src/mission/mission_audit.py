@@ -2,23 +2,11 @@
 
 from typing import Any
 
-from ai import AIConversationEvent, AIMessage, AIMessageSource
+from ai import AIConversationEvent, AIMessage
 from ai_transcript_conversation import AITranscriptConversation
 from mindspace.mindspace import Mindspace
+from mindspace.mindspace_conversation_log import completed_message_entry
 from mindspace.mindspace_log_level import MindspaceLogLevel
-from mission.mission_tool_label import tool_call_label
-
-
-LOG_PREVIEW_CHARS = 120
-
-
-def _summarize_for_log(text: str) -> str:
-    """Return a single-line excerpt of text for the interaction log."""
-    flat = " ".join(text.split())
-    if len(flat) <= LOG_PREVIEW_CHARS:
-        return flat
-
-    return f"{flat[:LOG_PREVIEW_CHARS]}..."
 
 
 class MissionConversationAuditor:
@@ -45,7 +33,9 @@ class MissionConversationAuditor:
         self._conversation = transcript.inner_conversation()
         self._history = transcript.get_conversation_history()
         self._baseline = self._usage_totals()
-        self._history.set_on_usage_changed(self._on_usage_changed)
+        # Kept so detach() can tell whether the history's one usage callback is still this one.
+        self._usage_callback = self._on_usage_changed
+        self._history.set_on_usage_changed(self._usage_callback)
         self._conversation.register_callback(AIConversationEvent.MESSAGE_COMPLETED, self._on_message_completed)
         self._conversation.register_callback(
             AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, self._on_message_completed
@@ -53,7 +43,11 @@ class MissionConversationAuditor:
 
     def detach(self) -> None:
         """Stop recording."""
-        self._history.set_on_usage_changed(None)
+        # The history has one usage callback.  Only this auditor's own is cleared, so a
+        # tab that has already installed its callback keeps it.
+        if self._history.on_usage_changed() is self._usage_callback:
+            self._history.set_on_usage_changed(None)
+
         self._conversation.unregister_callback(AIConversationEvent.MESSAGE_COMPLETED, self._on_message_completed)
         self._conversation.unregister_callback(
             AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, self._on_message_completed
@@ -69,29 +63,9 @@ class MissionConversationAuditor:
 
     async def _on_message_completed(self, message: AIMessage, *_args: Any) -> None:
         """Record a completed prompt, reasoning step or response."""
-        content = _summarize_for_log(message.content)
-
-        if message.source == AIMessageSource.REASONING:
-            if content:
-                self._log(f"AI reasoning: '{content}'")
-
-        elif message.source == AIMessageSource.AI:
-            if content:
-                self._log(f"AI response: '{content}'")
-
-            elif message.tool_calls:
-                tools = ", ".join(tool_call_label(tc) for tc in message.tool_calls)
-                self._log(f"AI requested tool calls: {tools}")
-
-        elif message.source == AIMessageSource.USER and not message.tool_results:
-            if message.user_name:
-                self._log(f"AI '{message.user_name}' submitted prompt: '{content}'")
-
-            else:
-                self._log(f"Human submitted prompt: '{content}'")
-
-        elif message.source == AIMessageSource.USER_QUEUED:
-            self._log(f"Human queued prompt: '{content}'")
+        entry = completed_message_entry(message)
+        if entry:
+            self._log(entry)
 
     def _usage_totals(self) -> dict[str, int]:
         """Return the conversation's cumulative token totals."""

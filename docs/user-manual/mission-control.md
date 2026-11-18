@@ -32,7 +32,8 @@ If movement on screen is uncomfortable or distracting, turn on **Reduce motion**
 Mission Control. Everything is then drawn still and in its final state: the agents do not move,
 their remarks appear whole instead of being typed out, status dots do not pulse, cards do not
 fade in, the page jumps rather than glides, and a finished mission is not celebrated with
-confetti. Nothing is hidden; only the movement goes. The choice is saved for the mindspace.
+confetti. Nothing is hidden; only the movement goes. The choice is saved for the mindspace, as a
+[mindspace setting](mindspace-settings.md#mission-control) you can also change in **Settings**.
 
 ---
 
@@ -135,8 +136,9 @@ request: to plan it first if it is a big task, or to give the answer if that is 
 instead, which resumes the mission too, or click **Stop** to leave it stopped.
 
 To have interrupted missions pick up without clicking **Resume**, turn on **Auto-resume after
-restart** at the top of Mission Control. This is saved for the mindspace and is off until you turn
-it on. Interrupted missions are then resumed as soon as the mindspace opens, whether or not the
+restart** at the top of Mission Control. This is saved for the mindspace, as a
+[mindspace setting](mindspace-settings.md#mission-control) you can also change in **Settings**, and
+is off until you turn it on. Interrupted missions are then resumed as soon as the mindspace opens, whether or not the
 Mission Control tab is open.
 
 A mission that was waiting for you when Humbug closed (asking a question, paused, or finished) is
@@ -208,8 +210,8 @@ When a mission is selected, Mission Control shows, from the top:
   helper agent for this…" or, when it is done, "All done! Anything else I can do for you?". A new
   agent introduces itself once; after its first step, while it works out its next one, it says what
   it has just done and how many actions it has taken so far, such as "Read merge.py, now working out
-  what's next… (2 actions so far)". A tag under each agent's name shows the AI model it uses, such
-  as **Claude Sonnet 5.5**, and the same model is named in **Show as a list** and when you hover over
+  what's next… (2 actions so far)". A tag under each agent's name shows the display name of the AI
+  model it uses, and the same model is named in **Show as a list** and when you hover over
   the agent. An
   agent waiting for your approval says what it wants to do and shows **Approve**, **Unsure** and
   **Reject** buttons in its bubble, which work exactly like the same buttons in the Decision Inbox.
@@ -252,7 +254,7 @@ When a mission is selected, Mission Control shows, from the top:
   lead have said, oldest first, as you would read it in a conversation tab but without the input box (you reply from the box at
   the bottom of Mission Control). Your messages sit on the right, shown exactly as you typed them;
   the lead's replies are on the left under its name, formatted and in full. Beside the name, a tag
-  shows the AI model that wrote that reply, such as **DeepSeek V4.1 Flash**. Between them, a small
+  shows the AI model that wrote that reply. Between them, a small
   **⚙** line names each tool the lead used and what it worked on, such as
   `filesystem.write_file · notes.md`. Your first message is shown as the request you typed, not the
   instructions Mission Control adds to it, and Mission Control's own requests for the lead to carry

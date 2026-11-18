@@ -1,24 +1,13 @@
-"""Readable labels for tool calls, shared by the mission modules."""
+"""What a tool call acts on, shared by the mission modules."""
 
 from ai_tool import AIToolCall
 
 
-def tool_call_label(tool_call: AIToolCall) -> str:
-    """
-    Return a readable label for a tool call, naming its operation if it has one.
-
-    Args:
-        tool_call: The call to describe
-
-    Returns:
-        The tool's name, followed by its operation when it has one
-    """
-    operation = tool_call.arguments.get("operation", "")
-    return f"{tool_call.name}.{operation}" if operation else tool_call.name
-
-
-# Arguments naming what a call acts on, most specific first.
-_TARGET_ARGUMENTS = ("path", "output_path", "command", "keystrokes", "url", "ref")
+# Arguments naming what a call acts on, most specific first.  The last few name
+# the work handed to another conversation, for calls that touch no file.
+_TARGET_ARGUMENTS = (
+    "path", "file_path", "output_path", "command", "keystrokes", "url", "ref", "destination", "task_prompt", "message"
+)
 
 
 def tool_call_target(tool_call: AIToolCall) -> str:

@@ -86,3 +86,24 @@ def test_a_save_writes_the_journal_section(tmp_path):
         saved = json.load(f)
 
     assert "journal" in saved
+
+
+def test_mission_control_settings_round_trip_through_a_save(tmp_path):
+    path = _settings_file(tmp_path, {})
+    settings = MindspaceSettings(["filesystem"])
+    assert not settings.mission_resume_automatically and not settings.mission_reduce_motion
+
+    settings.mission_resume_automatically = True
+    settings.mission_reduce_motion = True
+    settings.save(path)
+
+    reloaded = MindspaceSettings.load(path)
+    assert reloaded.mission_resume_automatically and reloaded.mission_reduce_motion
+
+
+def test_mission_control_settings_of_the_wrong_type_fall_back_to_off(tmp_path):
+    settings = MindspaceSettings.load(
+        _settings_file(tmp_path, {"missions": {"resumeAutomatically": "yes", "reduceMotion": 1}})
+    )
+
+    assert not settings.mission_resume_automatically and not settings.mission_reduce_motion

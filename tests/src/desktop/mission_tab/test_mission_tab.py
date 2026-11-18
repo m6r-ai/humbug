@@ -3214,8 +3214,7 @@ class TestComposerTools:
         widget.add_attachment("b.txt", "B")
         assert not widget._attachments_bar.isHidden()  # pylint: disable=protected-access
 
-        chip = widget._attachments_layout.itemAt(0).widget()  # pylint: disable=protected-access
-        chip.findChild(QToolButton).click()
+        widget._attachments_bar.findChildren(QToolButton, "_attachment_remove")[0].click()  # pylint: disable=protected-access
         assert widget.take_attachments() == [("b.txt", "B")]
         assert widget.take_attachments() == []
         assert widget._attachments_bar.isHidden()  # pylint: disable=protected-access

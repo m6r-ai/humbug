@@ -97,6 +97,17 @@ opening settings.
 
 ---
 
+## Mission Control
+
+- **Auto-resume after restart** — resume missions that were interrupted when Humbug closed as soon as
+  the mindspace opens. Off by default.
+- **Reduce motion** — draw Mission Control still, without animation. Off by default.
+
+The same two switches are at the top of the Mission Control tab; changing either place changes both.
+See [Mission Control](mission-control.md).
+
+---
+
 ## Journal
 
 Two settings control the [change journal](journal.md).

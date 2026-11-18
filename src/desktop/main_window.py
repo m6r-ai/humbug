@@ -2739,11 +2739,18 @@ class MainWindow(QMainWindow):
     def _show_mission(self, mission_id: str) -> None:
         """Open Mission Control showing a particular mission."""
         self._on_open_mission_control()
-        contexts = self._mindspace_manager.mindspace().contexts()
-        info = next((i for i in contexts.list_all() if i.context_type == "mission"), None)
+        info = self._mission_control_context()
         tab = self._tab_manager.get_tab_by_id(info.context_id) if info is not None else None
         if isinstance(tab, MissionTab):
             tab.show_mission(mission_id)
+
+    def _mission_control_context(self) -> ContextInfo | None:
+        """Return the context of the open Mission Control tab, if there is one."""
+        if not self._mindspace_manager.has_mindspace():
+            return None
+
+        contexts = self._mindspace_manager.mindspace().contexts()
+        return next((i for i in contexts.list_all() if i.context_type == "mission"), None)
 
     def _on_open_mission_control(self) -> None:
         """Open (or focus) Mission Control."""
@@ -2751,7 +2758,7 @@ class MainWindow(QMainWindow):
             return
 
         contexts = self._mindspace_manager.mindspace().contexts()
-        existing = next((i for i in contexts.list_all() if i.context_type == "mission"), None)
+        existing = self._mission_control_context()
         if existing:
             # If the tab is already tracked by the tab manager, just focus it.
             # If the context is stale (e.g. the tab failed to create on a

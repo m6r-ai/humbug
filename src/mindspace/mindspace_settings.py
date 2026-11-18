@@ -39,6 +39,8 @@ class MindspaceSettings:
         default_factory=lambda: sorted(DEFAULT_SCAN_PRUNED_PATHS)
     )  # Directories and paths the change scanner does not descend
     pinned_paths: list[str] = field(default_factory=list)
+    mission_resume_automatically: bool = False  # Resume interrupted missions when the mindspace opens
+    mission_reduce_motion: bool = False  # Draw Mission Control without animation
 
     @classmethod
     def _safe_load_json(cls, path: str) -> dict:
@@ -135,6 +137,7 @@ class MindspaceSettings:
         # settings under "changes".  The file is not rewritten on open, so both are
         # read; the new key wins once anything is saved again.
         journal = cls._safe_get_dict(data, "journal") or cls._safe_get_dict(data, "changes")
+        missions = cls._safe_get_dict(data, "missions")
 
         # Get defaults
         default_model, default_provider = AIConversationSettings.get_default_model({})
@@ -402,6 +405,22 @@ class MindspaceSettings:
 
         pinned_paths = [p for p in pinned_paths_raw if isinstance(p, str)]
 
+        mission_resume_automatically = missions.get("resumeAutomatically", False)
+        if not isinstance(mission_resume_automatically, bool):
+            cls._logger.warning(
+                "Invalid resumeAutomatically type in %s: expected bool, got %s. Using default.",
+                path, type(mission_resume_automatically).__name__
+            )
+            mission_resume_automatically = False
+
+        mission_reduce_motion = missions.get("reduceMotion", False)
+        if not isinstance(mission_reduce_motion, bool):
+            cls._logger.warning(
+                "Invalid reduceMotion type in %s: expected bool, got %s. Using default.",
+                path, type(mission_reduce_motion).__name__
+            )
+            mission_reduce_motion = False
+
         return cls(
             model=model,
             provider=provider,
@@ -422,7 +441,9 @@ class MindspaceSettings:
             journal_checkpoint_interval=journal_checkpoint_interval,
             journal_pruned_paths=journal_pruned_paths,
             enabled_tools=enabled_tools,
-            pinned_paths=pinned_paths
+            pinned_paths=pinned_paths,
+            mission_resume_automatically=mission_resume_automatically,
+            mission_reduce_motion=mission_reduce_motion,
         )
 
     def save(self, path: str) -> None:
@@ -457,6 +478,10 @@ class MindspaceSettings:
             "journal": {
                 "checkpointIntervalSeconds": self.journal_checkpoint_interval,
                 "prunedPaths": self.journal_pruned_paths,
+            },
+            "missions": {
+                "resumeAutomatically": self.mission_resume_automatically,
+                "reduceMotion": self.mission_reduce_motion,
             },
         }
         with open(path, 'w', encoding='utf-8') as f:

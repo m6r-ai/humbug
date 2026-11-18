@@ -36,10 +36,9 @@ from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.style_manager import StyleManager
 from desktop.widgets import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 from desktop.markdown import MarkdownTextEdit
+from mindspace.mindspace_conversation_log import completed_message_entry, summarize_for_log, tool_call_label
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
-
-LOG_PREVIEW_CHARS = 120
 
 
 # How long a reveal slice may run before yielding to the event loop, in seconds.
@@ -66,29 +65,6 @@ _VISIBLE_RANGE_SCAN_STEPS = 256
 # shown while a response is arriving, so it is given a widget when it is streamed, but
 # history is full of them and none of those are ever shown.
 _STREAMING_ONLY_SOURCES = frozenset({AIMessageSource.AI_CONNECTED})
-
-
-def _summarize_for_log(text: str) -> str:
-    """
-    Return a single-line excerpt of text, for the interaction log.
-
-    Args:
-        text: Text to summarise.
-
-    Returns:
-        The text flattened onto one line, with a trailing ellipsis when shortened.
-    """
-    flat = " ".join(text.split())
-    if len(flat) <= LOG_PREVIEW_CHARS:
-        return flat
-
-    return f"{flat[:LOG_PREVIEW_CHARS]}..."
-
-
-def _tool_call_label(tool_call: AIToolCall) -> str:
-    """Return a human-readable label for a tool call, naming its operation if it has one."""
-    operation = tool_call.arguments.get("operation", "")
-    return f"{tool_call.name}.{operation}" if operation else tool_call.name
 
 
 class ConversationWidget(QWidget):
@@ -1275,7 +1251,7 @@ class ConversationWidget(QWidget):
             self.status_updated.emit()
 
             self._log_conversation_interaction(
-                f"AI response failed: {_summarize_for_log(message.content)}",
+                f"AI response failed: {summarize_for_log(message.content)}",
                 MindspaceLogLevel.ERROR
             )
 
@@ -1407,7 +1383,7 @@ class ConversationWidget(QWidget):
             info = self._pending_tool_call_approval.get_tool_approval_info()
             if info and info.get("tool_call"):
                 self._log_conversation_interaction(
-                    f"Human approved tool call: {_tool_call_label(info['tool_call'])}"
+                    f"Human approved tool call: {tool_call_label(info['tool_call'])}"
                 )
 
         self._pending_tool_call_approval = None
@@ -1425,7 +1401,7 @@ class ConversationWidget(QWidget):
             if info and info.get("tool_call"):
                 self._log_conversation_interaction(
                     f"Human indicated uncertainty about tool call: "
-                    f"{_tool_call_label(info['tool_call'])}"
+                    f"{tool_call_label(info['tool_call'])}"
                 )
 
             self._pending_tool_call_approval.remove_tool_approval_ui()
@@ -1450,7 +1426,7 @@ class ConversationWidget(QWidget):
             info = self._pending_tool_call_approval.get_tool_approval_info()
             if info and info.get("tool_call"):
                 self._log_conversation_interaction(
-                    f"Human denied tool call: {_tool_call_label(info['tool_call'])}\n"
+                    f"Human denied tool call: {tool_call_label(info['tool_call'])}\n"
                     f"reason: {reason}"
                 )
 
@@ -1892,36 +1868,9 @@ class ConversationWidget(QWidget):
         Args:
             message: The message that was completed
         """
-        content = _summarize_for_log(message.content)
-
-        if message.source == AIMessageSource.REASONING:
-            if content:
-                self._log_conversation_interaction(f"AI reasoning: '{content}'")
-
-        elif message.source == AIMessageSource.AI:
-            if content:
-                self._log_conversation_interaction(f"AI response: '{content}'")
-
-            elif message.tool_calls:
-                tools = ", ".join(_tool_call_label(tc) for tc in message.tool_calls)
-                self._log_conversation_interaction(f"AI requested tool calls: {tools}")
-
-        elif message.source == AIMessageSource.USER and not message.tool_results:
-            if message.user_name:
-                self._log_conversation_interaction(
-                    f"AI '{message.user_name}' submitted prompt: '{content}'"
-                )
-
-            else:
-                attachment_note = (
-                    f"\nattachments: {len(message.attachments)}" if message.attachments else ""
-                )
-                self._log_conversation_interaction(
-                    f"Human submitted prompt: '{content}'{attachment_note}"
-                )
-
-        elif message.source == AIMessageSource.USER_QUEUED:
-            self._log_conversation_interaction(f"Human queued prompt: '{content}'")
+        entry = completed_message_entry(message)
+        if entry:
+            self._log_conversation_interaction(entry)
 
     def _log_conversation_interaction(
         self,

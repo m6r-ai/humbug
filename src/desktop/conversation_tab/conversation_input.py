@@ -9,10 +9,11 @@ from PySide6.QtGui import (
     QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent, QFontMetrics, QTextCursor, QTextDocument, QIcon,
     QKeyEvent, QMouseEvent
 )
-from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QLabel, QSizePolicy
+from PySide6.QtWidgets import QWidget, QToolButton, QSizePolicy
 
 from ai import AIMessageSource
 
+from desktop.attachments_bar import AttachmentsBar
 from desktop.drop_payload import read_drop_payload
 from desktop.markdown import MarkdownTextEdit
 from desktop.conversation_tab.conversation_message_style import ConversationMessageStyle
@@ -65,9 +66,8 @@ class ConversationInput(ConversationMessage):
         self._settings_button: QToolButton | None = None
         self._attach_button: QToolButton | None = None
         self._cancel_edit_button: QToolButton | None = None
-        self._attachments: list[tuple[str, str]] = []  # (filename, content)
-        self._attachments_bar: QWidget | None = None
-        self._attachments_layout: QHBoxLayout | None = None
+        self._attachments_bar: AttachmentsBar | None = None
+        self._attachments_shown = False
 
         super().__init__(style, parent=parent, is_input=True)
 
@@ -84,13 +84,9 @@ class ConversationInput(ConversationMessage):
         self._text_area.installEventFilter(self)  # Install event filter for Ctrl+Enter
 
         # Attachments bar (hidden until files are attached)
-        self._attachments_bar = QWidget(self)
-        self._attachments_bar.setObjectName("_attachments_bar")
-        self._attachments_layout = QHBoxLayout(self._attachments_bar)
-        self._attachments_layout.setContentsMargins(0, 2, 0, 2)
-        self._attachments_layout.setSpacing(4)
-        self._attachments_layout.addStretch()
-        self._attachments_bar.hide()
+        self._attachments_bar = AttachmentsBar(self)
+        self._attachments_bar.setContentsMargins(0, 2, 0, 2)
+        self._attachments_bar.changed.connect(self._on_attachments_changed)
 
         # Insert the attachments bar between the sections container and the banner.
         # The layout order for input messages is: spacing(1), sections_container, banner.
@@ -304,7 +300,8 @@ class ConversationInput(ConversationMessage):
             self._cancel_edit_button.setIcon(QIcon(self._style_manager.scale_icon("close", icon_base_size)))
             self._cancel_edit_button.setIconSize(icon_size)
 
-        self._rescale_attachment_icons(icon_base_size, icon_size)
+        if self._attachments_bar is not None:
+            self._attachments_bar.apply_style()
 
     def _update_banner_text(self) -> None:
         """Update the header text based on current state."""
@@ -349,7 +346,7 @@ class ConversationInput(ConversationMessage):
 
     def _update_button_states(self) -> None:
         """Update button enabled states and visibility based on content and streaming status."""
-        has_content = bool(self.to_plain_text().strip()) or bool(self._attachments)
+        has_content = bool(self.to_plain_text().strip()) or bool(self.get_attachments())
 
         if self._is_streaming:
             if self._stop_button:
@@ -388,87 +385,26 @@ class ConversationInput(ConversationMessage):
 
     def add_attachment(self, filename: str, content: str) -> None:
         """Add a file attachment and show it in the attachments bar."""
-        self._attachments.append((filename, content))
-        self._rebuild_attachments_bar()
-        self._update_button_states()
+        if self._attachments_bar is not None:
+            self._attachments_bar.add_attachment(filename, content)
 
     def get_attachments(self) -> list[tuple[str, str]]:
         """Return the list of (filename, content) attachments."""
-        return list(self._attachments)
+        return self._attachments_bar.attachments() if self._attachments_bar is not None else []
 
     def clear_attachments(self) -> None:
         """Remove all attachments and hide the attachments bar."""
-        self._attachments.clear()
-        self._rebuild_attachments_bar()
+        if self._attachments_bar is not None:
+            self._attachments_bar.clear()
+
+    def _on_attachments_changed(self) -> None:
+        """Update the buttons, and report a new chrome height when the attachments bar was shown or hidden."""
         self._update_button_states()
-
-    def _rebuild_attachments_bar(self) -> None:
-        """Rebuild the attachments bar from the current attachments list."""
-        if self._attachments_layout is None or self._attachments_bar is None:
-            return
-
-        # Remove all existing attachment widgets, leaving the trailing stretch.
-        while self._attachments_layout.count() > 1:
-            item = self._attachments_layout.takeAt(0)
-            widget = item.widget() if item else None
-            if widget:
-                widget.deleteLater()
-
-        for index, (filename, _) in enumerate(self._attachments):
-            attachment_widget = QWidget()
-            attachment_widget.setObjectName("_attachment_widget")
-            attachment_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-            attachment_layout = QHBoxLayout(attachment_widget)
-            attachment_layout.setContentsMargins(8, 4, 4, 4)
-            attachment_layout.setSpacing(4)
-
-            name_label = QLabel(filename)
-            name_label.setObjectName("_attachment_label")
-            attachment_layout.addWidget(name_label)
-
-            icon_base_size = 14
-            icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
-            icon_size = QSize(icon_scaled_size, icon_scaled_size)
-            remove_button = QToolButton()
-            remove_button.setObjectName("_attachment_remove")
-            remove_button.setIcon(QIcon(self._style_manager.scale_icon("close", icon_base_size)))
-            remove_button.setIconSize(icon_size)
-            remove_button.clicked.connect(lambda _checked, i=index: self._remove_attachment(i))
-            attachment_layout.addWidget(remove_button)
-
-            self._attachments_layout.insertWidget(self._attachments_layout.count() - 1, attachment_widget)
-
-        previous_chrome_height = self.chrome_height()
-        self._attachments_bar.setVisible(bool(self._attachments))
-        if self.chrome_height() != previous_chrome_height:
+        assert self._attachments_bar is not None
+        shown = not self._attachments_bar.isHidden()
+        if shown != self._attachments_shown:
+            self._attachments_shown = shown
             self.chrome_height_changed.emit()
-
-    def _remove_attachment(self, index: int) -> None:
-        """Remove the attachment at the given index."""
-        if 0 <= index < len(self._attachments):
-            self._attachments.pop(index)
-            self._rebuild_attachments_bar()
-            self._update_button_states()
-
-    def _rescale_attachment_icons(self, icon_base_size: int, icon_size: QSize) -> None:
-        """Update close icons on all current attachment remove buttons after a zoom change."""
-        if self._attachments_layout is None:
-            return
-
-        close_icon = QIcon(self._style_manager.scale_icon("close", icon_base_size))
-        for i in range(self._attachments_layout.count() - 1):
-            item = self._attachments_layout.itemAt(i)
-            if item is None:
-                continue
-
-            attachment_widget = item.widget()
-            if attachment_widget is None:
-                continue
-
-            remove_button = attachment_widget.findChild(QToolButton, "_attachment_remove")
-            if remove_button is not None:
-                remove_button.setIcon(close_icon)
-                remove_button.setIconSize(icon_size)
 
     def text_area(self) -> MarkdownTextEdit:
         """Return the input text area widget."""

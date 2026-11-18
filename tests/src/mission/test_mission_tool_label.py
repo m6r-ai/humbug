@@ -1,7 +1,8 @@
 """Tests for the readable labels given to tool calls."""
 
 from ai_tool import AIToolCall
-from mission.mission_tool_label import tool_call_label, tool_call_target
+from mindspace.mindspace_conversation_log import tool_call_label
+from mission.mission_tool_label import tool_call_target
 
 
 class TestToolCallLabel:
@@ -28,6 +29,13 @@ class TestToolCallTarget:
         assert tool_call_target(AIToolCall(id="t3", name="http", arguments={"url": "https://example.com"})) == (
             "https://example.com"
         )
+
+    def test_delegated_work_is_the_target_of_a_call_that_touches_no_file(self) -> None:
+        """A call that hands work to another conversation is shown by what it hands over."""
+        call = AIToolCall(id="t1", name="delegate_ai", arguments={"task_prompt": "Write the tests"})
+        assert tool_call_target(call) == "Write the tests"
+        call = AIToolCall(id="t2", name="filesystem", arguments={"file_path": "a.md", "task_prompt": "x"})
+        assert tool_call_target(call) == "a.md"
 
     def test_move_names_both_ends(self) -> None:
         """A move or copy is shown from its source to its destination."""

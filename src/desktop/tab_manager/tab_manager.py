@@ -348,13 +348,15 @@ class TabManager(QWidget):
         self.show_all_columns()
         self._update_tabs()
 
-    def _update_mru_order(self, tab: TabBase, column: ColumnWidget) -> None:
+    def _update_mru_order(self, tab: TabBase, column: ColumnWidget, most_recent: bool = True) -> None:
         """
-        Update the MRU order when a tab is activated.
+        Update the MRU order when a tab is activated or added.
 
         Args:
-            tab: The tab that was activated
+            tab: The tab that was activated or added
             column: The column containing the tab
+            most_recent: False for a tab added behind the current one, which has not
+                been used yet and so is the least recently used
         """
         tab_id = tab.tab_id()
         mru_list = self._column_mru_order[column]
@@ -362,7 +364,11 @@ class TabManager(QWidget):
         if tab_id in mru_list:
             mru_list.remove(tab_id)
 
-        mru_list.insert(0, tab_id)
+        if most_recent:
+            mru_list.insert(0, tab_id)
+
+        else:
+            mru_list.append(tab_id)
 
     def _get_next_mru_tab(self, column: ColumnWidget, excluding_tab_id: str | None = None) -> TabBase | None:
         """
@@ -1045,12 +1051,7 @@ class TabManager(QWidget):
         self._update_tabs(change_focus=False)
 
         # A tab added to an empty column becomes current even when opened in the background.
-        if column.currentWidget() is tab:
-            self._update_mru_order(tab, column)
-
-        else:
-            self._column_mru_order[column].append(tab_id)
-
+        self._update_mru_order(tab, column, most_recent=column.currentWidget() is tab)
         self._schedule_layout_pass()
 
         # Keep the registry's column and position state in sync with the Qt layout.

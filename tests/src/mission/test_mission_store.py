@@ -144,18 +144,6 @@ class TestMissionStore:
         del data["reportsGoal"], data["goalMet"]
         assert Mission.from_dict(data).is_complete()
 
-    def test_preferences_are_kept_side_by_side(self, tmp_path):
-        """Saving one preference keeps the other, and both default to off."""
-        store = MissionStore(str(tmp_path / "missions"))
-        assert not store.load_resume_automatically() and not store.load_reduce_motion()
-
-        store.save_resume_automatically(True)
-        store.save_reduce_motion(True)
-        assert store.load_resume_automatically() and store.load_reduce_motion()
-
-        store.save_resume_automatically(False)
-        assert store.load_reduce_motion()
-
     def test_missions_load_oldest_first(self, tmp_path):
         """Missions are returned in creation order."""
         store = MissionStore(str(tmp_path / "missions"))

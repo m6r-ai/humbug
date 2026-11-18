@@ -3,7 +3,7 @@
 import asyncio
 from collections import deque
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from datetime import datetime, timezone
 import logging
 import os
@@ -19,14 +19,18 @@ from context.context_info import ContextInfo
 from context.context_registry import ContextEvent
 from conversation_context.conversation_context import ConversationContext
 from mindspace.mindspace import Mindspace
+from mindspace.mindspace_error import MindspaceError
+from mindspace.mindspace_conversation_log import tool_call_label
 from mindspace.mindspace_log_level import MindspaceLogLevel
+from mindspace.mindspace_settings import MindspaceSettings
 from mission.mission import AutoApproveLevel, Mission, MissionMode, MissionPhase, MissionTaskStatus
 from mission.mission_audit import MissionConversationAuditor
-from mission.mission_tool_label import tool_call_label, tool_call_target
+from mission.mission_tool_label import tool_call_target
 from mission.mission_error import MissionError
 from mission.mission_plan_parser import parse_mission_plan, strip_mission_plan
 from mission.mission_prompt import build_lead_prompt
-from mission.mission_reviewer import MissionApprovalReviewer, ReviewRequest, ReviewVerdict
+from mission.mission_approvals import MissionApprovals, MissionApprovalsHost
+from mission.mission_reviewer import MissionApprovalReviewer
 from mission.mission_snapshot import (
     MissionActivity, MissionActivityKind, MissionAgent, MissionAgentState,
     MissionDecision, MissionExchange, MissionSnapshot, MissionSpeaker, MissionStatus
@@ -39,9 +43,6 @@ MISSIONS_DIR = "missions"
 # Shown as the sender of the opening message in the lead conversation.
 MISSION_REQUESTER = "Mission Control"
 
-_REJECT_REASON = "Tool call was rejected by the user"
-_UNSURE_REASON = "User is unsure about this tool request and wants to discuss"
-_UNSURE_MESSAGE = "I'm not sure about this tool request. Let's discuss."
 
 # A short pause before asking the lead to carry on lets its reply settle and gives the
 # user a moment to step in.
@@ -79,19 +80,8 @@ _RESUME_MESSAGE = (
 # Lead conversations of autonomous missions have no tab, so they are tracked under a key of their own.
 _HEADLESS_PREFIX = "mission-lead:"
 
-# How much of the user's later messages, and of the lead's latest update, the approval reviewer sees.
-_REVIEW_INSTRUCTION_COUNT = 6
-_REVIEW_TEXT_LIMIT = 800
-
 # Notes Mission Control adds to the user's messages start like this, so they can be left out when shown.
 _NOTE_START = "\n\n(Mission Control:"
-
-# What the user grants by confirming the Everything auto-approve level (ADR-0026), recorded with the confirmation.
-_EVERYTHING_AUTHORITY = (
-    "every tool request made while the mission is autonomous, without review, including destructive file "
-    "operations, terminal commands (which cannot be limited to particular files), delegation and network writes; "
-    "revoked by choosing another level, switching the mission to classic mode, or stopping it"
-)
 
 _FOLLOW_UP_NOTE = (
     "(Mission Control: the previous plan is finished. If the message above asks for more work, report a new "
@@ -101,10 +91,11 @@ _FOLLOW_UP_NOTE = (
 
 _MAX_ACTIVITY = 300
 _SNAPSHOT_ACTIVITY = 40
+# A title taken from the objective's first line is kept short; one the lead or the user chose may be longer.
 _MAX_TITLE_LENGTH = 72
+_MAX_CHOSEN_TITLE_LENGTH = 144
 
 
-_TARGET_ARGUMENTS = ("path", "file_path", "url", "command", "destination", "task_prompt", "message")
 _MAX_TARGET_LENGTH = 80
 
 
@@ -119,45 +110,30 @@ def _excerpt(text: str) -> str:
     return flat if len(flat) <= _MAX_EXCERPT_LENGTH else f"{flat[:_MAX_EXCERPT_LENGTH - 1]}…"
 
 
-def _allows(level: AutoApproveLevel, destructive: bool) -> bool:
-    """Return whether an auto-approve level lets a request be approved without the user."""
-    return level == AutoApproveLevel.ALL or (level == AutoApproveLevel.SAFE and not destructive)
-
-
 def _more(text: str) -> str:
     """Return text for an opened activity entry, shortened only when very long."""
     text = text.strip()
     return text if len(text) <= _MAX_MORE_LENGTH else f"{text[:_MAX_MORE_LENGTH - 1]}…"
 
 
-def _tool_target(tool_call: AIToolCall) -> str:
+def _short_target(tool_call: AIToolCall) -> str:
     """Return what a tool call works on, such as a file, a URL or a command, on one short line."""
-    for name in _TARGET_ARGUMENTS:
-        value = tool_call.arguments.get(name)
-        if isinstance(value, str) and value.strip():
-            flat = " ".join(value.split())
-            return flat if len(flat) <= _MAX_TARGET_LENGTH else f"{flat[:_MAX_TARGET_LENGTH - 1]}…"
+    flat = " ".join(tool_call_target(tool_call).split())
+    return flat if len(flat) <= _MAX_TARGET_LENGTH else f"{flat[:_MAX_TARGET_LENGTH - 1]}…"
 
-    return ""
+
+def _fit_title(title: str, limit: int) -> str:
+    """Return a title shortened to a limit, ending with an ellipsis when it was cut."""
+    if len(title) <= limit:
+        return title
+
+    return title[:limit - 1].rstrip() + "…"
 
 
 def _initial_title(objective: str) -> str:
     """Return a provisional mission title taken from the objective's first line."""
     first_line = objective.strip().splitlines()[0].strip() if objective.strip() else ""
-    if len(first_line) <= _MAX_TITLE_LENGTH:
-        return first_line
-
-    return first_line[:_MAX_TITLE_LENGTH - 1].rstrip() + "…"
-
-
-@dataclass
-class _PendingDecision:
-    """A decision together with what identifies the request it answers."""
-    decision: MissionDecision
-    tool_call_id: str
-    message_id: str | None
-    reviewing: bool = False
-    review_note: str = ""
+    return _fit_title(first_line, _MAX_TITLE_LENGTH)
 
 
 class _TrackedConversation:
@@ -260,7 +236,7 @@ class _TrackedConversation:
 
         self.state = MissionAgentState.WORKING
         self.tool_name = tool_call_label(message.tool_calls[0])
-        self.tool_target = _tool_target(message.tool_calls[0])
+        self.tool_target = _short_target(message.tool_calls[0])
         self._note_tool_call(message.tool_calls[0])
         self._service.handle_tool_used(self, self.tool_name)
 
@@ -268,7 +244,7 @@ class _TrackedConversation:
         """Count a tool call and remember it as the latest thing the conversation did."""
         self.actions += 1
         self.last_tool_name = tool_call_label(tool_call)
-        self.last_tool_target = _tool_target(tool_call)
+        self.last_tool_target = _short_target(tool_call)
 
     def model_name(self) -> str:
         """Return the display name of the AI model the conversation uses."""
@@ -339,7 +315,6 @@ class MissionService:
             reviewer: Reviews approval requests for missions that allow auto-approval
         """
         self._mindspace = mindspace
-        self._reviewer = reviewer if reviewer is not None else MissionApprovalReviewer(mindspace)
         self._mindspace_path = mindspace.mindspace_path()
         self._registry = mindspace.contexts()
         self._store = MissionStore(
@@ -351,7 +326,6 @@ class MissionService:
         self._members: dict[str, str] = {}
         self._expected_messages: dict[str, list[str]] = {}
         self._seen_user_messages: dict[str, list[str]] = {}
-        self._decisions: dict[str, _PendingDecision] = {}
         self._activity: deque[MissionActivity] = deque(maxlen=_MAX_ACTIVITY)
         self._listeners: list[Callable[[], None]] = []
         self._sync_scheduled = False
@@ -361,9 +335,24 @@ class MissionService:
         self._scheduled_continues: dict[str, asyncio.TimerHandle] = {}
         self._continue_tasks: set[asyncio.Task] = set()
         self._interrupted: set[str] = set()
-        self._resume_automatically = False
-        self._reduce_motion = False
         self._auditors: dict[str, MissionConversationAuditor] = {}
+        self._approvals = MissionApprovals(
+            mindspace,
+            reviewer if reviewer is not None else MissionApprovalReviewer(mindspace),
+            MissionApprovalsHost(
+                missions=self._missions,
+                tracked=self._tracked,
+                members=self._members,
+                record=self._record,
+                notify=self._notify,
+                save=self._save,
+                title_for=self._title_for,
+                run_task=self._run_task,
+                lead_for=self._lead_for,
+                latest_lead_message=self._latest_lead_message,
+                expect_message=self._expect_message,
+            ),
+        )
 
     def mindspace_path(self) -> str:
         """Return the path of the mindspace this service belongs to."""
@@ -387,17 +376,14 @@ class MissionService:
             ):
                 # Everything rests on a confirmation the user gave for an autonomous mission that
                 # is still going; one that was not saved, or no longer applies, is never assumed.
-                self._revoke_everything(mission, "no saved confirmation applies to it")
-
-        self._resume_automatically = self._store.load_resume_automatically()
-        self._reduce_motion = self._store.load_reduce_motion()
+                self._approvals.revoke_everything(mission, "no saved confirmation applies to it")
 
         self._registry.register_callback(ContextEvent.OPENED, self._on_context_opened)
         self._registry.register_callback(ContextEvent.CLOSED, self._on_context_closed)
         self._registry.register_callback(ContextEvent.UPDATED, self._on_context_updated)
         self._sync()
 
-        if self._resume_automatically:
+        if self.resume_automatically():
             # A paused mission waits for the user, even after Humbug restarts.
             for mission_id in sorted(self._interrupted):
                 if not self._missions[mission_id].paused:
@@ -419,7 +405,7 @@ class MissionService:
             tracked.detach()
 
         self._tracked.clear()
-        self._decisions.clear()
+        self._approvals.clear()
         self._members.clear()
         for handle in self._scheduled_continues.values():
             handle.cancel()
@@ -583,7 +569,7 @@ class MissionService:
 
             elif message.source == AIMessageSource.TOOL_CALL:
                 for tool_call in message.tool_calls or []:
-                    target = _tool_target(tool_call)
+                    target = _short_target(tool_call)
                     label = tool_call_label(tool_call)
                     entries.append(MissionExchange(
                         MissionSpeaker.TOOL, f"{label} · {target}" if target else label, message.timestamp
@@ -647,23 +633,8 @@ class MissionService:
         return self._mindspace.get_absolute_path(mission.lead_path) if mission is not None else ""
 
     def decisions(self) -> list[MissionDecision]:
-        """
-        Return every decision waiting for the user in this mindspace, oldest first.
-
-        A decision is only listed while its conversation is still waiting on the
-        same request, so one answered elsewhere disappears even if no event said so.
-        """
-        live: list[MissionDecision] = []
-        for context_id, pending in self._decisions.items():
-            tracked = self._tracked.get(context_id)
-            if tracked is None:
-                continue
-
-            request = tracked.conversation.pending_tool_authorization()
-            if request is not None and request.tool_call.id == pending.tool_call_id:
-                live.append(replace(pending.decision, reviewing=pending.reviewing, review_note=pending.review_note))
-
-        return sorted(live, key=lambda d: d.requested_at)
+        """Return every decision waiting for the user in this mindspace, oldest first."""
+        return self._approvals.decisions()
 
     async def create_mission(
         self,
@@ -741,7 +712,7 @@ class MissionService:
             context=self._mindspace.conversation_log_context(conversation)
         )
         if auto_approve == AutoApproveLevel.ALL:
-            self._log_everything_confirmed(mission)
+            self._approvals.log_everything_confirmed(mission)
 
         model_name = (
             AIConversationSettings.get_display_name(conversation_settings.model, conversation_settings.provider)
@@ -896,7 +867,7 @@ class MissionService:
 
         self._record(MissionActivityKind.MISSION_STOPPED, mission.title, "", mission_id)
         self._mindspace.add_interaction(MindspaceLogLevel.INFO, f"Human stopped mission '{mission.title}'")
-        self._revoke_everything(mission, "the mission was stopped")
+        self._approvals.revoke_everything(mission, "the mission was stopped")
         self._notify()
 
     def remove_mission(self, mission_id: str) -> None:
@@ -918,7 +889,10 @@ class MissionService:
         self._interrupted.discard(mission_id)
         self._detach_headless(mission_id, close_transcript=True)
         del self._missions[mission_id]
-        self._members = {ctx: mid for ctx, mid in self._members.items() if mid != mission_id}
+        # Changed in place: the approvals share this dictionary.
+        for context_id in [ctx for ctx, mid in self._members.items() if mid == mission_id]:
+            del self._members[context_id]
+
         self._mindspace.add_interaction(MindspaceLogLevel.INFO, f"Human removed mission '{mission.title}'")
         self._notify()
 
@@ -937,7 +911,7 @@ class MissionService:
             MissionError: If there is no such mission or the name is empty
         """
         mission = self._missions.get(mission_id)
-        title = " ".join(title.split())
+        title = _fit_title(" ".join(title.split()), _MAX_CHOSEN_TITLE_LENGTH)
         if mission is None:
             raise MissionError("There is no such mission")
 
@@ -948,7 +922,7 @@ class MissionService:
             return
 
         old_title = mission.title
-        mission.title = title[:_MAX_TITLE_LENGTH * 2]
+        mission.title = title
         mission.title_locked = True
         self._save(mission)
         self._mindspace.add_interaction(MindspaceLogLevel.INFO, f"Human renamed mission '{old_title}' to '{mission.title}'")
@@ -1094,19 +1068,7 @@ class MissionService:
         Returns:
             True if the request was approved, False if it was no longer pending
         """
-        found = self._take_decision(decision_id)
-        if found is None:
-            return False
-
-        tracked, pending = found
-        self._log_decision(tracked, f"Human approved tool call from Mission Control: {pending.decision.tool_name}")
-        self._record(
-            MissionActivityKind.APPROVED, self._title_for(tracked.context_id),
-            pending.decision.tool_name, pending.decision.mission_id, more=pending.decision.reason
-        )
-        await tracked.transcript.approve_pending_tool_calls()
-        self._notify()
-        return True
+        return await self._approvals.approve(decision_id)
 
     async def reject(self, decision_id: str) -> bool:
         """
@@ -1118,19 +1080,7 @@ class MissionService:
         Returns:
             True if the request was rejected, False if it was no longer pending
         """
-        found = self._take_decision(decision_id)
-        if found is None:
-            return False
-
-        tracked, pending = found
-        self._log_decision(tracked, f"Human denied tool call from Mission Control: {pending.decision.tool_name}")
-        self._record(
-            MissionActivityKind.REJECTED, self._title_for(tracked.context_id),
-            pending.decision.tool_name, pending.decision.mission_id, more=pending.decision.reason
-        )
-        await tracked.transcript.reject_pending_tool_calls(_REJECT_REASON)
-        self._notify()
-        return True
+        return await self._approvals.reject(decision_id)
 
     async def unsure(self, decision_id: str) -> bool:
         """
@@ -1142,99 +1092,72 @@ class MissionService:
         Returns:
             True if the request was declined, False if it was no longer pending
         """
-        found = self._take_decision(decision_id)
-        if found is None:
-            return False
-
-        tracked, pending = found
-        self._log_decision(
-            tracked,
-            f"Human indicated uncertainty about tool call from Mission Control: {pending.decision.tool_name}"
-        )
-        self._record(
-            MissionActivityKind.REJECTED, self._title_for(tracked.context_id),
-            pending.decision.tool_name, pending.decision.mission_id, more=pending.decision.reason
-        )
-        await tracked.transcript.reject_pending_tool_calls(_UNSURE_REASON)
-        self._expect_message(tracked.context_id, _UNSURE_MESSAGE)
-        await tracked.transcript.submit_message(None, _UNSURE_MESSAGE)
-        self._notify()
-        return True
-
-    def _take_decision(self, decision_id: str) -> tuple[_TrackedConversation, _PendingDecision] | None:
-        """
-        Remove a decision if it still matches the request its conversation is waiting on.
-
-        A decision that no longer matches, because the request was answered or
-        replaced, is discarded so it can never answer a different request.
-
-        Args:
-            decision_id: Decision to take
-
-        Returns:
-            The conversation and decision, or None if the decision is stale
-        """
-        context_id = next(
-            (ctx for ctx, p in self._decisions.items() if p.decision.decision_id == decision_id), None
-        )
-        if context_id is None:
-            return None
-
-        pending = self._decisions.pop(context_id)
-        tracked = self._tracked.get(context_id)
-        if tracked is None:
-            self._notify()
-            return None
-
-        request = tracked.conversation.pending_tool_authorization()
-        if request is None or request.tool_call.id != pending.tool_call_id:
-            self._notify()
-            return None
-
-        return tracked, pending
-
-    def _log_decision(self, tracked: _TrackedConversation, content: str) -> None:
-        """Record a decision in the interaction log, attributed to its conversation."""
-        self._mindspace.add_interaction(
-            MindspaceLogLevel.INFO,
-            content,
-            context=self._mindspace.conversation_log_context(tracked.conversation)
-        )
+        return await self._approvals.unsure(decision_id)
 
     def resume_automatically(self) -> bool:
         """Return whether interrupted missions are resumed when the mindspace opens."""
-        return self._resume_automatically
+        settings = self._mindspace.settings()
+        return settings is not None and settings.mission_resume_automatically
 
     def set_resume_automatically(self, enabled: bool) -> None:
         """
         Choose whether interrupted missions are resumed when the mindspace opens.
 
+        The choice is a mindspace setting, so it is also shown in the settings dialog.
+
         Args:
             enabled: True to resume them automatically
 
         Raises:
-            MissionError: If the preference cannot be saved
+            MissionError: If the setting cannot be saved
         """
-        self._store.save_resume_automatically(enabled)
-        self._resume_automatically = enabled
-        self._notify()
+        self._save_settings(replace(self._current_settings(), mission_resume_automatically=enabled))
 
     def reduce_motion(self) -> bool:
         """Return whether Mission Control should draw everything still."""
-        return self._reduce_motion
+        settings = self._mindspace.settings()
+        return settings is not None and settings.mission_reduce_motion
 
     def set_reduce_motion(self, reduced: bool) -> None:
         """
         Choose whether Mission Control draws everything still, for users who find motion uncomfortable.
 
+        The choice is a mindspace setting, so it is also shown in the settings dialog.
+
         Args:
             reduced: True to reduce motion
 
         Raises:
-            MissionError: If the preference cannot be saved
+            MissionError: If the setting cannot be saved
         """
-        self._store.save_reduce_motion(reduced)
-        self._reduce_motion = reduced
+        self._save_settings(replace(self._current_settings(), mission_reduce_motion=reduced))
+
+    def _current_settings(self) -> MindspaceSettings:
+        """
+        Return the mindspace's settings, which hold Mission Control's settings.
+
+        Raises:
+            MissionError: If no mindspace is open
+        """
+        settings = self._mindspace.settings()
+        if settings is None:
+            raise MissionError("No mindspace is open")
+
+        return settings
+
+    def _save_settings(self, settings: MindspaceSettings) -> None:
+        """
+        Save changed Mission Control settings with the rest of the mindspace's settings.
+
+        Raises:
+            MissionError: If the settings cannot be saved
+        """
+        try:
+            self._mindspace.update_settings(settings)
+
+        except MindspaceError as e:
+            raise MissionError(str(e)) from e
+
         self._notify()
 
     def is_interrupted(self, mission_id: str) -> bool:
@@ -1331,7 +1254,7 @@ class MissionService:
 
         mission.paused = True
         self._cancel_continue(mission_id)
-        self._withdraw_standing_approvals(mission_id)
+        self._approvals.withdraw_standing_approvals(mission_id)
         self._save(mission)
         self._record(MissionActivityKind.PAUSED, mission.title, "", mission_id)
         self._mindspace.add_interaction(MindspaceLogLevel.INFO, f"Human paused mission '{mission.title}'")
@@ -1364,9 +1287,7 @@ class MissionService:
 
         # The user has stepped in, so automatic continuing starts afresh.
         self._continues_without_progress.pop(mission_id, None)
-        for context_id, pending in list(self._decisions.items()):
-            if pending.decision.mission_id == mission_id:
-                self._consider_review(context_id)
+        self._approvals.review_waiting(mission_id)
 
         self._consider_continuing(mission)
         if mission_id in self._scheduled_continues:
@@ -1441,7 +1362,7 @@ class MissionService:
 
     def handle_turn_finished(self, tracked: _TrackedConversation, failed: bool) -> None:
         """Record that a conversation finished a turn, successfully or not."""
-        self._decisions.pop(tracked.context_id, None)
+        self._approvals.forget(tracked.context_id)
         mission_id = self._members.get(tracked.context_id)
         if mission_id is not None:
             kind = MissionActivityKind.ERROR if failed else MissionActivityKind.TURN_FINISHED
@@ -1599,9 +1520,7 @@ class MissionService:
         if message.source in (AIMessageSource.USER, AIMessageSource.USER_QUEUED):
             self._record_user_message(tracked, message)
 
-        pending = self._decisions.get(tracked.context_id)
-        if pending is not None and pending.message_id == message.id:
-            del self._decisions[tracked.context_id]
+        if self._approvals.clear_answered(tracked.context_id, message.id):
             if tracked.state == MissionAgentState.WAITING_FOR_APPROVAL:
                 tracked.state = MissionAgentState.WORKING
 
@@ -1624,22 +1543,7 @@ class MissionService:
         kind: AIToolApprovalKind
     ) -> None:
         """Add a conversation's approval request to the decision inbox, and have it reviewed if allowed."""
-        self._add_decision(tracked, message, tool_call, reason, context, destructive, kind)
-        mission_id = self._members.get(tracked.context_id)
-        if mission_id is not None:
-            # A change the journal records can usually be reversed, which matters to the user
-            # deciding on it, so the feed says which kind of request this is.
-            label = tool_call_label(tool_call)
-            if kind == AIToolApprovalKind.MINDSPACE_FILE_CHANGE:
-                label = f"{label} (journalled)"
-
-            self._record(
-                MissionActivityKind.APPROVAL_REQUESTED, self._title_for(tracked.context_id),
-                label, mission_id, more=f"{reason}\n\n{context}" if context else reason
-            )
-            self._consider_review(tracked.context_id)
-
-        self._notify()
+        self._approvals.handle_approval_required(tracked, message, tool_call, reason, context, destructive, kind)
 
     def set_auto_approve(self, mission_id: str, level: AutoApproveLevel) -> None:
         """
@@ -1658,184 +1562,7 @@ class MissionService:
         if mission is None:
             raise MissionError("There is no such mission")
 
-        if mission.auto_approve == level:
-            return
-
-        mission.auto_approve = level
-        if level == AutoApproveLevel.ALL:
-            mission.everything_confirmed_at = datetime.now(timezone.utc).isoformat()
-
-        else:
-            mission.everything_confirmed_at = ""
-            # The standing approvals were granted under Everything, which the user has withdrawn.
-            self._withdraw_standing_approvals(mission_id)
-
-        self._save(mission)
-        self._mindspace.add_interaction(
-            MindspaceLogLevel.INFO, f"Human set auto-approve for mission '{mission.title}' to {level.value}"
-        )
-        if level == AutoApproveLevel.ALL:
-            self._log_everything_confirmed(mission)
-
-        for context_id, pending in list(self._decisions.items()):
-            if pending.decision.mission_id == mission_id and not pending.reviewing:
-                # A new level is a new instruction, so requests already left for the user are reconsidered.
-                pending.review_note = ""
-                self._consider_review(context_id)
-
-        self._notify()
-
-    def _withdraw_standing_approvals(self, mission_id: str) -> None:
-        """Turn off the standing approval for file changes in each of a mission's conversations."""
-        for context_id, member_mission in self._members.items():
-            tracked = self._tracked.get(context_id)
-            if member_mission == mission_id and tracked is not None:
-                tracked.transcript.set_auto_approve_file_changes(False)
-
-    def _log_everything_confirmed(self, mission: Mission) -> None:
-        """Record the user's confirmation of the Everything level: the approval in advance it rests on."""
-        self._mindspace.add_interaction(
-            MindspaceLogLevel.INFO,
-            f"Human confirmed Everything auto-approve for mission '{mission.title}'\n"
-            f"mission: {mission.mission_id}\n"
-            f"confirmed at: {mission.everything_confirmed_at}\n"
-            f"authority: {_EVERYTHING_AUTHORITY}"
-        )
-
-    def _revoke_everything(self, mission: Mission, reason: str) -> None:
-        """
-        Take a mission off the Everything level, back to Off, and say why.
-
-        Everything is the user's approval in advance for an autonomous mission that is
-        going, so it ends when the mission leaves autonomous mode or is stopped (ADR-0026).
-        """
-        if mission.auto_approve != AutoApproveLevel.ALL:
-            return
-
-        mission.auto_approve = AutoApproveLevel.OFF
-        mission.everything_confirmed_at = ""
-        self._withdraw_standing_approvals(mission.mission_id)
-        self._save(mission)
-        self._mindspace.add_interaction(
-            MindspaceLogLevel.INFO,
-            f"Everything auto-approve for mission '{mission.title}' was revoked, as {reason}; auto-approve is now off"
-        )
-
-    def _user_instructions(self, mission: Mission) -> list[str]:
-        """Return the most recent messages the user typed to a mission's lead, oldest first."""
-        tracked = self._lead_for(mission)
-        if tracked is None:
-            return []
-
-        messages = [
-            message.content.strip()[:_REVIEW_TEXT_LIMIT]
-            for message in tracked.transcript.get_conversation_history().get_messages()
-            if message.source == AIMessageSource.USER and not message.tool_results and not message.user_name
-            and message.content.strip()
-        ]
-        return messages[-_REVIEW_INSTRUCTION_COUNT:]
-
-    def _consider_review(self, context_id: str) -> None:
-        """Send a pending decision to the AI reviewer if its mission's auto-approve level covers it."""
-        pending = self._decisions.get(context_id)
-        if pending is None or pending.reviewing or pending.review_note:
-            return
-
-        mission = self._missions.get(pending.decision.mission_id or "")
-        if mission is None or mission.mode != MissionMode.AUTONOMOUS or mission.paused:
-            return
-
-        if mission.auto_approve == AutoApproveLevel.OFF:
-            return
-
-        if pending.decision.reversible and _allows(mission.auto_approve, pending.decision.destructive):
-            # The journal records this change, which is the condition the conversation's own
-            # standing approval rests on, so it is approved rather than reviewed.
-            pending.reviewing = True
-            self._run_task(self._approve_reversible(mission, pending), mission.mission_id)
-            return
-
-        if mission.auto_approve == AutoApproveLevel.ALL:
-            # The user chose to let this mission run end to end, so nothing waits for them.
-            pending.reviewing = True
-            self._run_task(self._approve_everything(mission, pending), mission.mission_id)
-            return
-
-        if mission.auto_approve == AutoApproveLevel.SAFE and pending.decision.destructive:
-            return
-
-        pending.reviewing = True
-        self._run_task(self._review_decision(mission, context_id, pending), mission.mission_id)
-
-    async def _approve_reversible(self, mission: Mission, pending: _PendingDecision) -> None:
-        """
-        Approve a change the journal can undo, and grant the conversation's standing approval.
-
-        The standing approval is the conversation's own, from ADR-0022: it covers only changes
-        the journal records and lapses when the turn ends, so each turn's first such change
-        comes back here, where the mission's auto-approve level is checked again.
-        """
-        decision = pending.decision
-        if (
-            mission.mode != MissionMode.AUTONOMOUS or mission.paused
-            or not _allows(mission.auto_approve, decision.destructive)
-        ):
-            # The user changed the level or the mode, or paused the mission, since this was scheduled.
-            pending.reviewing = False
-            self._notify()
-            return
-
-        found = self._take_decision(decision.decision_id)
-        if found is None:
-            return
-
-        tracked, _ = found
-
-        # The standing approval covers every change the journal records, destructive ones
-        # included, so it is only granted where the level allows those too.
-        standing = mission.auto_approve == AutoApproveLevel.ALL
-        if standing:
-            tracked.transcript.set_auto_approve_file_changes(True)
-
-        self._log_decision(
-            tracked,
-            f"Mission '{mission.title}' auto-approve approved a change the journal records"
-            + (", and granted a standing approval for such changes for the rest of the turn" if standing else "")
-            + f": {decision.tool_name}"
-        )
-        self._record(
-            MissionActivityKind.REVERSIBLE_APPROVED, self._title_for(tracked.context_id), decision.tool_name,
-            mission.mission_id, more=decision.reason
-        )
-        await tracked.transcript.approve_pending_tool_calls()
-        self._notify()
-
-    async def _approve_everything(self, mission: Mission, pending: _PendingDecision) -> None:
-        """Approve a request without a review, because the mission's auto-approve level is Everything."""
-        decision = pending.decision
-        if mission.mode != MissionMode.AUTONOMOUS or mission.paused or mission.auto_approve != AutoApproveLevel.ALL:
-            # The user changed the level or the mode, or paused the mission, since this was scheduled.
-            pending.reviewing = False
-            self._notify()
-            self._consider_review(decision.context_id)
-            return
-
-        found = self._take_decision(decision.decision_id)
-        if found is None:
-            return
-
-        tracked, _ = found
-        self._log_decision(
-            tracked,
-            f"Mission '{mission.title}' auto-approve is set to Everything, so approved: {decision.tool_name}\n"
-            f"standing approval: Everything confirmed at {mission.everything_confirmed_at}"
-        )
-        self._record(
-            MissionActivityKind.EVERYTHING_APPROVED, self._title_for(tracked.context_id), decision.tool_name,
-            mission.mission_id, more=decision.reason
-        )
-        await tracked.transcript.approve_pending_tool_calls()
-        self._notify()
+        self._approvals.set_auto_approve(mission, level)
 
     def handle_standing_approval_used(self, tracked: _TrackedConversation, reason: str) -> None:
         """Note in the feed that a conversation's standing approval resolved a file change."""
@@ -1848,105 +1575,6 @@ class MissionService:
             tracked.tool_name or _excerpt(reason), mission_id, more=reason
         )
         self._notify()
-
-    async def _review_decision(self, mission: Mission, context_id: str, pending: _PendingDecision) -> None:
-        """Ask the reviewer about a decision and act on the verdict if the request is still waiting."""
-        tracked = self._tracked.get(context_id)
-        if tracked is None:
-            return
-
-        decision = pending.decision
-        lead_update, _when = self._latest_lead_message(mission)
-        request = ReviewRequest(
-            objective=mission.objective,
-            title=mission.title,
-            summary=mission.summary,
-            instructions=self._user_instructions(mission),
-            lead_update=lead_update[:_REVIEW_TEXT_LIMIT],
-            plan=[f"{task.task_id}. {task.title} [{task.status.value}]" for task in mission.tasks],
-            tool_name=decision.tool_name,
-            reason=decision.reason,
-            detail=decision.detail or "",
-            destructive=decision.destructive,
-            settings=tracked.conversation.conversation_settings(),
-        )
-        try:
-            verdict = await self._reviewer.review(request)
-
-        except Exception as e:
-            self._logger.warning("Approval review failed: %s", e)
-            verdict = ReviewVerdict(False, "The review could not be completed")
-
-        if self._decisions.get(context_id) is not pending:
-            return
-
-        if mission.paused:
-            # Paused while the reviewer was thinking: the request waits, and is reviewed again on continuing.
-            pending.reviewing = False
-            self._notify()
-            return
-
-        still_allowed = mission.auto_approve == AutoApproveLevel.ALL or (
-            mission.auto_approve == AutoApproveLevel.SAFE and not decision.destructive
-        )
-        if verdict.approved and still_allowed and mission.mode == MissionMode.AUTONOMOUS:
-            found = self._take_decision(decision.decision_id)
-            if found is not None:
-                found_tracked, _ = found
-                self._log_decision(
-                    found_tracked,
-                    f"AI reviewer approved tool call for mission '{mission.title}': {decision.tool_name}\n"
-                    f"reason: {verdict.reason}"
-                )
-                self._record(
-                    MissionActivityKind.AUTO_APPROVED, self._title_for(context_id), decision.tool_name,
-                    mission.mission_id, more=f"{decision.reason}\n\n{verdict.reason}"
-                )
-                await found_tracked.transcript.approve_pending_tool_calls()
-                self._notify()
-                return
-
-        pending.reviewing = False
-        pending.review_note = verdict.reason
-        self._log_decision(
-            tracked,
-            f"AI reviewer left tool call for the human: {decision.tool_name}\nreason: {verdict.reason}"
-        )
-        self._record(
-            MissionActivityKind.REVIEW_DEFERRED, self._title_for(context_id), decision.tool_name, mission.mission_id,
-            more=f"{decision.reason}\n\n{verdict.reason}"
-        )
-        self._notify()
-
-    def _add_decision(
-        self,
-        tracked: _TrackedConversation,
-        message: AIMessage | None,
-        tool_call: AIToolCall,
-        reason: str,
-        context: str | None,
-        destructive: bool,
-        kind: AIToolApprovalKind
-    ) -> None:
-        """Record a pending approval for a conversation, replacing any earlier one."""
-        decision = MissionDecision(
-            decision_id=uuid.uuid4().hex,
-            context_id=tracked.context_id,
-            conversation_title=self._title_for(tracked.context_id),
-            mission_id=self._members.get(tracked.context_id),
-            tool_name=tool_call_label(tool_call),
-            reason=reason,
-            detail=context,
-            destructive=destructive,
-            requested_at=datetime.now(timezone.utc),
-            reversible=kind == AIToolApprovalKind.MINDSPACE_FILE_CHANGE,
-            target=tool_call_target(tool_call),
-        )
-        self._decisions[tracked.context_id] = _PendingDecision(
-            decision=decision,
-            tool_call_id=tool_call.id,
-            message_id=message.id if message is not None else None,
-        )
 
     def _on_context_opened(self, info: ContextInfo, _is_ephemeral: bool, requester_id: str) -> None:
         """Note conversations delegated from a mission conversation, then resynchronise."""
@@ -2016,7 +1644,7 @@ class MissionService:
             if transcript is None or transcript.inner_conversation() is not tracked.conversation:
                 tracked.detach()
                 del self._tracked[context_id]
-                self._decisions.pop(context_id, None)
+                self._approvals.forget(context_id)
                 if transcript is None:
                     self._members.pop(context_id, None)
 
@@ -2066,7 +1694,7 @@ class MissionService:
             request = tracked.conversation.pending_tool_authorization()
             if request is not None:
                 tracked.state = MissionAgentState.WAITING_FOR_APPROVAL
-                self._add_decision(
+                self._approvals.add_decision(
                     tracked, request.message, request.tool_call, request.reason,
                     request.context, request.destructive, request.kind
                 )
@@ -2124,7 +1752,7 @@ class MissionService:
         new_tasks = [task.to_dict() for task in plan.tasks]
         old_tasks = [task.to_dict() for task in mission.tasks]
         # A name the user chose is kept; the lead's title only names missions the user has not renamed.
-        title = mission.title if mission.title_locked else (plan.title or mission.title)
+        title = mission.title if mission.title_locked else _fit_title(plan.title or mission.title, _MAX_CHOSEN_TITLE_LENGTH)
         summary = plan.summary or mission.summary
         if (
             new_tasks == old_tasks and title == mission.title and summary == mission.summary
@@ -2134,7 +1762,7 @@ class MissionService:
 
         mission.tasks = plan.tasks
         mission.goal_met = plan.goal_met
-        mission.title = title[:_MAX_TITLE_LENGTH * 2]
+        mission.title = title
         mission.summary = summary
         self._save(mission)
         if announce:
@@ -2234,7 +1862,7 @@ class MissionService:
 
         tracked = self._tracked.pop(key, None)
         self._members.pop(key, None)
-        self._decisions.pop(key, None)
+        self._approvals.forget(key)
         if tracked is None:
             return None
 
@@ -2250,9 +1878,11 @@ class MissionService:
 
         The tab has loaded the transcript itself, so the conversation Mission
         Control was driving is stopped and let go: two copies must never write
-        the same transcript.
+        the same transcript.  Everything is revoked first, as it is for any mission
+        that leaves autonomous mode.
         """
         self._cancel_continue(mission.mission_id)
+        self._approvals.revoke_everything(mission, "the mission's conversation was opened as a tab")
         tracked = self._detach_headless(mission.mission_id, close_transcript=False)
         if tracked is not None:
             tracked.transcript.cancel_current_tasks(notify=False)
@@ -2347,7 +1977,7 @@ class MissionService:
 
         self._cancel_continue(mission_id)
         # Revoked before the conversation goes to its tab, so no standing approval goes with it.
-        self._revoke_everything(mission, "the mission was switched to classic mode")
+        self._approvals.revoke_everything(mission, "the mission was switched to classic mode")
         tracked = self._detach_headless(mission_id, close_transcript=False)
         was_autonomous = mission.mode == MissionMode.AUTONOMOUS
         mission.mode = MissionMode.CLASSIC

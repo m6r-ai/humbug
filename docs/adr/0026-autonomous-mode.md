@@ -75,6 +75,12 @@ Most of the execution machinery is already in place:
   human-only GUI".
 - **ADR-0007** requires approval for any change to persistent state. The blueprint
   requires "explicit user approval before each action" for tools with side effects.
+  ADR-0025 supersedes ADR-0007 for editor operations only; its principle is unchanged.
+- **ADR-0022** allows one standing approval, for journalled file changes, and the
+  blueprint bounds it: the approval "is never remembered, lapses when the turn ends,
+  and never covers terminal commands, network requests, or anything the journal would
+  not record." Everything goes beyond that bound, so it is an exception to ADR-0022
+  and to that passage of the blueprint as well as to ADR-0007.
 - **ADR-0014** allows one process per mindspace, with an exclusive lock, and one
   window per process.
 - **ADR-0003, ADR-0004, ADR-0005:** local-first, minimal dependencies, and a
@@ -99,7 +105,7 @@ Most of the execution machinery is already in place:
 - Missions that span mindspaces.
 - Silent or default approval of state-changing actions. The only pre-authorisation
   in scope is the explicit **Everything** choice described below.
-- Remote or mobile access (ADR-0018).
+- Remote or mobile access.
 - Any change to the transcript format.
 
 ### Decision drivers
@@ -230,7 +236,7 @@ keep behaviour the same, and Classic benefits from them too:
 |---|---|---|
 | Assist | Missions organise and track work; every approval behaves exactly as in Classic | Decided |
 | Supervised | As Assist, with approvals also collected in the inbox and notified | Decided |
-| Everything | A user-confirmed, mission-scoped standing approval for every tool request while the mission remains Autonomous | Decided by this ADR; it is the limited exception to ADR-0007 described below. |
+| Everything | A user-confirmed, mission-scoped standing approval for every tool request while the mission remains Autonomous | Decided by this ADR; it is the limited exception to ADR-0007, ADR-0022 and the blueprint described below. |
 
 ### Approvals: one mechanism, two surfaces
 

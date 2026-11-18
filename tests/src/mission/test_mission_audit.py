@@ -44,3 +44,38 @@ class TestMissionConversationAuditor:
             auditor.detach()
 
         asyncio.run(run())
+
+    def test_a_prompt_with_attachments_is_logged_as_a_tab_logs_it(self, mindspace) -> None:
+        """A human prompt records how many files were attached, exactly as the conversation tab records it."""
+        async def run() -> None:
+            transcript = AITranscriptConversation(os.path.join(mindspace.conversations_dir(), "lead.conv"))
+            auditor = MissionConversationAuditor(mindspace, transcript)
+            message = AIMessage.create(
+                AIMessageSource.USER, "Summarise this", attachments=["a-guid", "b-guid"], completed=True
+            )
+            await transcript.inner_conversation()._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, message
+            )
+
+            logged = [entry.content for entry in mindspace.interactions().newest(5)]
+            assert "Human submitted prompt: 'Summarise this'\nattachments: 2" in logged
+            auditor.detach()
+
+        asyncio.run(run())
+
+    def test_detaching_leaves_a_tab_usage_callback_in_place(self, mindspace) -> None:
+        """An auditor detached after a tab took the conversation's usage callback leaves the tab's callback set."""
+        transcript = AITranscriptConversation(os.path.join(mindspace.conversations_dir(), "lead.conv"))
+        auditor = MissionConversationAuditor(mindspace, transcript)
+        history = transcript.get_conversation_history()
+
+        def tab_callback() -> None:
+            pass
+
+        history.set_on_usage_changed(tab_callback)
+        auditor.detach()
+        assert history.on_usage_changed() is tab_callback
+
+        auditor = MissionConversationAuditor(mindspace, transcript)
+        auditor.detach()
+        assert history.on_usage_changed() is None

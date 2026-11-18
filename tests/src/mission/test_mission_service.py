@@ -11,6 +11,7 @@ from ai import (
 from ai_transcript_conversation import AITranscriptConversation
 from ai_tool import AIToolApprovalKind, AIToolCall
 from mindspace.mindspace import Mindspace
+from mindspace.mindspace_settings import MindspaceSettings
 from mission import mission_service as mission_service_module
 from mission.mission_error import MissionError
 from mission.mission_service import MAX_CONTINUES_WITHOUT_PROGRESS, MISSION_REQUESTER, MissionService
@@ -811,6 +812,18 @@ class TestReduceMotionPreference:
         assert restarted.reduce_motion()
         restarted.stop()
 
+    def test_choice_is_a_mindspace_setting(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """The choice is saved in the mindspace's settings, where the settings dialog shows it."""
+        service = MissionService(mindspace)
+        service.start()
+        service.set_reduce_motion(True)
+        service.set_resume_automatically(True)
+        service.stop()
+
+        settings_path = os.path.join(mindspace.mindspace_path(), Mindspace.MINDSPACE_DIR, Mindspace.SETTINGS_FILE)
+        saved = MindspaceSettings.load(settings_path)
+        assert saved.mission_reduce_motion and saved.mission_resume_automatically
+
 
 class TestDecisionTargets:
     """A request in the inbox says what it acts on."""
@@ -1270,6 +1283,77 @@ class TestEverythingIsAnExplicitApproval:
 
         asyncio.run(run())
 
+    @pytest.mark.parametrize("leave", ["stop", "switch_to_classic", "open_as_tab"])
+    def test_every_way_out_of_autonomous_mode_revokes_it(self, mindspace, submitted, leave):  # pylint: disable=unused-argument
+        """However a mission leaves autonomous mode, Everything and its standing approval are gone, and that is logged."""
+        async def run() -> None:
+            service, mission, request = await _mission_waiting_on_approval(
+                mindspace, _FakeReviewer(approve=True), AutoApproveLevel.ALL, destructive=False,
+                kind=AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+            )
+            assert await asyncio.wait_for(request, timeout=1) is True
+            conversation = _lead(service, mission).inner_conversation()
+            assert conversation.auto_approve_file_changes()
+
+            tab_transcript = None
+            if leave == "stop":
+                service.stop_mission(mission.mission_id)
+
+            elif leave == "switch_to_classic":
+                assert service.switch_to_classic(mission.mission_id) is not None
+
+            else:
+                lead_path = mindspace.get_absolute_path(mission.lead_path)
+                tab_transcript = AITranscriptConversation(lead_path)
+                mindspace.contexts().open(
+                    context_type="conversation", path=lead_path, title="lead", initial_model=tab_transcript
+                )
+                for _ in range(5):
+                    await asyncio.sleep(0)
+
+            assert mission.auto_approve == AutoApproveLevel.OFF
+            assert not mission.everything_confirmed_at
+            assert not conversation.auto_approve_file_changes()
+            assert _store(mindspace).load_all()[0].auto_approve == AutoApproveLevel.OFF
+            logged = [m.content for m in mindspace.interactions().newest(10)]
+            assert any("Everything auto-approve" in c and "was revoked" in c for c in logged)
+            service.stop()
+            if tab_transcript is not None:
+                tab_transcript.close()
+
+        asyncio.run(run())
+
+    def test_opening_the_conversation_as_a_tab_revokes_it(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A mission taken over by a tab opened from the sidebar loses Everything, and switching back does not bring it back."""
+        async def run() -> None:
+            service, mission, request = await _mission_waiting_on_approval(
+                mindspace, _FakeReviewer(approve=True), AutoApproveLevel.ALL, destructive=False,
+                kind=AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+            )
+            assert await asyncio.wait_for(request, timeout=1) is True
+
+            lead_path = mindspace.get_absolute_path(mission.lead_path)
+            tab_transcript = AITranscriptConversation(lead_path)
+            mindspace.contexts().open(
+                context_type="conversation", path=lead_path, title="lead", initial_model=tab_transcript
+            )
+            for _ in range(5):
+                await asyncio.sleep(0)
+
+            assert mission.mode == MissionMode.CLASSIC
+            assert mission.auto_approve == AutoApproveLevel.OFF
+            assert not mission.everything_confirmed_at
+            assert _store(mindspace).load_all()[0].auto_approve == AutoApproveLevel.OFF
+            logged = [m.content for m in mindspace.interactions().newest(10)]
+            assert any("was opened as a tab" in c for c in logged)
+
+            service.switch_to_autonomous(mission.mission_id)
+            assert mission.auto_approve == AutoApproveLevel.OFF
+            service.stop()
+            tab_transcript.close()
+
+        asyncio.run(run())
+
     def test_restored_mission_keeps_everything_only_with_a_saved_confirmation(self, mindspace, submitted):  # pylint: disable=unused-argument
         """A record at Everything with no confirmation, or no longer autonomous, comes back at Off."""
         async def run() -> None:
@@ -1523,13 +1607,14 @@ class TestAutoApprove:
         async def run() -> None:
             reviewer = _FakeReviewer(approve=True)
             service = MissionService(mindspace, reviewer=reviewer)  # type: ignore[arg-type]
-            approve_reversible = service._approve_reversible  # pylint: disable=protected-access
+            approvals = service._approvals  # pylint: disable=protected-access
+            approve_reversible = approvals._approve_reversible  # pylint: disable=protected-access
 
             async def lowered_first(mission, pending) -> None:
                 service.set_auto_approve(mission.mission_id, AutoApproveLevel.OFF)
                 await approve_reversible(mission, pending)
 
-            service._approve_reversible = lowered_first  # type: ignore[method-assign]  # pylint: disable=protected-access
+            approvals._approve_reversible = lowered_first  # type: ignore[method-assign]  # pylint: disable=protected-access
             service.start()
             mission = await service.create_mission("Write the docs")
             service.set_auto_approve(mission.mission_id, AutoApproveLevel.ALL)

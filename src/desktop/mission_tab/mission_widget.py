@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QScrollArea, QScroller, QSizePolicy, QToolButton, QVBoxLayout, QWidget
 )
 
+from desktop.attachments_bar import AttachmentsBar
 from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.mission_tab.mission_display import (
@@ -647,7 +648,6 @@ class MissionWidget(QWidget):
         self._chips: list[MissionChipView] | None = None
         self._steps: list[MissionStepView] | None = None
         self._history: list[MissionPhaseView] | None = None
-        self._attachments: list[tuple[str, str]] = []
         self._agents: list[MissionAgentView] | None = None
         self._decisions: list[MissionDecisionView] | None = None
         self._activity: list[MissionActivityView] | None = None
@@ -1777,13 +1777,8 @@ class MissionWidget(QWidget):
         composer_layout.setSpacing(0)
 
         # Files attached to the next message, as a conversation's input shows them.
-        self._attachments_bar = QWidget()
-        self._attachments_bar.setObjectName("MissionAttachmentsBar")
-        self._attachments_layout = QHBoxLayout(self._attachments_bar)
-        self._attachments_layout.setContentsMargins(14, 8, 14, 0)
-        self._attachments_layout.setSpacing(4)
-        self._attachments_layout.addStretch()
-        self._attachments_bar.hide()
+        self._attachments_bar = AttachmentsBar()
+        self._attachments_bar.setContentsMargins(14, 8, 14, 0)
         composer_layout.addWidget(self._attachments_bar)
 
         row = QWidget()
@@ -2914,50 +2909,13 @@ class MissionWidget(QWidget):
 
     def add_attachment(self, filename: str, content: str) -> None:
         """Attach a file to the next message, and show it above the composer."""
-        self._attachments.append((filename, content))
-        self._show_attachments()
+        self._attachments_bar.add_attachment(filename, content)
 
     def take_attachments(self) -> list[tuple[str, str]]:
         """Return the files attached to the message being sent, as (filename, content) pairs, and clear them."""
-        attachments = self._attachments
-        self._attachments = []
-        self._show_attachments()
+        attachments = self._attachments_bar.attachments()
+        self._attachments_bar.clear()
         return attachments
-
-    def _remove_attachment(self, index: int) -> None:
-        """Take a file off the next message."""
-        if 0 <= index < len(self._attachments):
-            self._attachments.pop(index)
-            self._show_attachments()
-
-    def _show_attachments(self) -> None:
-        """Show a chip for each attached file, as a conversation's input does."""
-        while self._attachments_layout.count() > 1:
-            item = self._attachments_layout.takeAt(0)
-            widget = item.widget() if item else None
-            if widget:
-                widget.deleteLater()
-
-        icon_size = round(14 * self._style_manager.zoom_factor())
-        for index, (filename, _) in enumerate(self._attachments):
-            chip = QFrame()
-            chip.setObjectName("MissionAttachment")
-            chip_layout = QHBoxLayout(chip)
-            chip_layout.setContentsMargins(8, 4, 4, 4)
-            chip_layout.setSpacing(4)
-            name = QLabel(filename)
-            name.setObjectName("MissionAttachmentName")
-            chip_layout.addWidget(name)
-            remove = QToolButton()
-            remove.setObjectName("MissionComposerTool")
-            remove.setCursor(Qt.CursorShape.PointingHandCursor)
-            remove.setIcon(QIcon(self._style_manager.scale_icon("close", 14)))
-            remove.setIconSize(QSize(icon_size, icon_size))
-            remove.clicked.connect(lambda _checked=False, i=index: self._remove_attachment(i))
-            chip_layout.addWidget(remove)
-            self._attachments_layout.insertWidget(index, chip)
-
-        self._attachments_bar.setVisible(bool(self._attachments))
 
     def _show_auto_approve(self, level: str) -> None:
         """Mark the current auto-approve level, and say what it means."""
@@ -3123,7 +3081,7 @@ class MissionWidget(QWidget):
             button.setIcon(QIcon(self._style_manager.scale_icon(icon, 16)))
             button.setIconSize(QSize(tool_size, tool_size))
 
-        self._show_attachments()
+        self._attachments_bar.apply_style()
         new_stylesheet = self._build_stylesheet()
         if new_stylesheet != self.styleSheet():
             self.setStyleSheet(new_stylesheet)
@@ -3842,27 +3800,27 @@ class MissionWidget(QWidget):
                 font-size: {fs * 1.05:.1f}pt;
                 padding: 0px;
             }}
-            QToolButton#MissionComposerTool {{
+            QToolButton#MissionComposerTool, #MissionComposer QToolButton#_attachment_remove {{
                 background-color: transparent;
                 border: none;
                 border-radius: {round(6 * zoom)}px;
                 padding: {round(4 * zoom)}px;
             }}
-            QToolButton#MissionComposerTool:hover {{
+            QToolButton#MissionComposerTool:hover, #MissionComposer QToolButton#_attachment_remove:hover {{
                 background-color: {sm.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
             }}
-            QToolButton#MissionComposerTool:pressed {{
+            QToolButton#MissionComposerTool:pressed, #MissionComposer QToolButton#_attachment_remove:pressed {{
                 background-color: {sm.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)};
             }}
-            QToolButton#MissionComposerTool:focus {{
+            QToolButton#MissionComposerTool:focus, #MissionComposer QToolButton#_attachment_remove:focus {{
                 border: 1px solid {focus};
             }}
-            #MissionAttachment {{
+            #MissionComposer #_attachment_widget {{
                 background-color: {sm.get_color_str(ColorRole.MESSAGE_ATTACHMENT_BACKGROUND)};
                 border: 1px solid {input_border};
                 border-radius: {round(4 * zoom)}px;
             }}
-            QLabel#MissionAttachmentName {{
+            #MissionComposer #_attachment_label {{
                 background: transparent;
                 color: {text};
             }}

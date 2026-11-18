@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v60 (2026-11-09)
+## v60 (2026-11-xx)
 
 New features:
 
@@ -40,6 +40,8 @@ New features:
   longer approves a destructive request in one click: it offers **Review**, which opens the request in the inbox.
 - Mission Control has a **Reduce motion** option for people who find movement on screen uncomfortable or
   distracting: everything is drawn still and in its final state, with nothing hidden.
+- Mission Control's **Reduce motion** and **Auto-resume after restart** are mindspace settings, shown on a
+  **Mission Control** page in **Settings** as well as at the top of Mission Control.
 - Screen readers can now follow the picture of who is working in Mission Control: it describes every agent and
   what it is doing, and announces the highlighted agent as it moves.
 - Mission Control sums each autonomous mission up **At a glance**: what is happening now, what is holding it up,
