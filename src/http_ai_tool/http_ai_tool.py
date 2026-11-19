@@ -501,6 +501,7 @@ class HttpAITool(AITool):
         auth_context: str | None,
         request_authorization: AIToolAuthorizationCallback,
         action: str,
+        redirected_from: str | None = None,
     ) -> bool:
         """
         Decide whether a read-only request to a URL may proceed.
@@ -517,6 +518,8 @@ class HttpAITool(AITool):
             auth_context: Context block shown to the user, or None.
             request_authorization: Callback used to prompt the user.
             action: Description of the action for the prompt, e.g. "GET".
+            redirected_from: The URL that redirected to this one, when the request
+                being checked is a redirect target rather than the URL the AI asked for.
 
         Returns:
             True if the request may proceed, False if the user denied it.
@@ -536,7 +539,15 @@ class HttpAITool(AITool):
         ):
             return True
 
-        reason = f"The AI is requesting to {action} {url}"
+        if redirected_from is None:
+            reason = f"The AI is requesting to {action} {url}"
+
+        else:
+            reason = (
+                f"The AI is requesting to {action} {url}, which is where the request to "
+                f"{redirected_from} was redirected"
+            )
+
         return await request_authorization(
             "http", arguments, reason, auth_context, False, AIToolApprovalKind.STANDARD
         )
@@ -591,7 +602,8 @@ class HttpAITool(AITool):
 
             redirect_url = urljoin(current_url, location)
             authorized = await self._check_url_access(
-                redirect_url, arguments, None, request_authorization, method
+                redirect_url, arguments, None, request_authorization, method,
+                redirected_from=current_url
             )
             if not authorized:
                 raise AIToolAuthorizationDenied(

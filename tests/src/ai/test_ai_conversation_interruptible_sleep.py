@@ -88,11 +88,11 @@ def test_interrupt_pending_wait_is_noop_without_wait():
     asyncio.run(conversation.interrupt_pending_wait())
 
 
-def test_started_event_receives_pending_tool_call_message():
-    """The started event carries the current pending tool call message and duration."""
+def test_started_event_receives_executing_tool_call_message():
+    """The started event carries the tool call message being executed, and the duration."""
     conversation = AIConversation()
     message = AIMessage.create(AIMessageSource.TOOL_CALL, "{}")
-    conversation._pending_tool_call_message = message  # pylint: disable=protected-access
+    conversation._executing_tool_call_message = message  # pylint: disable=protected-access
 
     received: list[tuple[Any, Any]] = []
 

@@ -1306,7 +1306,7 @@ class ConversationWidget(QWidget):
 
     async def _on_tool_approval_required(
         self,
-        message: AIMessage,
+        message: AIMessage | None,
         tool_call: AIToolCall,
         reason: str,
         context: str | None,
@@ -1317,24 +1317,41 @@ class ConversationWidget(QWidget):
         Handle tool approval requirement.
 
         Args:
-            message: The tool call message
+            message: The tool call message, if the conversation knows it
             tool_call: Tool call requiring approval
             reason: Reason for the tool call
             context: Additional context for the tool call
             destructive: Whether the tool calls are considered destructive
             kind: What the request would change, as the tool classified it
         """
-        # Find the message widget that corresponds to this tool call message
-        for msg_widget in self._ordered_widgets():
-            if msg_widget.message_id() == message.id:
-                # Add approval UI to this message
-                self._pending_tool_call_approval = msg_widget
-                msg_widget.show_tool_approval_ui(
-                    tool_call, reason, context, destructive,
-                    kind == AIToolApprovalKind.MINDSPACE_FILE_CHANGE
-                )
-                self.update_label.emit()
-                break
+        # Find the message widget that corresponds to this tool call message.  A request
+        # that cannot be shown still has to be answered, because the tool call is waiting
+        # on the answer and would otherwise wait for the rest of the session.
+        msg_widget = None
+        if message is not None:
+            for candidate in self._ordered_widgets():
+                if candidate.message_id() == message.id:
+                    msg_widget = candidate
+                    break
+
+        if msg_widget is None:
+            self._logger.error(
+                "No message widget for the approval of tool call '%s' (message %s)",
+                tool_call.name,
+                message.id if message is not None else "unknown"
+            )
+            await self._ai_conversation.reject_pending_tool_calls(
+                "The request for approval could not be shown"
+            )
+            return
+
+        # Add approval UI to this message
+        self._pending_tool_call_approval = msg_widget
+        msg_widget.show_tool_approval_ui(
+            tool_call, reason, context, destructive,
+            kind == AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+        )
+        self.update_label.emit()
 
     async def _on_tool_approval_auto_approved(self, message: AIMessage | None, reason: str) -> None:
         """

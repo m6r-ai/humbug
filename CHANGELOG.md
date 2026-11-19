@@ -34,6 +34,8 @@ New features:
   beside the file itself.
 - The change journal now ignores editor swap files (`*.swp`) by default, so they no longer appear in the
   change list.
+- Added GPT 6.2 models.
+- Added Claude Fable 5.2.
 
 Bug fixes:
 
@@ -51,6 +53,10 @@ Bug fixes:
 - Don't display diffs twice when the editor AI tool is invoked.
 - A single-backtick inline code span in Markdown now stays highlighted when it runs across a line break,
   for example inside a list item, instead of only being styled up to the end of its first line.
+- The approval prompt for a redirected HTTP request did not say it was a redirect target, so a host the
+  AI never asked for appeared with no explanation.  The prompt now names the URL that was redirected.
+- A tool call that asked for approval more than once, such as an HTTP request whose redirect targets each
+  need approving, showed only the first prompt.  Every request is now shown.
 
 ## v59 (2026-11-07)
 

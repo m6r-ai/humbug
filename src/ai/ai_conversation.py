@@ -80,6 +80,7 @@ class AIConversation:
         # Tool approval state
         self._pending_tool_calls: list[AIToolCall] = []
         self._pending_tool_call_message: AIMessage | None = None
+        self._executing_tool_call_message: AIMessage | None = None
         self._pending_authorization_future: asyncio.Future[bool] | None = None
         self._auto_approve_file_changes = False
 
@@ -534,7 +535,7 @@ class AIConversation:
             )
             await self._trigger_event(
                 AIConversationEvent.TOOL_APPROVAL_AUTO_APPROVED,
-                self._pending_tool_call_message,
+                self._executing_tool_call_message,
                 reason
             )
             return True
@@ -560,7 +561,7 @@ class AIConversation:
             # Trigger the approval UI
             await self._trigger_event(
                 AIConversationEvent.TOOL_APPROVAL_REQUIRED,
-                self._pending_tool_call_message,
+                self._executing_tool_call_message,
                 tool_call,
                 reason,
                 context,
@@ -708,8 +709,10 @@ class AIConversation:
             )
             self._conversation.add_message(tool_call_message)
 
-            # Store the message for potential completion during authorization
+            # Store the message for potential completion during authorization, and keep it
+            # for the lifetime of the tool call so any later request can find its widget.
             self._pending_tool_call_message = tool_call_message
+            self._executing_tool_call_message = tool_call_message
 
             await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, tool_call_message)
 
@@ -830,6 +833,7 @@ class AIConversation:
         await self._trigger_event(AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, tool_response_message)
 
         # Continue the conversation with tool results
+        self._executing_tool_call_message = None
         self._state = ConversationState.IDLE
         await self._start_ai()
 
@@ -907,7 +911,7 @@ class AIConversation:
         try:
             await self._trigger_event(
                 AIConversationEvent.TOOL_INTERRUPTIBLE_WAIT_STARTED,
-                self._pending_tool_call_message,
+                self._executing_tool_call_message,
                 duration
             )
 

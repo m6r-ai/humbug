@@ -38,6 +38,7 @@ def _show_tool_call_message(widget: ConversationWidget, conversation: AIConversa
         conversation.get_conversation_history().get_messages(),
         True
     )
+    conversation._executing_tool_call_message = message  # pylint: disable=protected-access
     conversation._pending_tool_call_message = message  # pylint: disable=protected-access
 
     return message
@@ -202,6 +203,25 @@ class TestApprovalUiIsShown:
 
         asyncio.run(scenario())
 
+    def test_a_second_request_in_the_same_tool_call_is_shown_again(self, mindspace_sandbox) -> None:
+        """A tool that asks twice is answered twice, both prompts on its own message."""
+        widget, conversation = _make_widget(mindspace_sandbox)
+        message = _show_tool_call_message(widget, conversation)
+        message_widget = _message_widget(widget, message)
+
+        async def scenario() -> None:
+            first = _request(conversation, AIToolApprovalKind.STANDARD)
+            await _wait_for(lambda: message_widget._approval_approve_button is not None)  # pylint: disable=protected-access
+            message_widget._approval_approve_button.click()  # pylint: disable=protected-access
+            assert await first is True
+
+            second = _request(conversation, AIToolApprovalKind.STANDARD)
+            await _wait_for(lambda: message_widget._approval_reject_button is not None)  # pylint: disable=protected-access
+            message_widget._approval_reject_button.click()  # pylint: disable=protected-access
+            assert await second is False
+
+        asyncio.run(scenario())
+
 
 class TestStandingApprovalThroughTheWidget:
     """Tests for the widget's handling of a request a standing approval resolved."""
@@ -245,6 +265,35 @@ class TestStandingApprovalThroughTheWidget:
             return await task
 
         assert asyncio.run(scenario()) is False
+
+
+class TestRequestsThatCannotBeShown:
+    """Tests for a request that has no message widget to put its prompt on."""
+
+    def test_a_request_with_no_message_is_denied(self, mindspace_sandbox) -> None:
+        """A request the conversation cannot place is denied rather than left waiting."""
+        _, conversation = _make_widget(mindspace_sandbox)
+
+        async def scenario() -> bool:
+            return await _request(conversation, AIToolApprovalKind.STANDARD)
+
+        assert asyncio.run(scenario()) is False
+
+    def test_a_request_for_an_unrendered_message_is_denied(self, mindspace_sandbox) -> None:
+        """A request whose message has no widget is denied rather than left waiting."""
+        widget, conversation = _make_widget(mindspace_sandbox)
+        conversation._executing_tool_call_message = AIMessage.create(  # pylint: disable=protected-access
+            AIMessageSource.TOOL_CALL,
+            "{}",
+            tool_calls=[_TOOL_CALL],
+            completed=True,
+        )
+
+        async def scenario() -> bool:
+            return await _request(conversation, AIToolApprovalKind.STANDARD)
+
+        assert asyncio.run(scenario()) is False
+        assert widget._pending_tool_call_approval is None  # pylint: disable=protected-access
 
 
 class TestWithdrawingTheStandingApproval:

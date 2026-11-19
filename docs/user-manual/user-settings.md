@@ -122,7 +122,9 @@ safe, repetitive cases run without interrupting you:
 
 Every other request still prompts, including every request that changes something at the far end —
 POST, PUT, PATCH and DELETE are never auto-approved. Redirects are re-checked against these lists
-before they are followed, so an allowlisted URL cannot be used to reach a denied one.
+before they are followed, so an allowlisted URL cannot be used to reach a denied one. A redirect
+target that needs your approval is named in the prompt together with the URL that was redirected to
+it, so a host the AI never asked for is explained rather than appearing out of nowhere.
 
 The deny list is pre-filled with loopback, link-local and private network ranges, and with the
 cloud metadata endpoints that live in them. An allowlisted public host therefore cannot be used,
