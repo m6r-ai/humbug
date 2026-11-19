@@ -1121,6 +1121,7 @@ class MissionTab(TabBase):
             )
 
         except MissionError as e:
+            self._restore_message(objective, attachments)
             self._show_error(self._strings().mission_error_start.format(str(e)))
             return
 
@@ -1144,7 +1145,16 @@ class MissionTab(TabBase):
             await service.send_guidance(mission_id, text, requester_id=self._tab_id, attachments=attachments)
 
         except MissionError as e:
+            self._restore_message(text, attachments)
             self._show_error(self._strings().mission_error_send.format(str(e)))
+
+    def _restore_message(self, text: str, attachments: list[tuple[str, str]]) -> None:
+        """Put a message that could not be sent back in the composer, unless the tab has closed meanwhile."""
+        try:
+            self._widget.restore_message(text, attachments)
+
+        except RuntimeError:
+            self._logger.warning("Mission Control closed before an unsent message could be restored")
 
     def _answer(self, decide: Callable[[MissionService], Coroutine[Any, Any, bool]]) -> None:
         """Answer a decision and say so if it had already been answered."""

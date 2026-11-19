@@ -769,6 +769,11 @@ def get_french_strings() -> LanguageStrings:
         mission_send="Envoyer",
         mission_error_start="Impossible de démarrer la mission : {0}",
         mission_error_send="Impossible d'envoyer à la mission : {0}",
+        mission_working_close_title="Arrêter les missions en cours ?",
+        mission_working_close=(
+            "Ces missions sont encore en cours : {0}. Fermer maintenant arrête leur réponse en cours. "
+            "Vous pourrez les reprendre à la prochaine ouverture de cet espace mental."
+        ),
         mission_decision_stale="Cette demande a déjà reçu une réponse.",
         mission_lead_message_title="Dernier message du responsable de mission",
         mission_lead_waiting="Attend votre réponse",

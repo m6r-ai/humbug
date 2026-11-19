@@ -203,7 +203,9 @@ class Mission:
     only that once.  `goal_met` is whether the lead's latest plan reports the
     user's goal achieved; a mission whose lead was asked to report that
     (`reports_goal`) is complete only once it has, not merely when its plan's
-    tasks are done.
+    tasks are done.  `lead_settings` holds the AI settings chosen for the lead,
+    as the lead's conversation settings serialise them, so its lead keeps them
+    when it is loaded again; it is empty for a record from before they were kept.
     """
     mission_id: str
     objective: str
@@ -227,6 +229,7 @@ class Mission:
     celebrated: bool = False
     reports_goal: bool = False
     goal_met: bool = False
+    lead_settings: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         """Return the mission as a JSON-safe dictionary."""
@@ -254,6 +257,7 @@ class Mission:
             "celebrated": self.celebrated,
             "reportsGoal": self.reports_goal,
             "goalMet": self.goal_met,
+            "leadSettings": dict(self.lead_settings),
         }
 
     @classmethod
@@ -276,6 +280,7 @@ class Mission:
             raise ValueError("Mission record is missing its id or lead conversation")
 
         tasks = data.get("tasks", [])
+        lead_settings = data.get("leadSettings")
         mission = cls(
             mission_id=mission_id,
             objective=str(data.get("objective", "")),
@@ -302,6 +307,7 @@ class Mission:
             celebrated=bool(data.get("celebrated", False)),
             reports_goal=bool(data.get("reportsGoal", False)),
             goal_met=bool(data.get("goalMet", False)),
+            lead_settings=dict(lead_settings) if isinstance(lead_settings, dict) else {},
         )
         if "celebrated" not in data:
             # A record from before completions were remembered: one already finished has been seen finished.

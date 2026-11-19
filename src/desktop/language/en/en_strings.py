@@ -739,6 +739,11 @@ def get_english_strings() -> LanguageStrings:
         mission_send="Send",
         mission_error_start="Could not start the mission: {0}",
         mission_error_send="Could not send to the mission: {0}",
+        mission_working_close_title="Stop Working Missions?",
+        mission_working_close=(
+            "These missions are still working: {0}. Closing now stops their current reply. "
+            "You can resume them when this mindspace is next opened."
+        ),
         mission_decision_stale="That request has already been answered.",
         mission_lead_message_title="Latest from the mission lead",
         mission_lead_waiting="Waiting for your reply",

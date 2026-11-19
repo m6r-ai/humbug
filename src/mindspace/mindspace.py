@@ -233,17 +233,27 @@ class Mindspace:
         """
         assert self.has_mindspace(), "No mindspace is currently open"
         settings_path = os.path.join(self._path, self.MINDSPACE_DIR, self.SETTINGS_FILE)
+        old_settings = self._settings
+        # The watcher is only rebuilt when what it watches changes: rebuilding reloads its
+        # baseline from disk, which an unrelated setting has no reason to cost.
+        watch_changed = old_settings is None or (
+            old_settings.journal_pruned_paths != new_settings.journal_pruned_paths
+            or old_settings.journal_checkpoint_interval != new_settings.journal_checkpoint_interval
+        )
         try:
             new_settings.save(settings_path)
             self._settings = new_settings
             self._apply_tool_settings(new_settings)
-            self._change_watcher = MindspaceChangeWatcher(
-                self._path,
-                self._file_journal,
-                scan_pruned_paths(new_settings.journal_pruned_paths),
-                new_settings.journal_checkpoint_interval,
-            )
-            self._change_watcher.open()
+            if watch_changed:
+                self._change_watcher.close()
+                self._change_watcher = MindspaceChangeWatcher(
+                    self._path,
+                    self._file_journal,
+                    scan_pruned_paths(new_settings.journal_pruned_paths),
+                    new_settings.journal_checkpoint_interval,
+                )
+                self._change_watcher.open()
+
             self._on_settings_changed()
 
         except OSError as e:

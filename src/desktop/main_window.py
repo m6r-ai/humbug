@@ -1969,8 +1969,34 @@ class MainWindow(QMainWindow):
             )
 
     def _close_all_tabs(self) -> bool:
-        """Close all open tabs, returning True if all were closed."""
+        """
+        Close all open tabs, returning True if all were closed.
+
+        Mission leads followed in Mission Control have no tab to ask the user
+        before they are cut off, so the user is asked about them first.
+        """
+        if not self._confirm_stopping_missions():
+            return False
+
         return self._tab_manager.close_all_tabs()
+
+    def _confirm_stopping_missions(self) -> bool:
+        """Ask before stopping autonomous missions that are working, returning True if they may be stopped."""
+        service = MissionServiceHolder().current_service()
+        working = service.working_missions() if service is not None else []
+        if not working:
+            return True
+
+        strings = self._language_manager.strings()
+        result = MessageBox.show_message(
+            self,
+            MessageBoxType.QUESTION,
+            strings.mission_working_close_title,
+            strings.mission_working_close.format(", ".join(f"'{mission.title}'" for mission in working)),
+            [MessageBoxButton.YES, MessageBoxButton.NO],
+            destructive=True
+        )
+        return result == MessageBoxButton.YES
 
     def _focused_conversation_sidebar(self) -> ConversationSidebar | None:
         """Return the conversation sidebar panel if it currently has keyboard focus, else None."""
@@ -3548,5 +3574,6 @@ class MainWindow(QMainWindow):
             event.ignore()
             return
 
+        MissionServiceHolder().release()
         self._instance_registry.unregister()
         event.accept()

@@ -660,6 +660,8 @@ class LanguageStrings:
     mission_send: str
     mission_error_start: str
     mission_error_send: str
+    mission_working_close_title: str
+    mission_working_close: str
     mission_decision_stale: str
     mission_lead_message_title: str
     mission_lead_waiting: str

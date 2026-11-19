@@ -1,4 +1,5 @@
 """Tests for Mindspace AI settings broadcasting and session state persistence."""
+from dataclasses import replace
 import os
 
 import pytest
@@ -95,6 +96,42 @@ class TestApplyAiSettingsToAll:
         assert current.provider == "p"
         assert current.temperature == 0.5
         assert current.reasoning_effort == "high"
+
+
+class TestUpdateSettings:
+    """Saving settings rebuilds the change watcher only when what it watches changes."""
+
+    @staticmethod
+    def _open(tmp_path) -> Mindspace:
+        """Open a real mindspace in a temporary directory."""
+        mindspace = _new_mindspace()
+        mindspace.create_mindspace(str(tmp_path), [])
+        mindspace.open_mindspace(str(tmp_path))
+        return mindspace
+
+    def test_unrelated_setting_keeps_the_change_watcher(self, tmp_path) -> None:
+        """Changing a setting the watcher does not use leaves the running watcher in place."""
+        mindspace = self._open(tmp_path)
+        watcher = mindspace.change_watcher()
+        current = mindspace.settings()
+        assert current is not None
+
+        mindspace.update_settings(replace(current, mission_reduce_motion=not current.mission_reduce_motion))
+
+        assert mindspace.change_watcher() is watcher
+        mindspace.close_mindspace()
+
+    def test_watched_paths_change_rebuilds_the_change_watcher(self, tmp_path) -> None:
+        """Changing what the watcher ignores replaces it with one that watches the new set."""
+        mindspace = self._open(tmp_path)
+        watcher = mindspace.change_watcher()
+        current = mindspace.settings()
+        assert current is not None
+
+        mindspace.update_settings(replace(current, journal_pruned_paths=[*current.journal_pruned_paths, "build"]))
+
+        assert mindspace.change_watcher() is not watcher
+        mindspace.close_mindspace()
 
 
 class TestSessionState:

@@ -44,6 +44,11 @@ def submitted(monkeypatch):
     return calls
 
 
+async def _wait_for(future: asyncio.Future) -> None:
+    """Wait on a future, as background work waits on something that has not happened yet."""
+    await future
+
+
 def _lead(service: MissionService, mission) -> AITranscriptConversation:
     """Return the lead conversation Mission Control is driving for an autonomous mission."""
     tracked = service._lead_for(mission)  # pylint: disable=protected-access
@@ -373,6 +378,105 @@ class TestMissions:
 
         asyncio.run(run())
 
+    def test_removing_a_mission_stops_its_lead(self, mindspace, submitted, monkeypatch):  # pylint: disable=unused-argument
+        """A removed mission's lead is cancelled before it is let go, so it does not carry on unseen."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Objective")
+            conversation = _lead(service, mission).inner_conversation()
+            cancelled: list[AIConversation] = []
+            monkeypatch.setattr(AIConversation, "cancel_current_tasks", lambda self, notify=True: cancelled.append(self))
+
+            service.remove_mission(mission.mission_id)
+
+            assert cancelled == [conversation]
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_removing_a_mission_withdraws_its_standing_approvals(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A conversation that took part in a removed mission keeps no standing approval the mission granted."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Objective", AutoApproveLevel.ALL)
+            delegation = AIMessage.create(source=AIMessageSource.AI, content="", completed=True)
+            _lead(service, mission).get_conversation_history().add_message(delegation)
+            child_path = os.path.join(mindspace.conversations_dir(), "dAI-child.conv")
+            child = AITranscriptConversation(child_path)
+            child.get_conversation_history().set_parent(
+                AIConversationParent(message_id=delegation.id, tool_call_id="call-1")
+            )
+            mindspace.contexts().open(
+                context_type="conversation", path=child_path, title="dAI-child", initial_model=child
+            )
+            await asyncio.sleep(0)
+            child.set_auto_approve_file_changes(True)
+
+            service.remove_mission(mission.mission_id)
+
+            assert not child.inner_conversation().auto_approve_file_changes()
+            service.stop()
+            child.close()
+
+        asyncio.run(run())
+
+    def test_removing_a_mission_cancels_its_background_work(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Work started in the background for a removed mission does not run on after it."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Objective")
+            never = asyncio.get_running_loop().create_future()
+            service._run_task(_wait_for(never), mission.mission_id)  # pylint: disable=protected-access
+            await asyncio.sleep(0)
+
+            service.remove_mission(mission.mission_id)
+            await asyncio.sleep(0)
+
+            assert never.cancelled()
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_stopping_the_service_stops_every_lead_and_background_task(self, mindspace, submitted, monkeypatch):  # pylint: disable=unused-argument
+        """Nothing Mission Control drives keeps running once it stops following the mindspace."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Objective")
+            conversation = _lead(service, mission).inner_conversation()
+            never = asyncio.get_running_loop().create_future()
+            service._run_task(_wait_for(never), mission.mission_id)  # pylint: disable=protected-access
+            await asyncio.sleep(0)
+            cancelled: list[AIConversation] = []
+            monkeypatch.setattr(AIConversation, "cancel_current_tasks", lambda self, notify=True: cancelled.append(self))
+
+            service.stop()
+            await asyncio.sleep(0)
+
+            assert cancelled == [conversation]
+            assert never.cancelled()
+            assert _store(mindspace).load_all()[0].active
+
+        asyncio.run(run())
+
+    def test_working_missions_are_those_whose_lead_is_mid_turn(self, mindspace, submitted, monkeypatch):  # pylint: disable=unused-argument
+        """An autonomous mission whose lead is replying is reported as working; an idle one is not."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Objective")
+            conversation = _lead(service, mission).inner_conversation()
+            assert not service.working_missions()
+
+            monkeypatch.setattr(conversation, "is_streaming", lambda: True)
+            assert service.working_missions() == [mission]
+            service.stop()
+
+        asyncio.run(run())
+
 
 @pytest.fixture
 def no_continue_delay(monkeypatch):
@@ -489,11 +593,10 @@ class TestInterruptedMissions:
             restarted = MissionService(mindspace)
             restarted.start()
             assert restarted.status(mission.mission_id) == MissionStatus.INTERRUPTED
-            assert restarted.is_interrupted(mission.mission_id)
 
             await restarted.resume_mission(mission.mission_id)
 
-            assert not restarted.is_interrupted(mission.mission_id)
+            assert restarted.status(mission.mission_id) != MissionStatus.INTERRUPTED
             assert submitted[-1][0] == MISSION_REQUESTER
             assert "Humbug was closed while this mission was in progress" in submitted[-1][1]
             snapshot = restarted.snapshot(mission.mission_id)
@@ -513,7 +616,7 @@ class TestInterruptedMissions:
 
             restarted = MissionService(mindspace)
             restarted.start()
-            assert restarted.is_interrupted(mission.mission_id)
+            assert restarted.status(mission.mission_id) == MissionStatus.INTERRUPTED
             await restarted.resume_mission(mission.mission_id)
 
             message = submitted[-1][1]
@@ -571,7 +674,7 @@ class TestInterruptedMissions:
                 await asyncio.sleep(0)
 
             assert restarted.resume_automatically()
-            assert not restarted.is_interrupted(mission.mission_id)
+            assert restarted.status(mission.mission_id) != MissionStatus.INTERRUPTED
             assert len(submitted) == briefed + 1
             assert "Humbug was closed" in submitted[-1][1]
             restarted.stop()
@@ -590,7 +693,7 @@ class TestInterruptedMissions:
             for _ in range(5):
                 await asyncio.sleep(0)
 
-            assert restarted.is_interrupted(mission.mission_id)
+            assert restarted.status(mission.mission_id) == MissionStatus.INTERRUPTED
             assert len(submitted) == briefed
             restarted.stop()
 
@@ -2712,6 +2815,52 @@ class TestAttachmentsAndLeadSettings:
             changed = AIConversationSettings(model="other-model", provider=defaults.provider, temperature=0.5)
             service.update_lead_settings(mission.mission_id, changed)
             assert service.lead_settings(mission.mission_id).model == "other-model"
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_lead_keeps_its_settings_when_loaded_again(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """The settings chosen for a lead, and any change to them, survive the lead being loaded again."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            defaults = service.default_settings()
+            assert defaults is not None
+            chosen = AIConversationSettings(model="custom-model", provider=defaults.provider, temperature=0.3)
+            mission = await service.create_mission("Objective", settings=chosen)
+            service.stop()
+
+            restarted = MissionService(mindspace)
+            restarted.start()
+            assert restarted.lead_settings(mission.mission_id).model == "custom-model"
+
+            changed = AIConversationSettings(model="other-model", provider=defaults.provider, temperature=0.5)
+            restarted.update_lead_settings(mission.mission_id, changed)
+            restarted.stop()
+
+            again = MissionService(mindspace)
+            again.start()
+            assert again.lead_settings(mission.mission_id).model == "other-model"
+            again.stop()
+
+        asyncio.run(run())
+
+    def test_settings_chosen_in_the_tab_survive_switching_back(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Settings changed in a classic mission's tab go with the lead when it is switched back to autonomous."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            defaults = service.default_settings()
+            assert defaults is not None
+            mission = await service.create_mission("Objective")
+            context_id = service.switch_to_classic(mission.mission_id)
+            assert context_id is not None
+
+            changed = AIConversationSettings(model="tab-model", provider=defaults.provider, temperature=0.4)
+            _lead(service, mission).update_conversation_settings(changed)
+            service.switch_to_autonomous(mission.mission_id)
+
+            assert service.lead_settings(mission.mission_id).model == "tab-model"
             service.stop()
 
         asyncio.run(run())

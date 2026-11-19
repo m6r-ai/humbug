@@ -732,6 +732,11 @@ def get_arabic_strings() -> LanguageStrings:
         mission_send="إرسال",
         mission_error_start="تعذّر بدء المهمة: {0}",
         mission_error_send="تعذّر الإرسال إلى المهمة: {0}",
+        mission_working_close_title="إيقاف المهام الجارية؟",
+        mission_working_close=(
+            "لا تزال هذه المهام قيد العمل: {0}. الإغلاق الآن يوقف ردّها الحالي. "
+            "يمكنك استئنافها عند فتح هذه المساحة الذهنية في المرة القادمة."
+        ),
         mission_decision_stale="تمت الإجابة عن هذا الطلب مسبقًا.",
         mission_lead_message_title="آخر رسالة من قائد المهمة",
         mission_lead_waiting="بانتظار ردّك",

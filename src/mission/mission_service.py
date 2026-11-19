@@ -333,7 +333,7 @@ class MissionService:
         self._continues_without_progress: dict[str, int] = {}
         self._completed_at_last_continue: dict[str, int] = {}
         self._scheduled_continues: dict[str, asyncio.TimerHandle] = {}
-        self._continue_tasks: set[asyncio.Task] = set()
+        self._background_tasks: dict[asyncio.Task, str | None] = {}
         self._interrupted: set[str] = set()
         self._auditors: dict[str, MissionConversationAuditor] = {}
         self._approvals = MissionApprovals(
@@ -390,7 +390,14 @@ class MissionService:
                     self._start_resume(mission_id)
 
     def stop(self) -> None:
-        """Stop observing the mindspace.  Missions on disk are unaffected."""
+        """
+        Stop observing the mindspace.  Missions on disk are unaffected.
+
+        Every lead Mission Control drives is stopped, along with any background
+        work for a mission, so nothing keeps running against a mindspace that is
+        no longer open.  A mission that was working stays marked active, so it is
+        offered for resumption when the mindspace next opens.
+        """
         if not self._started:
             return
 
@@ -398,8 +405,11 @@ class MissionService:
         self._registry.unregister_callback(ContextEvent.OPENED, self._on_context_opened)
         self._registry.unregister_callback(ContextEvent.CLOSED, self._on_context_closed)
         self._registry.unregister_callback(ContextEvent.UPDATED, self._on_context_updated)
+        for task in list(self._background_tasks):
+            task.cancel()
+
         for mission_id in list(self._auditors):
-            self._detach_headless(mission_id, close_transcript=True)
+            self._shut_down_headless(mission_id)
 
         for tracked in self._tracked.values():
             tracked.detach()
@@ -697,6 +707,7 @@ class MissionService:
             everything_confirmed_at=timestamp.isoformat() if auto_approve == AutoApproveLevel.ALL else "",
             # The lead's brief asks it to report when the goal is met, so that, not a finished plan, completes it.
             reports_goal=True,
+            lead_settings=conversation_settings.to_dict(),
         )
         self._store.save(mission)
         self._missions[mission.mission_id] = mission
@@ -829,10 +840,13 @@ class MissionService:
         """
         mission = self._missions.get(mission_id)
         tracked = self._lead_for(mission) if mission is not None else None
-        if tracked is None:
+        if mission is None or tracked is None:
             return
 
         tracked.transcript.update_conversation_settings(settings)
+        # Recorded with the mission, so the lead keeps these settings when it is next loaded.
+        mission.lead_settings = settings.to_dict()
+        self._save(mission)
         self._notify()
 
     def stop_mission(self, mission_id: str) -> None:
@@ -886,12 +900,21 @@ class MissionService:
 
         self._store.delete(mission_id)
         self._cancel_continue(mission_id)
+        for task, task_mission_id in list(self._background_tasks.items()):
+            if task_mission_id == mission_id:
+                task.cancel()
+
         self._interrupted.discard(mission_id)
-        self._detach_headless(mission_id, close_transcript=True)
+        # Once its members are dropped nothing can find these conversations again, so any standing
+        # approval the mission granted them is withdrawn now.  Everything is not revoked through
+        # revoke_everything because that saves the record this has just deleted.
+        self._approvals.withdraw_standing_approvals(mission_id)
+        self._shut_down_headless(mission_id)
         del self._missions[mission_id]
         # Changed in place: the approvals share this dictionary.
         for context_id in [ctx for ctx, mid in self._members.items() if mid == mission_id]:
             del self._members[context_id]
+            self._approvals.forget(context_id)
 
         self._mindspace.add_interaction(MindspaceLogLevel.INFO, f"Human removed mission '{mission.title}'")
         self._notify()
@@ -1048,16 +1071,6 @@ class MissionService:
 
         self._registry.focus(context_id)
 
-    def focus_conversation(self, context_id: str) -> None:
-        """
-        Bring a conversation taking part in a mission to the front.
-
-        Args:
-            context_id: Context of the conversation
-        """
-        if self._registry.get(context_id) is not None:
-            self._registry.focus(context_id)
-
     async def approve(self, decision_id: str) -> bool:
         """
         Approve a pending decision.
@@ -1159,15 +1172,6 @@ class MissionService:
             raise MissionError(str(e)) from e
 
         self._notify()
-
-    def is_interrupted(self, mission_id: str) -> bool:
-        """
-        Return True if a mission was working when Humbug last closed and has not been resumed.
-
-        Args:
-            mission_id: Mission to check
-        """
-        return mission_id in self._interrupted
 
     async def resume_mission(self, mission_id: str, requester_id: str = "") -> None:
         """
@@ -1829,7 +1833,7 @@ class MissionService:
     def _load_headless(self, mission: Mission) -> _TrackedConversation | None:
         """Load an autonomous mission's lead conversation from its transcript."""
         lead_path = self._mindspace.get_absolute_path(mission.lead_path)
-        settings = self._mindspace.settings()
+        settings = self._saved_lead_settings(mission) or self.default_settings()
         if not os.path.exists(lead_path) or settings is None:
             return None
 
@@ -1841,19 +1845,25 @@ class MissionService:
             self._logger.warning("Could not load the lead conversation of mission '%s': %s", mission.mission_id, e)
             return None
 
-        transcript.update_conversation_settings(AIConversationSettings(
-            model=settings.model,
-            provider=settings.provider,
-            temperature=settings.temperature,
-            reasoning=settings.reasoning,
-            reasoning_effort=settings.reasoning_effort,
-        ))
+        transcript.update_conversation_settings(settings)
         transcript.load_history(history)
         tracked = self._attach_headless(mission, transcript)
         self._refresh_plan_from_history(mission, tracked)
         return tracked
 
-    def _detach_headless(self, mission_id: str, close_transcript: bool) -> _TrackedConversation | None:
+    def _saved_lead_settings(self, mission: Mission) -> AIConversationSettings | None:
+        """Return the AI settings recorded for a mission's lead, or None if none were recorded or they are unreadable."""
+        if not mission.lead_settings:
+            return None
+
+        try:
+            return AIConversationSettings.from_dict(mission.lead_settings)
+
+        except (KeyError, TypeError, ValueError) as e:
+            self._logger.warning("Ignoring the saved lead settings of mission '%s': %s", mission.mission_id, e)
+            return None
+
+    def _detach_headless(self, mission_id: str) -> _TrackedConversation | None:
         """Stop following an autonomous mission's lead conversation, returning it if it was followed."""
         key = _HEADLESS_PREFIX + mission_id
         auditor = self._auditors.pop(mission_id, None)
@@ -1867,10 +1877,20 @@ class MissionService:
             return None
 
         tracked.detach()
-        if close_transcript:
-            tracked.transcript.close()
-
         return tracked
+
+    def _shut_down_headless(self, mission_id: str) -> None:
+        """
+        Stop an autonomous mission's lead conversation and let it go.
+
+        Its reply and any tool call in progress are cancelled before its transcript
+        is closed: a lead left running would carry on unseen, with nothing saving
+        what it does and nobody to answer what it asks.
+        """
+        tracked = self._detach_headless(mission_id)
+        if tracked is not None:
+            tracked.transcript.cancel_current_tasks(notify=False)
+            tracked.transcript.close()
 
     def _take_over_by_tab(self, mission: Mission) -> None:
         """
@@ -1883,11 +1903,7 @@ class MissionService:
         """
         self._cancel_continue(mission.mission_id)
         self._approvals.revoke_everything(mission, "the mission's conversation was opened as a tab")
-        tracked = self._detach_headless(mission.mission_id, close_transcript=False)
-        if tracked is not None:
-            tracked.transcript.cancel_current_tasks(notify=False)
-            tracked.transcript.close()
-
+        self._shut_down_headless(mission.mission_id)
         mission.mode = MissionMode.CLASSIC
         self._save(mission)
         self._record(MissionActivityKind.MODE_CHANGED, mission.title, MissionMode.CLASSIC.value, mission.mission_id)
@@ -1978,7 +1994,7 @@ class MissionService:
         self._cancel_continue(mission_id)
         # Revoked before the conversation goes to its tab, so no standing approval goes with it.
         self._approvals.revoke_everything(mission, "the mission was switched to classic mode")
-        tracked = self._detach_headless(mission_id, close_transcript=False)
+        tracked = self._detach_headless(mission_id)
         was_autonomous = mission.mode == MissionMode.AUTONOMOUS
         mission.mode = MissionMode.CLASSIC
         self._save(mission)
@@ -2023,13 +2039,14 @@ class MissionService:
 
         tracked = self._lead_for(mission)
         if tracked is not None:
-            busy = tracked.conversation.is_streaming() or tracked.state in (
-                MissionAgentState.THINKING, MissionAgentState.WORKING, MissionAgentState.WAITING_FOR_APPROVAL
-            ) or tracked.conversation.pending_tool_authorization() is not None
-            if busy:
+            if self._is_busy(tracked):
                 raise MissionError("The conversation is busy. Wait for it to finish its reply, or stop it, then switch")
 
         mission.mode = MissionMode.AUTONOMOUS
+        if tracked is not None:
+            # The settings chosen in the tab go with the lead, which is about to be reloaded without it.
+            mission.lead_settings = tracked.conversation.conversation_settings().to_dict()
+
         self._save(mission)
         if tracked is not None:
             self._registry.close(tracked.context_id)
@@ -2100,6 +2117,27 @@ class MissionService:
 
         self._notify()
 
+    def working_missions(self) -> list[Mission]:
+        """
+        Return the autonomous missions whose lead is in the middle of a turn.
+
+        Their leads have no tab, so nothing else asks the user before they are
+        cut off: a front end asks this before it closes the mindspace.
+        """
+        working = []
+        for mission in self._missions.values():
+            tracked = self._tracked.get(_HEADLESS_PREFIX + mission.mission_id)
+            if mission.mode == MissionMode.AUTONOMOUS and tracked is not None and self._is_busy(tracked):
+                working.append(mission)
+
+        return working
+
+    def _is_busy(self, tracked: _TrackedConversation) -> bool:
+        """Return True if a conversation is replying, using a tool or waiting for an approval."""
+        return tracked.conversation.is_streaming() or tracked.state in (
+            MissionAgentState.THINKING, MissionAgentState.WORKING, MissionAgentState.WAITING_FOR_APPROVAL
+        ) or tracked.conversation.pending_tool_authorization() is not None
+
     def _run_task(self, coroutine: Any, mission_id: str | None = None) -> None:
         """
         Run a coroutine on the event loop, keeping a reference until it finishes.
@@ -2113,12 +2151,12 @@ class MissionService:
             mission_id: Mission the work belongs to, if any
         """
         task = asyncio.get_running_loop().create_task(coroutine)
-        self._continue_tasks.add(task)
+        self._background_tasks[task] = mission_id
         task.add_done_callback(lambda finished: self._task_finished(finished, mission_id))
 
     def _task_finished(self, task: asyncio.Task, mission_id: str | None) -> None:
         """Release a finished task and report a failure it did not handle itself."""
-        self._continue_tasks.discard(task)
+        self._background_tasks.pop(task, None)
         if task.cancelled():
             return
 

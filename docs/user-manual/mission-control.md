@@ -128,6 +128,11 @@ Mission Control remembers whether each mission was working. If Humbug closes, or
 switched, while a mission is still working, the mission is marked **Interrupted** when you open the
 mindspace again, with a short note explaining why.
 
+A mission followed in Mission Control has no tab of its own to warn you, so before Humbug quits, or
+the mindspace is closed or switched, it names the missions whose lead is still replying and asks
+whether to stop them. Choosing **No** leaves everything open. Choosing **Yes** stops their current
+reply, and they are shown as **Interrupted** the next time the mindspace opens.
+
 Click **Resume** to carry on. Humbug opens the lead conversation if it is not already open and
 tells the lead that it was interrupted, so that it first checks what was actually finished (an
 action or a delegated task may have stopped part way) and then continues with the next unfinished
@@ -280,7 +285,8 @@ rather than jumping, so you can see where you have been taken. Each chip has a *
 - **Rename**, to give the mission a name of your own. The name stays, even when the lead later
   reports a plan with a different title.
 - **Delete**, which removes the mission from Mission Control after you confirm. Its conversations
-  are kept.
+  are kept, but a lead followed in Mission Control is stopped first, and any standing approval the
+  mission gave its conversations is withdrawn.
 
 ### Mission status
 
@@ -314,7 +320,8 @@ beside them, so a mission cannot be deleted by a slip of the mouse aimed at **St
 - **Stop** cancels the lead and every delegated conversation in the mission, as **Esc** does in
   a conversation tab. Any approval they were waiting for is rejected. Stopping a paused mission
   ends the pause.
-- **Delete** removes the mission from Mission Control after you confirm. Its conversations are kept.
+- **Delete** removes the mission from Mission Control after you confirm. Its conversations are
+  kept; a lead followed in Mission Control is stopped first.
 
 When a mission is selected, the box at the bottom sends your message to its lead instead of
 starting a new mission. Sending a message to a stopped mission resumes it.

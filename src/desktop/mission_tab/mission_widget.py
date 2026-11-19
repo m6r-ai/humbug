@@ -2911,6 +2911,19 @@ class MissionWidget(QWidget):
         """Attach a file to the next message, and show it above the composer."""
         self._attachments_bar.add_attachment(filename, content)
 
+    def restore_message(self, text: str, attachments: list[tuple[str, str]]) -> None:
+        """
+        Put back a message that could not be sent, so the user does not have to write or attach it again.
+
+        Text the user has typed since is kept rather than replaced.
+        """
+        if not self._input.toPlainText().strip():
+            self._input.setPlainText(text)
+            self._input.moveCursor(QTextCursor.MoveOperation.End)
+
+        for filename, content in attachments:
+            self._attachments_bar.add_attachment(filename, content)
+
     def take_attachments(self) -> list[tuple[str, str]]:
         """Return the files attached to the message being sent, as (filename, content) pairs, and clear them."""
         attachments = self._attachments_bar.attachments()
