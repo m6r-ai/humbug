@@ -927,14 +927,6 @@ class MissionTab(TabBase):
             return
 
         missions = service.missions()
-        self._agent_display_names = {}
-        for listed in missions:
-            listed_snapshot = service.snapshot(listed.mission_id)
-            if listed_snapshot is not None:
-                listed_names = agent_names(listed.mission_id, listed_snapshot.agents)
-                for agent in listed_snapshot.agents:
-                    self._agent_display_names[agent.title] = listed_names[agent.context_id]
-
         known = {mission.mission_id for mission in missions}
         if self._selected_mission_id not in known:
             self._selected_mission_id = None
@@ -972,6 +964,14 @@ class MissionTab(TabBase):
         self._widget.set_reduce_motion(service.reduce_motion())
 
         snapshot = service.snapshot(self._selected_mission_id) if self._selected_mission_id else None
+        # Only the selected mission's activity and requests are shown, so only its agents need names;
+        # describing every mission on each refresh would read every lead's whole conversation.
+        self._agent_display_names = {}
+        if snapshot is not None:
+            names = agent_names(snapshot.mission.mission_id, snapshot.agents)
+            for agent in snapshot.agents:
+                self._agent_display_names[agent.title] = names[agent.context_id]
+
         view = self._mission_view(snapshot) if snapshot is not None else None
         if snapshot is not None and view is not None:
             view = self._with_celebration(service, snapshot, view)

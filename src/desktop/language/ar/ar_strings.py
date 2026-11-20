@@ -898,6 +898,7 @@ def get_arabic_strings() -> LanguageStrings:
         mission_say_sleeping="آخذ استراحة مخطط لها مدتها {0}. سأتابع بعد انتهائها…",
         mission_chat_title="المحادثة",
         mission_chat_hint="رسائلك وردود قائد المهمة، كما في علامة تبويب المحادثة",
+        mission_chat_show_earlier="عرض الرسائل السابقة ({0} أخرى)",
         mission_chat_you="أنت",
         mission_chat_lead="قائد المهمة",
         mission_results_title="النتائج السابقة",

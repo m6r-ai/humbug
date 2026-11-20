@@ -956,6 +956,7 @@ def get_french_strings() -> LanguageStrings:
         mission_say_sleeping="Je fais une pause prévue de {0}. Je reprendrai ensuite…",
         mission_chat_title="Conversation",
         mission_chat_hint="Vos messages et les réponses du responsable, comme dans un onglet de conversation",
+        mission_chat_show_earlier="Afficher les messages précédents ({0} de plus)",
         mission_chat_you="Vous",
         mission_chat_lead="Responsable de mission",
         mission_results_title="Résultats précédents",

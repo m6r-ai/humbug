@@ -910,6 +910,7 @@ def get_english_strings() -> LanguageStrings:
         mission_say_sleeping="Taking a planned pause of {0}. I'll carry on when it's up…",
         mission_chat_title="Conversation",
         mission_chat_hint="Your messages and the lead's replies, as in a conversation tab",
+        mission_chat_show_earlier="Show earlier messages ({0} more)",
         mission_chat_you="You",
         mission_chat_lead="Mission lead",
         mission_results_title="Earlier results",

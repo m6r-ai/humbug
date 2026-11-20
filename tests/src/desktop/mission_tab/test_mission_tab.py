@@ -3301,3 +3301,101 @@ class TestWrappedTextIsMeasuredOnce:
         assert heights[1] > heights[0] and heights[4] > heights[3]
         label.deleteLater()
         plain.deleteLater()
+
+    def test_setting_the_text_already_shown_keeps_its_measurements(self, qapp, monkeypatch) -> None:  # pylint: disable=unused-argument
+        """Showing the same text or format again measures nothing; new text is measured at its new height."""
+        label = mission_widget_module._WrapLabel("A piece of text long enough to wrap at a narrow width " * 2)  # pylint: disable=protected-access
+        label.setTextFormat(Qt.TextFormat.MarkdownText)
+        first = label.heightForWidth(200)
+        measured: list[int] = []
+        original = QLabel.heightForWidth
+        monkeypatch.setattr(QLabel, "heightForWidth", lambda self, width: measured.append(width) or original(self, width))
+
+        label.setText(label.text())
+        label.setTextFormat(Qt.TextFormat.MarkdownText)
+        assert label.heightForWidth(200) == first
+        assert not measured
+
+        label.setText("Short")
+        assert label.heightForWidth(200) < first
+        assert measured == [200]
+        label.deleteLater()
+
+
+class TestLongConversations:
+    """A long conversation with the lead is shown from its latest entries, and earlier ones on request."""
+
+    @staticmethod
+    def _chat(count: int, first: str = "Write the docs") -> list[MissionChatView]:
+        return [MissionChatView("user", "You", first, "10:00")] + [
+            MissionChatView("lead", "Theo", f"Reply {i}", "10:01") for i in range(1, count)
+        ]
+
+    @staticmethod
+    def _shown(widget: MissionWidget) -> list[str]:
+        return [key.text for key, _row in widget._chat_rows]  # pylint: disable=protected-access
+
+    def test_latest_entries_are_shown_and_earlier_ones_offered(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Only the latest page is shown, with a button saying how many earlier entries there are."""
+        widget = MissionWidget()
+        page = mission_widget_module._CHAT_PAGE  # pylint: disable=protected-access
+        chat = self._chat(page + 25)
+
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), conversation=chat))
+
+        assert self._shown(widget) == [entry.text for entry in chat[-page:]]
+        button = widget._chat_earlier_button  # pylint: disable=protected-access
+        assert not button.isHidden()
+        assert "25" in button.text()
+        widget.deleteLater()
+
+    def test_showing_earlier_entries_adds_a_page_and_keeps_it_as_the_conversation_grows(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Each click shows another page; new entries keep what was opened, and a different conversation starts afresh."""
+        widget = MissionWidget()
+        page = mission_widget_module._CHAT_PAGE  # pylint: disable=protected-access
+        chat = self._chat(page + 25)
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), conversation=chat))
+
+        widget._chat_earlier_button.click()  # pylint: disable=protected-access
+        assert self._shown(widget) == [entry.text for entry in chat]
+        assert widget._chat_earlier_button.isHidden()  # pylint: disable=protected-access
+
+        longer = chat + [MissionChatView("lead", "Theo", "Another reply", "10:02")]
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), conversation=longer))
+        assert self._shown(widget) == [entry.text for entry in longer]
+
+        other = self._chat(page + 25, first="Tidy the tests")
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), conversation=other))
+        assert self._shown(widget) == [entry.text for entry in other[-page:]]
+        widget.deleteLater()
+
+
+class TestRefreshDescribesTheSelectedMission:
+    """A refresh reads only the mission on show, however many missions there are."""
+
+    def test_refresh_snapshots_only_the_selected_mission(self, mindspace_sandbox, submitted, monkeypatch) -> None:  # pylint: disable=unused-argument
+        """Other missions appear as chips without their conversations being read again."""
+        async def run() -> None:
+            tab = MissionTab("mission-tab")
+            tab.attach_service()
+            service = tab._service  # pylint: disable=protected-access
+            first = await service.create_mission("First objective")
+            second = await service.create_mission("Second objective")
+            tab._on_mission_selected(second.mission_id)  # pylint: disable=protected-access
+            described: list[str] = []
+            original = type(service).snapshot
+            monkeypatch.setattr(
+                type(service), "snapshot", lambda self, mission_id: described.append(mission_id) or original(self, mission_id)
+            )
+
+            tab._refresh()  # pylint: disable=protected-access
+
+            assert described == [second.mission_id]
+            chips = tab._widget._chips  # pylint: disable=protected-access
+            assert chips is not None
+            assert {chip.mission_id for chip in chips} == {first.mission_id, second.mission_id}
+            tab.close_tab()
+            tab.deleteLater()
+            MissionServiceHolder().release()
+
+        asyncio.run(run())

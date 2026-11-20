@@ -798,6 +798,7 @@ class LanguageStrings:
     mission_results_title: str
     mission_chat_title: str
     mission_chat_hint: str
+    mission_chat_show_earlier: str
     mission_chat_you: str
     mission_chat_lead: str
     mission_results_hint: str

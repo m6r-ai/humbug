@@ -45,6 +45,8 @@ _DETAIL_MAX_LINES = 10
 _DETAIL_MAX_CHARS = 900
 _ACTIVITY_HEIGHT = 520
 _CHAT_MAX_HEIGHT = 560
+# Each entry's Markdown is measured as it is laid out, so a long conversation is shown from its end, a page at a time.
+_CHAT_PAGE = 40
 _COMPOSER_MAX_LINES = 6
 
 # The symbol beside each line of the mission at a glance.
@@ -222,12 +224,20 @@ class _WrapLabel(QLabel):
 
     def setText(self, text: str) -> None:
         """Show new text, fitting the height to it: shorter text must not keep the height of longer text."""
+        # Views are set again on every update, mostly with the text already shown, and measuring it
+        # afresh each time is what makes an update slow.
+        if text == self.text():
+            return
+
         self._heights.clear()
         super().setText(text)
         self._fit_height()
 
     def setTextFormat(self, text_format: Qt.TextFormat) -> None:
         """Interpret the text in a new format, which changes the height it needs."""
+        if text_format == self.textFormat():
+            return
+
         self._heights.clear()
         super().setTextFormat(text_format)
 
@@ -255,7 +265,9 @@ class _WrapLabel(QLabel):
 
     def _fit_height(self) -> None:
         """Keep exactly the height the text needs at the current width."""
-        if self.width() <= 0:
+        # A label not yet in a layout has Qt's default width, not one it will be shown at, so
+        # measuring it there is wasted: it is fitted when its layout first gives it a width.
+        if self.width() <= 0 or self.parentWidget() is None:
             return
 
         # The height a label reports for its width is never less than its minimum, so the
@@ -295,6 +307,7 @@ class _FittedScroll(QScrollArea):
         self.setWidget(content)
         content.installEventFilter(self)
         self._follow = True
+        self._to_top = False
         scrollbar = self.verticalScrollBar()
         scrollbar.valueChanged.connect(self._on_scrolled)
         scrollbar.rangeChanged.connect(self._on_range_changed)
@@ -335,8 +348,18 @@ class _FittedScroll(QScrollArea):
         """Follow new content only while the newest is in view."""
         self._follow = value >= self.verticalScrollBar().maximum() - 2
 
+    def show_top_next(self) -> None:
+        """Show the top of the content once it has been laid out again, for content added above what is in view."""
+        self._follow = False
+        self._to_top = True
+
     def _on_range_changed(self, _minimum: int, maximum: int) -> None:
         """Keep the newest content in view when more arrives."""
+        if self._to_top:
+            self._to_top = False
+            self.verticalScrollBar().setValue(0)
+            return
+
         if self._follow:
             self.verticalScrollBar().setValue(maximum)
 
@@ -674,6 +697,7 @@ class MissionWidget(QWidget):
         self._shown_activity: set[tuple[str, str]] = set()
         self._activity_rows: list[tuple[Hashable, QWidget]] = []
         self._chat_rows: list[tuple[Hashable, QWidget]] = []
+        self._chat_shown = _CHAT_PAGE
         self._stat_values: dict[MissionStatTarget, str] = {}
         self._decision_cards: dict[str, QFrame] = {}
         self._highlighted_card: QFrame | None = None
@@ -1389,6 +1413,12 @@ class MissionWidget(QWidget):
         self._chat_hint.setObjectName("MissionHintText")
         self._chat_hint.setWordWrap(True)
         layout.addWidget(self._chat_hint)
+        self._chat_earlier_button = QPushButton()
+        self._chat_earlier_button.setObjectName("MissionLinkButton")
+        self._chat_earlier_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._chat_earlier_button.clicked.connect(self._show_earlier_chat)
+        self._chat_earlier_button.hide()
+        layout.addWidget(self._chat_earlier_button, 0, Qt.AlignmentFlag.AlignLeft)
         feed = QWidget()
         feed.setObjectName("MissionChatFeed")
         self._chat_layout = QVBoxLayout(feed)
@@ -1414,10 +1444,29 @@ class MissionWidget(QWidget):
             _clear_layout(self._chat_layout)
             self._chat_rows = []
 
+        if self._conversation is None or conversation[:1] != self._conversation[:1]:
+            # A different conversation, such as another mission's, starts again from its latest page.
+            self._chat_shown = _CHAT_PAGE
+
         self._conversation = conversation
+        self._show_chat_rows()
+
+    def _show_chat_rows(self) -> None:
+        """Show the latest entries of the conversation, as many as the user has asked to see."""
+        conversation = self._conversation or []
+        shown = conversation[-self._chat_shown:]
         self._chat_rows = _sync_rows(
-            self._chat_layout, self._chat_rows, list(conversation), lambda index: self._chat_row(conversation[index])
+            self._chat_layout, self._chat_rows, list(shown), lambda index: self._chat_row(shown[index])
         )
+        hidden = len(conversation) - len(shown)
+        self._chat_earlier_button.setText(self._language_manager.strings().mission_chat_show_earlier.format(hidden))
+        self._chat_earlier_button.setVisible(hidden > 0)
+
+    def _show_earlier_chat(self) -> None:
+        """Show another page of earlier entries, and bring them into view."""
+        self._chat_shown += _CHAT_PAGE
+        self._chat_scroll.show_top_next()
+        self._show_chat_rows()
 
     def _chat_row(self, entry: MissionChatView) -> QWidget:
         """Create the row showing one entry in the conversation with the lead."""

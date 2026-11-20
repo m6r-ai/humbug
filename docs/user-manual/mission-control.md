@@ -257,7 +257,8 @@ When a mission is selected, Mission Control shows, from the top:
   worked on, or the reviewer's reasoning, and click it again to close it.
 - **Conversation**: in the right-hand column, below Recent Activity. It shows everything you and the
   lead have said, oldest first, as you would read it in a conversation tab but without the input box (you reply from the box at
-  the bottom of Mission Control). Your messages sit on the right, shown exactly as you typed them;
+  the bottom of Mission Control). A long conversation opens at its latest 40 entries; click **Show earlier
+  messages** above them to add 40 more at a time, or open the lead's conversation to read it all at once. Your messages sit on the right, shown exactly as you typed them;
   the lead's replies are on the left under its name, formatted and in full. Beside the name, a tag
   shows the AI model that wrote that reply. Between them, a small
   **⚙** line names each tool the lead used and what it worked on, such as
