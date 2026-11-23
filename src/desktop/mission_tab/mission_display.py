@@ -161,6 +161,8 @@ class MissionDecisionView:
 
     `target_text` says what the request acts on, and `undo_text` whether a
     destructive request can be undone once approved; either is "" when not shown.
+    `answerable` is False for a request the user is not asked to answer, because its
+    mission approves everything, so the card shows no buttons to answer it with.
     """
     decision_id: str
     context_id: str
@@ -175,6 +177,7 @@ class MissionDecisionView:
     auto_note: str
     target_text: str = ""
     undo_text: str = ""
+    answerable: bool = True
 
 
 @dataclass(frozen=True)

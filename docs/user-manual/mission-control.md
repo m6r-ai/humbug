@@ -415,6 +415,13 @@ anything the journal does not record, such as moving a folder of files, follows 
 below. At **Everything** it is approved like any other request, and shows in Recent Activity as
 **Approved … — auto-approve is set to Everything**.
 
+At **Everything**, Mission Control never asks you to answer the mission's requests: a request may
+appear in the Decision Inbox for a moment while it is approved, but its card has no **Approve**,
+**Unsure** or **Reject** buttons. While such a mission is paused its requests wait, and each card
+says it will be approved when you continue the mission; to answer one yourself instead, choose a
+lower level first. This applies only in Mission Control. A conversation tab still shows its own
+approval buttons.
+
 The reviewer is used only at **Safe actions**. For each request in scope, the reviewer, using the same AI model as the mission's lead, is given
 the request together with what you have asked for: the mission's original objective, the messages
 you have sent the lead since (which refine or replace the objective), the plan, and the lead's

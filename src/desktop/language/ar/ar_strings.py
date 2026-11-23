@@ -852,6 +852,9 @@ def get_arabic_strings() -> LanguageStrings:
         mission_activity_review_deferred="ترك مراجع الذكاء الاصطناعي {0} لك",
         mission_auto_approve_note_classic="الموافقة التلقائية متوقفة ما دامت هذه المهمة في الوضع الكلاسيكي.",
         mission_auto_approve_note_destructive="هذا الطلب هدّام، والموافقة التلقائية مضبوطة على الإجراءات الآمنة.",
+        mission_auto_approve_note_everything_paused=(
+            "هذه المهمة توافق على كل شيء، لذا ستتم الموافقة على هذا الطلب عند متابعة المهمة."
+        ),
         mission_options="خيارات المهمة",
         mission_rename="إعادة تسمية",
         mission_rename_title="إعادة تسمية المهمة",

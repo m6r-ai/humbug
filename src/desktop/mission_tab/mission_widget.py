@@ -2763,6 +2763,10 @@ class MissionWidget(QWidget):
                 detail.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
                 layout.addWidget(detail)
 
+            if not decision.answerable:
+                self._add_decision_card(card, decision.decision_id)
+                continue
+
             buttons = QHBoxLayout()
             buttons.setSpacing(8)
             approve = QPushButton(strings.mission_approve)
@@ -2781,12 +2785,16 @@ class MissionWidget(QWidget):
             reject.clicked.connect(lambda _checked=False, d=decision.decision_id: self.decision_rejected.emit(d))
             buttons.addWidget(reject, 1)
             layout.addLayout(buttons)
-            self._decisions_layout.addWidget(card)
-            self._decision_cards[decision.decision_id] = card
-            if decision.decision_id not in self._shown_decisions:
-                fade_in(card, 320)
+            self._add_decision_card(card, decision.decision_id)
 
         self._shown_decisions = {decision.decision_id for decision in decisions}
+
+    def _add_decision_card(self, card: QFrame, decision_id: str) -> None:
+        """Put a decision's card in the inbox, fading it in the first time it is shown."""
+        self._decisions_layout.addWidget(card)
+        self._decision_cards[decision_id] = card
+        if decision_id not in self._shown_decisions:
+            fade_in(card, 320)
 
     def show_decision(self, decision_id: str) -> None:
         """Bring a decision's card in the inbox into view and highlight it, so its whole request can be read."""

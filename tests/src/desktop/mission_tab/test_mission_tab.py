@@ -3399,3 +3399,51 @@ class TestRefreshDescribesTheSelectedMission:
             MissionServiceHolder().release()
 
         asyncio.run(run())
+
+
+class TestEverythingNeedsNoAnswer:
+    """Mission Control never asks the user to answer a request from a mission that approves everything."""
+
+    def test_unanswerable_decision_has_no_buttons(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A card for a request the user is not asked to answer shows the request but no Approve, Unsure or Reject."""
+        widget = MissionWidget()
+
+        widget.set_decisions([dataclasses.replace(_decision(destructive=True), answerable=False)])
+
+        assert widget._decision_cards["d1"] is not None  # pylint: disable=protected-access
+        assert not widget.findChildren(QPushButton, "MissionApprove")
+        assert not widget.findChildren(QPushButton, "MissionApproveDestructive")
+        assert not widget.findChildren(QPushButton, "MissionSecondaryButton")
+        widget.deleteLater()
+
+    def test_only_requests_of_a_mission_at_everything_are_unanswerable(self, mindspace_sandbox, submitted) -> None:  # pylint: disable=unused-argument
+        """Requests from a mission at Everything get no buttons; other missions and outside conversations keep them."""
+        async def run() -> None:
+            tab = MissionTab("mission-tab")
+            tab.attach_service()
+            service = tab._service  # pylint: disable=protected-access
+            everything = await service.create_mission("Run it all", AutoApproveLevel.ALL)
+            off = await service.create_mission("Ask me first")
+
+            def view(mission_id: str | None) -> MissionDecisionView:
+                decision = MissionDecision(
+                    decision_id="d", context_id="c", conversation_title="Chat", mission_id=mission_id,
+                    tool_name="terminal.send_command", reason="Run make", detail=None, destructive=True,
+                    requested_at=datetime.now(timezone.utc),
+                )
+                return tab._decision_view(decision)  # pylint: disable=protected-access
+
+            assert not view(everything.mission_id).answerable
+            assert view(off.mission_id).answerable
+            assert view(None).answerable
+
+            service.pause_mission(everything.mission_id)
+            paused = view(everything.mission_id)
+            assert not paused.answerable
+            assert paused.auto_note == tab._strings().mission_auto_approve_note_everything_paused  # pylint: disable=protected-access
+
+            tab.close_tab()
+            tab.deleteLater()
+            MissionServiceHolder().release()
+
+        asyncio.run(run())

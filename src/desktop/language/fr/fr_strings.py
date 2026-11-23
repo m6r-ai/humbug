@@ -904,6 +904,9 @@ def get_french_strings() -> LanguageStrings:
         mission_auto_approve_note_destructive=(
             "Cette demande est destructive et l'approbation automatique est réglée sur Actions sûres."
         ),
+        mission_auto_approve_note_everything_paused=(
+            "Cette mission approuve tout : cette demande sera approuvée quand vous poursuivrez la mission."
+        ),
         mission_options="Options de la mission",
         mission_rename="Renommer",
         mission_rename_title="Renommer la mission",

@@ -864,6 +864,9 @@ def get_english_strings() -> LanguageStrings:
         mission_activity_review_deferred="AI reviewer left {0} for you",
         mission_auto_approve_note_classic="Auto-approve is off while this mission is in Classic mode.",
         mission_auto_approve_note_destructive="This request is destructive, and auto-approve is set to Safe actions.",
+        mission_auto_approve_note_everything_paused=(
+            "This mission approves everything, so this request is approved when you continue the mission."
+        ),
         mission_options="Mission options",
         mission_rename="Rename",
         mission_rename_title="Rename mission",

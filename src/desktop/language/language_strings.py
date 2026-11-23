@@ -754,6 +754,7 @@ class LanguageStrings:
     mission_activity_review_deferred: str
     mission_auto_approve_note_classic: str
     mission_auto_approve_note_destructive: str
+    mission_auto_approve_note_everything_paused: str
     mission_options: str
     mission_rename: str
     mission_rename_title: str

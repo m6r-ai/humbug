@@ -32,7 +32,7 @@ from desktop.style_manager import StyleManager
 from desktop.tab import TabBase
 from mindspace.mindspace_settings import MindspaceSettings
 from mission import (
-    AutoApproveLevel, MissionActivity, MissionActivityKind, MissionAgent, MissionAgentState, MissionDecision,
+    AutoApproveLevel, Mission, MissionActivity, MissionActivityKind, MissionAgent, MissionAgentState, MissionDecision,
     MissionError, MissionExchange, MissionMode, MissionPhase, MissionService, MissionSnapshot, MissionSpeaker,
     MissionStatus, MissionTask, MissionTaskStatus
 )
@@ -558,6 +558,7 @@ class MissionTab(TabBase):
     def _decision_view(self, decision: MissionDecision) -> MissionDecisionView:
         """Turn a decision into its display record."""
         strings = self._strings()
+        mission = self._decision_mission(decision)
         return MissionDecisionView(
             decision_id=decision.decision_id,
             context_id=decision.context_id,
@@ -571,26 +572,36 @@ class MissionTab(TabBase):
             destructive=decision.destructive,
             reviewing=decision.reviewing,
             review_note=decision.review_note,
-            auto_note=self._auto_approve_note(decision),
+            auto_note=self._auto_approve_note(decision, mission),
             target_text=strings.mission_decision_target.format(decision.target) if decision.target else "",
             undo_text=(
                 "" if not decision.destructive
                 else strings.mission_decision_undoable if decision.reversible
                 else strings.mission_decision_not_undoable
             ),
+            # A mission at Everything has handed its approvals over, so Mission Control never asks
+            # the user to answer one of its requests.  A conversation tab still offers its own buttons.
+            answerable=mission is None or mission.auto_approve != AutoApproveLevel.ALL,
         )
 
-    def _auto_approve_note(self, decision: MissionDecision) -> str:
-        """Explain why a request of a mission with auto-approve turned on still needs the user."""
-        mission = next(
-            (m for m in self._service.missions() if m.mission_id == decision.mission_id), None
-        ) if self._service is not None else None
+    def _decision_mission(self, decision: MissionDecision) -> Mission | None:
+        """Return the mission a decision belongs to, or None if it comes from outside any mission."""
+        if self._service is None or decision.mission_id is None:
+            return None
+
+        return next((m for m in self._service.missions() if m.mission_id == decision.mission_id), None)
+
+    def _auto_approve_note(self, decision: MissionDecision, mission: Mission | None) -> str:
+        """Explain why a request of a mission with auto-approve turned on is still waiting."""
         if mission is None or mission.auto_approve == AutoApproveLevel.OFF:
             return ""
 
         strings = self._strings()
         if mission.mode == MissionMode.CLASSIC:
             return strings.mission_auto_approve_note_classic
+
+        if mission.auto_approve == AutoApproveLevel.ALL and mission.paused:
+            return strings.mission_auto_approve_note_everything_paused
 
         if mission.auto_approve == AutoApproveLevel.SAFE and decision.destructive:
             return strings.mission_auto_approve_note_destructive
