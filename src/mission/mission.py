@@ -61,6 +61,16 @@ class MissionMode(Enum):
     CLASSIC = "classic"
 
 
+def _texts(value: object) -> list[str]:
+    """Return a stored list of texts, leaving out anything stored in it that is not text."""
+    return [item for item in value if isinstance(item, str)] if isinstance(value, list) else []
+
+
+def _count(value: object) -> int:
+    """Return a stored count, or 0 if what was stored is not a count."""
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 0
+
+
 class AutoApproveLevel(Enum):
     """
     Which approval requests an AI reviewer may approve for a mission without the user.
@@ -206,6 +216,17 @@ class Mission:
     tasks are done.  `lead_settings` holds the AI settings chosen for the lead,
     as the lead's conversation settings serialise them, so its lead keeps them
     when it is loaded again; it is empty for a record from before they were kept.
+    `review_plan` is set when the user asked to approve the lead's first plan
+    before any of it is carried out, and `plan_approved` once they have; until
+    then the lead is not asked to continue.  `input_tokens` and `output_tokens`
+    count the tokens the mission's conversations have used, as far as Mission
+    Control has seen them; a record from before they were counted starts at none.
+    `conversation_ids` identifies every conversation that has taken part, lead
+    and helpers, which is how the change journal's records of the mission's file
+    changes are found; `journal_from` is the journal's first record that can be
+    the mission's, or 0 for a record from before it was kept; and `undone_paths`
+    are the files whose changes the user undid from Mission Control.  `archived`
+    is set when the user has put the mission away, out of the mission switcher.
     """
     mission_id: str
     objective: str
@@ -230,6 +251,14 @@ class Mission:
     reports_goal: bool = False
     goal_met: bool = False
     lead_settings: dict[str, Any] = field(default_factory=dict)
+    review_plan: bool = False
+    plan_approved: bool = False
+    input_tokens: int = 0
+    output_tokens: int = 0
+    conversation_ids: list[str] = field(default_factory=list)
+    journal_from: int = 0
+    undone_paths: list[str] = field(default_factory=list)
+    archived: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         """Return the mission as a JSON-safe dictionary."""
@@ -258,6 +287,14 @@ class Mission:
             "reportsGoal": self.reports_goal,
             "goalMet": self.goal_met,
             "leadSettings": dict(self.lead_settings),
+            "reviewPlan": self.review_plan,
+            "planApproved": self.plan_approved,
+            "inputTokens": self.input_tokens,
+            "outputTokens": self.output_tokens,
+            "conversationIds": list(self.conversation_ids),
+            "journalFrom": self.journal_from,
+            "undonePaths": list(self.undone_paths),
+            "archived": self.archived,
         }
 
     @classmethod
@@ -308,6 +345,14 @@ class Mission:
             reports_goal=bool(data.get("reportsGoal", False)),
             goal_met=bool(data.get("goalMet", False)),
             lead_settings=dict(lead_settings) if isinstance(lead_settings, dict) else {},
+            review_plan=bool(data.get("reviewPlan", False)),
+            plan_approved=bool(data.get("planApproved", False)),
+            input_tokens=_count(data.get("inputTokens")),
+            output_tokens=_count(data.get("outputTokens")),
+            conversation_ids=_texts(data.get("conversationIds")),
+            journal_from=_count(data.get("journalFrom")),
+            undone_paths=_texts(data.get("undonePaths")),
+            archived=bool(data.get("archived", False)),
         )
         if "celebrated" not in data:
             # A record from before completions were remembered: one already finished has been seen finished.

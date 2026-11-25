@@ -127,3 +127,14 @@ def test_new_mission_finishing_is_announced():
     assert watcher.changes(service) == []  # type: ignore[arg-type]
     service.statuses["a"] = MissionStatus.COMPLETED
     assert [alert.kind for alert in watcher.changes(service)] == [MissionAlertKind.COMPLETED]  # type: ignore[arg-type]
+
+
+def test_plan_waiting_for_review_is_announced():
+    """A plan the user asked to review is announced when it is ready."""
+    service = _Service()
+    service.add("a", MissionStatus.PLANNING)
+    watcher = MissionAlertWatcher()
+    watcher.changes(service)  # type: ignore[arg-type]
+
+    service.statuses["a"] = MissionStatus.PLAN_READY
+    assert [alert.kind for alert in watcher.changes(service)] == [MissionAlertKind.PLAN_READY]  # type: ignore[arg-type]

@@ -39,6 +39,8 @@ class MissionChipView:
     selected: bool
     status_text: str = ""
     waiting_text: str = ""
+    archived: bool = False
+    search_text: str = ""
 
 
 @dataclass(frozen=True)
@@ -63,9 +65,85 @@ class MissionHeaderView:
     paused: bool = False
     recovery_text: str = ""
     steps_text: str = ""
+    timing_text: str = ""
+    tokens_text: str = ""
+    tokens_detail: str = ""
     next_text: str = ""
     recovery_error: str = ""
+    plan_ready: bool = False
+    failure_text: str = ""
+    failure_detail: str = ""
     stuck_text: str = ""
+
+
+@dataclass(frozen=True)
+class MissionFileView:
+    """
+    A file the mission changed.
+
+    Attributes:
+        path: The file, relative to the mindspace
+        glyph: Symbol for what was done to it
+        tone: Colour of that symbol
+        kind_text: What was done to it, in words
+        state_text: Where it stands now, or "" when the mission's changes are still there
+        can_undo: Whether its changes can be undone from here
+        can_open: Whether it exists to be opened
+        lines_added: Lines the mission added, or None when they could not be counted
+        lines_removed: Lines the mission removed, or None when they could not be counted
+        lines_text: The line counts in words, for a tooltip, or "" when they could not be counted
+        review_sequence: The journal entry to compare the file as it is now against, or None
+            when there is no earlier version to compare with
+    """
+    path: str
+    glyph: str
+    tone: MissionTone
+    kind_text: str
+    state_text: str
+    can_undo: bool
+    can_open: bool
+    lines_added: int | None = None
+    lines_removed: int | None = None
+    lines_text: str = ""
+    review_sequence: int | None = None
+
+
+class MissionDiffLineKind(Enum):
+    """What a line of a file's diff is: added, removed, unchanged, or a run of unchanged lines left out."""
+    ADDED = auto()
+    REMOVED = auto()
+    CONTEXT = auto()
+    GAP = auto()
+
+
+@dataclass(frozen=True)
+class MissionDiffLineView:
+    """
+    One line of a file's diff.
+
+    Attributes:
+        kind: Whether the line was added, removed, left as it was, or stands for unchanged lines left out
+        text: The line, or for a gap, how many unchanged lines it stands for, in words
+        old_number: The line's number before the mission, or ""
+        new_number: The line's number as the mission left the file, or ""
+    """
+    kind: MissionDiffLineKind
+    text: str
+    old_number: str = ""
+    new_number: str = ""
+
+
+@dataclass(frozen=True)
+class MissionDiffView:
+    """
+    What a mission did to a file, line by line.
+
+    Attributes:
+        lines: The lines to show
+        note: Something to say under the lines, such as how many more there are, or why there are none
+    """
+    lines: list[MissionDiffLineView]
+    note: str = ""
 
 
 @dataclass(frozen=True)
@@ -301,3 +379,6 @@ class MissionView:
     glance: MissionGlanceView | None = None
     working_on_text: str = ""
     celebrate: bool = False
+    files: list[MissionFileView] = field(default_factory=list)
+    files_summary: str = ""
+    report_files: list[str] = field(default_factory=list)

@@ -196,7 +196,9 @@ def get_english_strings() -> LanguageStrings:
         settings_network_access="Network Access",
         external_http_access="Network Access",
         allow_external_http_access="Allow AI to fetch allowlisted URLs without asking",
-        external_http_allowlist="Auto-approved URLs (one per line, e.g. api.example.com or https://api.example.com:8443):",
+        external_http_allowlist=(
+            "Auto-approved URLs (one per line, e.g. api.example.com or https://api.example.com:8443):"
+        ),
         external_http_denylist="Always denied URLs (one per line, e.g. localhost or 10.0.0.0/8):",
 
         # Mindspace tree
@@ -449,7 +451,9 @@ def get_english_strings() -> LanguageStrings:
         trash_delete_forever="Delete Forever",
         trash_empty_trash_action="Empty Trash",
         trash_confirm_delete_forever_title="Delete Forever",
-        trash_confirm_delete_forever_message="Are you sure you want to permanently delete {0}? This cannot be undone.",
+        trash_confirm_delete_forever_message=(
+            "Are you sure you want to permanently delete {0}? This cannot be undone."
+        ),
         trash_confirm_empty_title="Empty Trash",
         trash_confirm_empty_message=(
             "Are you sure you want to permanently delete everything in the trash? This cannot be undone."
@@ -644,13 +648,17 @@ def get_english_strings() -> LanguageStrings:
             "Open your conversations here — use + to start a new one, or the folder icon to organize them."
         ),
         tour_workspace_title="Your Workspace",
-        tour_workspace_description="Conversations and other tabs open here. This is where you'll do most of your work.",
+        tour_workspace_description=(
+            "Conversations and other tabs open here. This is where you'll do most of your work."
+        ),
         tour_key_action_title="Send a Message",
         tour_key_action_description="Type a message and press Send (or {0}) to talk with the AI.",
         tour_output_title="Conversation History",
         tour_output_description="AI responses and your conversation history appear here as you chat.",
         tour_navigation_title="Navigation",
-        tour_navigation_description="Switch between Conversations, Files, Search, Preview, and more using this sidebar.",
+        tour_navigation_description=(
+            "Switch between Conversations, Files, Search, Preview, and more using this sidebar."
+        ),
         tour_help_title="Settings & Help",
         tour_help_description="Open Settings here anytime. You can restart this tour from Humbug → Take a Tour.",
 
@@ -665,7 +673,9 @@ def get_english_strings() -> LanguageStrings:
         fetch_error_timeout="Request timed out — the provider took too long to respond.",
         fetch_error_generic="Failed: {0}",
         stream_error_interrupted="The connection was interrupted before the response finished. Please try again.",
-        stream_error_no_backend="No AI backend is configured for this model's provider — check your AI Backend settings.",
+        stream_error_no_backend=(
+            "No AI backend is configured for this model's provider — check your AI Backend settings."
+        ),
         stream_error_access_denied="Access denied ({0}) — your account may not have access to this model.",
 
         mission_control="Mission Control",
@@ -754,7 +764,10 @@ def get_english_strings() -> LanguageStrings:
         mission_status_replied="Answered",
         mission_status_failed="Failed",
         mission_resume="Resume",
-        mission_interrupted_notice="Humbug was closed while this mission was running. Resume to carry on from where it stopped.",
+        mission_interrupted_notice=(
+            "Humbug was closed while this mission was running. Resume to carry on from where it "
+            "stopped."
+        ),
         mission_auto_resume="Auto-resume after restart",
         mission_milestone_step="Step {0} of {1} done: {2}",
         mission_milestone_round="Finished: {0}",
@@ -950,6 +963,131 @@ def get_english_strings() -> LanguageStrings:
         mission_notify_failed="Mission failed",
         mission_notify_stuck="Mission looks stuck",
         mission_steps_count="{0} of {1} steps done",
+        mission_failed_key=(
+            "The AI service turned the request away: its API key is missing, wrong, or not allowed to "
+            "use this model. Check the key in Settings › AI Backends, then press Retry."
+        ),
+        mission_failed_model=(
+            "The AI model was not found: it may have been renamed or withdrawn. Choose another model "
+            "with the cog beside the message box, then send me a message."
+        ),
+        mission_failed_request=(
+            "The AI service could not accept the request, often because the conversation has grown too "
+            "long for the model. Choose a model with a larger context, or start a new mission."
+        ),
+        mission_failed_rate=(
+            "The AI service is limiting how often it can be asked. Wait a few minutes, then press "
+            "Retry."
+        ),
+        mission_failed_network=(
+            "Humbug could not reach the AI service. Check your internet connection, then press Retry."
+        ),
+        mission_failed_server="The AI service had a problem on its side. Press Retry in a few minutes.",
+        mission_failed_backend=(
+            "No AI backend is set up for this model's provider. Set one up in Settings › AI Backends, "
+            "or choose another model with the cog beside the message box."
+        ),
+        mission_failed_cut_short="The AI service stopped before finishing its reply. Press Retry to ask again.",
+        mission_guide_title="How Mission Control works",
+        mission_guide_dismiss="Got it",
+        mission_guide_link="How does Mission Control work?",
+        mission_guide_1_title="Say what you want done",
+        mission_guide_1=(
+            "Describe the job in the box below. An AI lead plans it, and brings in helper agents for "
+            "the parts that can run side by side."
+        ),
+        mission_guide_2_title="Watch it work",
+        mission_guide_2=(
+            "The plan, the robots doing it and what they are saying are shown as they happen. You can "
+            "send the lead a message at any time."
+        ),
+        mission_guide_3_title="Stay in charge",
+        mission_guide_3=(
+            "Anything that changes files or runs commands waits in the Decision Inbox for you, unless "
+            "you let auto-approve handle it. Every file change can be undone."
+        ),
+        mission_run_again="Run again",
+        mission_archive="Archive",
+        mission_unarchive="Bring back from the archive",
+        mission_archived_count="Archived ({0})",
+        mission_search="Search missions",
+        mission_search_none="No missions match",
+        mission_report_save_word="Save as a Word document…",
+        mission_report_copy_image="Copy as an image",
+        mission_report_files="In this report:",
+        mission_report_open_file="Open {0}",
+        mission_report_save_word_title="Save the report as a Word document",
+        mission_report_word_filter="Word documents (*.docx)",
+        mission_report_save_failed="The report could not be saved: {0}",
+        mission_files_title="Files Changed",
+        mission_files_hint=(
+            "Changes made through Humbug's own tools, as the change journal recorded them. A command "
+            "run in a terminal can change files without being listed."
+        ),
+        mission_files_undo_all="Undo all",
+        mission_files_created="{0} created",
+        mission_files_changed="{0} changed",
+        mission_files_deleted="{0} deleted",
+        mission_files_lines="+{0} −{1} lines",
+        mission_file_lines="{0} lines added, {1} removed",
+        mission_file_review="See changes",
+        mission_file_review_tip="Compare {0} as it was before this mission with how it is now",
+        mission_file_diff_show="Show what changed, line by line",
+        mission_file_diff_gap="{0} unchanged lines",
+        mission_file_diff_more="{0} more lines are not shown here. See changes opens the whole diff.",
+        mission_file_diff_unavailable=(
+            "This change can no longer be shown line by line: an earlier version of the file is no "
+            "longer kept."
+        ),
+        mission_file_diff_empty="No lines changed.",
+        mission_file_open="Open",
+        mission_file_undo="Undo",
+        mission_file_open_tip="Open {0} in an editor tab",
+        mission_file_undo_tip="Put {0} back as it was before this mission",
+        mission_file_created="Created",
+        mission_file_modified="Changed",
+        mission_file_deleted="Deleted",
+        mission_file_times="{0} {1} times",
+        mission_file_undone="Undone",
+        mission_file_changed_since="Changed since",
+        mission_files_undo_title="Undo changes",
+        mission_files_undo_confirm="Put {0} back as it was before this mission changed it?",
+        mission_files_undo_all_confirm="Put every file this mission changed back as it was before?",
+        mission_files_undo_failed="Some changes could not be undone:\n{0}",
+        mission_tokens="{0} tokens",
+        mission_tokens_detail="Input {0} · Output {1}. Counted while Humbug was following the mission",
+        mission_working_for="Working for {0}",
+        mission_working_just_now="Just started",
+        mission_started_at="Started {0}",
+        mission_inbox_keys=(
+            "Keys: A approve · R reject · U unsure · N / P next and previous · Shift+A approves a "
+            "destructive request"
+        ),
+        mission_remember_level="Start every new mission at this level",
+        mission_remember_level_tip=(
+            "Kept for this project. Everything is never kept: it is chosen, and confirmed, for each "
+            "mission"
+        ),
+        mission_status_plan_ready="Plan ready",
+        mission_say_plan_ready="Here's my plan. Shall I start?",
+        mission_activity_plan_approved="You approved the plan",
+        mission_start_work="Start work",
+        mission_plan_ready_notice=(
+            "Your lead has drafted a plan and is waiting for you. Look it over below, then start the work, or "
+            "tell the lead what to change in the box at the bottom."
+        ),
+        mission_review_plan_option="Let me review the plan before work starts",
+        mission_review_plan_tip=(
+            "The lead drafts its plan, then waits for you to start it, so nothing is done before you have "
+            "seen what will be"
+        ),
+        mission_notify_plan_ready="Plan ready for your review",
+        mission_templates_label="Your templates",
+        mission_template_save="Save what you typed as a template",
+        mission_template_save_tip="Keep this request, to start missions from it again",
+        mission_template_delete="Delete the template “{0}”",
+        mission_template_name_title="Save as a template",
+        mission_template_name_prompt="Name this template:",
         mission_report_copy="Copy report",
         mission_report_copied="Copied",
         mission_report_show_steps="Show the steps",

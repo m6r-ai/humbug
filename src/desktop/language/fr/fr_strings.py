@@ -139,7 +139,10 @@ def get_french_strings() -> LanguageStrings:
         processing_message="Discuter avec {model} (Échap pour annuler, {key} pour envoyer)",
         input_prompt="Discuter avec {model} ({key} pour envoyer)",
         command_prompt="Commande (Entrée ou {key} pour envoyer)",
-        editing_message="Modification du message — l'envoi supprimera ce message et tous les suivants ({key} pour envoyer)",
+        editing_message=(
+            "Modification du message — l'envoi supprimera ce message et tous les suivants ({key} pour "
+            "envoyer)"
+        ),
 
         # AI thinking message
         ai_thinking="L'IA réfléchit...",
@@ -305,7 +308,9 @@ def get_french_strings() -> LanguageStrings:
         settings_effort_high="Élevé",
         settings_effort_xhigh="Très élevé",
         settings_effort_max="Maximum",
-        settings_apply_to_all_conversations="Définir par défaut pour cette conversation et toutes les conversations ouvertes",
+        settings_apply_to_all_conversations=(
+            "Définir par défaut pour cette conversation et toutes les conversations ouvertes"
+        ),
         settings_apply_to_open_conversations="Appliquer à toutes les conversations ouvertes",
         settings_applied_to_all_conversations="Appliqué",
         settings_apply_to_all_confirm_title="Appliquer à toutes les conversations ?",
@@ -481,7 +486,9 @@ def get_french_strings() -> LanguageStrings:
             "Cette version ne peut pas \u00eatre affich\u00e9e : son contenu n'est plus "
             "conserv\u00e9, ou il ne s'agit pas de texte et le fichier a chang\u00e9 depuis."
         ),
-        changes_this_version_unavailable="Cette modification a supprim\u00e9 le fichier : elle n'a donc pas de version propre.",
+        changes_this_version_unavailable=(
+            "Cette modification a supprimé le fichier : elle n'a donc pas de version propre."
+        ),
         changes_revert_title="Annuler des modifications",
         changes_revert_confirm=(
             "Annuler {0} modification(s) ? Chaque fichier concern\u00e9 revient \u00e0 l'\u00e9tat "
@@ -586,7 +593,9 @@ def get_french_strings() -> LanguageStrings:
         approve_tool_call="Approuver",
         i_am_unsure_about_tool_call="Je ne suis pas sûr à propos",
         reject_tool_call="Rejeter",
-        auto_approve_file_changes="Approuver automatiquement les modifications de fichiers jusqu'à votre prochain message",
+        auto_approve_file_changes=(
+            "Approuver automatiquement les modifications de fichiers jusqu'à votre prochain message"
+        ),
         interruptible_wait_message="Attente de {duration} secondes \u2014 {remaining} restantes...",
         finish_waiting_now="Terminer l'attente maintenant",
         retry_error="Réessayer",
@@ -680,7 +689,9 @@ def get_french_strings() -> LanguageStrings:
         fetched_models_remove="Supprimer",
 
         fetch_error_invalid_key="Clé API invalide — veuillez vérifier votre clé et réessayer.",
-        fetch_error_access_denied="Accès refusé ({0}) — votre clé n'a peut-être pas la permission de lister les modèles.",
+        fetch_error_access_denied=(
+            "Accès refusé ({0}) — votre clé n'a peut-être pas la permission de lister les modèles."
+        ),
         fetch_error_not_found="Point de terminaison des modèles introuvable ({0}) — vérifiez l'URL de l'API.",
         fetch_error_rate_limited="Limite de requêtes atteinte ({0}) — patientez un moment puis réessayez.",
         fetch_error_server_error="Erreur serveur du fournisseur ({0}) — réessayez plus tard.",
@@ -996,6 +1007,145 @@ def get_french_strings() -> LanguageStrings:
         mission_notify_failed="Mission échouée",
         mission_notify_stuck="La mission semble bloquée",
         mission_steps_count="{0} étape(s) sur {1} terminée(s)",
+        mission_failed_key=(
+            "Le service d'IA a refusé la requête : sa clé d'API est absente, erronée ou n'a pas accès à "
+            "ce modèle. Vérifiez la clé dans Paramètres › Backends IA, puis appuyez sur Réessayer."
+        ),
+        mission_failed_model=(
+            "Le modèle d'IA est introuvable : il a peut-être été renommé ou retiré. Choisissez un autre "
+            "modèle avec la roue dentée près de la zone de message, puis écrivez-moi."
+        ),
+        mission_failed_request=(
+            "Le service d'IA n'a pas pu accepter la requête, souvent parce que la conversation est "
+            "devenue trop longue pour le modèle. Choisissez un modèle avec un plus grand contexte, ou "
+            "démarrez une nouvelle mission."
+        ),
+        mission_failed_rate=(
+            "Le service d'IA limite la fréquence des requêtes. Attendez quelques minutes, puis appuyez "
+            "sur Réessayer."
+        ),
+        mission_failed_network=(
+            "Humbug n'a pas pu joindre le service d'IA. Vérifiez votre connexion Internet, puis appuyez "
+            "sur Réessayer."
+        ),
+        mission_failed_server=(
+            "Le service d'IA a rencontré un problème de son côté. Appuyez sur Réessayer dans quelques "
+            "minutes."
+        ),
+        mission_failed_backend=(
+            "Aucun service d'IA n'est configuré pour le fournisseur de ce modèle. Configurez-en un dans "
+            "Paramètres › Backends IA, ou choisissez un autre modèle avec la roue dentée près de la "
+            "zone de message."
+        ),
+        mission_failed_cut_short=(
+            "Le service d'IA s'est arrêté avant d'avoir fini sa réponse. Appuyez sur Réessayer pour la "
+            "redemander."
+        ),
+        mission_guide_title="Comment fonctionne Mission Control",
+        mission_guide_dismiss="Compris",
+        mission_guide_link="Comment fonctionne Mission Control ?",
+        mission_guide_1_title="Dites ce que vous voulez",
+        mission_guide_1=(
+            "Décrivez la tâche dans la zone ci-dessous. Un responsable IA la planifie et fait appel à "
+            "des agents pour les parties qui peuvent avancer en parallèle."
+        ),
+        mission_guide_2_title="Suivez le travail",
+        mission_guide_2=(
+            "Le plan, les robots qui l'exécutent et ce qu'ils disent s'affichent au fur et à mesure. "
+            "Vous pouvez écrire au responsable à tout moment."
+        ),
+        mission_guide_3_title="Gardez la main",
+        mission_guide_3=(
+            "Tout ce qui modifie des fichiers ou lance des commandes attend votre décision dans la "
+            "boîte de décisions, sauf si vous laissez l'approbation automatique s'en charger. Chaque "
+            "modification de fichier peut être annulée."
+        ),
+        mission_run_again="Relancer",
+        mission_archive="Archiver",
+        mission_unarchive="Sortir de l'archive",
+        mission_archived_count="Archivées ({0})",
+        mission_search="Rechercher des missions",
+        mission_search_none="Aucune mission ne correspond",
+        mission_report_save_word="Enregistrer comme document Word…",
+        mission_report_copy_image="Copier comme image",
+        mission_report_files="Dans ce rapport :",
+        mission_report_open_file="Ouvrir {0}",
+        mission_report_save_word_title="Enregistrer le rapport comme document Word",
+        mission_report_word_filter="Documents Word (*.docx)",
+        mission_report_save_failed="Le rapport n'a pas pu être enregistré : {0}",
+        mission_files_title="Fichiers modifiés",
+        mission_files_hint=(
+            "Modifications faites par les outils de Humbug, telles que le journal des modifications les "
+            "a enregistrées. Une commande lancée dans un terminal peut modifier des fichiers sans "
+            "qu'ils soient listés."
+        ),
+        mission_files_undo_all="Tout annuler",
+        mission_files_created="{0} créé(s)",
+        mission_files_changed="{0} modifié(s)",
+        mission_files_deleted="{0} supprimé(s)",
+        mission_files_lines="+{0} −{1} lignes",
+        mission_file_lines="{0} lignes ajoutées, {1} supprimées",
+        mission_file_review="Voir les modifications",
+        mission_file_review_tip="Comparer {0} avant cette mission avec sa version actuelle",
+        mission_file_diff_show="Afficher les modifications ligne par ligne",
+        mission_file_diff_gap="{0} lignes inchangées",
+        mission_file_diff_more=(
+            "{0} lignes supplémentaires ne sont pas affichées ici. Voir les modifications ouvre la "
+            "comparaison complète."
+        ),
+        mission_file_diff_unavailable=(
+            "Cette modification ne peut plus être affichée ligne par ligne : une version antérieure du "
+            "fichier n’est plus conservée."
+        ),
+        mission_file_diff_empty="Aucune ligne modifiée.",
+        mission_file_open="Ouvrir",
+        mission_file_undo="Annuler",
+        mission_file_open_tip="Ouvrir {0} dans un onglet d’éditeur",
+        mission_file_undo_tip="Remettre {0} comme avant cette mission",
+        mission_file_created="Créé",
+        mission_file_modified="Modifié",
+        mission_file_deleted="Supprimé",
+        mission_file_times="{0} {1} fois",
+        mission_file_undone="Annulé",
+        mission_file_changed_since="Modifié depuis",
+        mission_files_undo_title="Annuler des modifications",
+        mission_files_undo_confirm="Remettre {0} comme il était avant que cette mission le modifie ?",
+        mission_files_undo_all_confirm="Remettre chaque fichier modifié par cette mission comme il était avant ?",
+        mission_files_undo_failed="Certaines modifications n'ont pas pu être annulées :\n{0}",
+        mission_tokens="{0} jetons",
+        mission_tokens_detail="Entrée {0} · Sortie {1}. Comptés pendant que Humbug suivait la mission",
+        mission_working_for="Au travail depuis {0}",
+        mission_working_just_now="Vient de commencer",
+        mission_started_at="Commencée {0}",
+        mission_inbox_keys=(
+            "Touches : A approuver · R rejeter · U pas sûr · N / P suivante et précédente · Maj+A "
+            "approuve une demande destructrice"
+        ),
+        mission_remember_level="Démarrer chaque nouvelle mission à ce niveau",
+        mission_remember_level_tip=(
+            "Gardé pour ce projet. « Tout » n'est jamais gardé : il est choisi, et confirmé, pour "
+            "chaque mission"
+        ),
+        mission_status_plan_ready="Plan prêt",
+        mission_say_plan_ready="Voici mon plan. Je commence ?",
+        mission_activity_plan_approved="Vous avez approuvé le plan",
+        mission_start_work="Lancer le travail",
+        mission_plan_ready_notice=(
+            "Votre responsable a rédigé un plan et vous attend. Parcourez-le ci-dessous, puis lancez le "
+            "travail, ou dites au responsable ce qu'il faut changer dans la zone en bas."
+        ),
+        mission_review_plan_option="Me laisser revoir le plan avant le début du travail",
+        mission_review_plan_tip=(
+            "Le responsable rédige son plan, puis attend que vous le lanciez, afin que rien ne soit fait "
+            "avant que vous ayez vu ce qui le sera"
+        ),
+        mission_notify_plan_ready="Plan prêt à être revu",
+        mission_templates_label="Vos modèles",
+        mission_template_save="Enregistrer ce que vous avez saisi comme modèle",
+        mission_template_save_tip="Garder cette demande, pour en relancer des missions",
+        mission_template_delete="Supprimer le modèle « {0} »",
+        mission_template_name_title="Enregistrer comme modèle",
+        mission_template_name_prompt="Nommez ce modèle :",
         mission_report_copy="Copier le rapport",
         mission_report_copied="Copié",
         mission_report_show_steps="Afficher les étapes",

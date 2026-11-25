@@ -22,8 +22,10 @@ A new mission starts in Autonomous mode. See
 ## Opening Mission Control
 
 Open it from **Mindspace → Mission Control**, with **Ctrl+Shift+M** (macOS: **Cmd+Shift+M**), or
-from the Quick Switcher. If it is already open, this brings it to the front. Like any other tab, it
-is restored when you reopen the mindspace.
+from the Quick Switcher. Each of these opens it on the new-mission screen, ready for a request,
+and brings it to the front if it is already open; your missions stay in the row of chips above.
+A notification, or the mission button on a conversation, opens the mission it is about instead.
+Like any other tab, it is restored when you reopen the mindspace.
 
 Closing the tab does not stop anything. Missions keep running, and Mission Control keeps following
 them until the mindspace is closed, so reopening the tab shows everything that happened meanwhile.
@@ -39,6 +41,11 @@ it ends, and a finished mission is not celebrated with confetti. Nothing is hidd
 
 ## Starting a mission
 
+The first time you open the new-mission screen, a short guide, **How Mission Control works**,
+explains in three steps what happens to a request, how you follow the work, and how you stay in
+charge of what it changes. **Got it** puts it away; the **How does Mission Control work?** link brings it
+back. Putting it away is remembered for you, in every mindspace.
+
 The new-mission screen opens with a short animation of Humbug's logo arriving. Two streams of
 light fly in and meet, the logo turns into view out of the flash with rings of light circling it,
 a sheen crosses it, and it comes to rest over a pedestal of light with its reflection on the
@@ -51,6 +58,37 @@ Type what you want to achieve in the box at the bottom (**Tell Humbug what you w
 achieve…**) and press **Ctrl+Enter** (macOS: **Cmd+Enter**) or click the send button (the paper plane), just as you
 would in a conversation. **Enter** on its own starts a new line. You can also click one of the example objectives to
 fill in the box.
+
+### Starting every mission at the same auto-approve level
+
+New missions start with auto-approve **Off**. If you always want **Safe actions** for a project,
+choose it on the new-mission screen and tick **Start every new mission at this level**; clear the
+tick to go back to Off. The choice is kept with the mindspace's settings. **Everything** can never
+be kept this way: it has to be chosen, and confirmed, for each mission.
+
+### Reviewing the plan first
+
+Tick **Let me review the plan before work starts** on the new-mission screen, and the lead drafts
+its plan and then waits, without starting any task, delegating or changing anything. The mission
+shows **Plan ready**, and Mission Control tells you, as it does when a decision is waiting. Look
+the plan over: **Start work** lets the lead carry it out, a message in the box at the bottom asks
+it to change the plan (it reports the revised plan and waits again), and **Stop** ends the
+mission. Only the mission's first plan is reviewed this way; once you have started the work, the
+lead carries on as any mission does. The choice is kept with the mission, so a mission waiting
+for you is still waiting after Humbug restarts.
+
+The lead is asked to wait, and Mission Control does not ask it to continue until you start the
+work, but it is the AI that holds back: every action that changes files or runs commands still
+needs your approval, as always, if it tries anything before you have started the work.
+
+### Templates
+
+A request you make again and again can be kept as a template. Type it in the box, click **Save
+what you typed as a template** on the new-mission screen, and give it a name. Your templates are
+listed under **Your templates**: click one to put its request in the box, ready to change or send
+as it is, and click its **✕** to delete it. Saving under a name you already use replaces that
+template. Templates belong to the mindspace and are kept with its settings, so each project has
+its own.
 
 The box works like a conversation's input box:
 
@@ -222,7 +260,15 @@ When a mission is selected, Mission Control shows, from the top:
   to a mission that is already done, until the lead replies to it, a strip at the top names your
   message and says it is being worked on. It is not shown if the lead's reply fails or the mission
   is stopped or interrupted; the mission card says so instead.
-- **The mission card** with the mission's status, title and summary. Once there is a plan, a ring
+- **The mission card** with the mission's status, title and summary. Beside the status, a mission
+  that is working says how long it has been at it, such as **Working for 4m**, counted from when
+  it last set to work and kept up to date while you watch; a mission that is not working says when
+  it was started. Mission Control does not estimate how long is left: the lead cannot know how
+  long its next steps will take, so any figure would be a guess. Next to that is how many tokens the
+  mission has used so far, such as **12.4k tokens**, counting its lead and every helper; hover over
+  it to see input and output separately. The same figure is in the final report. Tokens are counted
+  only while Humbug is following the mission, so missions from before this count was kept start at
+  none, and Humbug has no price list, so it shows tokens rather than money. Once there is a plan, a ring
   beside the title fills with how much of it is done (a task in progress counts as half done), with
   how many steps are done and the step that comes next, or the step that is blocked. Under the
   title, a journey bar shows where the mission is on its way, one slim bar for each stage:
@@ -255,7 +301,12 @@ When a mission is selected, Mission Control shows, from the top:
   where you paste, and the formatted copy takes that document's own fonts and colours rather than
   Humbug's theme. You can also select any part of the report with the mouse.
   **New mission** and **Ask a follow-up** (to continue the same mission) follow, and the **⋯** menu
-  has **Switch to Classic mode** and **Delete**. **Show the steps**, under the report, brings back
+  has **Switch to Classic mode** and **Delete**. Under the report, **In this report** offers each file in the mindspace the report names, to open
+  in an editor tab; names of files that do not exist are left out. The report's **⋯** menu also has
+  **Save as a Word document…**, which keeps the report as a `.docx` with its headings, lists and
+  tables (a copy saved inside the mindspace is recorded in the change journal like any other
+  change), and **Copy as an image**, which puts a picture of the report card, exactly as it looks
+  on screen, on the clipboard. **Show the steps**, under the report, brings back
   the Mission Plan, and **Show what happened** brings back Recent Activity; each folds them away
   again. The Decision Inbox appears whenever a request is waiting. Sending a follow-up puts the
   mission back to work, and all its cards return. While you
@@ -327,6 +378,33 @@ When a mission is selected, Mission Control shows, from the top:
   progress has been reported. The filters in the plan's heading, **All**, **Completed** and
   **In progress**, each say how many steps they show: choose one to show only those steps, and
   choose it again, or **All**, to see every step.
+- **Files Changed**: every file the mission's lead and helpers created, changed or deleted, newest
+  first, with how many times. A line at the top sums it up, such as **2 created · 4 changed · +221
+  −20 lines**. Each file is named first, with its folder underneath, and shows how many lines the
+  mission added (green) and removed (red), with a row of five blocks showing the share of each, so
+  a one-line fix and a rewrite look different at a glance. The counts compare the file before the
+  mission with the file as the mission left it, so your own later edits are not included; files
+  that are not text, or are larger than 1 MB, have no counts.
+  Click a text file's row (or press Space or Return on it) to unfold what changed, the way a code
+  review shows it: removed lines in red and added lines in green, with each line's number before
+  and after, and three unchanged lines around each change. Longer runs of unchanged lines are
+  folded into a single row saying how many there are. Long lines are cut short rather than wrapped.
+  Up to 400 lines are shown; past that, the row says how many more there are. Click the row again
+  to fold it away. An unfolded file stays unfolded while the mission keeps working, and its lines
+  are updated as the mission changes it again. Each file has up to three small icon buttons on the
+  right; hover over one to see what it does. **See changes** (±) opens a diff of a changed or
+  deleted file as it was before the mission against the file as it is now, so it does include
+  later edits; a file the mission created has nothing earlier to compare with, so it has no such
+  button. **Open** (an arrow leaving a box) shows a file in an editor tab, and **Undo** (a curved
+  arrow) puts it back as
+  it was before the mission changed it: a file it created is removed, and a file it changed or
+  deleted gets its earlier content back. **Undo all** does that for every file the mission changed.
+  Each asks you first. The list comes from Humbug's [change journal](journal.md), so the same
+  limits apply: only changes made through Humbug's own tools are recorded, and a command the
+  mission ran in a terminal can change files without them appearing here. A file that has been
+  changed again since, by you or anything else, is marked **Changed since** and is not undone, so
+  your later work is never overwritten; one you have put back is marked **Undone**. The list stays
+  on a finished mission's page, under its report.
 - **Recent Activity**: a scrolling feed, newest first, as tall as its entries up to a limit, of what has happened in this mission
   since Mission Control was first opened in this mindspace. It includes the objective you started
   it with, each message you sent from Mission Control, and anything you typed directly into one of
@@ -350,7 +428,15 @@ When a mission is selected, Mission Control shows, from the top:
   to read an earlier one.
 
 Use the chips above the dashboard to switch between missions, or **+ New mission** to start
-another. **+ New mission** always stays in view. When there are more missions than fit, the chips
+another. Once there are more than a few missions, a **Search missions** box beside the chips
+shows only those whose name or request contains every word you type. **Run again**, in a mission's **⋯**
+menu or its report's, starts a new mission with the same request, lead AI settings and choice to
+review the plan, and with the same auto-approve level, except **Everything**, which has to be
+chosen and confirmed afresh, so the new mission starts at your default level instead. **Archive**, in a mission's
+**⋯** menu, puts a mission away out of the chips without deleting anything; **Archived (n)** beside
+the chips shows the archived ones, and **Bring back from the archive** returns one. A mission that
+is working or waiting for you cannot be archived, so nothing that needs you goes out of sight, and
+the mission on screen is always among the chips. **+ New mission** always stays in view. When there are more missions than fit, the chips
 scroll sideways: use the **‹** and **›** arrows, swipe sideways on a trackpad or touch screen, or
 scroll sideways with a mouse that can. The faded end shows which way more missions lie, and the
 selected mission is always scrolled into view.
@@ -379,8 +465,9 @@ rather than jumping, so you can see where you have been taken. Each chip has a *
 | **Waiting for you** | Nothing is running; the lead may have asked you a question |
 | **Answered** | The lead answered your question; no work was needed, so there is no plan |
 | **Reconnecting** | The AI service could not be reached; Mission Control will send the lead's request again by itself, and the mission card says when. See [When the AI service cannot be reached](#when-the-ai-service-cannot-be-reached) |
+| **Plan ready** | You asked to review the plan first, and the lead has drafted it. See [Reviewing the plan first](#reviewing-the-plan-first) |
 | **Looks stuck** | Mission Control stopped driving the mission because it was getting nowhere. The mission card says why, with **Carry on**. See [When a mission gets stuck](#when-a-mission-gets-stuck) |
-| **Failed** | The lead's latest reply ended in an error it could not recover from, or every automatic retry failed. The mission card says so, with **Retry** to send the same request to the lead again (the error and any partial reply are removed first), and **Open the lead's conversation** to see why. Sending a message also tries again. **Resume** is offered only to an **Interrupted** mission |
+| **Failed** | The lead's latest reply ended in an error it could not recover from, or every automatic retry failed. Where the kind of error is known, the mission card says what went wrong and what to do: a rejected API key, a model that was not found, a request too long for the model, a rate limit, no connection, trouble at the AI service, or no AI backend for the model's provider; hover over it to read what the AI service said. The mission card says so, with **Retry** to send the same request to the lead again (the error and any partial reply are removed first), and **Open the lead's conversation** to see why. Sending a message also tries again. **Resume** is offered only to an **Interrupted** mission |
 | **Completed** | The lead reports that everything you asked for is done, and every task in its plan is completed |
 | **Paused** | You paused the mission: nothing is approved automatically and the lead does not carry on by itself until you click **Continue** |
 | **Stopped** | You stopped the mission |
@@ -564,6 +651,20 @@ URL), that is shown as **Acts on**. A destructive request also says, before you 
 whether it can be undone: a file change that Humbug's file change journal records can be, and
 anything else, such as a terminal command or a network request, cannot be undone by Humbug. With
 nothing waiting, the inbox is a single line marked **All clear**.
+
+Requests can be answered from the keyboard once you have clicked on the Mission Control page
+(the keys are ignored while you are typing in the box at the bottom):
+
+| Key | Does |
+|---|---|
+| **A** | Approves the selected request |
+| **Shift+A** | Approves a destructive request. **A** alone only brings it into view, so you can see what it acts on and whether it can be undone first |
+| **R** | Rejects the selected request |
+| **U** | Answers **Unsure** for the selected request |
+| **N** / **P** | Selects the next or the previous request |
+
+The first request is selected to begin with, and once you start using the keys the selected one
+is ringed. The inbox lists the keys under its requests.
 
 - **Approve** allows the operation. It is red for destructive operations.
 - **Unsure** declines the operation and asks the conversation to discuss it with you.

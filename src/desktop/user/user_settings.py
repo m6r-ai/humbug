@@ -43,6 +43,8 @@ class UserSettings:
     external_http_denylist: list[str] = field(default_factory=list)
     onboarding_tour_status: OnboardingTourStatus = OnboardingTourStatus.NOT_STARTED
     onboarding_tour_version: int = 0
+    # Whether the user has put away the guide to how Mission Control works.
+    mission_guide_dismissed: bool = False
     # Monotonically increasing revision counter.  Every save increments it so that
     # other Humbug instances watching this file can tell a genuine change from their
     # own write.  See docs/adr/0014-multiple-instances-and-mindspaces.md.
@@ -476,6 +478,9 @@ class UserSettings:
         else:
             settings.onboarding_tour_version = tour_version
 
+        guide_dismissed = data.get("missionGuideDismissed", False)
+        settings.mission_guide_dismissed = guide_dismissed if isinstance(guide_dismissed, bool) else False
+
         # Load the name of the active saved custom theme (None means the live custom set)
         active_custom_theme = data.get("activeCustomThemeName", None)
         if active_custom_theme is None or (
@@ -638,6 +643,7 @@ class UserSettings:
             "externalHttpDenylist": self.external_http_denylist,
             "onboardingTourStatus": self.onboarding_tour_status.name,
             "onboardingTourVersion": self.onboarding_tour_version,
+            "missionGuideDismissed": self.mission_guide_dismissed,
             "revision": self.revision
         }
 

@@ -8,6 +8,7 @@ import pytest
 from ai import (
     AIConversation, AIConversationEvent, AIConversationParent, AIConversationSettings, AIMessage, AIMessageSource
 )
+from ai.ai_usage import AIUsage
 from ai_transcript_conversation import AITranscriptConversation
 from ai_tool import AIToolApprovalKind, AIToolCall, AIToolResult
 from mindspace.mindspace import Mindspace
@@ -16,8 +17,10 @@ from mission import mission_service as mission_service_module
 from mission.mission_error import MissionError
 from mission.mission_service import MAX_CONTINUES_WITHOUT_PROGRESS, MISSION_REQUESTER, MissionService
 from mission.mission_snapshot import (
-    MissionActivityKind, MissionAgentState, MissionSpeaker, MissionStatus, MissionStuckReason
+    MissionActivityKind, MissionAgentState, MissionFileChangeKind, MissionFileChangeState, MissionFileDiffLineKind,
+    MissionSpeaker, MissionStatus, MissionStuckReason
 )
+from mindspace.journal_entry import JournalActor
 from mission.mission import AutoApproveLevel, MissionMode, MissionTaskStatus
 from mission.mission_reviewer import ReviewRequest, ReviewVerdict
 from mission.mission_store import MissionStore
@@ -3175,6 +3178,556 @@ class TestStuckMissions:
             await service.send_guidance(mission.mission_id, "Skip the first step")
 
             assert service.status(mission.mission_id) != MissionStatus.STUCK
+            service.stop()
+
+        asyncio.run(run())
+
+
+class TestTemplates:
+    """Requests the user saves are kept with the mindspace, to start missions from again."""
+
+    def test_saved_template_is_listed_and_kept(self, mindspace):
+        """A saved template is listed, and is still there for a new service on the same mindspace."""
+        service = MissionService(mindspace)
+        service.save_template("  Review   a PR ", "  Review the open pull request.  ")
+
+        assert service.templates() == [("Review a PR", "Review the open pull request.")]
+        assert MissionService(mindspace).templates() == [("Review a PR", "Review the open pull request.")]
+
+    def test_saving_a_name_again_replaces_it(self, mindspace):
+        """A template saved under a name already used, in any case, replaces the old one and moves to the end."""
+        service = MissionService(mindspace)
+        service.save_template("Notes", "Old request")
+        service.save_template("Review", "Review it")
+        service.save_template("notes", "New request")
+
+        assert service.templates() == [("Review", "Review it"), ("notes", "New request")]
+
+    def test_deleted_template_is_gone(self, mindspace):
+        """Deleting a template removes only that one."""
+        service = MissionService(mindspace)
+        service.save_template("A", "First")
+        service.save_template("B", "Second")
+        service.delete_template("A")
+
+        assert service.templates() == [("B", "Second")]
+
+    @pytest.mark.parametrize("name, text", [("", "Do it"), ("Name", "   "), ("  ", "")])
+    def test_template_needs_a_name_and_a_request(self, mindspace, name, text):
+        """A template without a name or a request is refused, and nothing is saved."""
+        service = MissionService(mindspace)
+        with pytest.raises(MissionError):
+            service.save_template(name, text)
+
+        assert not service.templates()
+
+
+class TestPlanReview:
+    """A mission can wait for the user to approve its first plan before any of it is carried out."""
+
+    @staticmethod
+    async def _reviewed(mindspace, statuses: list[str]):
+        service = MissionService(mindspace)
+        service.start()
+        mission = await service.create_mission("Objective", review_plan=True)
+        conversation = _lead(service, mission).inner_conversation()
+        await conversation._trigger_event(  # pylint: disable=protected-access
+            AIConversationEvent.MESSAGE_COMPLETED, _plan_message(statuses)
+        )
+        return service, mission, conversation
+
+    def test_lead_is_told_to_wait_for_approval(self, mindspace, submitted):
+        """The lead's brief asks it to stop after its first plan; without review, it is not told to."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            await service.create_mission("Reviewed", review_plan=True)
+            await service.create_mission("Not reviewed")
+            briefs = [text for requester, text in submitted if requester == MISSION_REQUESTER]
+            assert "review your plan before any work starts" in briefs[0]
+            assert "review your plan before any work starts" not in briefs[1]
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_plan_waits_for_the_user(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """Once the plan is reported, the mission shows it ready and the lead is not asked to continue."""
+        async def run() -> None:
+            service, mission, conversation = await self._reviewed(mindspace, ["pending", "pending"])
+            await _finish_turn(conversation)
+
+            assert service.status(mission.mission_id) == MissionStatus.PLAN_READY
+            assert _continues(submitted) == 0
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_approving_starts_the_work(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """Approval tells the lead to carry the plan out, is kept, and lets the lead be asked to continue again."""
+        async def run() -> None:
+            service, mission, conversation = await self._reviewed(mindspace, ["pending", "pending"])
+            await _finish_turn(conversation)
+
+            await service.approve_plan(mission.mission_id)
+
+            assert submitted[-1] == (MISSION_REQUESTER, mission_service_module._PLAN_APPROVED_MESSAGE)  # pylint: disable=protected-access
+            assert mission.plan_approved
+            assert _store(mindspace).load_all()[0].plan_approved
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.activity[0].kind == MissionActivityKind.PLAN_APPROVED
+            assert service.status(mission.mission_id) != MissionStatus.PLAN_READY
+
+            await _finish_turn(conversation)
+            assert _continues(submitted) == 1
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_nothing_to_approve_is_refused(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A mission that did not ask for review, or has no plan yet, has nothing to approve."""
+        async def run() -> None:
+            service, mission, _conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            with pytest.raises(MissionError):
+                await service.approve_plan(mission.mission_id)
+
+            waiting = await service.create_mission("No plan yet", review_plan=True)
+            with pytest.raises(MissionError):
+                await service.approve_plan(waiting.mission_id)
+
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_review_choice_is_kept_with_the_mission(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Whether the plan is to be reviewed is saved, so a restart does not let the lead carry on unapproved."""
+        async def run() -> None:
+            service, mission, _conversation = await self._reviewed(mindspace, ["pending"])
+            stored = _store(mindspace).load_all()[0]
+            assert (stored.review_plan, stored.plan_approved) == (True, False)
+            assert mission.review_plan
+            service.stop()
+
+        asyncio.run(run())
+
+
+class TestDefaultAutoApprove:
+    """New missions can start at a level the user chose for the project, but never at Everything."""
+
+    def test_default_is_off_until_chosen(self, mindspace):
+        """Without a choice new missions start at Off; a chosen level is kept for the mindspace."""
+        service = MissionService(mindspace)
+        assert service.default_auto_approve() == AutoApproveLevel.OFF
+
+        service.set_default_auto_approve(AutoApproveLevel.SAFE)
+        assert MissionService(mindspace).default_auto_approve() == AutoApproveLevel.SAFE
+
+    def test_everything_is_never_a_default(self, mindspace):
+        """Approving everything rests on a confirmation for each mission, so it cannot be the default."""
+        service = MissionService(mindspace)
+        with pytest.raises(MissionError):
+            service.set_default_auto_approve(AutoApproveLevel.ALL)
+
+        assert service.default_auto_approve() == AutoApproveLevel.OFF
+
+
+class TestWorkingSince:
+    """A working mission says when it set to work; one that is not working does not."""
+
+    def test_new_mission_is_working_from_its_start(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A mission's lead at work makes it working, and it stops being so when it finishes."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["completed"])
+            await conversation._trigger_event(AIConversationEvent.AI_CONNECTED)  # pylint: disable=protected-access
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.working_since is not None
+
+            await _finish_turn(conversation)
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.working_since is None
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_working_again_starts_the_clock_again(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A message to a mission that had stopped working sets it to work from that moment."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["completed"])
+            await conversation._trigger_event(AIConversationEvent.AI_CONNECTED)  # pylint: disable=protected-access
+            first = service.snapshot(mission.mission_id).working_since  # type: ignore[union-attr]
+            await _finish_turn(conversation)
+
+            await service.send_guidance(mission.mission_id, "One more thing")
+            await conversation._trigger_event(AIConversationEvent.AI_CONNECTED)  # pylint: disable=protected-access
+            again = service.snapshot(mission.mission_id).working_since  # type: ignore[union-attr]
+            assert again is not None and first is not None and again >= first
+            service.stop()
+
+        asyncio.run(run())
+
+
+class TestTokenCount:
+    """Each mission counts the tokens its conversations use."""
+
+    @staticmethod
+    def _reply(prompt: int, completion: int) -> AIMessage:
+        return AIMessage.create(
+            source=AIMessageSource.AI, content="Working on it.", completed=True,
+            usage=AIUsage(prompt_tokens=prompt, completion_tokens=completion, total_tokens=prompt + completion),
+        )
+
+    def test_replies_are_counted_once_and_kept(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Each reply's tokens are added once, however often it is reported, and are saved with the mission."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            first = self._reply(1200, 300)
+            for _ in range(2):
+                await conversation._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, first)  # pylint: disable=protected-access
+
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, self._reply(800, 100)
+            )
+
+            assert (mission.input_tokens, mission.output_tokens) == (2000, 400)
+            stored = _store(mindspace).load_all()[0]
+            assert (stored.input_tokens, stored.output_tokens) == (2000, 400)
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_helpers_count_towards_their_mission(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A conversation the lead delegated to counts its tokens to the lead's mission."""
+        async def run() -> None:
+            service, mission, _conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            lead_id = service._lead_for(mission).context_id  # pylint: disable=protected-access
+            _context_id, helper = _open_conversation(mindspace, "Helper", requester_id=lead_id)
+            await asyncio.sleep(0)
+            service._sync()  # pylint: disable=protected-access
+
+            await helper.inner_conversation()._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, self._reply(500, 50)
+            )
+
+            assert (mission.input_tokens, mission.output_tokens) == (500, 50)
+            service.stop()
+            helper.close()
+
+        asyncio.run(run())
+
+
+class TestFileChanges:
+    """A mission lists the files its conversations changed, and can put them back."""
+
+    @staticmethod
+    def _write(mindspace, conversation_id: str, name: str, text: str) -> None:
+        """Write a file the way Humbug's tools do: recorded in the journal first, as the conversation's."""
+        absolute = os.path.join(mindspace.mindspace_path(), name)
+        content = text.encode("utf-8")
+        mindspace.file_journal().record_write(absolute, name, content, JournalActor.AI, conversation_id)
+        with open(absolute, "wb") as handle:
+            handle.write(content)
+
+    def test_changes_are_listed_by_what_was_done(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Files the mission created and changed are listed; another conversation's changes are not."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            lead = conversation.conversation_id()
+            existing = os.path.join(mindspace.mindspace_path(), "notes.md")
+            with open(existing, "w", encoding="utf-8") as handle:
+                handle.write("old")
+
+            self._write(mindspace, lead, "guide.md", "# Guide")
+            self._write(mindspace, lead, "notes.md", "new")
+            self._write(mindspace, lead, "notes.md", "newer")
+            self._write(mindspace, "someone-else", "other.md", "not ours")
+
+            changes = {change.path: change for change in service.file_changes(mission.mission_id)}
+            assert set(changes) == {"guide.md", "notes.md"}
+            assert changes["guide.md"].kind == MissionFileChangeKind.CREATED
+            assert changes["notes.md"].kind == MissionFileChangeKind.MODIFIED
+            assert changes["notes.md"].changes == 2
+            assert all(change.state == MissionFileChangeState.CURRENT for change in changes.values())
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_lines_added_and_removed_are_counted(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Each file says how many lines the mission added and removed, and where its earlier version is kept."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            lead = conversation.conversation_id()
+            with open(os.path.join(mindspace.mindspace_path(), "notes.md"), "w", encoding="utf-8") as handle:
+                handle.write("a\nb\nc\n")
+
+            self._write(mindspace, lead, "notes.md", "a\nB\nc\n")
+            self._write(mindspace, lead, "notes.md", "a\nB\nc\nd\n")
+            self._write(mindspace, lead, "guide.md", "one\ntwo\n")
+
+            changes = {change.path: change for change in service.file_changes(mission.mission_id)}
+            assert (changes["notes.md"].lines_added, changes["notes.md"].lines_removed) == (2, 1)
+            assert changes["notes.md"].before_sequence is not None
+            assert (changes["guide.md"].lines_added, changes["guide.md"].lines_removed) == (2, 0)
+            assert changes["guide.md"].before_sequence is None
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_lines_are_not_counted_for_binary_files(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A file that is not text has no line counts."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            self._write(mindspace, conversation.conversation_id(), "image.bin", "\0\1\2")
+
+            change = service.file_changes(mission.mission_id)[0]
+            assert change.lines_added is None and change.lines_removed is None
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_later_edits_are_not_counted_as_the_missions(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Lines someone else changed after the mission do not count towards what the mission did."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            self._write(mindspace, conversation.conversation_id(), "guide.md", "one\n")
+            self._write(mindspace, "", "guide.md", "one\ntwo\nthree\n")
+
+            change = service.file_changes(mission.mission_id)[0]
+            assert (change.lines_added, change.lines_removed) == (1, 0)
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_diff_shows_changes_with_the_lines_around_them(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A file's diff has its removed and added lines, numbered, with nearby lines and long unchanged runs folded."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            before = [f"line {n}" for n in range(1, 21)]
+            with open(os.path.join(mindspace.mindspace_path(), "notes.md"), "w", encoding="utf-8") as handle:
+                handle.write("\n".join(before) + "\n")
+
+            after = list(before)
+            after[9] = "line ten"
+            self._write(mindspace, conversation.conversation_id(), "notes.md", "\n".join(after) + "\n")
+
+            diff = service.file_diff(mission.mission_id, "notes.md")
+            assert diff is not None and diff.more == 0
+            kinds = [line.kind for line in diff.lines]
+            assert kinds == (
+                [MissionFileDiffLineKind.GAP] + [MissionFileDiffLineKind.CONTEXT] * 3
+                + [MissionFileDiffLineKind.REMOVED, MissionFileDiffLineKind.ADDED]
+                + [MissionFileDiffLineKind.CONTEXT] * 3 + [MissionFileDiffLineKind.GAP]
+            )
+            assert diff.lines[0].skipped == 6 and diff.lines[-1].skipped == 7
+            removed, added = diff.lines[4], diff.lines[5]
+            assert (removed.text, removed.old_number, removed.new_number) == ("line 10", 10, None)
+            assert (added.text, added.old_number, added.new_number) == ("line ten", None, 10)
+            assert (diff.lines[3].old_number, diff.lines[3].new_number) == (9, 9)
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_diff_shows_short_unchanged_runs_in_full(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A few unchanged lines between two changes are shown rather than folded into a gap."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            before = [f"line {n}" for n in range(1, 11)]
+            with open(os.path.join(mindspace.mindspace_path(), "notes.md"), "w", encoding="utf-8") as handle:
+                handle.write("\n".join(before) + "\n")
+
+            after = list(before)
+            after[0] = "first"
+            after[9] = "last"
+            self._write(mindspace, conversation.conversation_id(), "notes.md", "\n".join(after) + "\n")
+
+            diff = service.file_diff(mission.mission_id, "notes.md")
+            assert diff is not None
+            assert MissionFileDiffLineKind.GAP not in [line.kind for line in diff.lines]
+            context = [line for line in diff.lines if line.kind == MissionFileDiffLineKind.CONTEXT]
+            assert [line.old_number for line in context] == list(range(2, 10))
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_diff_of_a_created_file_is_all_added(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A file the mission created shows every line as added; a file it did not change has no diff."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            self._write(mindspace, conversation.conversation_id(), "guide.md", "one\ntwo\n")
+
+            diff = service.file_diff(mission.mission_id, "guide.md")
+            assert diff is not None
+            assert [(line.kind, line.new_number) for line in diff.lines] == [
+                (MissionFileDiffLineKind.ADDED, 1), (MissionFileDiffLineKind.ADDED, 2)
+            ]
+            assert service.file_diff(mission.mission_id, "elsewhere.md") is None
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_long_diff_is_cut_short_and_says_how_much(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A diff longer than can be shown keeps its first lines and counts the rest."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            self._write(
+                mindspace, conversation.conversation_id(), "big.md", "".join(f"{n}\n" for n in range(1000))
+            )
+
+            diff = service.file_diff(mission.mission_id, "big.md")
+            assert diff is not None
+            assert len(diff.lines) + diff.more == 1000 and diff.more > 0
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_undo_puts_files_back(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Undoing restores what was there before the mission, removes what it created, and is remembered."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            lead = conversation.conversation_id()
+            root = mindspace.mindspace_path()
+            with open(os.path.join(root, "notes.md"), "w", encoding="utf-8") as handle:
+                handle.write("old")
+
+            self._write(mindspace, lead, "notes.md", "new")
+            self._write(mindspace, lead, "guide.md", "# Guide")
+
+            assert service.undo_file_changes(mission.mission_id) == []
+
+            with open(os.path.join(root, "notes.md"), encoding="utf-8") as handle:
+                assert handle.read() == "old"
+
+            assert not os.path.exists(os.path.join(root, "guide.md"))
+            states = {change.path: change.state for change in service.file_changes(mission.mission_id)}
+            assert states == {"notes.md": MissionFileChangeState.UNDONE, "guide.md": MissionFileChangeState.UNDONE}
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.activity[0].kind == MissionActivityKind.FILES_UNDONE
+            assert _store(mindspace).load_all()[0].undone_paths
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_undo_one_file_leaves_the_others(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Undoing a single file changes nothing else."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            lead = conversation.conversation_id()
+            self._write(mindspace, lead, "a.md", "a")
+            self._write(mindspace, lead, "b.md", "b")
+
+            service.undo_file_changes(mission.mission_id, "a.md")
+
+            root = mindspace.mindspace_path()
+            assert not os.path.exists(os.path.join(root, "a.md")) and os.path.exists(os.path.join(root, "b.md"))
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_file_changed_since_is_left_alone(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A file something else changed after the mission is shown as changed since, and not undone."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            self._write(mindspace, conversation.conversation_id(), "guide.md", "mission's")
+            self._write(mindspace, "", "guide.md", "the user's own edit")
+
+            change = service.file_changes(mission.mission_id)[0]
+            assert change.state == MissionFileChangeState.CHANGED_SINCE
+            assert service.undo_file_changes(mission.mission_id) == []
+            with open(os.path.join(mindspace.mindspace_path(), "guide.md"), encoding="utf-8") as handle:
+                assert handle.read() == "the user's own edit"
+
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_conversations_that_take_part_are_remembered(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """The lead's identifier is kept with the mission, so its changes are found after a restart."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            assert conversation.conversation_id() in _store(mindspace).load_all()[0].conversation_ids
+            assert mission.journal_from >= 1
+            service.stop()
+
+        asyncio.run(run())
+
+
+class TestArchive:
+    """Missions can be put away, but never one that is working or waiting for the user."""
+
+    def test_finished_mission_is_archived_and_brought_back(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Archiving is saved with the mission, and can be undone."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["completed"])
+            await _finish_turn(conversation)
+
+            service.set_archived(mission.mission_id, True)
+            assert _store(mindspace).load_all()[0].archived
+            service.set_archived(mission.mission_id, False)
+            assert not _store(mindspace).load_all()[0].archived
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_working_mission_is_not_archived(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A mission at work is refused, so nothing that needs the user goes out of sight."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            await conversation._trigger_event(AIConversationEvent.AI_CONNECTED)  # pylint: disable=protected-access
+
+            with pytest.raises(MissionError):
+                service.set_archived(mission.mission_id, True)
+
+            assert not mission.archived
+            service.stop()
+
+        asyncio.run(run())
+
+
+class TestRunAgain:
+    """An earlier mission starts again with its request and choices, but never approving everything unasked."""
+
+    def test_new_mission_has_the_same_request_and_choices(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """The request, the auto-approve level and the plan review carry over to a new mission."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            first = await service.create_mission("Write the notes", AutoApproveLevel.SAFE, review_plan=True)
+
+            again = await service.run_again(first.mission_id)
+
+            assert again.mission_id != first.mission_id
+            assert (again.objective, again.auto_approve, again.review_plan) == ("Write the notes", AutoApproveLevel.SAFE, True)
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_everything_is_not_carried_over(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A mission that approved everything is run again at the default level, as that needs confirming each time."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            first = await service.create_mission("Tidy up", AutoApproveLevel.ALL)
+
+            again = await service.run_again(first.mission_id)
+
+            assert again.auto_approve == AutoApproveLevel.OFF
+            service.stop()
+
+        asyncio.run(run())
+
+
+class TestFailureDetails:
+    """A failed mission says what kind of error ended its lead's turn, and what the AI service said."""
+
+    def test_failed_mission_carries_its_error(self, mindspace, submitted, started_turns):  # pylint: disable=unused-argument
+        """The error's kind and message are in the snapshot of a failed mission, and only of a failed one."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.failure_code == ""
+
+            await _fail_turn(conversation, "401")
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            assert (snapshot.failure_code, snapshot.failure_message) == ("401", "")
             service.stop()
 
         asyncio.run(run())

@@ -5,6 +5,7 @@ from collections import deque
 from collections.abc import Callable
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
+import difflib
 import logging
 import os
 from typing import Any
@@ -18,6 +19,7 @@ from ai_transcript_conversation import AITranscriptConversation
 from context.context_info import ContextInfo
 from context.context_registry import ContextEvent
 from conversation_context.conversation_context import ConversationContext
+from mindspace.journal_entry import JournalEntry
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace_conversation_log import tool_call_label
@@ -33,7 +35,9 @@ from mission.mission_approvals import MissionApprovals, MissionApprovalsHost
 from mission.mission_reviewer import MissionApprovalReviewer
 from mission.mission_snapshot import (
     MissionActivity, MissionActivityKind, MissionAgent, MissionAgentState, MissionDecision, MissionExchange,
-    MissionRecovery, MissionSnapshot, MissionSpeaker, MissionStatus, MissionStuck, MissionStuckReason
+    MissionFileChange, MissionFileChangeKind, MissionFileChangeState, MissionFileDiff, MissionFileDiffLine,
+    MissionFileDiffLineKind, MissionRecovery, MissionSnapshot, MissionSpeaker, MissionStatus, MissionStuck,
+    MissionStuckReason
 )
 from mission.mission_store import MissionStore
 from mission.mission_watchdog import RepeatedActionCounter, is_transient_error
@@ -61,6 +65,16 @@ AUTO_RETRY_DELAYS_SECONDS = (15, 30, 60, 120, 300, 600)
 # Mission Control decides it is going round in circles.
 MAX_REPEATED_ACTIONS = 4
 
+# Files larger than this are not compared line by line when counting what a mission changed.
+_MAX_COUNTED_BYTES = 1024 * 1024
+
+# How many unchanged lines are shown either side of a change in a file's diff, and the most lines a diff shows.
+_DIFF_CONTEXT_LINES = 3
+_MAX_DIFF_LINES = 400
+
+# Runs of unchanged lines between changes no longer than this are shown rather than folded away.
+_MAX_UNFOLDED_GAP = 3
+
 _CONTINUE_MESSAGE = (
     "Continue the mission: work on the next unfinished task. Make reasonable assumptions for details "
     "you can decide yourself, note them in the task's progress, and report the updated plan. Only stop "
@@ -71,6 +85,11 @@ _CONTINUE_TO_GOAL_MESSAGE = (
     "Every task in your plan is done, but you have not reported the user's goal as met. If the whole request "
     "is now achieved, check it and report the plan once more with \"goal_met\": true and a short summary. "
     "Otherwise plan the next part of the work as a new mission-plan block and carry on with it."
+)
+
+_PLAN_APPROVED_MESSAGE = (
+    "The user has approved your plan. Carry it out now, starting with the first unfinished task, and report the "
+    "updated plan as you go."
 )
 
 _RESUME_WITHOUT_PLAN_MESSAGE = (
@@ -97,6 +116,12 @@ _FOLLOW_UP_NOTE = (
     "mission-plan block for it and the finished plan will move to this mission's history. If it is a question or "
     "a remark, just answer it, without a plan block.)"
 )
+
+# The statuses in which a mission is at work, and so is said to have been working for a time.
+_WORKING_STATUSES = (MissionStatus.PLANNING, MissionStatus.RUNNING, MissionStatus.NEEDS_YOU, MissionStatus.RECOVERING)
+
+# How many of a mission's latest counted replies are remembered, to keep any from being counted twice.
+_COUNTED_MESSAGES = 500
 
 _MAX_ACTIVITY = 300
 _SNAPSHOT_ACTIVITY = 40
@@ -350,6 +375,12 @@ class MissionService:
         self._scheduled_recoveries: dict[str, asyncio.TimerHandle] = {}
         self._recovery_attempts: dict[str, int] = {}
         self._stuck: dict[str, MissionStuck] = {}
+        # When each mission working now set to work, so the user can see how long it has been at it.
+        self._working_since: dict[str, datetime] = {}
+        # The messages whose tokens have been counted for their mission, so none is counted twice.
+        self._counted_messages: dict[str, deque[str]] = {}
+        # Each mission's file changes as last read from the journal, with what they were read at.
+        self._file_changes: dict[str, tuple[tuple[int, int], list[MissionFileChange], dict[str, list[JournalEntry]]]] = {}
         self._auditors: dict[str, MissionConversationAuditor] = {}
         self._approvals = MissionApprovals(
             mindspace,
@@ -523,7 +554,22 @@ class MissionService:
             conversation=self._conversation(mission),
             recovery=self._recoveries.get(mission_id),
             stuck=self._stuck.get(mission_id),
+            working_since=self._working_since.get(mission_id) if status in _WORKING_STATUSES else None,
+            **self._failure(mission, status),
         )
+
+    def _failure(self, mission: Mission, status: MissionStatus) -> dict[str, str]:
+        """Return the kind of error that failed a mission's lead, and what the AI service said, if it failed."""
+        tracked = self._lead_for(mission) if status == MissionStatus.FAILED else None
+        if tracked is None:
+            return {}
+
+        messages = tracked.transcript.get_conversation_history().get_messages()
+        error = messages[-1].error if messages and messages[-1].source == AIMessageSource.SYSTEM else None
+        if not error:
+            return {}
+
+        return {"failure_code": str(error.get("code", "")), "failure_message": str(error.get("message", ""))}
 
     def _shown_mission(self, mission: Mission, status: MissionStatus) -> Mission:
         """
@@ -671,7 +717,8 @@ class MissionService:
         objective: str,
         auto_approve: AutoApproveLevel = AutoApproveLevel.OFF,
         attachments: list[tuple[str, str]] | None = None,
-        settings: AIConversationSettings | None = None
+        settings: AIConversationSettings | None = None,
+        review_plan: bool = False
     ) -> Mission:
         """
         Start an autonomous mission: record it, start its lead conversation and brief the lead.
@@ -685,6 +732,7 @@ class MissionService:
             auto_approve: Which of the mission's requests may be approved without the user
             attachments: Files for the lead, as (filename, content) pairs
             settings: AI settings for the lead, instead of the mindspace's
+            review_plan: Whether the user approves the lead's first plan before any of it is carried out
 
         Returns:
             The new mission
@@ -728,9 +776,12 @@ class MissionService:
             # The lead's brief asks it to report when the goal is met, so that, not a finished plan, completes it.
             reports_goal=True,
             lead_settings=conversation_settings.to_dict(),
+            review_plan=review_plan,
         )
+        mission.journal_from = self._mindspace.file_journal().newest_sequence() + 1
         self._store.save(mission)
         self._missions[mission.mission_id] = mission
+        self._working_since[mission.mission_id] = timestamp
         self._attach_headless(mission, transcript)
 
         self._record(
@@ -750,7 +801,8 @@ class MissionService:
             if conversation_settings.model else ""
         )
         await transcript.submit_message(
-            MISSION_REQUESTER, build_lead_prompt(objective, model_name), self._add_attachments(transcript, attachments)
+            MISSION_REQUESTER, build_lead_prompt(objective, model_name, review_plan),
+            self._add_attachments(transcript, attachments)
         )
         self._notify()
         return mission
@@ -923,6 +975,7 @@ class MissionService:
             return
 
         self._store.delete(mission_id)
+        self._file_changes.pop(mission_id, None)
         self._cancel_continue(mission_id)
         self._cancel_recovery(mission_id)
         self._stuck.pop(mission_id, None)
@@ -943,6 +996,62 @@ class MissionService:
             self._approvals.forget(context_id)
 
         self._mindspace.add_interaction(MindspaceLogLevel.INFO, f"Human removed mission '{mission.title}'")
+        self._notify()
+
+    async def run_again(self, mission_id: str) -> Mission:
+        """
+        Start a new mission from an earlier one: the same request, lead settings and choice to review the plan.
+
+        Its auto-approve level carries over too, except approving everything, which rests on the
+        user confirming it for each mission: such a mission is run again at the default level.
+
+        Args:
+            mission_id: The mission to run again
+
+        Returns:
+            The new mission
+
+        Raises:
+            MissionError: If there is no such mission, or the new one cannot be started
+        """
+        mission = self._missions.get(mission_id)
+        if mission is None:
+            raise MissionError("There is no such mission")
+
+        level = mission.auto_approve if mission.auto_approve != AutoApproveLevel.ALL else self.default_auto_approve()
+        return await self.create_mission(
+            mission.objective, level, settings=self._saved_lead_settings(mission), review_plan=mission.review_plan
+        )
+
+    def set_archived(self, mission_id: str, archived: bool) -> None:
+        """
+        Put a mission away out of the mission switcher, or bring it back.
+
+        A mission that is working, or waiting for the user, is not archived: what needs the
+        user is never put out of sight.
+
+        Args:
+            mission_id: The mission
+            archived: True to archive it, False to bring it back
+
+        Raises:
+            MissionError: If there is no such mission, or it is working or waiting for the user
+        """
+        mission = self._missions.get(mission_id)
+        if mission is None:
+            raise MissionError("There is no such mission")
+
+        if archived and self._status_for(mission) in (*_WORKING_STATUSES, MissionStatus.PLAN_READY):
+            raise MissionError("A mission that is working or waiting for you cannot be archived")
+
+        if mission.archived == archived:
+            return
+
+        mission.archived = archived
+        self._save(mission)
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO, f"Human {'archived' if archived else 'unarchived'} mission '{mission.title}'"
+        )
         self._notify()
 
     def rename_mission(self, mission_id: str, title: str) -> None:
@@ -1170,6 +1279,66 @@ class MissionService:
             MissionError: If the setting cannot be saved
         """
         self._save_settings(replace(self._current_settings(), mission_reduce_motion=reduced))
+
+    def default_auto_approve(self) -> AutoApproveLevel:
+        """Return the auto-approve level new missions start at, which is never the level approving everything."""
+        settings = self._mindspace.settings()
+        level = settings.mission_default_auto_approve if settings is not None else "off"
+        return AutoApproveLevel.SAFE if level == AutoApproveLevel.SAFE.value else AutoApproveLevel.OFF
+
+    def set_default_auto_approve(self, level: AutoApproveLevel) -> None:
+        """
+        Choose the auto-approve level new missions start at.
+
+        Approving everything rests on the user confirming it for each mission, so it is never a default.
+
+        Args:
+            level: Off or safe actions
+
+        Raises:
+            MissionError: If the level approves everything, or the setting cannot be saved
+        """
+        if level == AutoApproveLevel.ALL:
+            raise MissionError("Approving everything is chosen for each mission, never for every mission")
+
+        self._save_settings(replace(self._current_settings(), mission_default_auto_approve=level.value))
+
+    def templates(self) -> list[tuple[str, str]]:
+        """Return the requests the user saved to start missions from, as (name, request) pairs."""
+        settings = self._mindspace.settings()
+        return list(settings.mission_templates) if settings is not None else []
+
+    def save_template(self, name: str, request: str) -> None:
+        """
+        Save a request under a name, to start missions from; a template of the same name is replaced.
+
+        Args:
+            name: What the user calls the template
+            request: The request a mission started from it is given
+
+        Raises:
+            MissionError: If the name or the request is empty, or the template cannot be saved
+        """
+        name = " ".join(name.split())
+        request = request.strip()
+        if not name or not request:
+            raise MissionError("A template needs a name and a request")
+
+        kept = [(n, r) for n, r in self.templates() if n.casefold() != name.casefold()]
+        self._save_settings(replace(self._current_settings(), mission_templates=[*kept, (name, request)]))
+
+    def delete_template(self, name: str) -> None:
+        """
+        Delete a saved template.
+
+        Args:
+            name: The template's name
+
+        Raises:
+            MissionError: If the templates cannot be saved
+        """
+        kept = [(n, r) for n, r in self.templates() if n != name]
+        self._save_settings(replace(self._current_settings(), mission_templates=kept))
 
     def _current_settings(self) -> MindspaceSettings:
         """
@@ -1556,6 +1725,10 @@ class MissionService:
         """Record whether a mission is working, saving only when that changes."""
         if active:
             self._interrupted.discard(mission.mission_id)
+            self._working_since.setdefault(mission.mission_id, datetime.now(timezone.utc))
+
+        else:
+            self._working_since.pop(mission.mission_id, None)
 
         if mission.active != active:
             mission.active = active
@@ -1618,6 +1791,9 @@ class MissionService:
             return False
 
         if mission.mission_id in self._interrupted or mission.mode == MissionMode.CLASSIC or mission.paused:
+            return False
+
+        if self._awaiting_plan_approval(mission):
             return False
 
         if any(task.status == MissionTaskStatus.BLOCKED for task in mission.tasks):
@@ -1749,6 +1925,9 @@ class MissionService:
         if message.source == AIMessageSource.TOOL_RESULT and message.tool_results:
             self._watch_for_repeats(tracked, message)
 
+        if message.usage is not None and message.completed:
+            self._count_tokens(tracked, message)
+
         if self._approvals.clear_answered(tracked.context_id, message.id):
             if tracked.state == MissionAgentState.WAITING_FOR_APPROVAL:
                 tracked.state = MissionAgentState.WORKING
@@ -1760,6 +1939,299 @@ class MissionService:
                 self._apply_plan(mission, message.content, announce=True)
 
         self._notify()
+
+    def _note_conversation(self, mission: Mission, tracked: _TrackedConversation) -> None:
+        """Remember that a conversation took part in a mission, so its file changes count as the mission's."""
+        conversation_id = tracked.conversation.conversation_id()
+        if conversation_id and conversation_id not in mission.conversation_ids:
+            mission.conversation_ids.append(conversation_id)
+            self._save(mission)
+
+    def file_changes(self, mission_id: str) -> list[MissionFileChange]:
+        """
+        Return the files a mission's conversations changed, as the change journal recorded them, newest first.
+
+        Only changes made through Humbug's own tools are recorded, so a change a command run
+        in the terminal made is not listed.
+
+        Args:
+            mission_id: The mission
+        """
+        mission = self._missions.get(mission_id)
+        if mission is None or not mission.conversation_ids:
+            return []
+
+        return self._read_file_changes(mission)[0]
+
+    def _read_file_changes(self, mission: Mission) -> tuple[list[MissionFileChange], dict[str, list[JournalEntry]]]:
+        """Read a mission's file changes from the journal, unless nothing has been recorded since the last read."""
+        journal = self._mindspace.file_journal()
+        newest = journal.newest_sequence()
+        key = (newest, len(mission.conversation_ids) + len(mission.undone_paths))
+        cached = self._file_changes.get(mission.mission_id)
+        if cached is not None and cached[0] == key:
+            return cached[1], cached[2]
+
+        if mission.journal_from:
+            entries = journal.entries_from(mission.journal_from, max(0, newest - mission.journal_from + 1))
+
+        else:
+            entries = journal.entries_since(datetime.fromisoformat(mission.created_at))
+
+        ids = set(mission.conversation_ids)
+        mine: dict[str, list[JournalEntry]] = {}
+        newest_entry: dict[str, JournalEntry] = {}
+        for entry in entries:
+            newest_entry[entry.path] = entry
+            if entry.conversation in ids:
+                mine.setdefault(entry.path, []).append(entry)
+
+        changes = []
+        for path, path_entries in mine.items():
+            first, last = path_entries[0], path_entries[-1]
+            if not first.existed_before:
+                kind = MissionFileChangeKind.CREATED
+
+            elif last.post_image_hash is None and not last.post_image_is_directory:
+                kind = MissionFileChangeKind.DELETED
+
+            else:
+                kind = MissionFileChangeKind.MODIFIED
+
+            changed_since = newest_entry[path] is not last
+            if not changed_since and path in mission.undone_paths:
+                # The mission has changed the file again since its earlier changes were undone.
+                mission.undone_paths.remove(path)
+                self._save(mission)
+
+            if not changed_since:
+                state = MissionFileChangeState.CURRENT
+
+            elif path in mission.undone_paths:
+                state = MissionFileChangeState.UNDONE
+
+            else:
+                state = MissionFileChangeState.CHANGED_SINCE
+
+            added, removed = self._line_counts(first, last, state == MissionFileChangeState.CURRENT)
+            changes.append(MissionFileChange(
+                path, kind, len(path_entries), state, last.timestamp, added, removed,
+                first.sequence if first.pre_image_hash is not None else None,
+            ))
+
+        changes.sort(key=lambda change: change.changed_at, reverse=True)
+        key = (newest, len(mission.conversation_ids) + len(mission.undone_paths))
+        self._file_changes[mission.mission_id] = (key, changes, mine)
+        return changes, mine
+
+    def _line_counts(
+        self, first: JournalEntry, last: JournalEntry, still_current: bool
+    ) -> tuple[int | None, int | None]:
+        """
+        Count the lines a mission added to and removed from a file, from its first change to its last.
+
+        Args:
+            first: The mission's first change to the file
+            last: The mission's last change to the file
+            still_current: Whether the file is still as the mission left it
+
+        Returns:
+            The lines added and removed, or (None, None) when they cannot be counted
+        """
+        versions = self._mission_versions(first, last, still_current)
+        if versions is None:
+            return None, None
+
+        old_lines, new_lines = versions
+        added = removed = 0
+        for line in difflib.unified_diff(old_lines, new_lines, lineterm="", n=0):
+            if line.startswith("+") and not line.startswith("+++"):
+                added += 1
+
+            elif line.startswith("-") and not line.startswith("---"):
+                removed += 1
+
+        return added, removed
+
+    def file_diff(self, mission_id: str, path: str) -> MissionFileDiff | None:
+        """
+        Return what a mission did to a file, line by line, the way a code review shows a change.
+
+        Each change comes with a few unchanged lines around it, and the unchanged lines between
+        changes are left out and counted.  The diff is between the file before the mission and
+        the file as the mission left it, so it never shows someone else's later edits.
+
+        Args:
+            mission_id: The mission
+            path: The file, relative to the mindspace
+
+        Returns:
+            The diff, or None when the mission did not change the file, or the file is not text,
+            is too large, or its versions are no longer held
+        """
+        mission = self._missions.get(mission_id)
+        if mission is None or not mission.conversation_ids:
+            return None
+
+        changes, entries = self._read_file_changes(mission)
+        change = next((c for c in changes if c.path == path), None)
+        if change is None:
+            return None
+
+        path_entries = entries[path]
+        versions = self._mission_versions(
+            path_entries[0], path_entries[-1], change.state == MissionFileChangeState.CURRENT
+        )
+        if versions is None:
+            return None
+
+        old_lines, new_lines = versions
+        lines: list[MissionFileDiffLine] = []
+        shown_to = 0
+
+        def unchanged(old_end: int, new_end: int) -> None:
+            """Show the unchanged lines up to a point, folded into a gap unless there are only a few."""
+            skipped = old_end - shown_to
+            if skipped > _MAX_UNFOLDED_GAP:
+                lines.append(MissionFileDiffLine(MissionFileDiffLineKind.GAP, "", skipped=skipped))
+                return
+
+            for offset in range(skipped):
+                lines.append(MissionFileDiffLine(
+                    MissionFileDiffLineKind.CONTEXT, old_lines[shown_to + offset],
+                    shown_to + offset + 1, new_end - skipped + offset + 1,
+                ))
+
+        matcher = difflib.SequenceMatcher(None, old_lines, new_lines, autojunk=False)
+        for group in matcher.get_grouped_opcodes(_DIFF_CONTEXT_LINES):
+            unchanged(group[0][1], group[0][3])
+
+            for tag, old_start, old_end, new_start, new_end in group:
+                if tag == "equal":
+                    for offset in range(old_end - old_start):
+                        lines.append(MissionFileDiffLine(
+                            MissionFileDiffLineKind.CONTEXT, old_lines[old_start + offset],
+                            old_start + offset + 1, new_start + offset + 1,
+                        ))
+
+                    continue
+
+                for number in range(old_start, old_end):
+                    lines.append(MissionFileDiffLine(
+                        MissionFileDiffLineKind.REMOVED, old_lines[number], old_number=number + 1
+                    ))
+
+                for number in range(new_start, new_end):
+                    lines.append(MissionFileDiffLine(
+                        MissionFileDiffLineKind.ADDED, new_lines[number], new_number=number + 1
+                    ))
+
+            shown_to = group[-1][2]
+
+        if lines and shown_to < len(old_lines):
+            unchanged(len(old_lines), len(new_lines))
+
+        return MissionFileDiff(lines[:_MAX_DIFF_LINES], max(0, len(lines) - _MAX_DIFF_LINES))
+
+    def _mission_versions(
+        self, first: JournalEntry, last: JournalEntry, still_current: bool
+    ) -> tuple[list[str], list[str]] | None:
+        """
+        Return a file's lines before a mission changed it and as the mission left it.
+
+        The file as it was before the mission is the version the journal holds.  The file as the
+        mission left it is the journal's copy when it has one, or the file itself while nothing
+        has changed it since, so someone else's later edits are never taken for the mission's.
+
+        Args:
+            first: The mission's first change to the file
+            last: The mission's last change to the file
+            still_current: Whether the file is still as the mission left it
+
+        Returns:
+            The lines before and after, or None when the file is not text, is too large to compare
+            quickly, or its versions are no longer held
+        """
+        journal = self._mindspace.file_journal()
+        try:
+            before = journal.pre_image(first) if first.existed_before else b""
+            after = journal.post_image(last) if last.post_image_hash is not None else b""
+            if after is None and still_current:
+                with open(os.path.join(self._mindspace.mindspace_path(), last.path), "rb") as handle:
+                    after = handle.read(_MAX_COUNTED_BYTES + 1)
+
+        except OSError:
+            return None
+
+        if before is None or after is None or b"\0" in before or b"\0" in after:
+            return None
+
+        if len(before) > _MAX_COUNTED_BYTES or len(after) > _MAX_COUNTED_BYTES:
+            return None
+
+        return before.decode("utf-8", errors="replace").splitlines(), after.decode("utf-8", errors="replace").splitlines()
+
+    def undo_file_changes(self, mission_id: str, path: str | None = None) -> list[str]:
+        """
+        Put files back as they were before a mission changed them.
+
+        Only files whose newest change is still the mission's are undone: a file something
+        else has changed since is left alone, as the Journal panel would leave it.
+
+        Args:
+            mission_id: The mission
+            path: The one file to put back, or None for every file the mission changed
+
+        Returns:
+            What could not be undone, one line for each file
+
+        Raises:
+            MissionError: If there is no such mission
+        """
+        mission = self._missions.get(mission_id)
+        if mission is None:
+            raise MissionError("There is no such mission")
+
+        changes, entries = self._read_file_changes(mission)
+        targets = [
+            change.path for change in changes
+            if change.state == MissionFileChangeState.CURRENT and (path is None or change.path == path)
+        ]
+        if not targets:
+            return []
+
+        result = self._mindspace.revert_journal_entries([entry for target in targets for entry in entries[target]])
+        reverted = result.reverted_paths()
+        mission.undone_paths.extend(p for p in reverted if p not in mission.undone_paths)
+        self._save(mission)
+        if reverted:
+            self._record(MissionActivityKind.FILES_UNDONE, mission.title, str(len(reverted)), mission_id)
+            self._mindspace.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"Human undid mission '{mission.title}' changes to: {', '.join(reverted)}"
+            )
+
+        self._notify()
+        return [
+            f"{outcome.path}: {outcome.detail or outcome.status.value}" for outcome in result.failed_outcomes()
+        ]
+
+    def _count_tokens(self, tracked: _TrackedConversation, message: AIMessage) -> None:
+        """Add the tokens a reply used to the mission whose conversation gave it."""
+        mission_id = self._members.get(tracked.context_id)
+        mission = self._missions.get(mission_id) if mission_id is not None else None
+        usage = message.usage
+        if mission is None or usage is None:
+            return
+
+        counted = self._counted_messages.setdefault(mission.mission_id, deque(maxlen=_COUNTED_MESSAGES))
+        if message.id in counted:
+            return
+
+        counted.append(message.id)
+        mission.input_tokens += max(0, usage.prompt_tokens)
+        mission.output_tokens += max(0, usage.completion_tokens)
+        self._save(mission)
 
     def handle_approval_required(
         self,
@@ -1934,6 +2406,10 @@ class MissionService:
             if mission is not None:
                 self._refresh_plan_from_history(mission, tracked)
 
+            member_of = self._missions.get(self._members.get(tracked.context_id, ""))
+            if member_of is not None:
+                self._note_conversation(member_of, tracked)
+
         self._notify()
 
     def _refresh_plan_from_history(self, mission: Mission, tracked: _TrackedConversation) -> None:
@@ -2052,6 +2528,7 @@ class MissionService:
         tracked = _TrackedConversation(self, key, transcript)
         self._tracked[key] = tracked
         self._members[key] = mission.mission_id
+        self._note_conversation(mission, tracked)
         self._auditors[mission.mission_id] = MissionConversationAuditor(self._mindspace, transcript)
         return tracked
 
@@ -2453,6 +2930,9 @@ class MissionService:
         if mission.mode == MissionMode.AUTONOMOUS and self._lead_failed(mission):
             return MissionStatus.RECOVERING if mission.mission_id in self._recoveries else MissionStatus.FAILED
 
+        if mission.mode == MissionMode.AUTONOMOUS and self._awaiting_plan_approval(mission):
+            return MissionStatus.PLAN_READY
+
         # A message the user sent is being worked on, even before the lead has started its reply, so
         # a finished plan does not make the mission look done while it is still answering the user.
         if mission.mode == MissionMode.AUTONOMOUS and self._awaiting_reply(mission):
@@ -2466,6 +2946,41 @@ class MissionService:
             return MissionStatus.REPLIED
 
         return MissionStatus.IDLE
+
+    def _awaiting_plan_approval(self, mission: Mission) -> bool:
+        """Return True if the lead has reported the plan the user asked to approve, and the user has not yet."""
+        return mission.review_plan and not mission.plan_approved and bool(mission.tasks)
+
+    async def approve_plan(self, mission_id: str) -> None:
+        """
+        Let the lead carry out the plan the user asked to review first.
+
+        Args:
+            mission_id: Mission whose plan is approved
+
+        Raises:
+            MissionError: If the mission has no plan waiting for approval
+        """
+        mission = self._missions.get(mission_id)
+        if mission is None or not self._awaiting_plan_approval(mission):
+            raise MissionError("This mission has no plan waiting for approval")
+
+        tracked = self._lead_for(mission)
+        if tracked is None:
+            raise MissionError("The mission's lead conversation could not be opened")
+
+        mission.plan_approved = True
+        self._save(mission)
+        self._set_active(mission, True)
+        self._continues_without_progress.pop(mission_id, None)
+        self._record(MissionActivityKind.PLAN_APPROVED, mission.title, "", mission_id)
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"Human approved the plan of mission '{mission.title}'",
+            context=self._mindspace.conversation_log_context(tracked.conversation)
+        )
+        await tracked.transcript.submit_message(MISSION_REQUESTER, _PLAN_APPROVED_MESSAGE)
+        self._notify()
 
     def _working_status(self, mission: Mission) -> MissionStatus:
         """

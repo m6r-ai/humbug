@@ -2,7 +2,9 @@
 
 import asyncio
 import dataclasses
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import os
+import re
 import types
 from unittest import mock
 
@@ -21,7 +23,8 @@ from mission import (
     MissionPhase, MissionSnapshot, MissionSpeaker, MissionStatus, MissionTask, MissionTaskStatus
 )
 from mission.mission_snapshot import (
-    MissionActivity, MissionActivityKind, MissionRecovery, MissionStuck, MissionStuckReason
+    MissionActivity, MissionActivityKind, MissionFileChange, MissionFileChangeKind, MissionFileChangeState,
+    MissionFileDiff, MissionFileDiffLine, MissionFileDiffLineKind, MissionRecovery, MissionStuck, MissionStuckReason
 )
 from PySide6.QtWidgets import QLabel
 
@@ -30,13 +33,17 @@ from desktop.mission_tab import mission_widget as mission_widget_module
 from desktop.mission_tab import mission_scene as mission_scene_module
 from desktop.mission_tab import mission_network as mission_network_module
 from desktop.mission_tab.mission_display import (
-    MissionActivityView, MissionAgentView, MissionChatView, MissionChipView, MissionDecisionView, MissionGlanceView,
+    MissionActivityView, MissionAgentView, MissionChatView, MissionChipView, MissionDecisionView, MissionDiffLineKind,
+    MissionDiffLineView, MissionDiffView, MissionFileView, MissionGlanceView,
     MissionHeaderView, MissionPhaseView,
     MissionResultView, MissionStatTarget,
     MissionStatView, MissionStepState, MissionStepView, MissionTone, MissionView
 )
 from desktop.message_box import MessageBoxButton
+from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.mission_tab.mission_mode_menus import MissionModeMenus
+from desktop.mission_tab import mission_diff as mission_diff_module
+from desktop.mission_tab import mission_report as mission_report_module
 from desktop.mission_tab.mission_service_holder import MissionServiceHolder
 from desktop.mission_tab.mission_motion import MissionMotion
 from desktop.mission_tab import mission_intro as mission_intro_module
@@ -386,6 +393,30 @@ class TestMissionTab:
         asyncio.run(run())
         assert not mindspace_sandbox.manager.mindspace().contexts().list_all()
 
+    def test_show_new_mission_leaves_the_mission_on_show(self, mindspace_sandbox, submitted) -> None:  # pylint: disable=unused-argument
+        """Asking for the new-mission screen shows it even while a mission is selected, and keeps it shown."""
+        async def run() -> None:
+            tab = MissionTab("mission-tab")
+            tab.attach_service()
+            widget = tab._widget  # pylint: disable=protected-access
+            widget.submit_requested.emit("Write release notes")
+            for _ in range(5):
+                await asyncio.sleep(0)
+
+            tab._refresh()  # pylint: disable=protected-access
+            assert widget._hero.isHidden()  # pylint: disable=protected-access
+
+            tab.show_new_mission()
+            tab._refresh()  # pylint: disable=protected-access
+
+            assert not widget._hero.isHidden()  # pylint: disable=protected-access
+            assert widget._dashboard.isHidden()  # pylint: disable=protected-access
+            tab.close_tab()
+            tab.deleteLater()
+            MissionServiceHolder().release()
+
+        asyncio.run(run())
+
     def test_switching_to_classic_opens_the_conversation_beside_the_tab(self, mindspace_sandbox, submitted) -> None:
         """A new mission has no conversation tab; switching it to classic opens one beside Mission Control."""
         async def run() -> None:
@@ -486,7 +517,7 @@ class TestAutoApproveBeforeStarting:
         async def run() -> None:
             tab = MissionTab("mission-tab")
             tab.attach_service()
-            tab._on_new_mission_requested()  # pylint: disable=protected-access
+            tab.show_new_mission()
             hero = tab._widget._hero_auto_approve_buttons  # pylint: disable=protected-access
 
             monkeypatch.setattr(mission_tab_module.MessageBox, "show_message", lambda *_a, **_k: MessageBoxButton.NO)
@@ -507,7 +538,7 @@ class TestAutoApproveBeforeStarting:
 
             # The next mission starts from Off again unless the user chooses otherwise.
             assert hero["off"].isChecked()
-            tab._on_new_mission_requested()  # pylint: disable=protected-access
+            tab.show_new_mission()
             tab._widget.submit_requested.emit("Fix the tests")  # pylint: disable=protected-access
             for _ in range(5):
                 await asyncio.sleep(0)
@@ -534,7 +565,7 @@ class TestSidebarFollowsTheMission:
             tab.lead_conversation_changed.connect(announced.append)
             tab.attach_service()
             for objective in ("Tidy the docs", "Fix the tests"):
-                tab._on_new_mission_requested()  # pylint: disable=protected-access
+                tab.show_new_mission()
                 tab._widget.submit_requested.emit(objective)  # pylint: disable=protected-access
                 for _ in range(5):
                     await asyncio.sleep(0)
@@ -555,7 +586,7 @@ class TestSidebarFollowsTheMission:
             tab._on_mission_selected(newest.mission_id)  # pylint: disable=protected-access
             assert len(announced) == count
 
-            tab._on_new_mission_requested()  # pylint: disable=protected-access
+            tab.show_new_mission()
             assert tab.lead_conversation_path() == ""
             assert announced[-1] == ""
 
@@ -1442,6 +1473,22 @@ class TestMissionJourney:
         assert widget._confetti.is_celebrating()  # pylint: disable=protected-access
         widget.deleteLater()
 
+    def test_opening_the_report_folds_does_not_celebrate_again(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Showing or hiding the steps and what happened after a celebrated finish throws no more confetti."""
+        widget = MissionWidget()
+        widget.set_mission(_view(completed=False, stage=2))
+        bursts: list[QPointF] = []
+        widget._confetti.burst = bursts.append  # type: ignore[method-assign]  # pylint: disable=protected-access
+        widget.set_mission(dataclasses.replace(_view(completed=True, stage=3), celebrate=True))
+        assert len(bursts) == 1
+
+        widget._report_steps_button.click()  # pylint: disable=protected-access
+        widget._report_activity_button.click()  # pylint: disable=protected-access
+        widget._report_steps_button.click()  # pylint: disable=protected-access
+
+        assert len(bursts) == 1
+        widget.deleteLater()
+
     def test_opening_a_finished_mission_does_not_celebrate_again(self, qapp) -> None:  # pylint: disable=unused-argument
         """Selecting a mission that finished earlier shows the report without the confetti."""
         widget = MissionWidget()
@@ -1916,14 +1963,14 @@ class TestWaitingAlerts:
     def test_each_mission_shows_only_its_own_requests(self, qapp) -> None:  # pylint: disable=unused-argument
         """Requests from other missions stay out of the inbox and are pointed out; those outside any mission stay."""
         missions = [
-            types.SimpleNamespace(mission_id="m1", title="First", mode=MissionMode.AUTONOMOUS),
-            types.SimpleNamespace(mission_id="m2", title="Second", mode=MissionMode.AUTONOMOUS),
+            types.SimpleNamespace(mission_id="m1", title="First", mode=MissionMode.AUTONOMOUS, archived=False, objective=""),
+            types.SimpleNamespace(mission_id="m2", title="Second", mode=MissionMode.AUTONOMOUS, archived=False, objective=""),
         ]
         service = types.SimpleNamespace(
             missions=lambda: missions,
             snapshot=lambda _mission_id: None,
             status=lambda mission_id: MissionStatus.NEEDS_YOU if mission_id == "m2" else MissionStatus.RUNNING,
-            resume_automatically=lambda: False, reduce_motion=lambda: False,
+            resume_automatically=lambda: False, templates=lambda: [], reduce_motion=lambda: False,
             decisions=lambda: [
                 MissionDecision(
                     decision_id="d1", context_id="c1", conversation_title="Helper", mission_id="m2",
@@ -2400,7 +2447,10 @@ class TestWaitingElsewhereText:
     @staticmethod
     def _tab(selected: str | None, waiting: list[str]) -> MissionTab:
         missions = [
-            types.SimpleNamespace(mission_id=m, title=m.upper(), mode=MissionMode.AUTONOMOUS, auto_approve=AutoApproveLevel.OFF)
+            types.SimpleNamespace(
+                mission_id=m, title=m.upper(), mode=MissionMode.AUTONOMOUS, auto_approve=AutoApproveLevel.OFF,
+                archived=False, objective=m
+            )
             for m in ("m1", "m2", "m3")
         ]
         decisions = [
@@ -2413,7 +2463,7 @@ class TestWaitingElsewhereText:
         service = types.SimpleNamespace(
             missions=lambda: missions, snapshot=lambda _mission_id: None,
             status=lambda mission_id: MissionStatus.NEEDS_YOU if mission_id in waiting else MissionStatus.RUNNING,
-            resume_automatically=lambda: False, reduce_motion=lambda: False, decisions=lambda: decisions,
+            resume_automatically=lambda: False, templates=lambda: [], reduce_motion=lambda: False, decisions=lambda: decisions,
             lead_conversation_path=lambda mission_id: f"/{mission_id}.conv",
         )
         tab = MissionTab("mission-tab")
@@ -4124,7 +4174,7 @@ class TestFinishedMissionPage:
         widget.deleteLater()
 
     def test_rarer_actions_are_offered_on_the_report(self, qapp, monkeypatch) -> None:  # pylint: disable=unused-argument
-        """With the mission card put away, the report's own menu offers switching mode and deleting."""
+        """With the mission card put away, the report's own menu offers keeping the report, switching mode and deleting."""
         widget = self._finished()
         offered: list[str] = []
         menu = mock.MagicMock()
@@ -4134,5 +4184,775 @@ class TestFinishedMissionPage:
         strings = widget._language_manager.strings()  # pylint: disable=protected-access
 
         widget._report_more_button.click()  # pylint: disable=protected-access
-        assert offered == [strings.mission_switch_to_classic, strings.mission_delete]
+        assert offered == [
+            strings.mission_report_save_word, strings.mission_report_copy_image, strings.mission_run_again,
+            strings.mission_switch_to_classic, strings.mission_delete,
+        ]
         widget.deleteLater()
+
+
+class TestTemplatesOnTheNewMissionScreen:
+    """Saved requests are offered on the new-mission screen, to start from again."""
+
+    def test_templates_are_offered_and_fill_the_box(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Each template is a chip; choosing one puts its request in the box, and its cross asks to delete it."""
+        widget = MissionWidget()
+        widget.set_mission(None)
+        widget.set_templates([("Review a PR", "Review the open pull request")])
+        deleted: list[str] = []
+        widget.template_delete_requested.connect(deleted.append)
+
+        assert not widget._templates_label.isHidden()  # pylint: disable=protected-access
+        chips = [b for b in widget._hero.findChildren(QPushButton) if b.text().endswith("Review a PR")]  # pylint: disable=protected-access
+        chips[0].click()
+        assert widget._input.toPlainText() == "Review the open pull request"  # pylint: disable=protected-access
+
+        widget._hero.findChildren(QToolButton, "MissionTemplateRemove")[0].click()  # pylint: disable=protected-access
+        assert deleted == ["Review a PR"]
+        widget.deleteLater()
+
+    def test_no_templates_no_heading(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Without templates, there is no heading for them."""
+        widget = MissionWidget()
+        widget.set_templates([])
+        assert widget._templates_label.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_saving_needs_something_typed(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Save as a template is offered once there is a request in the box, and passes it on."""
+        widget = MissionWidget()
+        saved: list[str] = []
+        widget.template_save_requested.connect(saved.append)
+        assert not widget._save_template_button.isEnabled()  # pylint: disable=protected-access
+
+        widget._input.setPlainText("  Write the release notes  ")  # pylint: disable=protected-access
+        assert widget._save_template_button.isEnabled()  # pylint: disable=protected-access
+        widget._save_template_button.click()  # pylint: disable=protected-access
+        assert saved == ["Write the release notes"]
+        widget.deleteLater()
+
+    def test_tab_names_and_saves_the_template(self, mindspace_sandbox, qapp, monkeypatch) -> None:  # pylint: disable=unused-argument
+        """The tab asks for a name, offering the request's first line, and saves the template under it."""
+        tab = MissionTab("mission")
+        saved: list[tuple[str, str]] = []
+        tab._service = types.SimpleNamespace(save_template=lambda n, r: saved.append((n, r)))  # pylint: disable=protected-access
+        offered: list[str] = []
+
+        def ask(_parent, _title, _label, text=""):
+            offered.append(text)
+            return "Release notes", True
+
+        monkeypatch.setattr(mission_tab_module.QInputDialog, "getText", ask)
+        tab._save_template("Write the release notes\nfor version 2")  # pylint: disable=protected-access
+
+        assert offered == ["Write the release notes"]
+        assert saved == [("Release notes", "Write the release notes\nfor version 2")]
+        tab._service = None  # pylint: disable=protected-access
+        tab.deleteLater()
+
+
+class TestPlanReady:
+    """A plan waiting for the user is shown with a way to start it."""
+
+    def test_plan_ready_offers_start_work(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """The header says the plan is ready, and Start work asks for it to be approved."""
+        tab = MissionTab("mission")
+        view = tab._mission_view(_snapshot(MissionStatus.PLAN_READY))  # pylint: disable=protected-access
+        assert view.header.plan_ready and view.header.status_text == "Plan ready" and view.header.can_stop
+
+        widget = tab._widget  # pylint: disable=protected-access
+        widget.set_mission(view)
+        assert not widget._plan_ready_notice.isHidden()  # pylint: disable=protected-access
+        started: list[bool] = []
+        widget.start_work_requested.connect(lambda: started.append(True))
+        widget._start_work_button.click()  # pylint: disable=protected-access
+        assert started == [True]
+        tab.deleteLater()
+
+    def test_running_mission_has_no_start_button(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A mission at work shows neither the notice nor the button."""
+        widget = MissionWidget()
+        widget.set_mission(_view(completed=False, stage=2))
+        assert widget._plan_ready_notice.isHidden() and widget._start_work_button.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_review_choice_reaches_the_new_mission(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """Ticking the option on the new-mission screen is what the next mission is started with."""
+        tab = MissionTab("mission")
+        created: list[bool] = []
+
+        async def create(_objective, _level, _attachments, _settings, review_plan=False):
+            created.append(review_plan)
+            raise mission_tab_module.MissionError("stop here")
+
+        tab._widget._review_plan_check.setChecked(True)  # pylint: disable=protected-access
+        tab._show_error = lambda _message: None  # type: ignore[method-assign]  # pylint: disable=protected-access
+        asyncio.run(tab._create_mission(types.SimpleNamespace(create_mission=create), "Do it", []))  # type: ignore[arg-type]  # pylint: disable=protected-access
+        assert created == [True]
+        tab.deleteLater()
+
+
+class TestRememberedLevel:
+    """The level new missions start at can be kept for the project, except Everything."""
+
+    def test_remembered_level_is_offered_and_kept(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The option is ticked for a remembered level, and cannot be ticked for Everything."""
+        widget = MissionWidget()
+        widget.set_new_mission_auto_approve("safe", remembered=True)
+        check = widget._remember_level_check  # pylint: disable=protected-access
+        assert check.isEnabled() and check.isChecked()
+
+        widget.set_new_mission_auto_approve("all", remembered=True)
+        assert not check.isEnabled() and not check.isChecked()
+        widget.deleteLater()
+
+    def test_tab_saves_the_level_for_every_mission(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """Ticking the option saves the chosen level; clearing it goes back to Off."""
+        tab = MissionTab("mission")
+        saved: list[AutoApproveLevel] = []
+        tab._service = types.SimpleNamespace(  # pylint: disable=protected-access
+            set_default_auto_approve=saved.append,
+            default_auto_approve=lambda: saved[-1] if saved else AutoApproveLevel.OFF,
+        )
+        tab._new_mission_auto_approve = AutoApproveLevel.SAFE  # pylint: disable=protected-access
+
+        tab._on_new_mission_level_remembered(True)  # pylint: disable=protected-access
+        tab._on_new_mission_level_remembered(False)  # pylint: disable=protected-access
+
+        assert saved == [AutoApproveLevel.SAFE, AutoApproveLevel.OFF]
+        tab._service = None  # pylint: disable=protected-access
+        tab.deleteLater()
+
+
+class TestDecisionShortcuts:
+    """Requests in the Decision Inbox can be answered from the keyboard."""
+
+    @staticmethod
+    def _inbox(*decisions: MissionDecisionView) -> MissionWidget:
+        widget = MissionWidget()
+        widget.set_mission(_view(completed=False, stage=2))
+        widget.set_decisions(list(decisions))
+        return widget
+
+    @staticmethod
+    def _answers(widget: MissionWidget) -> list[tuple[str, str]]:
+        answers: list[tuple[str, str]] = []
+        widget.decision_approved.connect(lambda d: answers.append(("approve", d)))
+        widget.decision_rejected.connect(lambda d: answers.append(("reject", d)))
+        widget.decision_unsure.connect(lambda d: answers.append(("unsure", d)))
+        return answers
+
+    def test_keys_answer_the_selected_request(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A approves, R rejects and U is unsure, each for the request selected; N and P move the selection."""
+        first = dataclasses.replace(_decision(), decision_id="d1")
+        second = dataclasses.replace(_decision(), decision_id="d2")
+        widget = self._inbox(first, second)
+        answers = self._answers(widget)
+
+        QTest.keyClick(widget, Qt.Key.Key_A)
+        QTest.keyClick(widget, Qt.Key.Key_N)
+        QTest.keyClick(widget, Qt.Key.Key_R)
+        QTest.keyClick(widget, Qt.Key.Key_P)
+        QTest.keyClick(widget, Qt.Key.Key_U)
+
+        assert answers == [("approve", "d1"), ("reject", "d2"), ("unsure", "d1")]
+        widget.deleteLater()
+
+    def test_destructive_request_needs_shift(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A on a destructive request only takes the user to it; Shift+A approves it."""
+        widget = self._inbox(dataclasses.replace(_decision(destructive=True), decision_id="d1"))
+        answers = self._answers(widget)
+
+        QTest.keyClick(widget, Qt.Key.Key_A)
+        assert not answers
+        assert widget._highlighted_card is widget._decision_cards["d1"]  # pylint: disable=protected-access
+
+        QTest.keyClick(widget, Qt.Key.Key_A, Qt.KeyboardModifier.ShiftModifier)
+        assert answers == [("approve", "d1")]
+        widget.deleteLater()
+
+    def test_selection_is_marked_once_the_keyboard_is_used(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The selected request is ringed only after the user starts answering by keyboard."""
+        first = dataclasses.replace(_decision(), decision_id="d1")
+        second = dataclasses.replace(_decision(), decision_id="d2")
+        widget = self._inbox(first, second)
+        cards = widget._decision_cards  # pylint: disable=protected-access
+        assert not cards["d1"].property("selected")
+
+        QTest.keyClick(widget, Qt.Key.Key_N)
+        assert cards["d2"].property("selected") and not cards["d1"].property("selected")
+        widget.deleteLater()
+
+    def test_typing_and_shortcuts_with_modifiers_are_left_alone(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Letters typed in the message box are text, and Ctrl+A is not an approval."""
+        widget = self._inbox(dataclasses.replace(_decision(), decision_id="d1"))
+        answers = self._answers(widget)
+
+        QTest.keyClick(widget._input, Qt.Key.Key_A)  # pylint: disable=protected-access
+        QTest.keyClick(widget, Qt.Key.Key_A, Qt.KeyboardModifier.ControlModifier)
+
+        assert not answers
+        assert widget._input.toPlainText() == "a"  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_shortcuts_are_listed_while_something_can_be_answered(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The inbox lists its keys while a request can be answered, and not when it is empty."""
+        widget = self._inbox(dataclasses.replace(_decision(), decision_id="d1"))
+        assert not widget._inbox_keys.isHidden()  # pylint: disable=protected-access
+        widget.set_decisions([])
+        assert widget._inbox_keys.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+
+class TestMissionTiming:
+    """The header says how long a working mission has been at it, or when a resting one was started."""
+
+    def test_working_mission_says_how_long(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """Under a minute it has just started; after that it gives the minutes it has been working."""
+        tab = MissionTab("mission")
+        now = datetime.now(timezone.utc)
+        fresh = tab._mission_view(_snapshot(MissionStatus.RUNNING, working_since=now))  # pylint: disable=protected-access
+        assert fresh.header.timing_text == "Just started"
+
+        later = tab._mission_view(  # pylint: disable=protected-access
+            _snapshot(MissionStatus.RUNNING, working_since=now - timedelta(minutes=4, seconds=20))
+        )
+        assert later.header.timing_text == "Working for 4m"
+        tab.deleteLater()
+
+    def test_resting_mission_says_when_it_started(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """A mission not working gives the time it was started, with the day when that was not today."""
+        tab = MissionTab("mission")
+        today = _snapshot(MissionStatus.COMPLETED)
+        started = datetime.now(timezone.utc) - timedelta(seconds=30)
+        today.mission.created_at = started.isoformat()
+        assert tab._mission_view(today).header.timing_text == f"Started {started.astimezone():%H:%M}"  # pylint: disable=protected-access
+
+        earlier = _snapshot(MissionStatus.COMPLETED)
+        earlier.mission.created_at = "2026-03-04T09:30:00+00:00"
+        text = tab._mission_view(earlier).header.timing_text  # pylint: disable=protected-access
+        assert text.startswith("Started ") and "Mar" in text
+        tab.deleteLater()
+
+    def test_timing_is_shown_beside_the_status(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The widget shows the timing text next to the status pill, and hides it when there is none."""
+        widget = MissionWidget()
+        view = _view(completed=False, stage=2)
+        widget.set_mission(dataclasses.replace(view, header=dataclasses.replace(view.header, timing_text="Working for 4m")))
+        assert widget._timing_label.text() == "Working for 4m" and not widget._timing_label.isHidden()  # pylint: disable=protected-access
+        widget.set_mission(view)
+        assert widget._timing_label.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+
+class TestTokenUse:
+    """How many tokens a mission has used is shown beside its status and in its report."""
+
+    def test_tokens_are_shown_compactly_with_the_split_on_hover(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """The total is given compactly, with input and output in its tooltip; a mission with none says nothing."""
+        tab = MissionTab("mission")
+        snapshot = _snapshot(MissionStatus.RUNNING)
+        assert tab._mission_view(snapshot).header.tokens_text == ""  # pylint: disable=protected-access
+
+        snapshot.mission.input_tokens, snapshot.mission.output_tokens = 10_100, 2_300
+        header = tab._mission_view(snapshot).header  # pylint: disable=protected-access
+        assert header.tokens_text == "12.4k tokens"
+        assert "10.1k" in header.tokens_detail and "2.3k" in header.tokens_detail
+        tab.deleteLater()
+
+    @pytest.mark.parametrize("count, text", [(950, "950"), (12_400, "12.4k"), (1_250_000, "1.2M")])
+    def test_counts_are_compact(self, count, text) -> None:
+        """Counts are written as they are read: thousands as k and millions as M."""
+        assert mission_tab_module._token_count(count) == text  # pylint: disable=protected-access
+
+
+class TestFilesChanged:
+    """The files a mission changed are listed, each a click from being opened or undone."""
+
+    @staticmethod
+    def _file(
+        path: str, can_undo: bool = True, can_open: bool = True, state_text: str = "",
+        lines: tuple[int, int] | None = None, review_sequence: int | None = None
+    ) -> MissionFileView:
+        return MissionFileView(
+            path=path, glyph="✎", tone=MissionTone.ACCENT, kind_text="Changed", state_text=state_text,
+            can_undo=can_undo, can_open=can_open,
+            lines_added=lines[0] if lines else None, lines_removed=lines[1] if lines else None,
+            lines_text=f"{lines[0]} lines added, {lines[1]} removed" if lines else "",
+            review_sequence=review_sequence,
+        )
+
+    def test_file_shows_its_name_folder_and_line_counts(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A file is named first, with its folder beside what was done, and how many lines were added and removed."""
+        widget = MissionWidget()
+        view = dataclasses.replace(
+            _view(completed=False, stage=2), files=[self._file("docs/guide.md", lines=(12, 3))],
+            files_summary="1 changed  ·  +12 −3 lines",
+        )
+        widget.set_mission(view)
+
+        labels = [label.text() for label in widget._files_card.findChildren(QLabel)]  # pylint: disable=protected-access
+        assert "guide.md" in labels
+        assert "docs/  ·  Changed" in labels
+        assert any("+12" in text and "−3" in text for text in labels)
+        assert widget._files_summary.text() == "1 changed  ·  +12 −3 lines"  # pylint: disable=protected-access
+        assert not widget._files_summary.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_changes_can_be_seen_only_where_there_is_an_earlier_version(self, qapp) -> None:  # pylint: disable=unused-argument
+        """See changes asks to compare a changed file with its earlier version; a new file has nothing to compare."""
+        widget = MissionWidget()
+        view = dataclasses.replace(
+            _view(completed=False, stage=2),
+            files=[self._file("new.md"), self._file("old.md", review_sequence=7)],
+        )
+        widget.set_mission(view)
+        reviewed: list[tuple[str, int]] = []
+        widget.file_review_requested.connect(lambda path, sequence: reviewed.append((path, sequence)))
+
+        buttons = [
+            b for b in widget._files_card.findChildren(QToolButton, "MissionFileAction")  # pylint: disable=protected-access
+            if b.accessibleName() == "See changes"
+        ]
+        assert len(buttons) == 1
+        buttons[0].click()
+        assert reviewed == [("old.md", 7)]
+        widget.deleteLater()
+
+    def test_text_file_unfolds_into_its_diff(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Clicking a text file's row asks for its diff once, shows it under the row, and folds it away again."""
+        widget = MissionWidget()
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), files=[self._file("a.md", lines=(1, 1))]))
+        asked: list[str] = []
+        widget.file_diff_requested.connect(asked.append)
+        row = widget._files_card.findChildren(QFrame, "MissionFileRow")[0]  # pylint: disable=protected-access
+        diff = widget._files_card.findChild(QFrame, "MissionFileDiff")  # pylint: disable=protected-access
+
+        row.clicked.emit()
+        assert asked == ["a.md"]
+        widget.set_file_diff("a.md", MissionDiffView([
+            MissionDiffLineView(MissionDiffLineKind.REMOVED, "old", "1", ""),
+            MissionDiffLineView(MissionDiffLineKind.ADDED, "new", "", "1"),
+        ]))
+        assert not diff.isHidden()
+        assert len(diff.findChildren(mission_diff_module.FileDiffPanel)) == 1
+
+        row.clicked.emit()
+        assert diff.isHidden()
+        row.clicked.emit()
+        assert not diff.isHidden() and asked == ["a.md"]
+        widget.deleteLater()
+
+    def test_unfolded_file_stays_unfolded_when_the_list_changes(self, qapp) -> None:  # pylint: disable=unused-argument
+        """When the mission changes more files, a file already unfolded stays open and its diff is asked for again."""
+        widget = MissionWidget()
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), files=[self._file("a.md", lines=(1, 0))]))
+        asked: list[str] = []
+        widget.file_diff_requested.connect(asked.append)
+        widget._files_card.findChildren(QFrame, "MissionFileRow")[0].clicked.emit()  # pylint: disable=protected-access
+
+        widget.set_mission(dataclasses.replace(
+            _view(completed=False, stage=2), files=[self._file("b.md", lines=(2, 0)), self._file("a.md", lines=(3, 0))]
+        ))
+        assert asked == ["a.md", "a.md"]
+        widget.deleteLater()
+
+    def test_heading_reads_as_a_card_title(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The card's title is larger than the text under it, like every other card's title."""
+        widget = MissionWidget()
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), files=[self._file("a.md")]))
+        assert widget._files_title.text() == "Files Changed"  # pylint: disable=protected-access
+        stylesheet = widget._build_stylesheet()  # pylint: disable=protected-access
+
+        def size(name: str) -> float:
+            match = re.search(rf"QLabel#{name}[^{{]*{{[^}}]*?font-size: ([0-9.]+)pt", stylesheet)
+            assert match is not None
+            return float(match.group(1))
+
+        assert size("MissionCardTitle") > size("MissionHintText")
+        assert size("MissionCardTitle") > size("MissionFilePath")
+        widget.deleteLater()
+
+    def test_file_that_is_not_text_does_not_unfold(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A file without line counts has nothing to show line by line, so clicking it asks for nothing."""
+        widget = MissionWidget()
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), files=[self._file("image.png")]))
+        asked: list[str] = []
+        widget.file_diff_requested.connect(asked.append)
+        widget._files_card.findChildren(QFrame, "MissionFileRow")[0].clicked.emit()  # pylint: disable=protected-access
+        assert not asked
+        widget.deleteLater()
+
+    def test_change_bar_shows_the_share_added_and_removed(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The bar fills in proportion to what was added and removed, and a small change leaves blocks empty."""
+        assert sum(mission_diff_module.DiffStatBar(10, 10).blocks()) == 5
+        assert mission_diff_module.DiffStatBar(30, 10).blocks() == (4, 1)
+        assert mission_diff_module.DiffStatBar(1, 0).blocks() == (1, 0)
+        assert mission_diff_module.DiffStatBar(100, 1).blocks() == (4, 1)
+        assert mission_diff_module.DiffStatBar(0, 0).blocks() == (0, 0)
+
+    def test_diff_is_described_for_the_widget(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """The service's diff becomes numbered lines with gaps in words, and a missing diff is explained."""
+        tab = MissionTab("mission")
+        tab._selected_mission_id = "m"  # pylint: disable=protected-access
+        shown: list[tuple[str, MissionDiffView]] = []
+        tab._widget.set_file_diff = lambda path, view: shown.append((path, view))  # type: ignore[method-assign]  # pylint: disable=protected-access
+        diffs = {
+            "a.md": MissionFileDiff([
+                MissionFileDiffLine(MissionFileDiffLineKind.GAP, "", skipped=12),
+                MissionFileDiffLine(MissionFileDiffLineKind.ADDED, "new", new_number=13),
+            ], 5),
+            "b.md": None,
+        }
+        tab._service = types.SimpleNamespace(file_diff=lambda _m, path: diffs[path])  # pylint: disable=protected-access
+
+        tab._on_file_diff_requested("a.md")  # pylint: disable=protected-access
+        tab._on_file_diff_requested("b.md")  # pylint: disable=protected-access
+
+        a_view, b_view = shown[0][1], shown[1][1]
+        assert a_view.lines[0] == MissionDiffLineView(MissionDiffLineKind.GAP, "12 unchanged lines")
+        assert a_view.lines[1] == MissionDiffLineView(MissionDiffLineKind.ADDED, "new", "", "13")
+        assert a_view.note.startswith("5 more lines")
+        assert not b_view.lines and "no longer" in b_view.note
+        tab._service = None  # pylint: disable=protected-access
+        tab.deleteLater()
+
+    def test_summary_counts_what_was_done_and_the_lines(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """The summary says how many files were created, changed and deleted, and the lines added and removed."""
+        tab = MissionTab("mission")
+        changes = [
+            MissionFileChange("a.md", MissionFileChangeKind.CREATED, 1, MissionFileChangeState.CURRENT, "", 5, 0),
+            MissionFileChange("b.md", MissionFileChangeKind.MODIFIED, 1, MissionFileChangeState.CURRENT, "", 2, 1, 4),
+            MissionFileChange("c.png", MissionFileChangeKind.MODIFIED, 1, MissionFileChangeState.CURRENT, ""),
+        ]
+        assert tab._files_summary(changes) == "1 created  ·  2 changed  ·  +7 −1 lines"  # pylint: disable=protected-access
+        view = tab._file_view(changes[1])  # pylint: disable=protected-access
+        assert view.review_sequence == 4 and view.lines_text == "2 lines added, 1 removed"
+        tab.deleteLater()
+
+    def test_files_are_listed_with_their_actions(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Each file can be opened and undone; Undo all is offered when more than one file can be."""
+        widget = MissionWidget()
+        view = dataclasses.replace(_view(completed=False, stage=2), files=[self._file("a.md"), self._file("b.md")])
+        widget.set_mission(view)
+        opened: list[str] = []
+        undone: list[str] = []
+        widget.file_open_requested.connect(opened.append)
+        widget.file_undo_requested.connect(undone.append)
+
+        assert not widget._files_card.isHidden()  # pylint: disable=protected-access
+        assert not widget._files_undo_all.isHidden()  # pylint: disable=protected-access
+        buttons = widget._files_card.findChildren(QToolButton, "MissionFileAction")  # pylint: disable=protected-access
+        assert all(not b.icon().isNull() and not b.text() for b in buttons)
+        open_button = next(b for b in buttons if b.accessibleName() == "Open")
+        undo_button = next(b for b in buttons if b.accessibleName() == "Undo")
+        assert "a.md" in open_button.toolTip() and "a.md" in undo_button.toolTip()
+        open_button.click()
+        undo_button.click()
+        widget._files_undo_all.click()  # pylint: disable=protected-access
+
+        assert opened == ["a.md"]
+        assert undone == ["a.md", ""]
+        widget.deleteLater()
+
+    def test_undone_file_offers_no_undo(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A file already put back says so, and has no Undo; a deleted one has nothing to open."""
+        widget = MissionWidget()
+        view = dataclasses.replace(
+            _view(completed=False, stage=2),
+            files=[self._file("a.md", can_undo=False, can_open=False, state_text="Undone")],
+        )
+        widget.set_mission(view)
+        assert not widget._files_card.findChildren(QToolButton, "MissionFileAction")  # pylint: disable=protected-access
+        assert widget._files_undo_all.isHidden()  # pylint: disable=protected-access
+        labels = [label.text() for label in widget._files_card.findChildren(QLabel)]  # pylint: disable=protected-access
+        assert "Changed  ·  Undone" in labels
+        widget.deleteLater()
+
+    def test_no_files_no_card(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A mission that changed no files has no card for them."""
+        widget = MissionWidget()
+        widget.set_mission(_view(completed=False, stage=2))
+        assert widget._files_card.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_finished_mission_keeps_its_files_in_view(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The files a finished mission changed stay on its result page, not folded away with its plan."""
+        widget = MissionWidget()
+        widget.set_mission(dataclasses.replace(_view(completed=True, stage=3), files=[self._file("a.md")]))
+        assert not widget._files_card.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_undo_asks_first_and_reports_what_failed(self, mindspace_sandbox, qapp, monkeypatch) -> None:  # pylint: disable=unused-argument
+        """Nothing is undone without a yes; files that could not be put back are reported."""
+        tab = MissionTab("mission")
+        calls: list[tuple[str, str | None]] = []
+        tab._service = types.SimpleNamespace(  # pylint: disable=protected-access
+            undo_file_changes=lambda m, p: calls.append((m, p)) or ["a.md: conflict"]
+        )
+        tab._selected_mission_id = "m"  # pylint: disable=protected-access
+        answers = iter([MessageBoxButton.NO, MessageBoxButton.YES])
+        monkeypatch.setattr(mission_tab_module.MessageBox, "show_message", lambda *_a, **_k: next(answers))
+        errors: list[str] = []
+        tab._show_error = errors.append  # type: ignore[method-assign]  # pylint: disable=protected-access
+
+        tab._on_file_undo_requested("a.md")  # pylint: disable=protected-access
+        assert not calls
+        tab._on_file_undo_requested("")  # pylint: disable=protected-access
+        assert calls == [("m", None)]
+        assert errors and "a.md: conflict" in errors[0]
+        tab._service = None  # pylint: disable=protected-access
+        tab.deleteLater()
+
+
+class TestReportActions:
+    """A finished report can be taken further: its files opened, and itself kept as a document or a picture."""
+
+    def test_files_named_in_the_report_are_offered(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """Files the report names that exist are offered once each, in order; names of missing files are not."""
+        mindspace = MindspaceManager().mindspace()
+        root = mindspace.mindspace_path()
+        os.makedirs(os.path.join(root, "docs"), exist_ok=True)
+        for name in ("docs/guide.md", "README.md"):
+            with open(os.path.join(root, name), "w", encoding="utf-8") as handle:
+                handle.write("x")
+
+        report = "Wrote `docs/guide.md` and **README.md**; see docs/guide.md again, and missing.md, and v1.2."
+        assert mission_report_module.report_files(report, mindspace) == ["docs/guide.md", "README.md"]
+
+    def test_report_files_open_from_the_report(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Each file the report names is a button that asks for the file to be opened."""
+        widget = MissionWidget()
+        widget.set_mission(dataclasses.replace(_view(completed=True, stage=3), report_files=["docs/guide.md"]))
+        opened: list[str] = []
+        widget.file_open_requested.connect(opened.append)
+
+        assert not widget._report_files_row.isHidden()  # pylint: disable=protected-access
+        next(b for b in widget._report_files_row.findChildren(QPushButton) if b.text() == "docs/guide.md").click()  # pylint: disable=protected-access
+        assert opened == ["docs/guide.md"]
+        widget.deleteLater()
+
+    def test_report_buttons_wrap_rather_than_widen_the_page(self, qapp) -> None:  # pylint: disable=unused-argument
+        """However many files the report names, its buttons take more rows instead of more width."""
+        widget = MissionWidget()
+        names = [f"folder/a-rather-long-file-name-{n}.html" for n in range(6)]
+        widget.set_mission(dataclasses.replace(_view(completed=True, stage=3), report_files=names))
+        layout = widget._report_files_layout  # pylint: disable=protected-access
+        one_row = layout.sizeHint()
+
+        assert layout.minimumSize().width() < one_row.width() / 3
+        assert layout.heightForWidth(one_row.width() // 3) > one_row.height()
+        widget.deleteLater()
+
+    def test_report_becomes_a_word_document(self) -> None:
+        """The report is turned into a Word document holding its words."""
+        document = mission_report_module.report_as_word("# Done\n\n- Wrote **docs/guide.md**")
+        assert document[:2] == b"PK"
+        assert b"word/document.xml" in document
+
+    def test_saved_report_is_recorded_in_the_journal(self, mindspace_sandbox) -> None:  # pylint: disable=unused-argument
+        """Saving the report in the mindspace records the write, so it can be undone like any change."""
+        mindspace = MindspaceManager().mindspace()
+        path = os.path.join(mindspace.mindspace_path(), "report.docx")
+        before = mindspace.file_journal().newest_sequence()
+
+        mission_report_module.save_report(mindspace, path, b"document")
+
+        with open(path, "rb") as handle:
+            assert handle.read() == b"document"
+
+        assert mindspace.file_journal().newest_sequence() == before + 1
+        assert mindspace.file_journal().entries_for_path("report.docx")
+
+    def test_tab_saves_the_report_where_the_user_chooses(self, mindspace_sandbox, qapp, monkeypatch, tmp_path) -> None:  # pylint: disable=unused-argument
+        """The tab asks where to save, offering the mission's name, and writes the Word document there."""
+        tab = MissionTab("mission")
+        tab.attach_service()
+        offered: list[str] = []
+
+        def ask(_parent, _title, directory, _filter):
+            offered.append(directory)
+            return str(tmp_path / "out.docx"), ""
+
+        monkeypatch.setattr(mission_tab_module.QFileDialog, "getSaveFileName", ask)
+        tab._selected_mission_id = "m"  # pylint: disable=protected-access
+        tab._on_report_export_requested("# Done")  # pylint: disable=protected-access
+
+        assert offered and offered[0].endswith("Mission report.docx")
+        assert (tmp_path / "out.docx").read_bytes()[:2] == b"PK"
+        tab.close_tab()
+        MissionServiceHolder().release()
+
+    def test_report_is_copied_as_a_picture(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Copy as an image puts a picture of the report card on the clipboard."""
+        widget = MissionWidget()
+        widget.resize(1000, 800)
+        widget.set_mission(_view(completed=True, stage=3))
+        widget.show()
+        QApplication.clipboard().clear()
+
+        widget._copy_report_image()  # pylint: disable=protected-access
+
+        assert not QApplication.clipboard().pixmap().isNull()
+        widget._report_copied_timer.stop()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+
+class TestFindingMissions:
+    """Missions can be searched, and archived ones are kept out of the way until asked for."""
+
+    @staticmethod
+    def _chips() -> list[MissionChipView]:
+        return [
+            MissionChipView("m1", "Write the guide", MissionTone.ACCENT, True, search_text="Write the guide\ndocs"),
+            MissionChipView("m2", "Fix flaky tests", MissionTone.SUCCESS, False, search_text="Fix flaky tests\nCI"),
+            MissionChipView("m3", "Release notes", MissionTone.NEUTRAL, False, search_text="Release notes\nv2"),
+            MissionChipView("m4", "Old audit", MissionTone.NEUTRAL, False, archived=True, search_text="Old audit\n"),
+            MissionChipView("m5", "Tidy imports", MissionTone.NEUTRAL, False, search_text="Tidy imports\n"),
+        ]
+
+    @staticmethod
+    def _shown(widget: MissionWidget) -> list[str]:
+        return [chip.mission_id for chip in widget._shown_chip_views]  # pylint: disable=protected-access
+
+    def test_archived_missions_are_hidden_until_asked_for(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Archived missions are left out, counted on a switch that shows them."""
+        widget = MissionWidget()
+        widget.set_missions(self._chips(), False)
+        assert self._shown(widget) == ["m1", "m2", "m3", "m5"]
+        assert widget._archived_toggle.text() == "Archived (1)"  # pylint: disable=protected-access
+
+        widget._archived_toggle.setChecked(True)  # pylint: disable=protected-access
+        assert "m4" in self._shown(widget)
+        widget.deleteLater()
+
+    def test_search_matches_title_and_request(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Every word typed must appear in a mission's name or request; the mission on screen always stays."""
+        widget = MissionWidget()
+        widget.set_missions(self._chips(), False)
+        assert not widget._mission_search.isHidden()  # pylint: disable=protected-access
+
+        widget._mission_search.setText("ci flaky")  # pylint: disable=protected-access
+        assert self._shown(widget) == ["m1", "m2"]
+        widget._mission_search.setText("nothing like it")  # pylint: disable=protected-access
+        assert self._shown(widget) == ["m1"]
+        widget.deleteLater()
+
+    def test_few_missions_need_no_search(self, qapp) -> None:  # pylint: disable=unused-argument
+        """With only a few missions, there is no search box."""
+        widget = MissionWidget()
+        widget.set_missions(self._chips()[:2], False)
+        assert widget._mission_search.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_chip_menu_archives_and_brings_back(self, qapp, monkeypatch) -> None:  # pylint: disable=unused-argument
+        """A mission's menu archives it, or brings back an archived one."""
+        widget = MissionWidget()
+        widget.set_missions(self._chips(), False)
+        requested: list[tuple[str, bool]] = []
+        widget.mission_archive_requested.connect(lambda m, a: requested.append((m, a)))
+        strings = widget._language_manager.strings()  # pylint: disable=protected-access
+        for mission_id, label in (("m2", strings.mission_archive), ("m4", strings.mission_unarchive)):
+            menu = mock.MagicMock()
+            menu.addAction.side_effect = lambda text: text
+            menu.exec.side_effect = lambda _position, chosen=label: chosen
+            monkeypatch.setattr(widget._style_manager, "create_menu", lambda _parent, m=menu: m)  # pylint: disable=protected-access
+            widget._show_chip_menu(mission_id, QPoint())  # pylint: disable=protected-access
+
+        assert requested == [("m2", True), ("m4", False)]
+        widget.deleteLater()
+
+
+class TestRunAgain:
+    """An earlier mission can be started again from its menu or its report."""
+
+    def test_menus_ask_to_run_again(self, qapp, monkeypatch) -> None:  # pylint: disable=unused-argument
+        """Run again in a chip's menu names that mission; on the report it means the mission on screen."""
+        widget = MissionWidget()
+        widget.set_missions([MissionChipView("m1", "Guide", MissionTone.ACCENT, True)], False)
+        widget.set_mission(_view(completed=True, stage=3))
+        asked: list[str] = []
+        widget.mission_rerun_requested.connect(asked.append)
+        strings = widget._language_manager.strings()  # pylint: disable=protected-access
+        menu = mock.MagicMock()
+        menu.addAction.side_effect = lambda text: text
+        menu.exec.side_effect = lambda _position: strings.mission_run_again
+        monkeypatch.setattr(widget._style_manager, "create_menu", lambda _parent: menu)  # pylint: disable=protected-access
+
+        widget._show_chip_menu("m1", QPoint())  # pylint: disable=protected-access
+        widget._show_report_actions()  # pylint: disable=protected-access
+
+        assert asked == ["m1", ""]
+        widget.deleteLater()
+
+
+class TestGuide:
+    """A short guide explains Mission Control on the new-mission screen until it is put away."""
+
+    def test_guide_and_its_link_take_turns(self, qapp) -> None:  # pylint: disable=unused-argument
+        """While the guide is shown there is no link to it; once put away, the link brings it back."""
+        widget = MissionWidget()
+        widget.set_guide_visible(True)
+        assert not widget._guide.isHidden() and widget._guide_link.isHidden()  # pylint: disable=protected-access
+        answers: list[bool] = []
+        widget.guide_dismissed.connect(answers.append)
+
+        widget._guide_dismiss.click()  # pylint: disable=protected-access
+        widget.set_guide_visible(False)
+        assert widget._guide.isHidden() and not widget._guide_link.isHidden()  # pylint: disable=protected-access
+        widget._guide_link.click()  # pylint: disable=protected-access
+
+        assert answers == [True, False]
+        widget.deleteLater()
+
+    def test_guide_has_three_steps(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The guide's three steps each have a heading and an explanation."""
+        widget = MissionWidget()
+        assert len(widget._guide_steps) == 3  # pylint: disable=protected-access
+        assert all(heading.text() and body.text() for heading, body in widget._guide_steps)  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_dismissal_is_saved_for_the_user(self, mindspace_sandbox, qapp, monkeypatch) -> None:  # pylint: disable=unused-argument
+        """Putting the guide away saves that for the user, so it stays away in every mindspace."""
+        tab = MissionTab("mission")
+        saved: list[dict] = []
+        monkeypatch.setattr(mission_tab_module.UserManager, "update_settings_fields", lambda _self, **f: saved.append(f))
+
+        tab._on_guide_dismissed(True)  # pylint: disable=protected-access
+
+        assert saved == [{"mission_guide_dismissed": True}]
+        assert tab._widget._guide.isHidden()  # pylint: disable=protected-access
+        tab.deleteLater()
+
+
+class TestFriendlyFailures:
+    """A failed mission says what went wrong and what to do, for the kinds of error AI services report."""
+
+    @pytest.mark.parametrize("code, words", [
+        ("401", "API key"), ("authentication_error", "API key"), ("permission_error", "API key"),
+        ("404", "not found"), ("not_found_error", "not found"),
+        ("400", "too long"), ("invalid_request_error", "too long"),
+        ("429", "limiting"), ("rate_limit", "limiting"),
+        ("network_error", "internet connection"),
+        ("503", "on its side"), ("server_error", "on its side"), ("overloaded_error", "on its side"),
+        ("backend_error", "No AI backend"), ("cancelled", "before finishing"),
+    ])
+    def test_known_errors_are_explained(self, mindspace_sandbox, qapp, code, words) -> None:  # pylint: disable=unused-argument
+        """Each kind of error gets words saying what to do about it."""
+        tab = MissionTab("mission")
+        view = tab._mission_view(_snapshot(MissionStatus.FAILED, failure_code=code, failure_message="raw"))  # pylint: disable=protected-access
+        assert words in view.header.failure_text
+        assert view.header.failure_detail == "raw"
+        tab.deleteLater()
+
+    def test_unknown_error_gets_the_general_notice(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """An error of no known kind is shown with the general failure notice, the service's words on hover."""
+        tab = MissionTab("mission")
+        view = tab._mission_view(_snapshot(MissionStatus.FAILED, failure_code="process_error", failure_message="boom"))  # pylint: disable=protected-access
+        assert view.header.failure_text == ""
+
+        widget = tab._widget  # pylint: disable=protected-access
+        widget.set_mission(view)
+        assert widget._failed_notice.text().startswith("My last reply ended in an error")  # pylint: disable=protected-access
+        assert widget._failed_notice.toolTip() == "boom"  # pylint: disable=protected-access
+        tab.deleteLater()

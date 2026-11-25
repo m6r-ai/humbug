@@ -197,7 +197,10 @@ def get_arabic_strings() -> LanguageStrings:
         settings_network_access="الوصول إلى الشبكة",
         external_http_access="الوصول إلى الشبكة",
         allow_external_http_access="السماح للذكاء الاصطناعي بجلب عناوين URL المسموح بها دون سؤال",
-        external_http_allowlist="عناوين URL المعتمدة تلقائياً (واحد لكل سطر، مثل api.example.com أو https://api.example.com:8443):",
+        external_http_allowlist=(
+            "عناوين URL المعتمدة تلقائياً (واحد لكل سطر، مثل api.example.com أو "
+            "https://api.example.com:8443):"
+        ),
         external_http_denylist="عناوين URL المرفوضة دائماً (واحد لكل سطر، مثل localhost أو 10.0.0.0/8):",
 
         # Mindspace tree
@@ -449,7 +452,9 @@ def get_arabic_strings() -> LanguageStrings:
         trash_confirm_delete_forever_title="حذف نهائي",
         trash_confirm_delete_forever_message="هل أنت متأكد من الحذف النهائي لـ {0}؟ لا يمكن التراجع عن هذا الإجراء.",
         trash_confirm_empty_title="إفراغ سلة المهملات",
-        trash_confirm_empty_message="هل أنت متأكد من الحذف النهائي لكل ما في سلة المهملات؟ لا يمكن التراجع عن هذا الإجراء.",
+        trash_confirm_empty_message=(
+            "هل أنت متأكد من الحذف النهائي لكل ما في سلة المهملات؟ لا يمكن التراجع عن هذا الإجراء."
+        ),
         trash_restore_failed_title="فشلت الاستعادة",
         trash_restore_failed_message="فشلت استعادة {0}: {1}",
         trash_time_just_now="الآن",
@@ -539,7 +544,10 @@ def get_arabic_strings() -> LanguageStrings:
         ),
 
         delete_from_here_title="حذف الرسائل",
-        delete_from_here_message="هل أنت متأكد من أنك تريد حذف هذه الرسالة وجميع الرسائل اللاحقة؟ لا يمكن التراجع عن هذا الإجراء.",
+        delete_from_here_message=(
+            "هل أنت متأكد من أنك تريد حذف هذه الرسالة وجميع الرسائل اللاحقة؟ لا يمكن التراجع عن هذا "
+            "الإجراء."
+        ),
 
         # Move operation strings
         move_file_title="نقل الملف",
@@ -640,13 +648,17 @@ def get_arabic_strings() -> LanguageStrings:
             "افتح محادثاتك هنا — استخدم + لبدء محادثة جديدة، أو أيقونة المجلد لتنظيمها."
         ),
         tour_workspace_title="مساحة عملك",
-        tour_workspace_description="تُفتح المحادثات وعلامات التبويب الأخرى هنا. هذا هو المكان الذي ستقوم فيه بمعظم عملك.",
+        tour_workspace_description=(
+            "تُفتح المحادثات وعلامات التبويب الأخرى هنا. هذا هو المكان الذي ستقوم فيه بمعظم عملك."
+        ),
         tour_key_action_title="إرسال رسالة",
         tour_key_action_description="اكتب رسالة واضغط على إرسال (أو {0}) للتحدث مع الذكاء الاصطناعي.",
         tour_output_title="سجل المحادثة",
         tour_output_description="تظهر ردود الذكاء الاصطناعي وسجل محادثتك هنا أثناء الدردشة.",
         tour_navigation_title="التنقل",
-        tour_navigation_description="بدّل بين المحادثات والملفات والبحث والمعاينة والمزيد باستخدام هذا الشريط الجانبي.",
+        tour_navigation_description=(
+            "بدّل بين المحادثات والملفات والبحث والمعاينة والمزيد باستخدام هذا الشريط الجانبي."
+        ),
         tour_help_title="الإعدادات والمساعدة",
         tour_help_description="افتح الإعدادات هنا في أي وقت. يمكنك إعادة تشغيل هذه الجولة من Humbug ← أخذ جولة.",
 
@@ -661,7 +673,10 @@ def get_arabic_strings() -> LanguageStrings:
         fetch_error_timeout="انتهت مهلة الطلب — استغرق المزود وقتاً طويلاً للاستجابة.",
         fetch_error_generic="فشل: {0}",
         stream_error_interrupted="انقطع الاتصال قبل اكتمال الاستجابة. يرجى إعادة المحاولة.",
-        stream_error_no_backend="لا يوجد خدمة ذكاء اصطناعي مهيأة لمزود هذا النموذج — تحقق من إعدادات خدمات الذكاء الاصطناعي.",
+        stream_error_no_backend=(
+            "لا يوجد خدمة ذكاء اصطناعي مهيأة لمزود هذا النموذج — تحقق من إعدادات خدمات الذكاء "
+            "الاصطناعي."
+        ),
         stream_error_access_denied="تم رفض الوصول ({0}) — قد لا يملك حسابك صلاحية الوصول إلى هذا النموذج.",
 
         mission_control="مركز المهام",
@@ -803,7 +818,10 @@ def get_arabic_strings() -> LanguageStrings:
         mission_mode_autonomous="مستقل",
         mission_mode_classic="كلاسيكي",
         mission_classic_title="هذه المهمة في الوضع الكلاسيكي",
-        mission_classic_body="أنت تتابعها من تبويب محادثتها، لذا لا يتابعها مركز المهام. بدّل إلى الوضع المستقل لإعادتها إليه.",
+        mission_classic_body=(
+            "أنت تتابعها من تبويب محادثتها، لذا لا يتابعها مركز المهام. بدّل إلى الوضع المستقل لإعادتها "
+            "إليه."
+        ),
         mission_task_stop="إيقاف الخطوة",
         mission_task_stopped="متوقفة",
         mission_activity_task_stopped="أوقفت \"{0}\"",
@@ -887,7 +905,10 @@ def get_arabic_strings() -> LanguageStrings:
         mission_chat_you="أنت",
         mission_chat_lead="قائد المهمة",
         mission_results_title="النتائج السابقة",
-        mission_results_hint="تُحفظ هنا كل جولة انتهت قبل سؤال متابعة، الأحدث أولًا. انقر على جولة لقراءة تقريرها الكامل.",
+        mission_results_hint=(
+            "تُحفظ هنا كل جولة انتهت قبل سؤال متابعة، الأحدث أولًا. انقر على جولة لقراءة تقريرها "
+            "الكامل."
+        ),
         mission_result_number="الجولة {0}",
         mission_result_asked="طلبت: {0}",
         mission_result_no_report="لم يقدّم قائد المهمة تقريرًا نهائيًا لهذه الجولة.",
@@ -938,6 +959,117 @@ def get_arabic_strings() -> LanguageStrings:
         mission_notify_failed="فشلت المهمة",
         mission_notify_stuck="تبدو المهمة متعثرة",
         mission_steps_count="اكتملت {0} من {1} خطوات",
+        mission_failed_key=(
+            "رفضت خدمة الذكاء الاصطناعي الطلب: مفتاح API مفقود أو خاطئ أو غير مسموح له باستخدام هذا "
+            "النموذج. تحقق من المفتاح في الإعدادات › خلفيات الذكاء الاصطناعي، ثم اضغط إعادة المحاولة."
+        ),
+        mission_failed_model=(
+            "لم يُعثر على نموذج الذكاء الاصطناعي: ربما أُعيدت تسميته أو سُحب. اختر نموذجًا آخر من الترس "
+            "بجانب مربع الرسالة، ثم أرسل لي رسالة."
+        ),
+        mission_failed_request=(
+            "لم تستطع خدمة الذكاء الاصطناعي قبول الطلب، غالبًا لأن المحادثة أصبحت أطول مما يتسع له "
+            "النموذج. اختر نموذجًا بسياق أكبر، أو ابدأ مهمة جديدة."
+        ),
+        mission_failed_rate="تحدّ خدمة الذكاء الاصطناعي من عدد الطلبات. انتظر بضع دقائق ثم اضغط إعادة المحاولة.",
+        mission_failed_network=(
+            "تعذّر على Humbug الوصول إلى خدمة الذكاء الاصطناعي. تحقق من اتصالك بالإنترنت ثم اضغط إعادة "
+            "المحاولة."
+        ),
+        mission_failed_server="واجهت خدمة الذكاء الاصطناعي مشكلة من جهتها. اضغط إعادة المحاولة بعد بضع دقائق.",
+        mission_failed_backend=(
+            "لا توجد خدمة ذكاء اصطناعي مُعدّة لمزوّد هذا النموذج. أعدّ واحدة في الإعدادات › خلفيات "
+            "الذكاء الاصطناعي، أو اختر نموذجًا آخر من الترس بجانب مربع الرسالة."
+        ),
+        mission_failed_cut_short="توقفت خدمة الذكاء الاصطناعي قبل إكمال ردها. اضغط إعادة المحاولة لتطلبه من جديد.",
+        mission_guide_title="كيف يعمل مركز المهام",
+        mission_guide_dismiss="فهمت",
+        mission_guide_link="كيف يعمل مركز المهام؟",
+        mission_guide_1_title="قل ما تريد إنجازه",
+        mission_guide_1=(
+            "صِف المهمة في المربع أدناه. يخطط لها قائد ذكاء اصطناعي ويستعين بمساعدين للأجزاء التي يمكن "
+            "تنفيذها بالتوازي."
+        ),
+        mission_guide_2_title="شاهده يعمل",
+        mission_guide_2="تُعرض الخطة والروبوتات التي تنفذها وما تقوله لحظة بلحظة. يمكنك مراسلة القائد في أي وقت.",
+        mission_guide_3_title="ابقَ صاحب القرار",
+        mission_guide_3=(
+            "كل ما يغيّر الملفات أو يشغّل الأوامر ينتظر قرارك في صندوق القرارات، ما لم تسمح للموافقة "
+            "التلقائية بالتعامل معه. ويمكن التراجع عن كل تعديل على الملفات."
+        ),
+        mission_run_again="تشغيل مرة أخرى",
+        mission_archive="أرشفة",
+        mission_unarchive="إخراج من الأرشيف",
+        mission_archived_count="المؤرشفة ({0})",
+        mission_search="البحث في المهام",
+        mission_search_none="لا توجد مهام مطابقة",
+        mission_report_save_word="حفظ كمستند Word…",
+        mission_report_copy_image="نسخ كصورة",
+        mission_report_files="في هذا التقرير:",
+        mission_report_open_file="فتح {0}",
+        mission_report_save_word_title="حفظ التقرير كمستند Word",
+        mission_report_word_filter="مستندات Word (*.docx)",
+        mission_report_save_failed="تعذّر حفظ التقرير: {0}",
+        mission_files_title="الملفات المعدَّلة",
+        mission_files_hint=(
+            "التعديلات التي أُجريت بأدوات Humbug كما سجلها سجل التعديلات. قد يغيّر أمر شُغِّل في "
+            "الطرفية ملفات دون أن تُدرج هنا."
+        ),
+        mission_files_undo_all="تراجع عن الكل",
+        mission_files_created="أُنشئ {0}",
+        mission_files_changed="عُدّل {0}",
+        mission_files_deleted="حُذف {0}",
+        mission_files_lines="+{0} −{1} سطر",
+        mission_file_lines="أُضيف {0} سطر وحُذف {1}",
+        mission_file_review="عرض التغييرات",
+        mission_file_review_tip="قارن {0} كما كان قبل هذه المهمة بما هو عليه الآن",
+        mission_file_diff_show="عرض التغييرات سطرًا بسطر",
+        mission_file_diff_gap="{0} أسطر لم تتغير",
+        mission_file_diff_more="لا تظهر هنا {0} أسطر أخرى. يفتح «عرض التغييرات» المقارنة كاملة.",
+        mission_file_diff_unavailable="لم يعد بالإمكان عرض هذا التغيير سطرًا بسطر: لم تعد نسخة سابقة من الملف محفوظة.",
+        mission_file_diff_empty="لم يتغير أي سطر.",
+        mission_file_open="فتح",
+        mission_file_undo="تراجع",
+        mission_file_open_tip="فتح {0} في تبويب المحرر",
+        mission_file_undo_tip="إعادة {0} كما كان قبل هذه المهمة",
+        mission_file_created="أُنشئ",
+        mission_file_modified="عُدِّل",
+        mission_file_deleted="حُذف",
+        mission_file_times="{0} {1} مرات",
+        mission_file_undone="تم التراجع",
+        mission_file_changed_since="تغيّر منذ ذلك",
+        mission_files_undo_title="التراجع عن التعديلات",
+        mission_files_undo_confirm="هل تريد إعادة {0} كما كان قبل أن تعدّله هذه المهمة؟",
+        mission_files_undo_all_confirm="هل تريد إعادة كل ملف عدّلته هذه المهمة كما كان من قبل؟",
+        mission_files_undo_failed="تعذّر التراجع عن بعض التعديلات:\n{0}",
+        mission_tokens="{0} رمز",
+        mission_tokens_detail="الإدخال {0} · الإخراج {1}. تُحسب أثناء متابعة Humbug للمهمة",
+        mission_working_for="تعمل منذ {0}",
+        mission_working_just_now="بدأت للتو",
+        mission_started_at="بدأت {0}",
+        mission_inbox_keys=(
+            "المفاتيح: A موافقة · R رفض · U غير متأكد · N / P التالي والسابق · Shift+A يوافق على طلب "
+            "مدمِّر"
+        ),
+        mission_remember_level="ابدأ كل مهمة جديدة بهذا المستوى",
+        mission_remember_level_tip="يُحفظ لهذا المشروع. لا يُحفظ «كل شيء» أبدًا: يُختار ويُؤكَّد لكل مهمة",
+        mission_status_plan_ready="الخطة جاهزة",
+        mission_say_plan_ready="هذه خطتي. هل أبدأ؟",
+        mission_activity_plan_approved="وافقت على الخطة",
+        mission_start_work="ابدأ العمل",
+        mission_plan_ready_notice=(
+            "أعد القائد خطة وهو بانتظارك. راجعها أدناه ثم ابدأ العمل، أو أخبر القائد بما يجب تغييره في المربع "
+            "في الأسفل."
+        ),
+        mission_review_plan_option="دعني أراجع الخطة قبل بدء العمل",
+        mission_review_plan_tip="يعد القائد خطته ثم ينتظر أن تبدأها، فلا يُنفَّذ شيء قبل أن ترى ما سيُنفَّذ",
+        mission_notify_plan_ready="الخطة جاهزة لمراجعتك",
+        mission_templates_label="قوالبك",
+        mission_template_save="حفظ ما كتبته كقالب",
+        mission_template_save_tip="احتفظ بهذا الطلب لتبدأ منه مهام لاحقًا",
+        mission_template_delete="حذف القالب “{0}”",
+        mission_template_name_title="حفظ كقالب",
+        mission_template_name_prompt="اسم هذا القالب:",
         mission_report_copy="نسخ التقرير",
         mission_report_copied="تم النسخ",
         mission_report_show_steps="إظهار الخطوات",

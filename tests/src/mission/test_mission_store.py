@@ -209,3 +209,19 @@ class TestMissionProgress:
 
         assert mission.is_complete()
         assert mission.completed_count() == 2
+
+
+def test_token_counts_survive_a_round_trip_and_bad_values_are_none():
+    """Token counts are saved and loaded; a missing or malformed count loads as zero."""
+    from mission.mission import Mission  # pylint: disable=import-outside-toplevel
+    mission = Mission(mission_id="m", objective="o", title="t", lead_path="l.conv", created_at="2026-01-01T00:00:00+00:00")
+    mission.input_tokens, mission.output_tokens = 1234, 56
+    loaded = Mission.from_dict(mission.to_dict())
+    assert (loaded.input_tokens, loaded.output_tokens) == (1234, 56)
+
+    data = mission.to_dict()
+    data.update(inputTokens="lots", outputTokens=-3)
+    loaded = Mission.from_dict(data)
+    assert (loaded.input_tokens, loaded.output_tokens) == (0, 0)
+    data.pop("inputTokens")
+    assert Mission.from_dict(data).input_tokens == 0

@@ -11,7 +11,7 @@ _PLAN_EXAMPLE = (
 )
 
 
-def build_lead_prompt(objective: str, model_name: str = "") -> str:
+def build_lead_prompt(objective: str, model_name: str = "", review_plan: bool = False) -> str:
     """
     Return the opening message for a mission lead conversation.
 
@@ -28,6 +28,7 @@ def build_lead_prompt(objective: str, model_name: str = "") -> str:
     Args:
         objective: What the user wants to achieve
         model_name: Display name of the AI model the lead runs on, or "" if not known
+        review_plan: Whether the user wants to approve the first plan before any of it is carried out
 
     Returns:
         The message to submit to the lead conversation
@@ -36,8 +37,14 @@ def build_lead_prompt(objective: str, model_name: str = "") -> str:
         f"\nYou are running on the AI model {model_name}. If the user asks which model you are, say that.\n"
         if model_name else ""
     )
+    review_note = (
+        f"\nThe user wants to review your plan before any work starts. After you report your first `{PLAN_FENCE}`\n"
+        "block, stop: do not start any task, delegate or change anything until the user approves the plan. If the user\n"
+        "asks for changes instead, report the revised plan and wait again.\n"
+        if review_plan else ""
+    )
     return f"""You are the mission lead for a Humbug mission. The user's request is at the end of this message.
-{model_note}
+{model_note}{review_note}
 First work out what the user actually wants. Do this for the request below and for every later message from the
 user:
 

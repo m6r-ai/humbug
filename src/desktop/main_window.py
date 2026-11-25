@@ -531,7 +531,7 @@ class MainWindow(QMainWindow):
 
         self._open_mission_control_action = QAction(strings.mission_control, self)
         self._open_mission_control_action.setShortcut(QKeySequence("Ctrl+Shift+M"))
-        self._open_mission_control_action.triggered.connect(self._on_open_mission_control)
+        self._open_mission_control_action.triggered.connect(self._on_mission_control_requested)
 
         self._show_tab_overview_action = QAction(strings.show_tab_overview, self)
         self._show_tab_overview_action.setShortcut(QKeySequence("Ctrl+Shift+E"))
@@ -2766,6 +2766,14 @@ class MainWindow(QMainWindow):
         """
         if self._mindspace_manager.has_mindspace():
             self._mission_notifier.follow(MissionServiceHolder().service_for(self._mindspace_manager.mindspace()))
+
+    def _on_mission_control_requested(self) -> None:
+        """Open Mission Control on the new-mission screen, as asked for from the menu."""
+        self._on_open_mission_control()
+        info = self._mission_control_context()
+        tab = self._tab_manager.get_tab_by_id(info.context_id) if info is not None else None
+        if isinstance(tab, MissionTab):
+            tab.show_new_mission()
 
     def _show_mission(self, mission_id: str) -> None:
         """Open Mission Control showing a particular mission."""

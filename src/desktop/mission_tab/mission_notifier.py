@@ -114,6 +114,7 @@ class MissionNotifier(QObject):
             MissionAlertKind.REPLIED: strings.mission_notify_replied,
             MissionAlertKind.FAILED: strings.mission_notify_failed,
             MissionAlertKind.STUCK: strings.mission_notify_stuck,
+            MissionAlertKind.PLAN_READY: strings.mission_notify_plan_ready,
         }[alert.kind]
         message = f"{alert.mission_title}: {alert.detail}" if alert.detail else alert.mission_title
         return title, message

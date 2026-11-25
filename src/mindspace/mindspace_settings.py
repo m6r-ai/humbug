@@ -41,6 +41,10 @@ class MindspaceSettings:
     pinned_paths: list[str] = field(default_factory=list)
     mission_resume_automatically: bool = False  # Resume interrupted missions when the mindspace opens
     mission_reduce_motion: bool = False  # Draw Mission Control without animation
+    # The auto-approve level new missions start at: "off" or "safe", never the level that approves everything.
+    mission_default_auto_approve: str = "off"
+    # Requests the user saved to start missions from, as (name, request) pairs, in the order saved.
+    mission_templates: list[tuple[str, str]] = field(default_factory=list)
 
     @classmethod
     def _safe_load_json(cls, path: str) -> dict:
@@ -421,6 +425,29 @@ class MindspaceSettings:
             )
             mission_reduce_motion = False
 
+        mission_default_auto_approve = missions.get("defaultAutoApprove", "off")
+        if mission_default_auto_approve not in ("off", "safe"):
+            cls._logger.warning(
+                "Invalid defaultAutoApprove in %s: expected off or safe, got %r. Using off.",
+                path, mission_default_auto_approve
+            )
+            mission_default_auto_approve = "off"
+
+        mission_templates: list[tuple[str, str]] = []
+        templates_raw = missions.get("templates", [])
+        if not isinstance(templates_raw, list):
+            cls._logger.warning(
+                "Invalid templates type in %s: expected list, got %s. Using default.",
+                path, type(templates_raw).__name__
+            )
+            templates_raw = []
+
+        for entry in templates_raw:
+            name = entry.get("name") if isinstance(entry, dict) else None
+            request = entry.get("request") if isinstance(entry, dict) else None
+            if isinstance(name, str) and isinstance(request, str) and name.strip() and request.strip():
+                mission_templates.append((name, request))
+
         return cls(
             model=model,
             provider=provider,
@@ -444,6 +471,8 @@ class MindspaceSettings:
             pinned_paths=pinned_paths,
             mission_resume_automatically=mission_resume_automatically,
             mission_reduce_motion=mission_reduce_motion,
+            mission_default_auto_approve=mission_default_auto_approve,
+            mission_templates=mission_templates,
         )
 
     def save(self, path: str) -> None:
@@ -482,6 +511,8 @@ class MindspaceSettings:
             "missions": {
                 "resumeAutomatically": self.mission_resume_automatically,
                 "reduceMotion": self.mission_reduce_motion,
+                "defaultAutoApprove": self.mission_default_auto_approve,
+                "templates": [{"name": name, "request": request} for name, request in self.mission_templates],
             },
         }
         with open(path, 'w', encoding='utf-8') as f:

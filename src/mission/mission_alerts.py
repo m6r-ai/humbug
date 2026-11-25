@@ -14,6 +14,7 @@ class MissionAlertKind(Enum):
     REPLIED = auto()
     FAILED = auto()
     STUCK = auto()
+    PLAN_READY = auto()
 
 
 @dataclass(frozen=True)
@@ -38,6 +39,7 @@ _STATUS_ALERTS = {
     MissionStatus.REPLIED: MissionAlertKind.REPLIED,
     MissionStatus.FAILED: MissionAlertKind.FAILED,
     MissionStatus.STUCK: MissionAlertKind.STUCK,
+    MissionStatus.PLAN_READY: MissionAlertKind.PLAN_READY,
 }
 
 

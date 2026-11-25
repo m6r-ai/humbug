@@ -3,14 +3,15 @@
 import asyncio
 import dataclasses
 from collections.abc import Callable, Coroutine
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 import os
+import re
 import zlib
 from typing import Any
 
 from PySide6.QtCore import QTimer, Signal
-from PySide6.QtWidgets import QInputDialog, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFileDialog, QInputDialog, QVBoxLayout, QWidget
 
 from ai import AIConversationSettings
 
@@ -21,22 +22,27 @@ from desktop.language.language_strings import LanguageStrings
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.mission_tab.mission_display import (
-    MissionActivityView, MissionAgentView, MissionChatView, MissionChipView, MissionDecisionView, MissionHeaderView,
-    MissionGlanceView, MissionPhaseView, MissionResultView, MissionStatTarget, MissionStatView, MissionStepState,
-    MissionStepView, MissionTone, MissionView
+    MissionActivityView, MissionAgentView, MissionChatView, MissionChipView, MissionDecisionView, MissionDiffLineKind,
+    MissionDiffLineView, MissionDiffView, MissionHeaderView, MissionFileView, MissionGlanceView, MissionPhaseView,
+    MissionResultView, MissionStatTarget, MissionStatView, MissionStepState, MissionStepView, MissionTone, MissionView
 )
+from desktop.mission_tab.mission_report import report_as_word, report_files, save_report
 from desktop.mission_tab.mission_service_holder import MissionServiceHolder
 from desktop.mission_tab.mission_widget import MissionWidget
 from desktop.status_message import StatusMessage
 from desktop.style_manager import StyleManager
+from desktop.user.user_manager import UserError, UserManager
 from desktop.tab import TabBase
+from diff_context.diff_context import JournalDiffTarget
 from mindspace.mindspace_settings import MindspaceSettings
 from mission import (
     AutoApproveLevel, Mission, MissionActivity, MissionActivityKind, MissionAgent, MissionAgentState, MissionDecision,
     MissionError, MissionExchange, MissionMode, MissionPhase, MissionService, MissionSnapshot, MissionSpeaker,
     MissionStatus, MissionTask, MissionTaskStatus
 )
-from mission.mission_snapshot import MissionStuckReason
+from mission.mission_snapshot import (
+    MissionFileChange, MissionFileChangeKind, MissionFileChangeState, MissionFileDiffLineKind, MissionStuckReason
+)
 
 
 _STATUS_TONES = {
@@ -52,6 +58,7 @@ _STATUS_TONES = {
     MissionStatus.FAILED: MissionTone.DANGER,
     MissionStatus.RECOVERING: MissionTone.WARNING,
     MissionStatus.STUCK: MissionTone.WARNING,
+    MissionStatus.PLAN_READY: MissionTone.WARNING,
 }
 
 _TASK_STATES = {
@@ -93,6 +100,7 @@ _ACTIVITY_STYLES = {
     MissionActivityKind.AUTO_RETRIED: ("↻", MissionTone.INFO),
     MissionActivityKind.RECOVERY_GAVE_UP: ("!", MissionTone.DANGER),
     MissionActivityKind.LOOP_DETECTED: ("∞", MissionTone.WARNING),
+    MissionActivityKind.PLAN_APPROVED: ("▶", MissionTone.SUCCESS),
 }
 
 # Colour of the current stage of the journey, where it differs from the status colour.
@@ -108,6 +116,7 @@ _STAGE_TONES = {
     MissionStatus.FAILED: MissionTone.DANGER,
     MissionStatus.RECOVERING: MissionTone.WARNING,
     MissionStatus.STUCK: MissionTone.WARNING,
+    MissionStatus.PLAN_READY: MissionTone.WARNING,
 }
 
 
@@ -176,6 +185,9 @@ def agent_names(mission_id: str, agents: list[MissionAgent]) -> dict[str, str]:
 # Service changes arrive in bursts while conversations stream, so redraws are coalesced.
 _REFRESH_DELAY_MS = 120
 
+# How often the time a working mission has been at it is brought up to date.
+_CLOCK_MS = 30000
+
 
 _SPEECH_REQUEST_LENGTH = 90
 
@@ -240,6 +252,17 @@ def _duration_text(seconds: float) -> str:
     return f"{secs}s"
 
 
+def _token_count(count: int) -> str:
+    """Format a token count compactly, such as "950", "12.4k" or "1.2M"."""
+    if count >= 1_000_000:
+        return f"{count / 1_000_000:.1f}M"
+
+    if count >= 1000:
+        return f"{count / 1000:.1f}k"
+
+    return str(count)
+
+
 def _local_time(moment: datetime, with_seconds: bool) -> str:
     """Format a timestamp in local time."""
     return moment.astimezone().strftime("%H:%M:%S" if with_seconds else "%H:%M")
@@ -272,6 +295,7 @@ class MissionTab(TabBase):
         self._agent_display_names: dict[str, str] = {}
         self._lead_conversation_path = ""
         self._new_mission_auto_approve = AutoApproveLevel.OFF
+        self._new_mission_review_plan = False
         # AI settings the user chose for the next mission's lead, if they chose any.
         self._new_mission_settings: AIConversationSettings | None = None
         self._settings_dialog: ConversationSettingsDialog | None = None
@@ -288,9 +312,13 @@ class MissionTab(TabBase):
         self._refresh_timer.setSingleShot(True)
         self._refresh_timer.setInterval(_REFRESH_DELAY_MS)
         self._refresh_timer.timeout.connect(self._refresh)
+        # While the mission on screen is working, how long it has been at it is kept up to date.
+        self._clock_timer = QTimer(self)
+        self._clock_timer.setInterval(_CLOCK_MS)
+        self._clock_timer.timeout.connect(self._refresh)
 
         self._widget.mission_selected.connect(self._on_mission_selected)
-        self._widget.new_mission_requested.connect(self._on_new_mission_requested)
+        self._widget.new_mission_requested.connect(self.show_new_mission)
         self._widget.submit_requested.connect(self._on_submit_requested)
         self._widget.attach_requested.connect(self._on_attach_requested)
         self._widget.settings_requested.connect(self._on_settings_requested)
@@ -299,6 +327,14 @@ class MissionTab(TabBase):
         self._widget.task_stop_requested.connect(self._on_task_stop_requested)
         self._widget.auto_approve_selected.connect(self._on_auto_approve_selected)
         self._widget.new_mission_auto_approve_selected.connect(self._on_new_mission_auto_approve_selected)
+        self._widget.new_mission_review_plan_toggled.connect(self._on_new_mission_review_plan_toggled)
+        self._widget.new_mission_level_remembered.connect(self._on_new_mission_level_remembered)
+        self._widget.start_work_requested.connect(self._on_start_work_requested)
+        self._widget.file_open_requested.connect(self._on_file_open_requested)
+        self._widget.file_undo_requested.connect(self._on_file_undo_requested)
+        self._widget.file_review_requested.connect(self._on_file_review_requested)
+        self._widget.file_diff_requested.connect(self._on_file_diff_requested)
+        self._widget.report_export_requested.connect(self._on_report_export_requested)
         self._widget.resume_requested.connect(self._on_resume_requested)
         self._widget.retry_requested.connect(self._on_retry_requested)
         self._widget.auto_resume_toggled.connect(self._on_auto_resume_toggled)
@@ -309,7 +345,13 @@ class MissionTab(TabBase):
         self._widget.carry_on_requested.connect(self._on_carry_on_requested)
         self._widget.remove_requested.connect(self._on_remove_requested)
         self._widget.mission_rename_requested.connect(self._rename_mission)
+        self._widget.template_save_requested.connect(self._save_template)
+        self._widget.template_delete_requested.connect(self._delete_template)
         self._widget.mission_delete_requested.connect(self._delete_mission)
+        self._widget.mission_archive_requested.connect(self._archive_mission)
+        self._widget.mission_rerun_requested.connect(self._on_rerun_requested)
+        self._widget.guide_dismissed.connect(self._on_guide_dismissed)
+        self._widget.set_guide_visible(not UserManager().settings().mission_guide_dismissed)
         self._widget.conversation_requested.connect(self._on_conversation_requested)
         self._widget.decision_approved.connect(lambda d: self._answer(lambda s: s.approve(d)))
         self._widget.wait_finish_requested.connect(self._on_wait_finish_requested)
@@ -335,6 +377,7 @@ class MissionTab(TabBase):
 
         self._service = MissionServiceHolder().service_for(self._mindspace_manager.mindspace())
         self._service.add_listener(self._on_service_changed)
+        self._start_new_missions_at_default()
         self._refresh()
 
     def _on_service_changed(self) -> None:
@@ -373,6 +416,7 @@ class MissionTab(TabBase):
             MissionStatus.FAILED: strings.mission_status_failed,
             MissionStatus.RECOVERING: strings.mission_status_recovering,
             MissionStatus.STUCK: strings.mission_status_stuck,
+            MissionStatus.PLAN_READY: strings.mission_status_plan_ready,
         }[status]
 
     def _task_text(self, status: MissionTaskStatus) -> str:
@@ -549,6 +593,7 @@ class MissionTab(TabBase):
             MissionStatus.FAILED: strings.mission_say_error,
             MissionStatus.RECOVERING: strings.mission_say_reconnecting,
             MissionStatus.STUCK: strings.mission_say_stuck,
+            MissionStatus.PLAN_READY: strings.mission_say_plan_ready,
         }
         if snapshot.status in idle_speech:
             return idle_speech[snapshot.status]
@@ -626,6 +671,7 @@ class MissionTab(TabBase):
             MissionActivityKind.RECOVERY_SCHEDULED: strings.mission_activity_recovery_scheduled.format(entry.detail),
             MissionActivityKind.AUTO_RETRIED: strings.mission_activity_auto_retried.format(entry.detail),
             MissionActivityKind.RECOVERY_GAVE_UP: strings.mission_activity_recovery_gave_up.format(entry.detail),
+            MissionActivityKind.PLAN_APPROVED: strings.mission_activity_plan_approved,
             MissionActivityKind.LOOP_DETECTED: strings.mission_activity_loop_detected.format(
                 self._tool_action(subject, entry.detail, entry.more)
             ),
@@ -712,7 +758,7 @@ class MissionTab(TabBase):
             progress_text=strings.mission_progress.format(percent),
             can_stop=snapshot.status in (
                 MissionStatus.PLANNING, MissionStatus.RUNNING, MissionStatus.NEEDS_YOU, MissionStatus.INTERRUPTED,
-                MissionStatus.PAUSED, MissionStatus.RECOVERING, MissionStatus.STUCK
+                MissionStatus.PAUSED, MissionStatus.RECOVERING, MissionStatus.STUCK, MissionStatus.PLAN_READY
             ),
             can_resume=snapshot.status == MissionStatus.INTERRUPTED and not classic,
             is_classic=classic,
@@ -732,12 +778,20 @@ class MissionTab(TabBase):
             paused=not classic and mission.paused and not mission.stopped and snapshot.status != MissionStatus.STUCK,
             recovery_text="" if classic else self._recovery_text(snapshot),
             recovery_error=snapshot.recovery.error if snapshot.recovery is not None and not classic else "",
+            plan_ready=not classic and snapshot.status == MissionStatus.PLAN_READY,
+            failure_text=self._failure_text(snapshot.failure_code) if snapshot.status == MissionStatus.FAILED else "",
+            failure_detail=snapshot.failure_message,
             stuck_text="" if classic else self._stuck_text(snapshot),
             steps_text=(
                 strings.mission_steps_count.format(mission.completed_count(), len(mission.tasks))
                 if mission.tasks and not classic else ""
             ),
             next_text="" if classic else self._next_text(snapshot),
+            timing_text=self._timing_text(snapshot),
+            tokens_text=self._tokens_text(mission),
+            tokens_detail=strings.mission_tokens_detail.format(
+                _token_count(mission.input_tokens), _token_count(mission.output_tokens)
+            ) if mission.input_tokens or mission.output_tokens else "",
         )
         stats = [
             MissionStatView(str(len(mission.tasks)), strings.mission_plan_filter_all, MissionStatTarget.ALL_STEPS),
@@ -805,13 +859,236 @@ class MissionTab(TabBase):
             completed=completed,
             report_text=strings.mission_report_stats.format(
                 mission.completed_count(), len(mission.tasks), len(snapshot.agents)
-            ),
+            ) + (f"  ·  {self._tokens_text(mission)}" if self._tokens_text(mission) else ""),
             results=results,
             report_message=report_message,
             conversation=conversation,
             glance=None if classic else self._glance_view(snapshot, lead_view),
             working_on_text="" if classic else self._working_on_text(snapshot),
         )
+
+    def _file_view(self, change: MissionFileChange) -> MissionFileView:
+        """Turn a file the mission changed into its display record."""
+        strings = self._strings()
+        glyph, tone, kind_text = {
+            MissionFileChangeKind.CREATED: ("+", MissionTone.SUCCESS, strings.mission_file_created),
+            MissionFileChangeKind.MODIFIED: ("✎", MissionTone.ACCENT, strings.mission_file_modified),
+            MissionFileChangeKind.DELETED: ("−", MissionTone.DANGER, strings.mission_file_deleted),
+        }[change.kind]
+        if change.changes > 1:
+            kind_text = strings.mission_file_times.format(kind_text, change.changes)
+
+        state_text = {
+            MissionFileChangeState.CURRENT: "",
+            MissionFileChangeState.UNDONE: strings.mission_file_undone,
+            MissionFileChangeState.CHANGED_SINCE: strings.mission_file_changed_since,
+        }[change.state]
+        exists = self._service is not None and os.path.exists(
+            os.path.join(self._service.mindspace_path(), change.path)
+        )
+        return MissionFileView(
+            path=change.path,
+            glyph=glyph,
+            tone=tone,
+            kind_text=kind_text,
+            state_text=state_text,
+            can_undo=change.state == MissionFileChangeState.CURRENT,
+            can_open=exists,
+            lines_added=change.lines_added,
+            lines_removed=change.lines_removed,
+            lines_text=(
+                strings.mission_file_lines.format(change.lines_added, change.lines_removed)
+                if change.lines_added is not None and change.lines_removed is not None else ""
+            ),
+            review_sequence=change.before_sequence,
+        )
+
+    def _files_summary(self, changes: list[MissionFileChange]) -> str:
+        """Sum up what a mission did to the user's files: how many it created, changed and deleted, and by how much."""
+        strings = self._strings()
+        parts = []
+        for kind, text in (
+            (MissionFileChangeKind.CREATED, strings.mission_files_created),
+            (MissionFileChangeKind.MODIFIED, strings.mission_files_changed),
+            (MissionFileChangeKind.DELETED, strings.mission_files_deleted),
+        ):
+            count = sum(1 for change in changes if change.kind == kind)
+            if count:
+                parts.append(text.format(count))
+
+        counted = [c for c in changes if c.lines_added is not None and c.lines_removed is not None]
+        if counted:
+            parts.append(strings.mission_files_lines.format(
+                sum(c.lines_added or 0 for c in counted), sum(c.lines_removed or 0 for c in counted)
+            ))
+
+        return "  ·  ".join(parts)
+
+    def _on_file_diff_requested(self, path: str) -> None:
+        """Show what the selected mission did to a file, line by line."""
+        if self._service is None or self._selected_mission_id is None:
+            return
+
+        strings = self._strings()
+        diff = self._service.file_diff(self._selected_mission_id, path)
+        if diff is None:
+            self._widget.set_file_diff(path, MissionDiffView([], strings.mission_file_diff_unavailable))
+            return
+
+        kinds = {
+            MissionFileDiffLineKind.ADDED: MissionDiffLineKind.ADDED,
+            MissionFileDiffLineKind.REMOVED: MissionDiffLineKind.REMOVED,
+            MissionFileDiffLineKind.CONTEXT: MissionDiffLineKind.CONTEXT,
+            MissionFileDiffLineKind.GAP: MissionDiffLineKind.GAP,
+        }
+        lines = [
+            MissionDiffLineView(
+                kinds[line.kind],
+                strings.mission_file_diff_gap.format(line.skipped) if line.kind == MissionFileDiffLineKind.GAP
+                else line.text,
+                str(line.old_number) if line.old_number is not None else "",
+                str(line.new_number) if line.new_number is not None else "",
+            )
+            for line in diff.lines
+        ]
+        note = (
+            strings.mission_file_diff_more.format(diff.more) if diff.more
+            else "" if lines else strings.mission_file_diff_empty
+        )
+        self._widget.set_file_diff(path, MissionDiffView(lines, note))
+
+    def _on_file_review_requested(self, path: str, sequence: int) -> None:
+        """Compare a file the mission changed, as it was before the mission, with how it is now."""
+        if self._service is None:
+            return
+
+        self._mindspace_manager.mindspace().contexts().open(
+            context_type="diff",
+            path=os.path.join(self._service.mindspace_path(), path),
+            title=os.path.basename(path) or path,
+            is_ephemeral=True,
+            initial_model=JournalDiffTarget(sequence=sequence),
+        )
+
+    def _on_file_open_requested(self, path: str) -> None:
+        """Open a file the mission changed in an editor tab."""
+        if self._service is None:
+            return
+
+        self._mindspace_manager.mindspace().contexts().open(
+            context_type="editor",
+            path=os.path.join(self._service.mindspace_path(), path),
+            title=os.path.basename(path) or path,
+        )
+
+    def _on_file_undo_requested(self, path: str) -> None:
+        """Undo the selected mission's changes to one file, or to every file when path is "", after confirmation."""
+        service = self._service
+        mission_id = self._selected_mission_id
+        if service is None or mission_id is None:
+            return
+
+        strings = self._strings()
+        question = strings.mission_files_undo_confirm.format(path) if path else strings.mission_files_undo_all_confirm
+        result = MessageBox.show_message(
+            self, MessageBoxType.QUESTION, strings.mission_files_undo_title, question,
+            [MessageBoxButton.YES, MessageBoxButton.NO], destructive=True
+        )
+        if result != MessageBoxButton.YES:
+            return
+
+        try:
+            failures = service.undo_file_changes(mission_id, path or None)
+
+        except MissionError as e:
+            self._show_error(str(e))
+            return
+
+        if failures:
+            self._show_error(strings.mission_files_undo_failed.format("\n".join(failures)))
+
+    def _on_report_export_requested(self, report: str) -> None:
+        """Ask where to keep the selected mission's report, and save it there as a Word document."""
+        if self._service is None or self._selected_mission_id is None or not report:
+            return
+
+        strings = self._strings()
+        mission = next((m for m in self._service.missions() if m.mission_id == self._selected_mission_id), None)
+        name = re.sub(r"[^\w\- ]+", "", mission.title if mission is not None else "").strip() or "Mission report"
+        path, _filter = QFileDialog.getSaveFileName(
+            self, strings.mission_report_save_word_title, os.path.join(self._service.mindspace_path(), f"{name}.docx"),
+            strings.mission_report_word_filter
+        )
+        if not path:
+            return
+
+        try:
+            save_report(self._mindspace_manager.mindspace(), path, report_as_word(report))
+
+        except OSError as e:
+            self._show_error(strings.mission_report_save_failed.format(str(e)))
+
+    def _failure_text(self, code: str) -> str:
+        """
+        Say, for the kind of error that failed a mission, what went wrong and what the user can do about it.
+
+        AI services name their errors differently: some give an HTTP status, others a name such as
+        "authentication_error", so both are recognised.  An error of no known kind gets the general notice.
+        """
+        strings = self._strings()
+        code = code.casefold()
+        status = int(code) if code.isdigit() else 0
+        if status in (401, 403) or "auth" in code or "permission" in code:
+            return strings.mission_failed_key
+
+        if status == 404 or "not_found" in code:
+            return strings.mission_failed_model
+
+        if status in (400, 413, 422) or "invalid_request" in code or "context" in code:
+            return strings.mission_failed_request
+
+        if status == 429 or "rate" in code:
+            return strings.mission_failed_rate
+
+        if code == "network_error":
+            return strings.mission_failed_network
+
+        if status >= 500 or "server" in code or "overload" in code:
+            return strings.mission_failed_server
+
+        if code == "backend_error":
+            return strings.mission_failed_backend
+
+        if code == "cancelled":
+            return strings.mission_failed_cut_short
+
+        return ""
+
+    def _tokens_text(self, mission: Mission) -> str:
+        """Say how many tokens a mission has used, or return "" if none have been counted."""
+        total = mission.input_tokens + mission.output_tokens
+        return self._strings().mission_tokens.format(_token_count(total)) if total else ""
+
+    def _timing_text(self, snapshot: MissionSnapshot) -> str:
+        """Say how long a working mission has been at it, or, when it is not working, when it was started."""
+        strings = self._strings()
+        if snapshot.working_since is not None:
+            elapsed = (datetime.now(timezone.utc) - snapshot.working_since).total_seconds()
+            if elapsed < 60:
+                return strings.mission_working_just_now
+
+            return strings.mission_working_for.format(_duration_text(elapsed - elapsed % 60))
+
+        try:
+            started = datetime.fromisoformat(snapshot.mission.created_at)
+
+        except ValueError:
+            return ""
+
+        local = started.astimezone()
+        today = datetime.now(timezone.utc).astimezone().date()
+        when = local.strftime("%H:%M") if local.date() == today else local.strftime("%d %b, %H:%M")
+        return strings.mission_started_at.format(when)
 
     def _next_text(self, snapshot: MissionSnapshot) -> str:
         """Name the step a mission that is still going will do next, or say that its plan is done."""
@@ -1086,10 +1363,13 @@ class MissionTab(TabBase):
                 tone=_STATUS_TONES[status],
                 selected=mission.mission_id == self._selected_mission_id,
                 waiting_text=str(waiting[mission.mission_id]) if mission.mission_id in waiting else "",
+                archived=mission.archived,
+                search_text=f"{mission.title}\n{mission.objective}",
             ))
 
         self._widget.set_missions(chips, self._selected_mission_id is None)
         self._widget.set_auto_resume(service.resume_automatically())
+        self._widget.set_templates(service.templates())
         self._widget.set_reduce_motion(service.reduce_motion())
 
         snapshot = service.snapshot(self._selected_mission_id) if self._selected_mission_id else None
@@ -1101,9 +1381,26 @@ class MissionTab(TabBase):
             for agent in snapshot.agents:
                 self._agent_display_names[agent.title] = names[agent.context_id]
 
+        working = snapshot is not None and snapshot.working_since is not None
+        if working and not self._clock_timer.isActive():
+            self._clock_timer.start()
+
+        elif not working:
+            self._clock_timer.stop()
+
         view = self._mission_view(snapshot) if snapshot is not None else None
         if snapshot is not None and view is not None:
             view = self._with_celebration(service, snapshot, view)
+            changes = service.file_changes(snapshot.mission.mission_id)
+            view = dataclasses.replace(
+                view,
+                files=[self._file_view(change) for change in changes],
+                files_summary=self._files_summary(changes),
+                report_files=(
+                    report_files(view.report_message, self._mindspace_manager.mindspace())
+                    if view.report_message else []
+                ),
+            )
 
         self._widget.set_mission(view)
         # Each mission's inbox holds its own requests, and those from conversations outside any
@@ -1158,8 +1455,8 @@ class MissionTab(TabBase):
         self._starting_new = False
         self._refresh()
 
-    def _on_new_mission_requested(self) -> None:
-        """Show the new-mission welcome."""
+    def show_new_mission(self) -> None:
+        """Show the new-mission welcome, ready for a request to be typed."""
         self._selected_mission_id = None
         self._starting_new = True
         self._refresh()
@@ -1246,7 +1543,8 @@ class MissionTab(TabBase):
         """Start a mission and show it."""
         try:
             mission = await service.create_mission(
-                objective, self._new_mission_auto_approve, attachments, self._new_mission_settings
+                objective, self._new_mission_auto_approve, attachments, self._new_mission_settings,
+                review_plan=self._new_mission_review_plan
             )
 
         except MissionError as e:
@@ -1256,9 +1554,9 @@ class MissionTab(TabBase):
 
         self._selected_mission_id = mission.mission_id
         self._starting_new = False
-        # Each new mission starts from Off unless the user chooses again, as auto-approval is opt-in.
-        self._new_mission_auto_approve = AutoApproveLevel.OFF
-        self._widget.set_new_mission_auto_approve(AutoApproveLevel.OFF.value)
+        # Each new mission starts from the level the user chose for every mission, Off unless they chose
+        # one, as auto-approval is opt-in.
+        self._start_new_missions_at_default()
         self._new_mission_settings = None
         self._on_service_changed()
 
@@ -1336,13 +1634,60 @@ class MissionTab(TabBase):
 
         self._refresh()
 
+    def _on_new_mission_review_plan_toggled(self, review: bool) -> None:
+        """Remember whether the next mission's plan is to be approved before its work starts."""
+        self._new_mission_review_plan = review
+
+    def _on_start_work_requested(self) -> None:
+        """Approve the selected mission's plan, so that its lead carries it out."""
+        service = self._service
+        mission_id = self._selected_mission_id
+        if service is None or mission_id is None:
+            return
+
+        async def start() -> None:
+            try:
+                await service.approve_plan(mission_id)
+
+            except MissionError as e:
+                self._show_error(str(e))
+
+        self._run(start())
+
     def _on_new_mission_auto_approve_selected(self, value: str) -> None:
         """Choose the auto-approve level the next mission starts with, confirming before approving everything."""
         level = next((lvl for lvl in AutoApproveLevel if lvl.value == value), None)
         if level is not None and self._confirm_auto_approve(level):
             self._new_mission_auto_approve = level
 
-        self._widget.set_new_mission_auto_approve(self._new_mission_auto_approve.value)
+        service = self._service
+        remembered = service is not None and service.default_auto_approve() == self._new_mission_auto_approve
+        self._widget.set_new_mission_auto_approve(
+            self._new_mission_auto_approve.value, remembered and self._new_mission_auto_approve != AutoApproveLevel.OFF
+        )
+
+    def _start_new_missions_at_default(self) -> None:
+        """Set the next mission's auto-approve level to the one the user chose for every mission."""
+        default = self._service.default_auto_approve() if self._service is not None else AutoApproveLevel.OFF
+        self._new_mission_auto_approve = default
+        self._widget.set_new_mission_auto_approve(default.value, default != AutoApproveLevel.OFF)
+
+    def _on_new_mission_level_remembered(self, remember: bool) -> None:
+        """Start every new mission at the chosen level, or go back to starting them at Off."""
+        if self._service is None:
+            return
+
+        level = self._new_mission_auto_approve if remember else AutoApproveLevel.OFF
+        try:
+            self._service.set_default_auto_approve(level)
+
+        except MissionError as e:
+            self._show_error(str(e))
+
+        self._widget.set_new_mission_auto_approve(
+            self._new_mission_auto_approve.value,
+            self._service.default_auto_approve() == self._new_mission_auto_approve and remember
+        )
 
     def _confirm_auto_approve(self, level: AutoApproveLevel) -> bool:
         """Return whether the user wants this level, asking first if it approves everything."""
@@ -1469,6 +1814,47 @@ class MissionTab(TabBase):
         if self._selected_mission_id is not None:
             self._delete_mission(self._selected_mission_id)
 
+    def _on_guide_dismissed(self, dismissed: bool) -> None:
+        """Put the guide to how Mission Control works away for good, or bring it back."""
+        try:
+            UserManager().update_settings_fields(mission_guide_dismissed=dismissed)
+
+        except UserError as e:
+            self._show_error(str(e))
+
+        self._widget.set_guide_visible(not dismissed)
+
+    def _on_rerun_requested(self, mission_id: str) -> None:
+        """Start a new mission from an earlier one, and show it."""
+        service = self._service
+        if service is None:
+            return
+
+        async def rerun() -> None:
+            try:
+                mission = await service.run_again(mission_id or self._selected_mission_id or "")
+
+            except MissionError as e:
+                self._show_error(self._strings().mission_error_start.format(str(e)))
+                return
+
+            self._selected_mission_id = mission.mission_id
+            self._starting_new = False
+            self._on_service_changed()
+
+        self._run(rerun())
+
+    def _archive_mission(self, mission_id: str, archived: bool) -> None:
+        """Archive a mission, or bring it back."""
+        if self._service is None:
+            return
+
+        try:
+            self._service.set_archived(mission_id, archived)
+
+        except MissionError as e:
+            self._show_error(str(e))
+
     def _delete_mission(self, mission_id: str) -> None:
         """Delete a mission from Mission Control after confirmation; its conversations are kept."""
         if self._service is None:
@@ -1517,6 +1903,36 @@ class MissionTab(TabBase):
 
         except MissionError as e:
             self._show_error(self._strings().mission_error_rename.format(str(e)))
+
+    def _save_template(self, request: str) -> None:
+        """Ask for a name for what the user typed, and keep it as a template."""
+        if self._service is None or not request:
+            return
+
+        strings = self._strings()
+        first_line = request.splitlines()[0][:60]
+        name, accepted = QInputDialog.getText(
+            self, strings.mission_template_name_title, strings.mission_template_name_prompt, text=first_line
+        )
+        if not accepted or not name.strip():
+            return
+
+        try:
+            self._service.save_template(name, request)
+
+        except MissionError as e:
+            self._show_error(str(e))
+
+    def _delete_template(self, name: str) -> None:
+        """Delete a saved template."""
+        if self._service is None:
+            return
+
+        try:
+            self._service.delete_template(name)
+
+        except MissionError as e:
+            self._show_error(str(e))
 
     def tool_name(self) -> str:
         return "mission"

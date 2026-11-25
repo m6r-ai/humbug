@@ -21,6 +21,7 @@ class MissionStatus(Enum):
     FAILED = auto()
     RECOVERING = auto()
     STUCK = auto()
+    PLAN_READY = auto()
 
 
 class MissionAgentState(Enum):
@@ -64,6 +65,8 @@ class MissionActivityKind(Enum):
     AUTO_RETRIED = auto()
     RECOVERY_GAVE_UP = auto()
     LOOP_DETECTED = auto()
+    PLAN_APPROVED = auto()
+    FILES_UNDONE = auto()
 
 
 @dataclass(frozen=True)
@@ -106,6 +109,86 @@ class MissionStuck:
     agent_title: str = ""
     tool_name: str = ""
     tool_target: str = ""
+
+
+class MissionFileChangeKind(Enum):
+    """What a mission did to a file, taking all its changes to the file together."""
+    CREATED = auto()
+    MODIFIED = auto()
+    DELETED = auto()
+
+
+class MissionFileDiffLineKind(Enum):
+    """What a line of a file's diff is: added, removed, unchanged, or a run of unchanged lines left out."""
+    ADDED = auto()
+    REMOVED = auto()
+    CONTEXT = auto()
+    GAP = auto()
+
+
+@dataclass(frozen=True)
+class MissionFileDiffLine:
+    """
+    One line of what a mission did to a file.
+
+    Attributes:
+        kind: Whether the line was added, removed, left as it was, or stands for unchanged lines left out
+        text: The line, without its line ending, or "" for a gap
+        old_number: The line's number before the mission, or None for an added line or a gap
+        new_number: The line's number as the mission left the file, or None for a removed line or a gap
+        skipped: For a gap, how many unchanged lines it stands for
+    """
+    kind: MissionFileDiffLineKind
+    text: str
+    old_number: int | None = None
+    new_number: int | None = None
+    skipped: int = 0
+
+
+@dataclass(frozen=True)
+class MissionFileDiff:
+    """
+    What a mission did to a file, line by line, as the file was before the mission against how it left it.
+
+    Attributes:
+        lines: The changed lines with a few unchanged ones around each change, and gaps between
+        more: How many further lines there were, left out to keep the diff short
+    """
+    lines: list[MissionFileDiffLine]
+    more: int
+
+
+class MissionFileChangeState(Enum):
+    """Where a file the mission changed stands now."""
+    CURRENT = auto()
+    UNDONE = auto()
+    CHANGED_SINCE = auto()
+
+
+@dataclass(frozen=True)
+class MissionFileChange:
+    """
+    A file a mission changed, as the change journal recorded it.
+
+    Attributes:
+        path: The file, relative to the mindspace
+        kind: Whether the mission created, changed or deleted it
+        changes: How many times the mission changed it
+        state: Whether its changes are still there, were undone, or something has changed it since
+        changed_at: When the mission last changed it, as an ISO-8601 time
+        lines_added: Lines the mission added, or None when the file is not text or its versions are not held
+        lines_removed: Lines the mission removed, or None when the file is not text or its versions are not held
+        before_sequence: The journal entry holding the file as it was before the mission, or None
+            when there was no such version (the mission created it) or it is no longer held
+    """
+    path: str
+    kind: MissionFileChangeKind
+    changes: int
+    state: MissionFileChangeState
+    changed_at: str
+    lines_added: int | None = None
+    lines_removed: int | None = None
+    before_sequence: int | None = None
 
 
 @dataclass(frozen=True)
@@ -240,6 +323,9 @@ class MissionSnapshot:
         conversation: The user's messages, the lead's replies and the tools it used, oldest first
         recovery: The automatic retry waiting to happen, if the lead's last turn failed and will be retried
         stuck: Why Mission Control stopped driving the mission, if it looked stuck
+        working_since: When the mission last set to work, while it is working, or None
+        failure_code: What kind of error ended the lead's latest turn, as the AI service named it, when it failed
+        failure_message: What the AI service said about that error
     """
     mission: Mission
     status: MissionStatus
@@ -251,3 +337,6 @@ class MissionSnapshot:
     conversation: list[MissionExchange] = field(default_factory=list)
     recovery: MissionRecovery | None = None
     stuck: MissionStuck | None = None
+    working_since: datetime | None = None
+    failure_code: str = ""
+    failure_message: str = ""
