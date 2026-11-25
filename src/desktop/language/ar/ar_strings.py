@@ -771,6 +771,7 @@ def get_arabic_strings() -> LanguageStrings:
         mission_milestone_round="اكتمل: {0}",
         mission_milestone_next="التالي: {0}",
         mission_milestone_planning="التالي: التخطيط لما تبقى من الهدف",
+        mission_milestone_checks="التالي: إنجاح فحوص الإنجاز",
         mission_milestone_follow_up="التالي: التخطيط لطلبك الجديد",
         mission_glance_now="الآن",
         mission_chips_back="عرض المهام السابقة",
@@ -1028,6 +1029,25 @@ def get_arabic_strings() -> LanguageStrings:
         mission_file_diff_more="لا تظهر هنا {0} أسطر أخرى. يفتح «عرض التغييرات» المقارنة كاملة.",
         mission_file_diff_unavailable="لم يعد بالإمكان عرض هذا التغيير سطرًا بسطر: لم تعد نسخة سابقة من الملف محفوظة.",
         mission_file_diff_empty="لم يتغير أي سطر.",
+        mission_checks_option="إضافة فحوص الإنجاز (اختياري)",
+        mission_checks_placeholder="فحص واحد في كل سطر، مثل:\nينجح npm test\nالملف POC/about.html مرتبط من لوحة المعلومات",
+        mission_checks_explain=(
+            "لا تُعدّ المهمة منجزة إلا عندما يفيد القائد بنجاح كل فحص. إذا فشل أحدها يُعاد القائد "
+            "لإصلاحه، حتى 3 مرات."
+        ),
+        mission_checks_title="فحوص الإنجاز",
+        mission_checks_hint="يشغّل القائد كل فحص ويفيد بما رآه. الأوامر التي يشغّلها ما زالت تحتاج إلى موافقتك.",
+        mission_checks_count="نجح {0} من {1}",
+        mission_check_passed="نجح",
+        mission_check_failed="فشل",
+        mission_check_pending="لم يُشغَّل بعد",
+        mission_stuck_checks=(
+            "ظلت فحوص الإنجاز تفشل بعد {0} محاولات، فتوقف مركز المهام عن إعادة القائد. اطّلع على "
+            "النتائج، ثم أرسل توجيهًا أو اضغط «تابع» لمنحه {0} محاولات أخرى."
+        ),
+        mission_activity_checks_passed="نجحت جميع فحوص الإنجاز ({0})",
+        mission_activity_checks_failed="فحوص الإنجاز غير الناجحة: {0}",
+        mission_activity_files_undone="تراجعت عن التغييرات في {0} ملفات",
         mission_file_open="فتح",
         mission_file_undo="تراجع",
         mission_file_open_tip="فتح {0} في تبويب المحرر",
@@ -1055,6 +1075,16 @@ def get_arabic_strings() -> LanguageStrings:
         mission_remember_level_tip="يُحفظ لهذا المشروع. لا يُحفظ «كل شيء» أبدًا: يُختار ويُؤكَّد لكل مهمة",
         mission_status_plan_ready="الخطة جاهزة",
         mission_say_plan_ready="هذه خطتي. هل أبدأ؟",
+        mission_say_plan_edited="لقد غيّرت الخطة. هل أتابع بالخطة المعدّلة؟",
+        mission_step_skipped="متخطاة",
+        mission_step_skip="تخطَّ",
+        mission_step_unskip="أدرِج",
+        mission_step_move_tip="اسحب لنقل هذه الخطوة، أو اضغط Alt+أعلى أو Alt+أسفل",
+        mission_plan_arrange_hint="اسحب الخطوات لتغيير ترتيبها، أو تخطَّ ما لا تريده، قبل بدء العمل.",
+        mission_plan_yes="نعم، ابدأ",
+        mission_plan_no="لا",
+        mission_composer_plan_change="أخبر القائد بما يجب تغييره في الخطة… ({key} للإرسال)",
+        mission_activity_plan_approved_edited="وافقت على الخطة مع تعديلاتك",
         mission_activity_plan_approved="وافقت على الخطة",
         mission_start_work="ابدأ العمل",
         mission_plan_ready_notice=(

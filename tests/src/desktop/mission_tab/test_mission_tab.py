@@ -22,6 +22,7 @@ from mission import (
     AutoApproveLevel, Mission, MissionAgent, MissionAgentState, MissionDecision, MissionExchange, MissionMode,
     MissionPhase, MissionSnapshot, MissionSpeaker, MissionStatus, MissionTask, MissionTaskStatus
 )
+from mission.mission import MissionCheckResult
 from mission.mission_snapshot import (
     MissionActivity, MissionActivityKind, MissionFileChange, MissionFileChangeKind, MissionFileChangeState,
     MissionFileDiff, MissionFileDiffLine, MissionFileDiffLineKind, MissionRecovery, MissionStuck, MissionStuckReason
@@ -33,7 +34,8 @@ from desktop.mission_tab import mission_widget as mission_widget_module
 from desktop.mission_tab import mission_scene as mission_scene_module
 from desktop.mission_tab import mission_network as mission_network_module
 from desktop.mission_tab.mission_display import (
-    MissionActivityView, MissionAgentView, MissionChatView, MissionChipView, MissionDecisionView, MissionDiffLineKind,
+    MissionActivityView, MissionAgentView, MissionChatView, MissionCheckView, MissionChipView, MissionDecisionView,
+    MissionDiffLineKind,
     MissionDiffLineView, MissionDiffView, MissionFileView, MissionGlanceView,
     MissionHeaderView, MissionPhaseView,
     MissionResultView, MissionStatTarget,
@@ -4269,6 +4271,86 @@ class TestPlanReady:
         assert started == [True]
         tab.deleteLater()
 
+    def test_lead_asks_whether_to_start_and_answers_from_its_bubble(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """The lead's bubble asks whether to start, with Yes to start the work and No to ask for changes."""
+        tab = MissionTab("mission")
+        lead = MissionAgent("lead", "Mission-1", True, MissionAgentState.IDLE, "")
+        view = tab._mission_view(_snapshot(MissionStatus.PLAN_READY, agents=[lead]))  # pylint: disable=protected-access
+        agent = view.agents[0]
+        assert agent.asks_to_start and agent.speech == "Here's my plan. Shall I start?"
+
+        widget = tab._widget  # pylint: disable=protected-access
+        widget.show()
+        widget.set_mission(view)
+        started: list[bool] = []
+        widget.start_work_requested.connect(lambda: started.append(True))
+        buttons = {b.text(): b for b in widget._agent_network.findChildren(QPushButton) if b.text()}  # pylint: disable=protected-access
+        assert {"Yes, start", "No"} <= set(buttons)
+
+        buttons["No"].click()
+        assert not started and widget.focusWidget() is widget._input  # pylint: disable=protected-access
+        assert widget._input.placeholderText().startswith("Tell the lead what to change in the plan")  # pylint: disable=protected-access
+        buttons["Yes, start"].click()
+        assert started == [True] and not buttons["Yes, start"].isEnabled()
+        tab.deleteLater()
+
+    def test_changed_plan_is_asked_about_afresh(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """Once the user has changed the plan, the lead asks whether to go ahead with the changed plan."""
+        tab = MissionTab("mission")
+        lead = MissionAgent("lead", "Mission-1", True, MissionAgentState.IDLE, "")
+        snapshot = _snapshot(MissionStatus.PLAN_READY, agents=[lead])
+        snapshot.mission.tasks.append(MissionTask(task_id="2", title="Write", status=MissionTaskStatus.STOPPED))
+        snapshot.mission.skipped_tasks = ["2"]
+        view = tab._mission_view(snapshot)  # pylint: disable=protected-access
+
+        assert view.agents[0].speech == "You changed the plan. Shall I go ahead with the changed plan?"
+        assert [(s.arrangeable, s.skipped, s.status_text, s.can_stop) for s in view.steps] == [
+            (True, False, "Pending", False), (True, True, "Skipped", False)
+        ]
+        assert view.header.steps_text.startswith("0 of 1")
+        tab.deleteLater()
+
+    def test_steps_can_be_moved_and_skipped_only_while_the_plan_waits(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Arrangeable steps have a handle and Skip; moving and skipping ask for the new plan."""
+        widget = MissionWidget()
+        steps = [
+            dataclasses.replace(_step(n, MissionStepState.PENDING), arrangeable=True) for n in ("1", "2", "3")
+        ]
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), steps=steps))
+        asked: list[tuple[list[str], list[str]]] = []
+        widget.plan_rearranged.connect(lambda order, skipped: asked.append((order, skipped)))
+        handles = widget.findChildren(QLabel, "MissionStepHandle")
+        assert len(handles) == 3
+
+        widget._move_step("3", "1", False)  # pylint: disable=protected-access
+        widget._move_step("1", "3", True)  # pylint: disable=protected-access
+        next(b for b in widget.findChildren(QPushButton) if b.text() == "Skip").click()
+        assert asked == [(["3", "1", "2"], []), (["2", "3", "1"], []), (["1", "2", "3"], ["1"])]
+
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), steps=[_step("1", MissionStepState.PENDING)]))
+        rows = [r for r in widget.findChildren(mission_widget_module._StepRow) if not r.isHidden()]  # pylint: disable=protected-access
+        assert len(rows) == 1
+        assert not rows[0].findChildren(QLabel, "MissionStepHandle")
+        assert not [b for b in rows[0].findChildren(QPushButton) if b.text() == "Skip"]
+        widget.deleteLater()
+
+    def test_alt_arrows_move_a_step(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Alt+Up and Alt+Down move the focused step one place, without a mouse."""
+        widget = MissionWidget()
+        steps = [
+            dataclasses.replace(_step(n, MissionStepState.PENDING), arrangeable=True) for n in ("1", "2", "3")
+        ]
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), steps=steps))
+        asked: list[list[str]] = []
+        widget.plan_rearranged.connect(lambda order, _skipped: asked.append(order))
+        rows = widget.findChildren(mission_widget_module._StepRow)  # pylint: disable=protected-access
+        second = next(row for row in rows if "Step 2" in row.accessibleName())
+
+        QTest.keyClick(second, Qt.Key.Key_Up, Qt.KeyboardModifier.AltModifier)
+        QTest.keyClick(second, Qt.Key.Key_Down, Qt.KeyboardModifier.AltModifier)
+        assert asked == [["2", "1", "3"], ["1", "3", "2"]]
+        widget.deleteLater()
+
     def test_running_mission_has_no_start_button(self, qapp) -> None:  # pylint: disable=unused-argument
         """A mission at work shows neither the notice nor the button."""
         widget = MissionWidget()
@@ -4281,7 +4363,7 @@ class TestPlanReady:
         tab = MissionTab("mission")
         created: list[bool] = []
 
-        async def create(_objective, _level, _attachments, _settings, review_plan=False):
+        async def create(_objective, _level, _attachments, _settings, review_plan=False, done_checks=None):  # pylint: disable=unused-argument
             created.append(review_plan)
             raise mission_tab_module.MissionError("stop here")
 
@@ -4289,6 +4371,92 @@ class TestPlanReady:
         tab._show_error = lambda _message: None  # type: ignore[method-assign]  # pylint: disable=protected-access
         asyncio.run(tab._create_mission(types.SimpleNamespace(create_mission=create), "Do it", []))  # type: ignore[arg-type]  # pylint: disable=protected-access
         assert created == [True]
+        tab.deleteLater()
+
+
+class TestDoneChecksScreen:
+    """Done checks are optional on the new-mission screen, and shown with their results on the mission."""
+
+    def test_checks_box_appears_only_when_asked_for(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The box is hidden until ticked; its lines are the checks, and unticking means there are none."""
+        widget = MissionWidget()
+        assert widget._checks_editor.isHidden()  # pylint: disable=protected-access
+        widget._checks_option.setChecked(True)  # pylint: disable=protected-access
+        assert not widget._checks_editor.isHidden()  # pylint: disable=protected-access
+        widget._checks_input.setPlainText("npm test passes\n\n  Docs updated  ")  # pylint: disable=protected-access
+        assert widget.done_checks() == ["npm test passes", "Docs updated"]
+
+        widget._checks_option.setChecked(False)  # pylint: disable=protected-access
+        assert widget.done_checks() == []
+        widget.deleteLater()
+
+    def test_checks_reach_the_new_mission_and_are_then_cleared(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """The checks written are what the mission starts with, and the next mission starts without them."""
+        tab = MissionTab("mission")
+        created: list[list[str] | None] = []
+
+        async def create(_objective, _level, _attachments, _settings, review_plan=False, done_checks=None):  # pylint: disable=unused-argument
+            created.append(done_checks)
+            return types.SimpleNamespace(mission_id="m")
+
+        tab._widget._checks_option.setChecked(True)  # pylint: disable=protected-access
+        tab._widget._checks_input.setPlainText("npm test passes")  # pylint: disable=protected-access
+        tab._on_service_changed = lambda: None  # type: ignore[method-assign]  # pylint: disable=protected-access
+        asyncio.run(tab._create_mission(types.SimpleNamespace(create_mission=create), "Do it", []))  # type: ignore[arg-type]  # pylint: disable=protected-access
+
+        assert created == [["npm test passes"]]
+        assert tab._widget.done_checks() == []  # pylint: disable=protected-access
+        tab.deleteLater()
+
+    def test_checks_show_their_results(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """Each check shows passed, failed or not run yet, with what the lead saw, and the count passed."""
+        tab = MissionTab("mission")
+        mission = Mission(mission_id="m", objective="o", title="t", lead_path="l.conv", created_at="")
+        mission.done_checks = ["npm test", "Linked", "Docs"]
+        mission.check_results = [MissionCheckResult("npm test", True, "42 passed"), MissionCheckResult("Linked", False, "no link")]
+
+        views = tab._check_views(mission)  # pylint: disable=protected-access
+        assert [(v.glyph, v.state_text, v.evidence) for v in views] == [
+            ("✓", "Passed", "42 passed"), ("✗", "Failed", "no link"), ("○", "Not run yet", "")
+        ]
+        assert tab._checks_summary(mission) == "1/3 passed"  # pylint: disable=protected-access
+        mission.done_checks = []
+        assert tab._checks_summary(mission) == ""  # pylint: disable=protected-access
+        tab.deleteLater()
+
+    def test_card_lists_the_checks(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The Done Checks card shows each check and its result, and is hidden for a mission without checks."""
+        widget = MissionWidget()
+        widget.set_mission(_view(completed=False, stage=2))
+        assert widget._checks_card.isHidden()  # pylint: disable=protected-access
+
+        view = dataclasses.replace(
+            _view(completed=False, stage=2), checks_summary="1/1 passed",
+            checks=[MissionCheckView("npm test", "✓", MissionTone.SUCCESS, "Passed", "42 passed")],
+        )
+        widget.set_mission(view)
+        labels = [label.text() for label in widget._checks_card.findChildren(QLabel)]  # pylint: disable=protected-access
+        assert not widget._checks_card.isHidden()  # pylint: disable=protected-access
+        assert "npm test" in labels and "Passed  ·  42 passed" in labels
+        widget.deleteLater()
+
+    def test_every_activity_kind_can_be_shown(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """Whatever happened in a mission, the feed has words for it."""
+        tab = MissionTab("mission")
+        for kind in MissionActivityKind:
+            entry = MissionActivity(kind, "Lead", "2", "m", datetime(2026, 11, 25, tzinfo=timezone.utc))
+            assert tab._activity_view(entry).text  # pylint: disable=protected-access
+
+        tab.deleteLater()
+
+    def test_failing_checks_explain_why_the_mission_waits(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """A mission waiting because its checks kept failing says so, and how to carry on."""
+        tab = MissionTab("mission")
+        snapshot = types.SimpleNamespace(
+            status=MissionStatus.STUCK, stuck=MissionStuck(reason=MissionStuckReason.CHECKS_FAILING, count=3)
+        )
+        text = tab._stuck_text(snapshot)  # type: ignore[arg-type]  # pylint: disable=protected-access
+        assert "3 tries" in text and "Carry on" in text
         tab.deleteLater()
 
 

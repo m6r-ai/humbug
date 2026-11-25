@@ -681,6 +681,7 @@ class LanguageStrings:
     mission_milestone_round: str
     mission_milestone_next: str
     mission_milestone_planning: str
+    mission_milestone_checks: str
     mission_milestone_follow_up: str
     mission_glance_now: str
     mission_chips_back: str
@@ -874,6 +875,19 @@ class LanguageStrings:
     mission_file_diff_more: str
     mission_file_diff_unavailable: str
     mission_file_diff_empty: str
+    mission_checks_option: str
+    mission_checks_placeholder: str
+    mission_checks_explain: str
+    mission_checks_title: str
+    mission_checks_hint: str
+    mission_checks_count: str
+    mission_check_passed: str
+    mission_check_failed: str
+    mission_check_pending: str
+    mission_stuck_checks: str
+    mission_activity_checks_passed: str
+    mission_activity_checks_failed: str
+    mission_activity_files_undone: str
     mission_file_open: str
     mission_file_undo: str
     mission_file_open_tip: str
@@ -898,6 +912,16 @@ class LanguageStrings:
     mission_remember_level_tip: str
     mission_status_plan_ready: str
     mission_say_plan_ready: str
+    mission_say_plan_edited: str
+    mission_step_skipped: str
+    mission_step_skip: str
+    mission_step_unskip: str
+    mission_step_move_tip: str
+    mission_plan_arrange_hint: str
+    mission_plan_yes: str
+    mission_plan_no: str
+    mission_composer_plan_change: str
+    mission_activity_plan_approved_edited: str
     mission_activity_plan_approved: str
     mission_start_work: str
     mission_plan_ready_notice: str

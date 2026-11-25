@@ -22,7 +22,8 @@ from desktop.language.language_strings import LanguageStrings
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.mission_tab.mission_display import (
-    MissionActivityView, MissionAgentView, MissionChatView, MissionChipView, MissionDecisionView, MissionDiffLineKind,
+    MissionActivityView, MissionAgentView, MissionChatView, MissionCheckView, MissionChipView, MissionDecisionView,
+    MissionDiffLineKind,
     MissionDiffLineView, MissionDiffView, MissionHeaderView, MissionFileView, MissionGlanceView, MissionPhaseView,
     MissionResultView, MissionStatTarget, MissionStatView, MissionStepState, MissionStepView, MissionTone, MissionView
 )
@@ -101,6 +102,9 @@ _ACTIVITY_STYLES = {
     MissionActivityKind.RECOVERY_GAVE_UP: ("!", MissionTone.DANGER),
     MissionActivityKind.LOOP_DETECTED: ("∞", MissionTone.WARNING),
     MissionActivityKind.PLAN_APPROVED: ("▶", MissionTone.SUCCESS),
+    MissionActivityKind.FILES_UNDONE: ("↺", MissionTone.INFO),
+    MissionActivityKind.CHECKS_PASSED: ("✓", MissionTone.SUCCESS),
+    MissionActivityKind.CHECKS_FAILED: ("✗", MissionTone.DANGER),
 }
 
 # Colour of the current stage of the journey, where it differs from the status colour.
@@ -330,6 +334,7 @@ class MissionTab(TabBase):
         self._widget.new_mission_review_plan_toggled.connect(self._on_new_mission_review_plan_toggled)
         self._widget.new_mission_level_remembered.connect(self._on_new_mission_level_remembered)
         self._widget.start_work_requested.connect(self._on_start_work_requested)
+        self._widget.plan_rearranged.connect(self._on_plan_rearranged)
         self._widget.file_open_requested.connect(self._on_file_open_requested)
         self._widget.file_undo_requested.connect(self._on_file_undo_requested)
         self._widget.file_review_requested.connect(self._on_file_review_requested)
@@ -438,13 +443,15 @@ class MissionTab(TabBase):
         task_title: str,
         speech: str = "",
         decision: MissionDecision | None = None,
-        reconnecting: bool = False
+        reconnecting: bool = False,
+        asks_to_start: bool = False
     ) -> MissionAgentView:
         """
         Turn an agent into its display record, named and described by the task it is doing.
 
         reconnecting says the mission will retry the request that failed, so a failed agent is
-        shown as reconnecting rather than as stopped.
+        shown as reconnecting rather than as stopped.  asks_to_start says the agent is the lead
+        asking whether to carry out the plan it drafted, so its bubble offers Yes and No.
         """
         strings = self._strings()
         states = {
@@ -479,6 +486,7 @@ class MissionTab(TabBase):
             wait_seconds=agent.wait_seconds,
             wait_started=agent.wait_started_at.timestamp() if agent.wait_started_at is not None else 0.0,
             model_text=agent.model,
+            asks_to_start=asks_to_start,
         )
 
     def _tool_speech(self, tool_name: str, target: str, done: bool = False) -> str:
@@ -593,7 +601,9 @@ class MissionTab(TabBase):
             MissionStatus.FAILED: strings.mission_say_error,
             MissionStatus.RECOVERING: strings.mission_say_reconnecting,
             MissionStatus.STUCK: strings.mission_say_stuck,
-            MissionStatus.PLAN_READY: strings.mission_say_plan_ready,
+            MissionStatus.PLAN_READY: (
+                strings.mission_say_plan_edited if mission.plan_edited() else strings.mission_say_plan_ready
+            ),
         }
         if snapshot.status in idle_speech:
             return idle_speech[snapshot.status]
@@ -671,7 +681,13 @@ class MissionTab(TabBase):
             MissionActivityKind.RECOVERY_SCHEDULED: strings.mission_activity_recovery_scheduled.format(entry.detail),
             MissionActivityKind.AUTO_RETRIED: strings.mission_activity_auto_retried.format(entry.detail),
             MissionActivityKind.RECOVERY_GAVE_UP: strings.mission_activity_recovery_gave_up.format(entry.detail),
-            MissionActivityKind.PLAN_APPROVED: strings.mission_activity_plan_approved,
+            MissionActivityKind.PLAN_APPROVED: (
+                strings.mission_activity_plan_approved_edited if entry.detail == "edited"
+                else strings.mission_activity_plan_approved
+            ),
+            MissionActivityKind.FILES_UNDONE: strings.mission_activity_files_undone.format(entry.detail),
+            MissionActivityKind.CHECKS_PASSED: strings.mission_activity_checks_passed.format(entry.detail),
+            MissionActivityKind.CHECKS_FAILED: strings.mission_activity_checks_failed.format(entry.detail),
             MissionActivityKind.LOOP_DETECTED: strings.mission_activity_loop_detected.format(
                 self._tool_action(subject, entry.detail, entry.more)
             ),
@@ -783,7 +799,7 @@ class MissionTab(TabBase):
             failure_detail=snapshot.failure_message,
             stuck_text="" if classic else self._stuck_text(snapshot),
             steps_text=(
-                strings.mission_steps_count.format(mission.completed_count(), len(mission.tasks))
+                strings.mission_steps_count.format(mission.completed_count(), mission.planned_count())
                 if mission.tasks and not classic else ""
             ),
             next_text="" if classic else self._next_text(snapshot),
@@ -806,7 +822,10 @@ class MissionTab(TabBase):
             for task in mission.tasks if task.agent.strip()
         }
 
-        steps = self._step_views(mission.tasks, names_by_title, open_agents, can_stop=not classic)
+        steps = self._step_views(
+            mission.tasks, names_by_title, open_agents, can_stop=not classic,
+            arrangeable=snapshot.status == MissionStatus.PLAN_READY and not classic, skipped=mission.skipped_tasks,
+        )
         decisions_by_context = {decision.context_id: decision for decision in snapshot.decisions}
         history = [
             self._phase_view(phase, names_by_title, open_agents) for phase in reversed(mission.history)
@@ -830,6 +849,7 @@ class MissionTab(TabBase):
                 ),
                 decisions_by_context.get(agent.context_id),
                 reconnecting=agent.is_lead and snapshot.status == MissionStatus.RECOVERING,
+                asks_to_start=agent.is_lead and snapshot.status == MissionStatus.PLAN_READY and not classic,
             )
             for agent in snapshot.agents
         ]
@@ -858,7 +878,7 @@ class MissionTab(TabBase):
             history=history,
             completed=completed,
             report_text=strings.mission_report_stats.format(
-                mission.completed_count(), len(mission.tasks), len(snapshot.agents)
+                mission.completed_count(), mission.planned_count(), len(snapshot.agents)
             ) + (f"  ·  {self._tokens_text(mission)}" if self._tokens_text(mission) else ""),
             results=results,
             report_message=report_message,
@@ -902,6 +922,35 @@ class MissionTab(TabBase):
             ),
             review_sequence=change.before_sequence,
         )
+
+    def _check_views(self, mission: Mission) -> list[MissionCheckView]:
+        """Turn a mission's done checks into their display records, each with its latest result."""
+        strings = self._strings()
+        views = []
+        for index, check in enumerate(mission.done_checks):
+            result = mission.check_results[index] if index < len(mission.check_results) else None
+            if result is None:
+                views.append(MissionCheckView(check, "○", MissionTone.NEUTRAL, strings.mission_check_pending))
+
+            elif result.passed:
+                views.append(MissionCheckView(
+                    check, "✓", MissionTone.SUCCESS, strings.mission_check_passed, result.evidence
+                ))
+
+            else:
+                views.append(MissionCheckView(
+                    check, "✗", MissionTone.DANGER, strings.mission_check_failed, result.evidence
+                ))
+
+        return views
+
+    def _checks_summary(self, mission: Mission) -> str:
+        """Say how many of a mission's done checks passed, or return "" when it has none."""
+        if not mission.done_checks:
+            return ""
+
+        passed = sum(1 for view in self._check_views(mission) if view.tone == MissionTone.SUCCESS)
+        return self._strings().mission_checks_count.format(passed, len(mission.done_checks))
 
     def _files_summary(self, changes: list[MissionFileChange]) -> str:
         """Sum up what a mission did to the user's files: how many it created, changed and deleted, and by how much."""
@@ -1127,6 +1176,9 @@ class MissionTab(TabBase):
         if stuck.reason == MissionStuckReason.NO_PROGRESS:
             return strings.mission_stuck_no_progress.format(stuck.count)
 
+        if stuck.reason == MissionStuckReason.CHECKS_FAILING:
+            return strings.mission_stuck_checks.format(stuck.count)
+
         name = self._agent_display_names.get(stuck.agent_title, stuck.agent_title)
         return strings.mission_stuck_repeating.format(self._tool_action(name, stuck.tool_name, stuck.tool_target), stuck.count)
 
@@ -1180,8 +1232,16 @@ class MissionTab(TabBase):
             return f"{text}  ·  {strings.mission_milestone_next.format(upcoming.title)}"
 
         # Every task is done, and the lead is working out what comes next: what the user has just
-        # asked for, or what is left of a goal the finished plan did not meet.
-        planning = strings.mission_milestone_follow_up if mission.follow_up else strings.mission_milestone_planning
+        # asked for, what is left of a goal the finished plan did not meet, or a done check that failed.
+        if mission.follow_up:
+            planning = strings.mission_milestone_follow_up
+
+        elif mission.goal_met and not mission.checks_passed():
+            planning = strings.mission_milestone_checks
+
+        else:
+            planning = strings.mission_milestone_planning
+
         return f"{text}  ·  {planning}"
 
     def _glance_view(self, snapshot: MissionSnapshot, lead: MissionAgentView | None) -> MissionGlanceView:
@@ -1274,12 +1334,22 @@ class MissionTab(TabBase):
         tasks: list[MissionTask],
         names_by_title: dict[str, str],
         open_agents: dict[str, str],
-        can_stop: bool
+        can_stop: bool,
+        arrangeable: bool = False,
+        skipped: list[str] | None = None
     ) -> list[MissionStepView]:
-        """Turn a plan's tasks into step display records."""
+        """
+        Turn a plan's tasks into step display records.
+
+        arrangeable says the user can move steps and skip them, as they can while the plan waits for
+        their approval; skipped names the steps they chose to leave out.
+        """
+        strings = self._strings()
+        skipped = skipped or []
         steps: list[MissionStepView] = []
         for index, task in enumerate(tasks, start=1):
             state, step_tone = _TASK_STATES[task.status]
+            is_skipped = task.task_id in skipped
             # The lead names a delegate by its session ID, a transcript path; tabs are titled by file name.
             agent_title = os.path.splitext(os.path.basename(task.agent.strip()))[0]
             steps.append(MissionStepView(
@@ -1288,13 +1358,18 @@ class MissionTab(TabBase):
                 title=task.title,
                 detail=task.detail,
                 state=state,
-                status_text=self._task_text(task.status),
-                tone=step_tone,
+                status_text=strings.mission_step_skipped if is_skipped else self._task_text(task.status),
+                tone=MissionTone.NEUTRAL if is_skipped else step_tone,
                 progress=task.progress,
                 evidence=task.evidence,
                 agent_title=names_by_title.get(agent_title, agent_title),
                 agent_context_id=open_agents.get(agent_title, ""),
-                can_stop=can_stop and task.status not in (MissionTaskStatus.COMPLETED, MissionTaskStatus.STOPPED),
+                can_stop=(
+                    can_stop and not arrangeable
+                    and task.status not in (MissionTaskStatus.COMPLETED, MissionTaskStatus.STOPPED)
+                ),
+                arrangeable=arrangeable,
+                skipped=is_skipped,
             ))
 
         return steps
@@ -1396,6 +1471,8 @@ class MissionTab(TabBase):
                 view,
                 files=[self._file_view(change) for change in changes],
                 files_summary=self._files_summary(changes),
+                checks=self._check_views(snapshot.mission),
+                checks_summary=self._checks_summary(snapshot.mission),
                 report_files=(
                     report_files(view.report_message, self._mindspace_manager.mindspace())
                     if view.report_message else []
@@ -1544,7 +1621,7 @@ class MissionTab(TabBase):
         try:
             mission = await service.create_mission(
                 objective, self._new_mission_auto_approve, attachments, self._new_mission_settings,
-                review_plan=self._new_mission_review_plan
+                review_plan=self._new_mission_review_plan, done_checks=self._widget.done_checks()
             )
 
         except MissionError as e:
@@ -1554,6 +1631,7 @@ class MissionTab(TabBase):
 
         self._selected_mission_id = mission.mission_id
         self._starting_new = False
+        self._widget.clear_done_checks()
         # Each new mission starts from the level the user chose for every mission, Off unless they chose
         # one, as auto-approval is opt-in.
         self._start_new_missions_at_default()
@@ -1637,6 +1715,17 @@ class MissionTab(TabBase):
     def _on_new_mission_review_plan_toggled(self, review: bool) -> None:
         """Remember whether the next mission's plan is to be approved before its work starts."""
         self._new_mission_review_plan = review
+
+    def _on_plan_rearranged(self, order: list[str], skipped: list[str]) -> None:
+        """Keep the new order of the selected mission's plan, and the steps the user chose to skip."""
+        if self._service is None or self._selected_mission_id is None:
+            return
+
+        try:
+            self._service.edit_plan(self._selected_mission_id, order, skipped)
+
+        except MissionError as e:
+            self._show_error(str(e))
 
     def _on_start_work_requested(self) -> None:
         """Approve the selected mission's plan, so that its lead carries it out."""

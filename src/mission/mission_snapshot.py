@@ -67,6 +67,8 @@ class MissionActivityKind(Enum):
     LOOP_DETECTED = auto()
     PLAN_APPROVED = auto()
     FILES_UNDONE = auto()
+    CHECKS_PASSED = auto()
+    CHECKS_FAILED = auto()
 
 
 @dataclass(frozen=True)
@@ -90,6 +92,7 @@ class MissionStuckReason(Enum):
     """Why Mission Control thinks a mission is stuck."""
     NO_PROGRESS = auto()
     REPEATING = auto()
+    CHECKS_FAILING = auto()
 
 
 @dataclass(frozen=True)
@@ -99,7 +102,8 @@ class MissionStuck:
 
     Attributes:
         reason: What gave it away
-        count: How many continues finished no step, or how many times the action was repeated
+        count: How many continues finished no step, how many times the action was repeated, or how
+            many times the done checks failed
         agent_title: The conversation that repeated itself, for REPEATING
         tool_name: The tool call it repeated, for REPEATING
         tool_target: What that tool call worked on, such as a file or a command, when known

@@ -85,6 +85,8 @@ class AgentNetworkView(QWidget):
     decision_rejected = Signal(str)
     decision_details_requested = Signal(str)
     wait_finish_requested = Signal(str)
+    plan_accepted = Signal()
+    plan_declined = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -121,7 +123,9 @@ class AgentNetworkView(QWidget):
         left_label: str = "{0}",
         more_label: str = "",
         unsure_label: str = "",
-        review_label: str = ""
+        review_label: str = "",
+        yes_label: str = "",
+        no_label: str = ""
     ) -> None:
         """
         Show a mission's agents.
@@ -136,10 +140,12 @@ class AgentNetworkView(QWidget):
             unsure_label: Label of the Unsure button shown in a waiting agent's card
             review_label: Label of the button that opens a destructive request in the inbox, offered in
                 place of Approve so that it is approved only where its target and consequence are shown
+            yes_label: Label of the button that lets the lead carry out the plan it asks about
+            no_label: Label of the button that says the plan is not to be carried out as it is
         """
         self._labels = {
             "approve": approve_label, "reject": reject_label, "finish": finish_label, "left": left_label,
-            "more": more_label, "unsure": unsure_label, "review": review_label
+            "more": more_label, "unsure": unsure_label, "review": review_label, "yes": yes_label, "no": no_label
         }
         speech: dict[str, tuple[str, float]] = {}
         for agent in agents:
@@ -199,6 +205,10 @@ class AgentNetworkView(QWidget):
             if agent.decision_id:
                 wanted[agent.context_id] = (agent.decision_id, agent)
 
+            elif agent.asks_to_start:
+                # Asking again about a changed plan offers the buttons afresh.
+                wanted[agent.context_id] = (f"plan:{agent.speech}", agent)
+
             elif agent.wait_started:
                 wanted[agent.context_id] = (f"wait:{agent.wait_started}", agent)
 
@@ -218,7 +228,9 @@ class AgentNetworkView(QWidget):
                     [self._labels["review"], self._labels["unsure"], self._labels["reject"]]
                     if agent.decision_id and agent.decision_destructive
                     else [self._labels["approve"], self._labels["unsure"], self._labels["reject"], self._labels["more"]]
-                    if agent.decision_id else [self._labels["finish"]]
+                    if agent.decision_id
+                    else [self._labels["yes"], self._labels["no"]] if agent.asks_to_start
+                    else [self._labels["finish"]]
                 )
                 for button, text in zip(buttons, texts):
                     button.setText(text)
@@ -264,6 +276,12 @@ class AgentNetworkView(QWidget):
                 self._buttons[context_id] = (key, [approve, unsure, reject, more])
                 continue
 
+            if agent.asks_to_start:
+                yes = self._make_button(self._labels["yes"], "MissionApprove", self._accept_plan)
+                no = self._make_button(self._labels["no"], "MissionSecondaryButton", self.plan_declined.emit)
+                self._buttons[context_id] = (key, [yes, no])
+                continue
+
             finish = self._make_button(
                 self._labels["finish"], "MissionSecondaryButton", partial(self._finish_wait, context_id)
             )
@@ -277,6 +295,16 @@ class AgentNetworkView(QWidget):
         button.hide()
         button.clicked.connect(lambda _checked=False: action())
         return button
+
+    def _accept_plan(self) -> None:
+        """Say yes to the plan the lead asks about, once: its buttons are disabled until it moves on."""
+        for key, buttons in self._buttons.values():
+            if key.startswith("plan:"):
+                self._release_focus(buttons)
+                for button in buttons:
+                    button.setEnabled(False)
+
+        self.plan_accepted.emit()
 
     def _answer(self, decision_id: str, answered: SignalInstance) -> None:
         """Report an answer given from a card, and stop it being given twice."""

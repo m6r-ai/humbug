@@ -11,7 +11,31 @@ _PLAN_EXAMPLE = (
 )
 
 
-def build_lead_prompt(objective: str, model_name: str = "", review_plan: bool = False) -> str:
+def checks_note(done_checks: list[str]) -> str:
+    """
+    Return the instructions that tell the lead about the user's done checks, or "" when there are none.
+
+    Args:
+        done_checks: The checks the user set, one each
+    """
+    if not done_checks:
+        return ""
+
+    listed = "\n".join(f"{index}. {check}" for index, check in enumerate(done_checks, start=1))
+    return (
+        "\nThe user set these done checks. The mission is accomplished only when every one of them passes:\n\n"
+        f"{listed}\n\n"
+        "Before you report `\"goal_met\": true`, run every check: a command with your tools, anything else by\n"
+        "looking at the result yourself. Then add a `checks` list to the plan block, one entry per check in the\n"
+        "order above, each `{\"check\": \"<the check as written>\", \"passed\": true or false, \"evidence\":\n"
+        "\"<what you saw, such as the command's result, in a sentence or two>\"}`. Report a check as passed only\n"
+        "if you ran it and saw it pass. If any check fails, fix the work, run all the checks again and report them.\n"
+    )
+
+
+def build_lead_prompt(
+    objective: str, model_name: str = "", review_plan: bool = False, done_checks: list[str] | None = None
+) -> str:
     """
     Return the opening message for a mission lead conversation.
 
@@ -29,6 +53,7 @@ def build_lead_prompt(objective: str, model_name: str = "", review_plan: bool = 
         objective: What the user wants to achieve
         model_name: Display name of the AI model the lead runs on, or "" if not known
         review_plan: Whether the user wants to approve the first plan before any of it is carried out
+        done_checks: Checks the user wants passed before the mission counts as done, or None
 
     Returns:
         The message to submit to the lead conversation
@@ -44,7 +69,7 @@ def build_lead_prompt(objective: str, model_name: str = "", review_plan: bool = 
         if review_plan else ""
     )
     return f"""You are the mission lead for a Humbug mission. The user's request is at the end of this message.
-{model_note}{review_note}
+{model_note}{review_note}{checks_note(done_checks or [])}
 First work out what the user actually wants. Do this for the request below and for every later message from the
 user:
 

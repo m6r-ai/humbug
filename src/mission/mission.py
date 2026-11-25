@@ -139,6 +139,44 @@ class MissionTask:
 
 
 @dataclass
+class MissionCheckResult:
+    """
+    What the lead found when it ran one of the user's done checks.
+
+    Attributes:
+        check: The check, as the user wrote it
+        passed: Whether the lead found it passed
+        evidence: What the lead saw, such as a command's result, in a sentence or two
+    """
+    check: str
+    passed: bool
+    evidence: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return the result as a dictionary for storage."""
+        return {"check": self.check, "passed": self.passed, "evidence": self.evidence}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "MissionCheckResult":
+        """
+        Build a result from a dictionary, as stored or as the lead reported it.
+
+        Only a `passed` of exactly true counts as passed, so a result written loosely is a failure
+        rather than a pass.
+
+        Args:
+            data: The result
+        """
+        check = data.get("check")
+        evidence = data.get("evidence")
+        return cls(
+            check=check.strip() if isinstance(check, str) else "",
+            passed=data.get("passed") is True,
+            evidence=evidence.strip() if isinstance(evidence, str) else "",
+        )
+
+
+@dataclass
 class MissionPhase:
     """
     A finished plan, kept in a mission's history when new work starts in the same mission.
@@ -227,6 +265,14 @@ class Mission:
     the mission's, or 0 for a record from before it was kept; and `undone_paths`
     are the files whose changes the user undid from Mission Control.  `archived`
     is set when the user has put the mission away, out of the mission switcher.
+    `done_checks` are the checks the user asked to be passed before the mission
+    counts as done, one each, or none when they set none; `check_results` are the
+    results the lead last reported for them, and `check_rounds` counts the times the
+    lead reported the goal met while a check had not passed.  While a plan waits
+    for the user's approval they may rearrange it: `skipped_tasks` are the steps
+    they chose to leave out, which stay skipped whatever the lead reports later,
+    and `reviewed_order` is the order the lead first gave, kept so that what the
+    user changed can be told and the lead's unchanged plan is not taken as a new one.
     """
     mission_id: str
     objective: str
@@ -259,6 +305,11 @@ class Mission:
     journal_from: int = 0
     undone_paths: list[str] = field(default_factory=list)
     archived: bool = False
+    done_checks: list[str] = field(default_factory=list)
+    check_results: list[MissionCheckResult] = field(default_factory=list)
+    check_rounds: int = 0
+    skipped_tasks: list[str] = field(default_factory=list)
+    reviewed_order: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Return the mission as a JSON-safe dictionary."""
@@ -295,6 +346,11 @@ class Mission:
             "journalFrom": self.journal_from,
             "undonePaths": list(self.undone_paths),
             "archived": self.archived,
+            "doneChecks": list(self.done_checks),
+            "checkResults": [result.to_dict() for result in self.check_results],
+            "checkRounds": self.check_rounds,
+            "skippedTasks": list(self.skipped_tasks),
+            "reviewedOrder": list(self.reviewed_order),
         }
 
     @classmethod
@@ -353,6 +409,13 @@ class Mission:
             journal_from=_count(data.get("journalFrom")),
             undone_paths=_texts(data.get("undonePaths")),
             archived=bool(data.get("archived", False)),
+            done_checks=_texts(data.get("doneChecks")),
+            check_results=[
+                MissionCheckResult.from_dict(r) for r in data.get("checkResults", []) if isinstance(r, dict)
+            ],
+            check_rounds=_count(data.get("checkRounds")),
+            skipped_tasks=_texts(data.get("skippedTasks")),
+            reviewed_order=_texts(data.get("reviewedOrder")),
         )
         if "celebrated" not in data:
             # A record from before completions were remembered: one already finished has been seen finished.
@@ -372,30 +435,64 @@ class Mission:
 
     def is_complete(self) -> bool:
         """
-        Return True when the mission is done: its plan is finished and, where the lead reports it, the goal is met.
+        Return True when the mission is done: its plan is finished, where the lead reports it the goal
+        is met, and every done check the user set has passed.
 
         A lead may finish one plan and still have more to do for the user's goal, so a finished plan
         alone completes only a mission whose lead was never asked to report the goal, or one the user
         cut short by stopping a task: asking the lead for more would undo that choice.
         """
-        return self.plan_finished() and (self.goal_met or not self.reports_goal or bool(self.stopped_tasks))
+        if not self.plan_finished():
+            return False
+
+        # Stopping a task cuts the mission short, which the user chose over its goal and its checks.
+        if self.stopped_tasks:
+            return True
+
+        return (self.goal_met or not self.reports_goal) and self.checks_passed()
+
+    def plan_edited(self) -> bool:
+        """Return True when the user has changed the lead's plan: moved a step, or chosen to skip one."""
+        if self.skipped_tasks:
+            return True
+
+        return bool(self.reviewed_order) and [task.task_id for task in self.tasks] != self.reviewed_order
+
+    def checks_passed(self) -> bool:
+        """
+        Return True when every one of the user's done checks has been reported passed, or there are none.
+
+        The lead reports the results in the order the checks were given, one for each.
+        """
+        if not self.done_checks:
+            return True
+
+        return len(self.check_results) >= len(self.done_checks) and all(
+            result.passed for result in self.check_results[:len(self.done_checks)]
+        )
 
     def progress(self) -> float:
         """
         Return progress through the plan between 0.0 and 1.0.
 
         A task in progress counts as half done so that progress moves while
-        work is under way, not only when tasks finish.
+        work is under way, not only when tasks finish.  A step the user chose to
+        skip is not part of the work, so it counts neither way.
         """
-        if not self.tasks:
+        planned = [task for task in self.tasks if task.task_id not in self.skipped_tasks]
+        if not planned:
             return 0.0
 
         score = 0.0
-        for task in self.tasks:
+        for task in planned:
             if task.status in (MissionTaskStatus.COMPLETED, MissionTaskStatus.STOPPED):
                 score += 1.0
 
             elif task.status == MissionTaskStatus.IN_PROGRESS:
                 score += 0.5
 
-        return score / len(self.tasks)
+        return score / len(planned)
+
+    def planned_count(self) -> int:
+        """Return how many steps the plan holds, leaving out those the user chose to skip."""
+        return sum(1 for task in self.tasks if task.task_id not in self.skipped_tasks)

@@ -773,6 +773,7 @@ def get_english_strings() -> LanguageStrings:
         mission_milestone_round="Finished: {0}",
         mission_milestone_next="Next: {0}",
         mission_milestone_planning="Next: planning what is left of the goal",
+        mission_milestone_checks="Next: getting the done checks to pass",
         mission_milestone_follow_up="Next: planning your new request",
         mission_glance_now="Now",
         mission_chips_back="Show earlier missions",
@@ -1040,6 +1041,26 @@ def get_english_strings() -> LanguageStrings:
             "longer kept."
         ),
         mission_file_diff_empty="No lines changed.",
+        mission_checks_option="Add done checks (optional)",
+        mission_checks_placeholder="One check per line, for example:\nnpm test passes\nPOC/about.html is linked from the dashboard",
+        mission_checks_explain=(
+            "The mission counts as accomplished only when the lead reports every check passed. If one "
+            "fails, the lead is sent back to fix it, up to 3 times."
+        ),
+        mission_checks_title="Done Checks",
+        mission_checks_hint="The lead runs each check and reports what it saw. Commands it runs still need your approval.",
+        mission_checks_count="{0}/{1} passed",
+        mission_check_passed="Passed",
+        mission_check_failed="Failed",
+        mission_check_pending="Not run yet",
+        mission_stuck_checks=(
+            "The done checks still failed after {0} tries, so Mission Control stopped sending the lead "
+            "back. Look at the results under Done Checks, then send guidance, or press Carry on to give "
+            "it {0} more tries."
+        ),
+        mission_activity_checks_passed="All {0} done checks passed",
+        mission_activity_checks_failed="Done checks not passed: {0}",
+        mission_activity_files_undone="You undid the changes to {0} files",
         mission_file_open="Open",
         mission_file_undo="Undo",
         mission_file_open_tip="Open {0} in an editor tab",
@@ -1070,6 +1091,16 @@ def get_english_strings() -> LanguageStrings:
         ),
         mission_status_plan_ready="Plan ready",
         mission_say_plan_ready="Here's my plan. Shall I start?",
+        mission_say_plan_edited="You changed the plan. Shall I go ahead with the changed plan?",
+        mission_step_skipped="Skipped",
+        mission_step_skip="Skip",
+        mission_step_unskip="Include",
+        mission_step_move_tip="Drag to move this step, or press Alt+Up or Alt+Down",
+        mission_plan_arrange_hint="Drag steps to change their order, or skip the ones you don't want, before you start the work.",
+        mission_plan_yes="Yes, start",
+        mission_plan_no="No",
+        mission_composer_plan_change="Tell the lead what to change in the plan… ({key} to submit)",
+        mission_activity_plan_approved_edited="You approved the plan with your changes",
         mission_activity_plan_approved="You approved the plan",
         mission_start_work="Start work",
         mission_plan_ready_notice=(

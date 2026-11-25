@@ -102,3 +102,35 @@ class TestGoalMet:
         ):
             plan = parse_mission_plan(self._plan(goal))
             assert plan is not None and plan.goal_met is met
+
+
+class TestCheckResults:
+    """The lead reports what it found running the user's done checks alongside the plan."""
+
+    @staticmethod
+    def _plan(checks: str) -> str:
+        return (
+            '```mission-plan\n{"title": "T", "summary": "S", "goal_met": true, '
+            '"tasks": [{"id": "1", "title": "Do it", "status": "completed"}]' + checks + '}\n```'
+        )
+
+    def test_results_are_read_in_order(self) -> None:
+        """Each result keeps its check, whether it passed and what the lead saw."""
+        plan = parse_mission_plan(self._plan(
+            ', "checks": [{"check": "npm test", "passed": true, "evidence": "42 passed"}, '
+            '{"check": "Linked", "passed": false, "evidence": "no link"}]'
+        ))
+        assert plan is not None and plan.checks is not None
+        assert [(c.check, c.passed, c.evidence) for c in plan.checks] == [
+            ("npm test", True, "42 passed"), ("Linked", False, "no link")
+        ]
+
+    def test_only_an_explicit_true_passes(self) -> None:
+        """A loosely written result is a failure, not a pass."""
+        plan = parse_mission_plan(self._plan(', "checks": [{"check": "a", "passed": "yes"}]'))
+        assert plan is not None and plan.checks is not None and not plan.checks[0].passed
+
+    def test_plan_without_checks_reports_none(self) -> None:
+        """A plan that says nothing about checks is told apart from one reporting no results."""
+        plan = parse_mission_plan(self._plan(""))
+        assert plan is not None and plan.checks is None

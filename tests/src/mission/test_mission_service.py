@@ -15,7 +15,7 @@ from mindspace.mindspace import Mindspace
 from mindspace.mindspace_settings import MindspaceSettings
 from mission import mission_service as mission_service_module
 from mission.mission_error import MissionError
-from mission.mission_service import MAX_CONTINUES_WITHOUT_PROGRESS, MISSION_REQUESTER, MissionService
+from mission.mission_service import MAX_CHECK_ROUNDS, MAX_CONTINUES_WITHOUT_PROGRESS, MISSION_REQUESTER, MissionService
 from mission.mission_snapshot import (
     MissionActivityKind, MissionAgentState, MissionFileChangeKind, MissionFileChangeState, MissionFileDiffLineKind,
     MissionSpeaker, MissionStatus, MissionStuckReason
@@ -3283,6 +3283,112 @@ class TestPlanReview:
 
         asyncio.run(run())
 
+    def test_plan_can_be_rearranged_before_approval(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Steps can be put in a new order and skipped, which is kept and counted as a change to the plan."""
+        async def run() -> None:
+            service, mission, conversation = await self._reviewed(mindspace, ["pending", "pending", "pending"])
+            await _finish_turn(conversation)
+            assert not mission.plan_edited()
+
+            service.edit_plan(mission.mission_id, ["3", "1", "2"], ["2"])
+
+            assert [task.task_id for task in mission.tasks] == ["3", "1", "2"]
+            assert mission.tasks[2].status == MissionTaskStatus.STOPPED and mission.plan_edited()
+            assert mission.progress() == 0.0 and mission.planned_count() == 2
+            stored = _store(mindspace).load_all()[0]
+            assert stored.skipped_tasks == ["2"] and stored.reviewed_order == ["1", "2", "3"]
+
+            service.edit_plan(mission.mission_id, ["1", "2", "3"], [])
+            assert not mission.plan_edited() and mission.tasks[1].status == MissionTaskStatus.PENDING
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_rearranging_is_refused_outside_review_or_when_it_does_not_fit(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Only a plan waiting for approval changes; an order that loses a step, or skipping every step, is refused."""
+        async def run() -> None:
+            running, started, _conversation = await _start_mission_with_plan(mindspace, ["pending", "pending"])
+            with pytest.raises(MissionError):
+                running.edit_plan(started.mission_id, ["2", "1"], [])
+
+            running.stop()
+            service, mission, conversation = await self._reviewed(mindspace, ["pending", "pending"])
+            await _finish_turn(conversation)
+            for order, skipped in ((["1"], []), (["1", "1"], []), (["1", "2"], ["1", "2"]), (["1", "2"], ["9"])):
+                with pytest.raises(MissionError):
+                    service.edit_plan(mission.mission_id, order, skipped)
+
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_lead_repeating_its_plan_keeps_the_changes_but_a_revised_plan_replaces_them(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """The lead's unchanged plan does not undo the user's changes; a new plan from the lead does."""
+        async def run() -> None:
+            service, mission, conversation = await self._reviewed(mindspace, ["pending", "pending"])
+            await _finish_turn(conversation)
+            service.edit_plan(mission.mission_id, ["2", "1"], [])
+
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["pending", "pending"])
+            )
+            assert [task.task_id for task in mission.tasks] == ["2", "1"]
+
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["pending", "pending", "pending"])
+            )
+            assert [task.task_id for task in mission.tasks] == ["1", "2", "3"] and not mission.plan_edited()
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_approving_a_changed_plan_tells_the_lead_and_keeps_skips(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """The lead is given the new order and the skipped steps, which stay skipped whatever it reports."""
+        async def run() -> None:
+            service, mission, conversation = await self._reviewed(mindspace, ["pending", "pending", "pending"])
+            await _finish_turn(conversation)
+            service.edit_plan(mission.mission_id, ["3", "1", "2"], ["1"])
+
+            await service.approve_plan(mission.mission_id)
+
+            message = submitted[-1][1]
+            assert "changed your plan" in message
+            assert message.index("[3] Task 3") < message.index("[1] Task 1 (skipped)") < message.index("[2] Task 2")
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.activity[0].detail == "edited"
+
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["completed", "pending", "completed"], goal_met=True)
+            )
+            statuses = {task.task_id: task.status for task in mission.tasks}
+            assert statuses == {
+                "1": MissionTaskStatus.STOPPED, "2": MissionTaskStatus.PENDING, "3": MissionTaskStatus.COMPLETED
+            }
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_skipping_a_step_does_not_cut_the_mission_short(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """A mission whose other steps are done is accomplished only when the lead reports the goal met."""
+        async def run() -> None:
+            service, mission, conversation = await self._reviewed(mindspace, ["pending", "pending"])
+            await _finish_turn(conversation)
+            service.edit_plan(mission.mission_id, ["1", "2"], ["2"])
+            await service.approve_plan(mission.mission_id)
+
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["completed", "pending"], goal_met=False)
+            )
+            assert mission.plan_finished() and not mission.is_complete()
+
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["completed", "pending"], goal_met=True)
+            )
+            assert mission.is_complete()
+            service.stop()
+
+        asyncio.run(run())
+
     def test_nothing_to_approve_is_refused(self, mindspace, submitted):  # pylint: disable=unused-argument
         """A mission that did not ask for review, or has no plan yet, has nothing to approve."""
         async def run() -> None:
@@ -3644,6 +3750,153 @@ class TestFileChanges:
             service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
             assert conversation.conversation_id() in _store(mindspace).load_all()[0].conversation_ids
             assert mission.journal_from >= 1
+            service.stop()
+
+        asyncio.run(run())
+
+
+def _checked_plan(results: list[bool] | None, goal_met: bool = True) -> AIMessage:
+    """Return a lead reply with a finished plan, reporting a result for each done check given, or none at all."""
+    checks = "" if results is None else ', "checks": [' + ", ".join(
+        f'{{"check": "Check {i}", "passed": {str(passed).lower()}, "evidence": "saw {i}"}}'
+        for i, passed in enumerate(results, start=1)
+    ) + "]"
+    content = (
+        f'Done.\n```mission-plan\n{{"title": "T", "summary": "S", "goal_met": {str(goal_met).lower()}, '
+        f'"tasks": [{{"id": "1", "title": "Task 1", "status": "completed"}}]{checks}}}\n```'
+    )
+    return AIMessage.create(source=AIMessageSource.AI, content=content, completed=True)
+
+
+async def _start_checked_mission(mindspace, checks: list[str]):
+    """Start a mission with done checks and return the service, mission and lead conversation."""
+    service = MissionService(mindspace)
+    service.start()
+    mission = await service.create_mission("Objective", done_checks=checks)
+    return service, mission, _lead(service, mission).inner_conversation()
+
+
+async def _lead_reports(conversation: AIConversation, message: AIMessage) -> None:
+    """Have the lead report a plan and end its turn."""
+    await conversation._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, message)  # pylint: disable=protected-access
+    await _finish_turn(conversation)
+
+
+class TestDoneChecks:
+    """A mission with done checks is accomplished only once the lead reports every check passed."""
+
+    def test_checks_are_kept_and_given_to_the_lead(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Blank checks are dropped, and the lead's brief lists the rest in order."""
+        async def run() -> None:
+            service, mission, _conversation = await _start_checked_mission(mindspace, ["npm test passes", "  ", "Docs updated"])
+            assert mission.done_checks == ["npm test passes", "Docs updated"]
+            assert _store(mindspace).load_all()[0].done_checks == ["npm test passes", "Docs updated"]
+            brief = submitted[0][1]
+            assert "1. npm test passes" in brief and "2. Docs updated" in brief
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_mission_without_checks_is_briefed_as_before(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Done checks are optional: without them the brief does not mention them."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            await service.create_mission("Objective")
+            assert "done checks" not in submitted[0][1]
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_all_checks_passed_completes_the_mission(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """Reporting the goal met with every check passed finishes the mission, and the feed says so."""
+        async def run() -> None:
+            service, mission, conversation = await _start_checked_mission(mindspace, ["Check 1", "Check 2"])
+            await _lead_reports(conversation, _checked_plan([True, True]))
+
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.status == MissionStatus.COMPLETED
+            assert any(entry.kind == MissionActivityKind.CHECKS_PASSED for entry in snapshot.activity)
+            assert [r.evidence for r in snapshot.mission.check_results] == ["saw 1", "saw 2"]
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_failing_check_sends_the_lead_back(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """The goal reported met with a check failing is not accomplished; the lead is told which check failed."""
+        async def run() -> None:
+            service, mission, conversation = await _start_checked_mission(mindspace, ["Check 1", "Check 2"])
+            await _lead_reports(conversation, _checked_plan([True, False]))
+
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.status != MissionStatus.COMPLETED
+            assert any(entry.kind == MissionActivityKind.CHECKS_FAILED for entry in snapshot.activity)
+            sent_back = submitted[-1][1]
+            assert "Check 2: saw 2" in sent_back and "Check 1" not in sent_back
+            assert snapshot.mission.check_rounds == 1
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_unreported_checks_count_as_not_passed(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """A lead that says it is done without running the checks is asked to run them."""
+        async def run() -> None:
+            service, mission, conversation = await _start_checked_mission(mindspace, ["Check 1"])
+            await _lead_reports(conversation, _checked_plan(None))
+
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.status != MissionStatus.COMPLETED
+            assert "Check 1 (not reported)" in submitted[-1][1]
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_checks_failing_too_often_wait_for_the_user(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """After the checks fail the set number of times the lead is not sent back; Carry on gives it more tries."""
+        async def run() -> None:
+            service, mission, conversation = await _start_checked_mission(mindspace, ["Check 1"])
+            for round_number in range(MAX_CHECK_ROUNDS):
+                # Each round's report differs, as a lead's evidence would.
+                message = _checked_plan([False])
+                message.content = message.content.replace("saw 1", f"saw {round_number}")
+                await _lead_reports(conversation, message)
+
+            sent = len(submitted)
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.status == MissionStatus.STUCK
+            assert snapshot.stuck is not None and snapshot.stuck.reason == MissionStuckReason.CHECKS_FAILING
+
+            service.carry_on(mission.mission_id)
+            for _ in range(5):
+                await asyncio.sleep(0)
+
+            assert mission.check_rounds == 0
+            assert len(submitted) == sent + 1
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_guidance_while_checks_fail_is_about_the_checks(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """A message sent while a check fails is treated as help with the checks, not as a new request."""
+        async def run() -> None:
+            service, mission, conversation = await _start_checked_mission(mindspace, ["Check 1"])
+            await _lead_reports(conversation, _checked_plan([False]))
+
+            await service.send_guidance(mission.mission_id, "The test needs the fixture")
+
+            text = submitted[-1][1]
+            assert "done checks have not all passed" in text and "previous plan is finished" not in text
+            assert mission.check_rounds == 0
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_run_again_keeps_the_checks(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Running a mission again starts it with the same done checks."""
+        async def run() -> None:
+            service, mission, _conversation = await _start_checked_mission(mindspace, ["Check 1"])
+            again = await service.run_again(mission.mission_id)
+            assert again.done_checks == ["Check 1"]
             service.stop()
 
         asyncio.run(run())

@@ -57,6 +57,10 @@ AUTO_CONTINUE_DELAY_SECONDS = 1.5
 # Mission Control stops asking and leaves the mission waiting for the user.
 MAX_CONTINUES_WITHOUT_PROGRESS = 3
 
+# How many times the lead may report the goal met while a done check fails before Mission Control
+# stops sending it back to work and waits for the user.
+MAX_CHECK_ROUNDS = 3
+
 # When a lead's turn fails for a reason that may pass, such as a lost connection, it is tried again
 # after each of these waits in turn, each longer than the last, before the mission is left failed.
 AUTO_RETRY_DELAYS_SECONDS = (15, 30, 60, 120, 300, 600)
@@ -87,9 +91,27 @@ _CONTINUE_TO_GOAL_MESSAGE = (
     "Otherwise plan the next part of the work as a new mission-plan block and carry on with it."
 )
 
+_CHECKS_FAILED_MESSAGE = (
+    "You reported the goal met, but these done checks have not passed:\n\n{0}\n\nFix what makes them fail, "
+    "then run every done check again and report the plan with the `checks` list. Keep `\"goal_met\"` false until "
+    "every check passes."
+)
+
+_CHECKS_GUIDANCE_NOTE = (
+    "(Mission Control: the user's done checks have not all passed yet. Use the message above to get them passing, "
+    "then run every check again and report the plan with the `checks` list.)"
+)
+
 _PLAN_APPROVED_MESSAGE = (
     "The user has approved your plan. Carry it out now, starting with the first unfinished task, and report the "
     "updated plan as you go."
+)
+
+_EDITED_PLAN_APPROVED_MESSAGE = (
+    "The user changed your plan before approving it. Carry out the tasks in this order, keeping their ids, and do "
+    "not do the ones marked skipped:\n\n{0}\n\nReport the plan in this order as you go. Leave the skipped tasks "
+    "in it as they are: Mission Control shows them as skipped. If skipping a task means another has to change, say "
+    "so in that task's progress."
 )
 
 _RESUME_WITHOUT_PLAN_MESSAGE = (
@@ -586,6 +608,10 @@ class MissionService:
         ) or not mission.plan_finished() or (mission.is_complete() and not mission.follow_up):
             return mission
 
+        # A plan reported done while a check fails is still the plan being worked on, not a finished round.
+        if self._checks_failing(mission) and not mission.follow_up:
+            return mission
+
         return replace(
             mission,
             tasks=[],
@@ -718,7 +744,8 @@ class MissionService:
         auto_approve: AutoApproveLevel = AutoApproveLevel.OFF,
         attachments: list[tuple[str, str]] | None = None,
         settings: AIConversationSettings | None = None,
-        review_plan: bool = False
+        review_plan: bool = False,
+        done_checks: list[str] | None = None
     ) -> Mission:
         """
         Start an autonomous mission: record it, start its lead conversation and brief the lead.
@@ -733,6 +760,7 @@ class MissionService:
             attachments: Files for the lead, as (filename, content) pairs
             settings: AI settings for the lead, instead of the mindspace's
             review_plan: Whether the user approves the lead's first plan before any of it is carried out
+            done_checks: Checks that must pass before the mission counts as done, one each; blank ones are dropped
 
         Returns:
             The new mission
@@ -777,6 +805,7 @@ class MissionService:
             reports_goal=True,
             lead_settings=conversation_settings.to_dict(),
             review_plan=review_plan,
+            done_checks=[check.strip() for check in done_checks or [] if check.strip()],
         )
         mission.journal_from = self._mindspace.file_journal().newest_sequence() + 1
         self._store.save(mission)
@@ -790,7 +819,8 @@ class MissionService:
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
             f"Human started mission '{mission.title}'\nobjective: '{objective[:200]}'\n"
-            f"auto-approve: {auto_approve.value}",
+            f"auto-approve: {auto_approve.value}"
+            + (f"\ndone checks: {len(mission.done_checks)}" if mission.done_checks else ""),
             context=self._mindspace.conversation_log_context(conversation)
         )
         if auto_approve == AutoApproveLevel.ALL:
@@ -801,7 +831,7 @@ class MissionService:
             if conversation_settings.model else ""
         )
         await transcript.submit_message(
-            MISSION_REQUESTER, build_lead_prompt(objective, model_name, review_plan),
+            MISSION_REQUESTER, build_lead_prompt(objective, model_name, review_plan, mission.done_checks),
             self._add_attachments(transcript, attachments)
         )
         self._notify()
@@ -847,7 +877,11 @@ class MissionService:
 
         mission.stopped = False
         self._set_active(mission, True)
-        if mission.plan_finished():
+        if mission.plan_finished() and mission.goal_met and not mission.checks_passed():
+            # The work is reported done but a check fails: the message is about getting it to pass.
+            text = f"{text}\n\n{_CHECKS_GUIDANCE_NOTE}"
+
+        elif mission.plan_finished():
             # The lead decides whether this asks for new work or is only a question.  The finished
             # plan stays current until a new plan arrives; the report on it is kept for then.
             if not mission.follow_up:
@@ -857,7 +891,11 @@ class MissionService:
             self._save(mission)
             text = f"{text}\n\n{_FOLLOW_UP_NOTE}"
 
-        # The user has stepped in, so automatic continuing and retrying start afresh.
+        # The user has stepped in, so automatic continuing, retrying and checking start afresh.
+        if mission.check_rounds:
+            mission.check_rounds = 0
+            self._save(mission)
+
         self._continues_without_progress.pop(mission_id, None)
         self._cancel_continue(mission_id)
         self._cancel_recovery(mission_id)
@@ -1000,7 +1038,8 @@ class MissionService:
 
     async def run_again(self, mission_id: str) -> Mission:
         """
-        Start a new mission from an earlier one: the same request, lead settings and choice to review the plan.
+        Start a new mission from an earlier one: the same request, lead settings, choice to review the plan
+        and done checks.
 
         Its auto-approve level carries over too, except approving everything, which rests on the
         user confirming it for each mission: such a mission is run again at the default level.
@@ -1020,7 +1059,8 @@ class MissionService:
 
         level = mission.auto_approve if mission.auto_approve != AutoApproveLevel.ALL else self.default_auto_approve()
         return await self.create_mission(
-            mission.objective, level, settings=self._saved_lead_settings(mission), review_plan=mission.review_plan
+            mission.objective, level, settings=self._saved_lead_settings(mission), review_plan=mission.review_plan,
+            done_checks=mission.done_checks
         )
 
     def set_archived(self, mission_id: str, archived: bool) -> None:
@@ -1519,7 +1559,12 @@ class MissionService:
             self.unpause_mission(mission_id)
             return
 
-        self._stuck.pop(mission_id, None)
+        stuck = self._stuck.pop(mission_id, None)
+        if stuck is not None and stuck.reason == MissionStuckReason.CHECKS_FAILING:
+            # The lead gets as many more tries at the checks as it had to begin with.
+            mission.check_rounds = 0
+            self._save(mission)
+
         self._continues_without_progress.pop(mission_id, None)
         self._record(MissionActivityKind.UNPAUSED, mission.title, "", mission_id)
         self._mindspace.add_interaction(MindspaceLogLevel.INFO, f"Human let stuck mission '{mission.title}' carry on")
@@ -1821,6 +1866,22 @@ class MissionService:
         if mission_id in self._scheduled_continues or not self._can_continue(mission):
             return
 
+        if self._checks_failing(mission):
+            # The lead says it is done but a check fails: it is sent back to fix it, a few times at most.
+            if mission.check_rounds >= MAX_CHECK_ROUNDS:
+                if self._stuck.get(mission_id) is None:
+                    self._stuck[mission_id] = MissionStuck(
+                        reason=MissionStuckReason.CHECKS_FAILING, count=MAX_CHECK_ROUNDS
+                    )
+                    self._record(MissionActivityKind.AUTO_PAUSED, mission.title, "", mission_id)
+
+                return
+
+            self._scheduled_continues[mission_id] = asyncio.get_running_loop().call_later(
+                AUTO_CONTINUE_DELAY_SECONDS, self._start_continue, mission_id
+            )
+            return
+
         completed = mission.completed_count()
         if completed > self._completed_at_last_continue.get(mission_id, -1):
             self._continues_without_progress[mission_id] = 0
@@ -1843,6 +1904,25 @@ class MissionService:
             AUTO_CONTINUE_DELAY_SECONDS, self._start_continue, mission_id
         )
 
+    @staticmethod
+    def _checks_failing(mission: Mission) -> bool:
+        """Return True if the lead has reported a mission's work done while one of its done checks has not passed."""
+        return bool(mission.done_checks) and mission.plan_finished() and mission.goal_met and not mission.checks_passed()
+
+    @staticmethod
+    def _failing_checks(mission: Mission) -> str:
+        """List the done checks that have not passed, with what the lead last saw of each."""
+        lines = []
+        for index, check in enumerate(mission.done_checks):
+            result = mission.check_results[index] if index < len(mission.check_results) else None
+            if result is None:
+                lines.append(f"- {check} (not reported)")
+
+            elif not result.passed:
+                lines.append(f"- {check}" + (f": {result.evidence}" if result.evidence else ""))
+
+        return "\n".join(lines)
+
     def _cancel_continue(self, mission_id: str) -> None:
         """Cancel an automatic continue that has not happened yet."""
         handle = self._scheduled_continues.pop(mission_id, None)
@@ -1864,16 +1944,25 @@ class MissionService:
         if lead is None:
             return
 
-        self._continues_without_progress[mission_id] = self._continues_without_progress.get(mission_id, 0) + 1
-        self._completed_at_last_continue[mission_id] = mission.completed_count()
+        checking = self._checks_failing(mission)
+        if not checking:
+            self._continues_without_progress[mission_id] = self._continues_without_progress.get(mission_id, 0) + 1
+            self._completed_at_last_continue[mission_id] = mission.completed_count()
+
         self._record(MissionActivityKind.AUTO_CONTINUED, mission.title, "", mission_id)
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
             f"Mission Control asked the lead of mission '{mission.title}' to continue",
             context=self._mindspace.conversation_log_context(lead.conversation)
         )
-        # A finished plan whose goal is not yet met needs its next part planned, not its next task done.
-        message = _CONTINUE_TO_GOAL_MESSAGE if mission.plan_finished() else _CONTINUE_MESSAGE
+        # A finished plan whose goal is not yet met needs its next part planned, not its next task done,
+        # and one reported done while a check fails needs that check fixed.
+        if checking:
+            message = _CHECKS_FAILED_MESSAGE.format(self._failing_checks(mission))
+
+        else:
+            message = _CONTINUE_TO_GOAL_MESSAGE if mission.plan_finished() else _CONTINUE_MESSAGE
+
         await lead.transcript.submit_message(MISSION_REQUESTER, message)
         self._notify()
 
@@ -2436,7 +2525,7 @@ class MissionService:
 
         starts_new_work = any(
             task.status not in (MissionTaskStatus.COMPLETED, MissionTaskStatus.STOPPED)
-            and task.task_id not in mission.stopped_tasks
+            and task.task_id not in mission.stopped_tasks and task.task_id not in mission.skipped_tasks
             for task in plan.tasks
         )
         if mission.plan_finished() and starts_new_work:
@@ -2450,8 +2539,17 @@ class MissionService:
             self._archive_plan(mission, report)
             mission.request = follow_up
 
+        if self._awaiting_plan_approval(mission) and mission.reviewed_order:
+            if [task.task_id for task in plan.tasks] == mission.reviewed_order:
+                # The lead's plan as the user found it: their changes to it stand.
+                return
+
+            # The lead revised its plan, as the user asked, so the changes made to the old one go.
+            mission.skipped_tasks = []
+            mission.reviewed_order = []
+
         for task in plan.tasks:
-            if task.task_id in mission.stopped_tasks:
+            if task.task_id in mission.stopped_tasks or task.task_id in mission.skipped_tasks:
                 task.status = MissionTaskStatus.STOPPED
 
         new_tasks = [task.to_dict() for task in plan.tasks]
@@ -2459,16 +2557,33 @@ class MissionService:
         # A name the user chose is kept; the lead's title only names missions the user has not renamed.
         title = mission.title if mission.title_locked else _fit_title(plan.title or mission.title, _MAX_CHOSEN_TITLE_LENGTH)
         summary = plan.summary or mission.summary
+        checks = plan.checks if plan.checks is not None else mission.check_results
         if (
             new_tasks == old_tasks and title == mission.title and summary == mission.summary
-            and plan.goal_met == mission.goal_met
+            and plan.goal_met == mission.goal_met and checks == mission.check_results
         ):
             return
 
         mission.tasks = plan.tasks
         mission.goal_met = plan.goal_met
+        mission.check_results = list(checks)
         mission.title = title
         mission.summary = summary
+        if announce and mission.done_checks and mission.goal_met and mission.plan_finished():
+            # Each time the lead says the work is done, its checks either all passed or sent it back.
+            if mission.checks_passed():
+                self._record(
+                    MissionActivityKind.CHECKS_PASSED, mission.title, str(len(mission.done_checks)), mission.mission_id
+                )
+
+            else:
+                mission.check_rounds += 1
+                failing = sum(
+                    1 for index in range(len(mission.done_checks))
+                    if index >= len(mission.check_results) or not mission.check_results[index].passed
+                )
+                self._record(MissionActivityKind.CHECKS_FAILED, mission.title, str(failing), mission.mission_id)
+
         self._save(mission)
         if announce:
             self._record(MissionActivityKind.PLAN_UPDATED, mission.title, "", mission.mission_id)
@@ -2489,6 +2604,10 @@ class MissionService:
         mission.stopped_tasks = []
         mission.follow_up = ""
         mission.report = ""
+        mission.check_results = []
+        mission.check_rounds = 0
+        mission.skipped_tasks = []
+        mission.reviewed_order = []
         self._continues_without_progress.pop(mission.mission_id, None)
         self._completed_at_last_continue.pop(mission.mission_id, None)
         self._save(mission)
@@ -2969,17 +3088,74 @@ class MissionService:
         if tracked is None:
             raise MissionError("The mission's lead conversation could not be opened")
 
+        edited = mission.plan_edited()
+        if edited:
+            listed = "\n".join(
+                f"{index}. [{task.task_id}] {task.title}" + (" (skipped)" if task.task_id in mission.skipped_tasks else "")
+                for index, task in enumerate(mission.tasks, start=1)
+            )
+            message = _EDITED_PLAN_APPROVED_MESSAGE.format(listed)
+
+        else:
+            message = _PLAN_APPROVED_MESSAGE
+
         mission.plan_approved = True
         self._save(mission)
         self._set_active(mission, True)
         self._continues_without_progress.pop(mission_id, None)
-        self._record(MissionActivityKind.PLAN_APPROVED, mission.title, "", mission_id)
+        self._record(MissionActivityKind.PLAN_APPROVED, mission.title, "edited" if edited else "", mission_id)
         self._mindspace.add_interaction(
             MindspaceLogLevel.INFO,
-            f"Human approved the plan of mission '{mission.title}'",
+            f"Human approved the plan of mission '{mission.title}'" + (" with changes" if edited else ""),
             context=self._mindspace.conversation_log_context(tracked.conversation)
         )
-        await tracked.transcript.submit_message(MISSION_REQUESTER, _PLAN_APPROVED_MESSAGE)
+        await tracked.transcript.submit_message(MISSION_REQUESTER, message)
+        self._notify()
+
+    def edit_plan(self, mission_id: str, order: list[str], skipped: list[str]) -> None:
+        """
+        Rearrange a plan waiting for the user's approval: put its steps in a new order, and skip some.
+
+        The lead is told what changed when the user approves the plan.  Until then the lead's own
+        plan, reported again unchanged, does not undo the user's changes; a revised plan from the
+        lead, asked for by the user, replaces them.
+
+        Args:
+            mission_id: The mission
+            order: Every step's id, in the order the user wants
+            skipped: The ids of the steps to leave out
+
+        Raises:
+            MissionError: If the plan is not waiting for approval, the order does not hold each step
+                once, or every step would be skipped
+        """
+        mission = self._missions.get(mission_id)
+        if mission is None or not self._awaiting_plan_approval(mission):
+            raise MissionError("Only a plan waiting for your approval can be changed")
+
+        by_id = {task.task_id: task for task in mission.tasks}
+        if sorted(order) != sorted(by_id) or len(set(order)) != len(order):
+            raise MissionError("The new order must hold every step once")
+
+        if not set(skipped) <= set(by_id):
+            raise MissionError("There is no such step")
+
+        if set(skipped) == set(by_id):
+            raise MissionError("At least one step has to be kept")
+
+        if not mission.reviewed_order:
+            mission.reviewed_order = [task.task_id for task in mission.tasks]
+
+        mission.tasks = [by_id[task_id] for task_id in order]
+        mission.skipped_tasks = [task_id for task_id in order if task_id in skipped]
+        for task in mission.tasks:
+            if task.task_id in mission.skipped_tasks:
+                task.status = MissionTaskStatus.STOPPED
+
+            elif task.status == MissionTaskStatus.STOPPED:
+                task.status = MissionTaskStatus.PENDING
+
+        self._save(mission)
         self._notify()
 
     def _working_status(self, mission: Mission) -> MissionStatus:
@@ -2988,9 +3164,14 @@ class MissionService:
 
         Until the lead has unfinished work in a plan it is planning: with no plan yet, while it works
         out a follow-up sent after its plan was finished, or while it plans the next part of a goal
-        its finished plan did not meet.  Only the plan that completes the mission runs to its end.
+        its finished plan did not meet.  Only the plan that completes the mission runs to its end,
+        which includes getting its done checks to pass.
         """
-        if not mission.tasks or mission.follow_up or (mission.plan_finished() and not mission.is_complete()):
+        if not mission.tasks or mission.follow_up:
+            return MissionStatus.PLANNING
+
+        # Getting a failing done check to pass is carrying out the plan, not planning anew.
+        if mission.plan_finished() and not mission.is_complete() and not self._checks_failing(mission):
             return MissionStatus.PLANNING
 
         return MissionStatus.RUNNING

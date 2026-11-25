@@ -1,6 +1,7 @@
 """Mission Control dashboard widget."""
 
 import dataclasses
+from functools import partial
 import os
 import re
 import sys
@@ -11,8 +12,9 @@ from PySide6.QtCore import (
     SignalInstance
 )
 from PySide6.QtGui import (
-    QColor, QHideEvent, QIcon, QKeyEvent, QMouseEvent, QPainter, QPainterPath, QPen, QPixmap, QResizeEvent,
-    QLinearGradient, QPaintEvent, QShowEvent, QTextCursor, QTextDocument, QWheelEvent
+    QColor, QDrag, QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent, QHideEvent, QIcon, QKeyEvent,
+    QMouseEvent, QPainter, QPainterPath, QPen, QPixmap, QResizeEvent, QLinearGradient, QPaintEvent, QShowEvent,
+    QTextCursor, QTextDocument, QWheelEvent
 )
 from PySide6.QtWidgets import (
     QApplication, QBoxLayout, QCheckBox, QFrame, QHBoxLayout, QLabel, QLayout, QLayoutItem, QLineEdit, QPlainTextEdit,
@@ -24,7 +26,8 @@ from desktop.attachments_bar import AttachmentsBar
 from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.mission_tab.mission_display import (
-    MissionActivityView, MissionAgentView, MissionChatView, MissionChipView, MissionDecisionView, MissionDiffView,
+    MissionActivityView, MissionAgentView, MissionChatView, MissionCheckView, MissionChipView, MissionDecisionView,
+    MissionDiffView,
     MissionFileView,
     MissionGlanceView, MissionPhaseView, MissionResultView, MissionStatTarget, MissionStatView, MissionStepState,
     MissionStepView, MissionTone, MissionView
@@ -631,6 +634,133 @@ class _ClickableFrame(QFrame):
         super().keyPressEvent(event)
 
 
+# The type a step being dragged to a new place in the plan travels as.
+_STEP_MIME = "application/x-humbug-mission-step"
+
+
+class _StepHandle(QLabel):
+    """The grip a plan step is dragged by, to move it to another place in the plan."""
+
+    def __init__(self, task_id: str, parent: QWidget | None = None) -> None:
+        super().__init__("⠿", parent)
+        self._task_id = task_id
+        self._pressed_at: QPoint | None = None
+        self.setObjectName("MissionStepHandle")
+        self.setCursor(Qt.CursorShape.OpenHandCursor)
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        """Note where a drag may start; the press does not open the step."""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._pressed_at = event.position().toPoint()
+            event.accept()
+            return
+
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        """Start dragging the step once the mouse has moved far enough."""
+        if self._pressed_at is None or not event.buttons() & Qt.MouseButton.LeftButton:
+            return
+
+        if (event.position().toPoint() - self._pressed_at).manhattanLength() < QApplication.startDragDistance():
+            return
+
+        self._pressed_at = None
+        content = QMimeData()
+        content.setData(_STEP_MIME, self._task_id.encode("utf-8"))
+        drag = QDrag(self)
+        drag.setMimeData(content)
+        row = self.parentWidget()
+        if row is not None:
+            drag.setPixmap(row.grab())
+            drag.setHotSpot(self.mapTo(row, event.position().toPoint()))
+
+        drag.exec(Qt.DropAction.MoveAction)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        """Forget the press."""
+        self._pressed_at = None
+        super().mouseReleaseEvent(event)
+
+
+class _StepRow(_ClickableFrame):
+    """
+    A plan step that, while the plan can be rearranged, takes other steps dropped on it.
+
+    A step dropped on the upper half of the row goes before it, and on the lower half after it.
+    Alt+Up and Alt+Down move the focused step without a mouse.
+    """
+
+    def __init__(
+        self, task_id: str, move: Callable[[str, str, bool], None] | None, nudge: Callable[[int], None] | None
+    ) -> None:
+        """
+        Initialise the row.
+
+        Args:
+            task_id: The step the row shows
+            move: Called with the dragged step, this step, and whether it goes after this one; None when
+                the plan cannot be rearranged
+            nudge: Called with -1 or 1 to move this step up or down one place; None when it cannot be
+        """
+        super().__init__()
+        self._task_id = task_id
+        self._move = move
+        self._nudge = nudge
+        self.setAcceptDrops(move is not None)
+
+    def _set_drop_edge(self, edge: str) -> None:
+        """Show where a dropped step would land: a line above or below the row, or none."""
+        if self.property("dropEdge") != edge:
+            self.setProperty("dropEdge", edge)
+            self.style().unpolish(self)
+            self.style().polish(self)
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        """Take a step being dragged over the row."""
+        if event.mimeData().hasFormat(_STEP_MIME):
+            event.acceptProposedAction()
+            return
+
+        event.ignore()
+
+    def dragMoveEvent(self, event: QDragMoveEvent) -> None:
+        """Show whether the step would land above or below this one."""
+        if not event.mimeData().hasFormat(_STEP_MIME):
+            event.ignore()
+            return
+
+        self._set_drop_edge("bottom" if event.position().y() > self.height() / 2 else "top")
+        event.acceptProposedAction()
+
+    def dragLeaveEvent(self, event: QDragLeaveEvent) -> None:
+        """Stop showing where a step would land."""
+        self._set_drop_edge("")
+        super().dragLeaveEvent(event)
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        """Move the dropped step before or after this one."""
+        self._set_drop_edge("")
+        if self._move is None or not event.mimeData().hasFormat(_STEP_MIME):
+            event.ignore()
+            return
+
+        dragged = bytes(event.mimeData().data(_STEP_MIME).data()).decode("utf-8")
+        event.acceptProposedAction()
+        self._move(dragged, self._task_id, event.position().y() > self.height() / 2)
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        """Move the step up or down with Alt+Up and Alt+Down."""
+        if self._nudge is not None and event.modifiers() & Qt.KeyboardModifier.AltModifier and event.key() in (
+            Qt.Key.Key_Up, Qt.Key.Key_Down
+        ):
+            self._nudge(-1 if event.key() == Qt.Key.Key_Up else 1)
+            event.accept()
+            return
+
+        super().keyPressEvent(event)
+
+
 class _EdgeFade(QWidget):
     """A fade over one end of the chip strip, hinting that more missions lie that way."""
 
@@ -861,6 +991,7 @@ class MissionWidget(QWidget):
     new_mission_review_plan_toggled = Signal(bool)
     new_mission_level_remembered = Signal(bool)
     start_work_requested = Signal()
+    plan_rearranged = Signal(list, list)
     file_open_requested = Signal(str)
     file_undo_requested = Signal(str)
     file_review_requested = Signal(str, int)
@@ -907,6 +1038,8 @@ class MissionWidget(QWidget):
         self._report_activity_shown = False
         self._report_source = ""
         self._files: list[MissionFileView] | None = None
+        self._checks: list[MissionCheckView] | None = None
+        self._focus_step_after_render = ""
         # Each file's chevron and the frame its diff unfolds into, the files unfolded, and the diffs shown.
         self._file_rows: dict[str, tuple[QLabel, QFrame]] = {}
         self._expanded_files: set[str] = set()
@@ -924,6 +1057,7 @@ class MissionWidget(QWidget):
         self._new_mission_selected = True
         self._new_chip: QPushButton | None = None
         self._awaiting_reply = False
+        self._plan_ready = False
         self._lead_text = ""
         self._step_filter: MissionStatTarget = MissionStatTarget.ALL_STEPS
         self._expanded_steps: set[str] = set()
@@ -1285,6 +1419,26 @@ class MissionWidget(QWidget):
         self._review_plan_check.setCursor(Qt.CursorShape.PointingHandCursor)
         self._review_plan_check.toggled.connect(self.new_mission_review_plan_toggled)
         layout.addWidget(self._review_plan_check, 0, Qt.AlignmentFlag.AlignHCenter)
+        # Done checks are optional, so their box only appears once asked for.
+        self._checks_option = QCheckBox()
+        self._checks_option.setObjectName("MissionReviewPlan")
+        self._checks_option.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._checks_option.toggled.connect(self._show_checks_editor)
+        layout.addWidget(self._checks_option, 0, Qt.AlignmentFlag.AlignHCenter)
+        self._checks_editor = QWidget()
+        checks_layout = QVBoxLayout(self._checks_editor)
+        checks_layout.setContentsMargins(0, 0, 0, 0)
+        checks_layout.setSpacing(4)
+        self._checks_input = QPlainTextEdit()
+        self._checks_input.setObjectName("MissionChecksInput")
+        self._checks_input.setTabChangesFocus(True)
+        checks_layout.addWidget(self._checks_input)
+        self._checks_explain = QLabel()
+        self._checks_explain.setObjectName("MissionHintText")
+        self._checks_explain.setWordWrap(True)
+        checks_layout.addWidget(self._checks_explain)
+        self._checks_editor.hide()
+        layout.addWidget(self._checks_editor)
 
         layout.addSpacing(8)
         self._examples_label = QLabel()
@@ -1367,6 +1521,24 @@ class MissionWidget(QWidget):
         dismiss_row.addWidget(dismiss)
         layout.addLayout(dismiss_row)
         return guide, title, step_texts, steps, dismiss
+
+    def _show_checks_editor(self, shown: bool) -> None:
+        """Show the box for done checks when the user asks to add some, and hide it again when they do not."""
+        self._checks_editor.setVisible(shown)
+        if shown:
+            self._checks_input.setFocus()
+
+    def done_checks(self) -> list[str]:
+        """Return the done checks the user wrote for the next mission, one per line, or none if they chose none."""
+        if not self._checks_option.isChecked():
+            return []
+
+        return [line.strip() for line in self._checks_input.toPlainText().splitlines() if line.strip()]
+
+    def clear_done_checks(self) -> None:
+        """Forget the done checks once a mission has started with them, so the next one starts without."""
+        self._checks_input.clear()
+        self._checks_option.setChecked(False)
 
     def set_guide_visible(self, visible: bool) -> None:
         """Show the guide to how Mission Control works, or the link that brings it back."""
@@ -1775,6 +1947,8 @@ class MissionWidget(QWidget):
         self._agent_network.wait_finish_requested.connect(
             lambda c: self._answer_in_place(self.wait_finish_requested, c)
         )
+        self._agent_network.plan_accepted.connect(self.start_work_requested)
+        self._agent_network.plan_declined.connect(self.focus_composer)
         agents_layout.addWidget(self._agent_network)
         # The same agents as a list, for reading their states at a glance; folded away by default
         # because the picture above already shows them.
@@ -1798,6 +1972,21 @@ class MissionWidget(QWidget):
         # the plan it is carrying out follows.
         layout.addWidget(self._agents_card)
         layout.addWidget(self._lower_container)
+
+        # The user's done checks, and what the lead found when it last ran them.
+        self._checks_card, checks_layout = self._card()
+        header, self._checks_title, self._checks_pill = self._card_header("✓", MissionTone.SUCCESS)
+        checks_layout.addLayout(header)
+        self._checks_hint = QLabel()
+        self._checks_hint.setObjectName("MissionHintText")
+        self._checks_hint.setWordWrap(True)
+        checks_layout.addWidget(self._checks_hint)
+        self._checks_layout = QVBoxLayout()
+        self._checks_layout.setSpacing(4)
+        checks_layout.addLayout(self._checks_layout)
+        self._checks_card.hide()
+        # They decide whether the mission is done, so they sit straight under the mission itself.
+        layout.insertWidget(layout.indexOf(self._header_card) + 1, self._checks_card)
 
         # What the mission did to the user's files, each change a click from being undone.
         self._files_card, files_layout = self._card()
@@ -2652,6 +2841,11 @@ class MissionWidget(QWidget):
         self._remember_level_check.setText(strings.mission_remember_level)
         self._remember_level_check.setToolTip(strings.mission_remember_level_tip)
         self._review_plan_check.setToolTip(strings.mission_review_plan_tip)
+        self._checks_option.setText(strings.mission_checks_option)
+        self._checks_input.setPlaceholderText(strings.mission_checks_placeholder)
+        self._checks_explain.setText(strings.mission_checks_explain)
+        self._checks_title.setText(strings.mission_checks_title)
+        self._checks_hint.setText(strings.mission_checks_hint)
         self._paused_notice.setText(strings.mission_paused_notice)
         self._interrupted_notice.setText(strings.mission_interrupted_notice)
         self._failed_notice.setText(strings.mission_failed_notice)
@@ -2673,6 +2867,7 @@ class MissionWidget(QWidget):
         self._stats = None
         self._conversation = None
         self._files = None
+        self._checks = None
 
     def set_missions(self, chips: list[MissionChipView], new_mission_selected: bool) -> None:
         """
@@ -2925,18 +3120,52 @@ class MissionWidget(QWidget):
         self._stuck_notice.setText(header.stuck_text)
         self._stuck_notice.setVisible(bool(header.stuck_text))
         self._carry_on_button.setVisible(bool(header.stuck_text))
+        self._plan_ready = header.plan_ready
         self._plan_ready_notice.setVisible(header.plan_ready)
         self._start_work_button.setVisible(header.plan_ready)
         self._lead_context_id = header.lead_context_id
         self._lead_conversation_button.setVisible(failed and bool(header.lead_context_id))
         self._update_composer_target(header.title)
 
+        self._set_checks(view.checks, view.checks_summary)
         self._set_files(view.files, view.files_summary)
         self._set_stats(view.stats)
         self._set_history(view.history)
         self._set_steps(view.steps)
         self._set_agents(view.agents, view.agents_badge)
         self._set_activity(view.activity)
+
+    def _set_checks(self, checks: list[MissionCheckView], summary: str) -> None:
+        """Show the user's done checks, each with its latest result and what the lead saw."""
+        self._checks_card.setVisible(bool(checks))
+        self._checks_pill.set_pill(summary, MissionTone.ACCENT)
+        if checks == self._checks:
+            return
+
+        self._checks = checks
+        _clear_layout(self._checks_layout)
+        for check in checks:
+            row = QFrame()
+            row.setObjectName("MissionFileRow")
+            layout = QHBoxLayout(row)
+            layout.setContentsMargins(6, 6, 6, 6)
+            layout.setSpacing(10)
+            layout.addWidget(GlyphBadge(check.glyph, check.tone, 24), 0, Qt.AlignmentFlag.AlignTop)
+            texts = QVBoxLayout()
+            texts.setSpacing(2)
+            text = QLabel(check.text)
+            text.setObjectName("MissionStepsLabel")
+            text.setWordWrap(True)
+            text.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+            texts.addWidget(text)
+            detail = QLabel(f"{check.state_text}  ·  {check.evidence}" if check.evidence else check.state_text)
+            detail.setObjectName("MissionAgentRole")
+            detail.setWordWrap(True)
+            detail.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+            detail.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            texts.addWidget(detail)
+            layout.addLayout(texts, 1)
+            self._checks_layout.addWidget(row)
 
     def _set_files(self, files: list[MissionFileView], summary: str) -> None:
         """
@@ -3292,10 +3521,16 @@ class MissionWidget(QWidget):
             else strings.mission_plan_empty
         )
 
+        arranging = any(step.arrangeable for step in steps)
+        self._plan_hint.setText(strings.mission_plan_arrange_hint if arranging else strings.mission_plan_hint)
         _clear_layout(self._steps_layout)
         for index, step in enumerate(shown):
             expanded = step.task_id in self._expanded_steps
-            row = _ClickableFrame()
+            row = _StepRow(
+                step.task_id,
+                self._move_step if step.arrangeable else None,
+                partial(self._nudge_step, step.task_id) if step.arrangeable else None,
+            )
             row.setObjectName("MissionStepRowOpen" if expanded else "MissionStepRow")
             row.setCursor(Qt.CursorShape.PointingHandCursor)
             row.setAccessibleName(f"{step.number}. {step.title} — {step.status_text}")
@@ -3303,6 +3538,11 @@ class MissionWidget(QWidget):
             row_layout = QHBoxLayout(row)
             row_layout.setContentsMargins(4, 0, 8, 0)
             row_layout.setSpacing(10)
+            if step.arrangeable:
+                handle = _StepHandle(step.task_id)
+                handle.setToolTip(strings.mission_step_move_tip)
+                row_layout.addWidget(handle)
+
             marker = StepMarker()
             marker.set_step(step.number, step.state, index == 0, index == len(shown) - 1)
             row_layout.addWidget(marker)
@@ -3311,7 +3551,7 @@ class MissionWidget(QWidget):
             text.setContentsMargins(0, 10, 0, 12)
             text.setSpacing(2)
             title = QLabel(step.title)
-            title.setObjectName("MissionStepTitle")
+            title.setObjectName("MissionStepTitleSkipped" if step.skipped else "MissionStepTitle")
             title.setWordWrap(True)
             text.addWidget(title)
             if step.detail:
@@ -3332,11 +3572,55 @@ class MissionWidget(QWidget):
             pill = StatusPill()
             pill.set_pill(step.status_text, step.tone)
             side.addWidget(pill, 0, Qt.AlignmentFlag.AlignTop)
+            if step.arrangeable:
+                skip = QPushButton(strings.mission_step_unskip if step.skipped else strings.mission_step_skip)
+                skip.setObjectName("MissionPlanFilter")
+                skip.setCursor(Qt.CursorShape.PointingHandCursor)
+                skip.clicked.connect(lambda _checked=False, t=step.task_id: self._toggle_skip(t))
+                side.addWidget(skip, 0, Qt.AlignmentFlag.AlignTop)
+
             chevron = QLabel("▼" if expanded else "▶")
             chevron.setObjectName("MissionStepChevron")
             side.addWidget(chevron, 0, Qt.AlignmentFlag.AlignTop)
             row_layout.addLayout(side)
             self._steps_layout.addWidget(row)
+            if step.task_id == self._focus_step_after_render:
+                # A step moved from the keyboard keeps the focus, so it can be moved again.
+                self._focus_step_after_render = ""
+                row.setFocus()
+
+    def _plan_order(self) -> tuple[list[str], list[str]]:
+        """Return the plan's steps in their order, and the ones the user chose to skip."""
+        steps = self._steps or []
+        return [step.task_id for step in steps], [step.task_id for step in steps if step.skipped]
+
+    def _move_step(self, dragged: str, target: str, after: bool) -> None:
+        """Move a dragged step to just before or just after another, and ask for the plan to be kept so."""
+        order, skipped = self._plan_order()
+        if dragged not in order or target not in order or dragged == target:
+            return
+
+        moved = [task_id for task_id in order if task_id != dragged]
+        moved.insert(moved.index(target) + (1 if after else 0), dragged)
+        if moved != order:
+            self.plan_rearranged.emit(moved, skipped)
+
+    def _nudge_step(self, task_id: str, offset: int) -> None:
+        """Move a step one place up or down, and keep the focus on it so it can be moved again."""
+        order, skipped = self._plan_order()
+        index = order.index(task_id) if task_id in order else -1
+        if index < 0 or not 0 <= index + offset < len(order):
+            return
+
+        order[index], order[index + offset] = order[index + offset], order[index]
+        self._focus_step_after_render = task_id
+        self.plan_rearranged.emit(order, skipped)
+
+    def _toggle_skip(self, task_id: str) -> None:
+        """Skip a step the user does not want done, or bring it back."""
+        order, skipped = self._plan_order()
+        skipped = [t for t in skipped if t != task_id] if task_id in skipped else [*skipped, task_id]
+        self.plan_rearranged.emit(order, [t for t in order if t in skipped])
 
     def _set_history(self, history: list[MissionPhaseView]) -> None:
         """Show the plans this mission finished earlier."""
@@ -3528,7 +3812,7 @@ class MissionWidget(QWidget):
         self._agent_network.set_agents(
             agents, strings.mission_approve, strings.mission_reject,
             strings.mission_finish_waiting, strings.mission_wait_left, strings.mission_read_more,
-            strings.mission_unsure, strings.mission_review_request
+            strings.mission_unsure, strings.mission_review_request, strings.mission_plan_yes, strings.mission_plan_no
         )
         spinners: list[BusySpinner] = []
         for agent in agents:
@@ -3909,7 +4193,12 @@ class MissionWidget(QWidget):
 
         # The mission being guided is the one on show, so the composer does not repeat its name.
         self._target_pill.hide()
-        prompt = strings.mission_composer_reply if self._awaiting_reply else strings.mission_composer_guidance
+        # While the plan waits for approval, a message is how the user asks for it to be changed.
+        prompt = (
+            strings.mission_composer_plan_change if self._plan_ready
+            else strings.mission_composer_reply if self._awaiting_reply
+            else strings.mission_composer_guidance
+        )
         self._input.setPlaceholderText(prompt.format(key=submit_key_text()))
 
     def _use_example(self, text: str) -> None:
@@ -4588,6 +4877,15 @@ class MissionWidget(QWidget):
             QToolButton#MissionFileAction:focus {{
                 border: 2px solid {focus};
             }}
+            QPlainTextEdit#MissionChecksInput {{
+                background-color: {card};
+                color: {text};
+                border: 1px solid {input_border};
+                border-radius: 8px;
+                padding: 6px 8px;
+                font-size: {fs * 0.9:.1f}pt;
+                max-height: {round(96 * zoom)}px;
+            }}
             #MissionFileDiff {{
                 border: 1px solid {line};
                 border-radius: 6px;
@@ -4852,6 +5150,22 @@ class MissionWidget(QWidget):
             }}
             #MissionWidget QLabel#MissionStepTitle {{
                 font-weight: 600;
+            }}
+            #MissionWidget QLabel#MissionStepTitleSkipped {{
+                font-weight: 600;
+                color: {muted};
+                text-decoration: line-through;
+            }}
+            #MissionWidget QLabel#MissionStepHandle {{
+                color: {muted};
+                font-size: {fs * 1.15:.1f}pt;
+                padding: 0 2px;
+            }}
+            #MissionStepRow[dropEdge="top"], #MissionStepRowOpen[dropEdge="top"] {{
+                border-top: 2px solid {focus};
+            }}
+            #MissionStepRow[dropEdge="bottom"], #MissionStepRowOpen[dropEdge="bottom"] {{
+                border-bottom: 2px solid {focus};
             }}
             #MissionWidget QLabel#MissionStepDetail {{
                 color: {muted};

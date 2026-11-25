@@ -2,7 +2,7 @@
 
 import os
 
-from mission.mission import Mission, MissionPhase, MissionTask, MissionTaskStatus
+from mission.mission import Mission, MissionCheckResult, MissionPhase, MissionTask, MissionTaskStatus
 from mission.mission_store import MissionStore
 
 
@@ -209,6 +209,78 @@ class TestMissionProgress:
 
         assert mission.is_complete()
         assert mission.completed_count() == 2
+
+
+class TestDoneChecks:
+    """A mission with done checks is complete only once every check is reported passed."""
+
+    @staticmethod
+    def _finished(checks: list[str], results: list[bool]) -> Mission:
+        mission = _mission()
+        for task in mission.tasks:
+            task.status = MissionTaskStatus.COMPLETED
+
+        mission.reports_goal = True
+        mission.goal_met = True
+        mission.done_checks = checks
+        mission.check_results = [MissionCheckResult(f"c{i}", passed) for i, passed in enumerate(results)]
+        return mission
+
+    def test_every_check_must_pass(self):
+        """All checks passed completes the mission; one failed or one not reported does not."""
+        assert self._finished(["a", "b"], [True, True]).is_complete()
+        assert not self._finished(["a", "b"], [True, False]).is_complete()
+        assert not self._finished(["a", "b"], [True]).is_complete()
+
+    def test_no_checks_is_complete_as_before(self):
+        """Without done checks a finished mission whose goal is met is complete."""
+        assert self._finished([], []).is_complete()
+
+    def test_stopping_a_task_ends_the_mission_whatever_the_checks(self):
+        """A mission the user cut short by stopping a task is complete even with a check failing."""
+        mission = self._finished(["a"], [False])
+        mission.stopped_tasks = ["1"]
+        assert mission.is_complete()
+
+    def test_checks_survive_a_round_trip(self):
+        """The checks, their results and the rounds are saved and loaded."""
+        mission = self._finished(["npm test"], [False])
+        mission.check_results = [MissionCheckResult("npm test", False, "2 failures")]
+        mission.check_rounds = 2
+        loaded = Mission.from_dict(mission.to_dict())
+        assert loaded.done_checks == ["npm test"]
+        assert loaded.check_results == [MissionCheckResult("npm test", False, "2 failures")]
+        assert loaded.check_rounds == 2
+
+    def test_record_without_checks_loads_with_none(self):
+        """A record from before done checks loads with none, and so completes as it did."""
+        data = _mission().to_dict()
+        for key in ("doneChecks", "checkResults", "checkRounds"):
+            data.pop(key)
+
+        loaded = Mission.from_dict(data)
+        assert loaded.done_checks == [] and loaded.check_results == [] and loaded.check_rounds == 0
+
+
+class TestSkippedSteps:
+    """Steps the user skips before approving a plan are left out of its progress and kept with the mission."""
+
+    def test_skipped_steps_count_neither_way(self):
+        """Progress and the step count are of the steps still planned."""
+        mission = _mission()
+        mission.tasks[0].status = MissionTaskStatus.STOPPED
+        mission.skipped_tasks = [mission.tasks[0].task_id]
+        assert mission.planned_count() == 1
+        assert mission.progress() == 0.5
+
+    def test_changes_survive_a_round_trip(self):
+        """The skipped steps and the lead's own order are saved and loaded."""
+        mission = _mission()
+        mission.skipped_tasks = ["2"]
+        mission.reviewed_order = ["1", "2"]
+        loaded = Mission.from_dict(mission.to_dict())
+        assert loaded.skipped_tasks == ["2"] and loaded.reviewed_order == ["1", "2"]
+        assert loaded.plan_edited()
 
 
 def test_token_counts_survive_a_round_trip_and_bad_values_are_none():

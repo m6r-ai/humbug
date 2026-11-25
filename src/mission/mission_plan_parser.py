@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import json
 import re
 
-from mission.mission import MissionTask
+from mission.mission import MissionCheckResult, MissionTask
 
 
 PLAN_FENCE = "mission-plan"
@@ -18,12 +18,14 @@ class MissionPlan:
     A plan reported by the mission lead.
 
     `goal_met` is True only when the lead reports that the user's whole goal is achieved,
-    which finishing every task of the plan does not by itself mean.
+    which finishing every task of the plan does not by itself mean.  `checks` holds the
+    results of the user's done checks when the lead reported them, and is None when it did not.
     """
     title: str
     summary: str
     tasks: list[MissionTask]
     goal_met: bool = False
+    checks: list[MissionCheckResult] | None = None
 
 
 def strip_mission_plan(text: str) -> str:
@@ -89,11 +91,16 @@ def parse_mission_plan(text: str) -> MissionPlan | None:
 
         title = data.get("title")
         summary = data.get("summary")
+        raw_checks = data.get("checks")
         return MissionPlan(
             title=title.strip() if isinstance(title, str) else "",
             summary=summary.strip() if isinstance(summary, str) else "",
             tasks=tasks,
             goal_met=data.get("goal_met") is True,
+            checks=(
+                [MissionCheckResult.from_dict(raw) for raw in raw_checks if isinstance(raw, dict)]
+                if isinstance(raw_checks, list) else None
+            ),
         )
 
     return None

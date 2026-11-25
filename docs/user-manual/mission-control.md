@@ -70,16 +70,72 @@ be kept this way: it has to be chosen, and confirmed, for each mission.
 
 Tick **Let me review the plan before work starts** on the new-mission screen, and the lead drafts
 its plan and then waits, without starting any task, delegating or changing anything. The mission
-shows **Plan ready**, and Mission Control tells you, as it does when a decision is waiting. Look
-the plan over: **Start work** lets the lead carry it out, a message in the box at the bottom asks
-it to change the plan (it reports the revised plan and waits again), and **Stop** ends the
-mission. Only the mission's first plan is reviewed this way; once you have started the work, the
+shows **Plan ready**, and Mission Control tells you, as it does when a decision is waiting. The
+lead's speech bubble asks **Here's my plan. Shall I start?** with two buttons: **Yes, start** lets
+the lead carry it out (as **Start work** in the mission card does), and **No** puts the cursor in
+the box at the bottom, which now reads **Tell the lead what to change in the plan…**. A message
+there asks the lead to change the plan: it reports the revised plan and waits again. **Stop** ends
+the mission.
+
+While the plan waits, you can change it yourself:
+
+- **Move a step** by dragging it by its handle (⠿) to another place in the plan; a line shows
+  where it will land. With a step selected, **Alt+Up** and **Alt+Down** move it without a mouse.
+- **Skip a step** with **Skip** beside it. It is struck through and marked **Skipped**, and no
+  longer counts towards the plan's progress or its number of steps. **Include** brings it back.
+
+Once you have changed the plan the lead asks **You changed the plan. Shall I go ahead with the
+changed plan?** **Yes, start** sends the lead the plan in your order with the skipped steps
+marked, and the feed says **You approved the plan with your changes**. Mission Control keeps the
+skipped steps skipped whatever the lead reports afterwards. Skipping a step is not the same as
+stopping one: the mission is still accomplished only when the lead reports the goal met, and
+your [done checks](#done-checks), if any, pass. If you ask the lead for a revised plan instead,
+its new plan replaces your changes. Only the mission's first plan is reviewed this way; once you have started the work, the
 lead carries on as any mission does. The choice is kept with the mission, so a mission waiting
 for you is still waiting after Humbug restarts.
 
 The lead is asked to wait, and Mission Control does not ask it to continue until you start the
 work, but it is the AI that holds back: every action that changes files or runs commands still
 needs your approval, as always, if it tries anything before you have started the work.
+
+### Done checks
+
+Done checks are optional. Without them a mission is accomplished when its lead says everything
+you asked for is done. With them, it is accomplished only when the lead reports that every check
+passed, so you get evidence rather than the lead's word.
+
+Tick **Add done checks (optional)** on the new-mission screen and write one check per line. A check
+can be a command to run, such as `npm test passes` or `python -m tools.code_checker passes`, or
+something to confirm, such as `POC/about.html is linked from the dashboard`. Leave the box ticked
+but empty, or untick it, and the mission has no checks.
+
+When the lead says the work is done, it runs every check and reports, for each one, whether it
+passed and what it saw. The mission page shows them in a **Done Checks** card under the mission,
+with how many have passed: each check is marked **Passed**, **Failed** or **Not run yet**, with the
+lead's evidence beside it, such as `42 tests passed` or `dashboard.html has no link to about.html`.
+
+If a check fails, or the lead says it is done without running them, the mission is not accomplished.
+Mission Control sends the lead back with the checks that failed and what it saw, and the lead fixes
+the work and runs every check again. The mission stays **Running** with **Next: getting the done
+checks to pass**. After three tries that still leave a check failing, Mission Control stops sending
+it back and shows **Looks stuck**: read the results, then send the lead a message to help, or
+press **Carry on** to give it three more tries. A message you send while a check is failing is
+taken as help with the checks, not as a new request.
+
+What these checks can and cannot do:
+
+- **The lead runs the checks and reports the results.** Mission Control does not run them itself.
+  It holds the lead to reporting every check, passed, with evidence, before the mission counts as
+  done, but the result is what the lead says it saw. Read the evidence, and open the lead's
+  conversation to see the command output if you need to be sure.
+- **A check is only as good as what you write.** A weak test suite passes weak work, and a check
+  the lead has to judge by reading files, rather than by running a command, is less strict.
+- **Commands still need your approval.** Running `npm test` is a command like any other: it waits
+  in the Decision Inbox unless your auto-approve level allows it.
+- **Stopping a task still ends the mission**, whatever the checks say, because you chose to cut
+  it short.
+
+**Run again** starts the new mission with the same checks.
 
 ### Templates
 
@@ -160,6 +216,9 @@ indefinitely, and shows it as **Looks stuck** with a note saying what it saw:
   each time (reading a file that is not there, or running a command that fails the same way),
   Mission Control cancels that conversation's reply and pauses the mission. A call whose result
   changes, such as checking on a build that is still running, is not counted.
+- **The done checks keep failing.** After the lead has said it is done three times with a
+  [done check](#done-checks) still failing, Mission Control stops sending it back. **Carry on**
+  gives it three more tries.
 
 **Carry on** lets the mission continue, and sending the lead a message also clears it. Only
 missions in Autonomous mode are watched this way: in Classic mode you are watching the
@@ -378,6 +437,9 @@ When a mission is selected, Mission Control shows, from the top:
   progress has been reported. The filters in the plan's heading, **All**, **Completed** and
   **In progress**, each say how many steps they show: choose one to show only those steps, and
   choose it again, or **All**, to see every step.
+- **Done Checks**: shown only for a mission started with [done checks](#done-checks), straight under
+  the mission card: each check with **Passed**, **Failed** or **Not run yet** and the lead's evidence,
+  and how many have passed.
 - **Files Changed**: every file the mission's lead and helpers created, changed or deleted, newest
   first, with how many times. A line at the top sums it up, such as **2 created · 4 changed · +221
   −20 lines**. Each file is named first, with its folder underneath, and shows how many lines the
@@ -430,8 +492,8 @@ When a mission is selected, Mission Control shows, from the top:
 Use the chips above the dashboard to switch between missions, or **+ New mission** to start
 another. Once there are more than a few missions, a **Search missions** box beside the chips
 shows only those whose name or request contains every word you type. **Run again**, in a mission's **⋯**
-menu or its report's, starts a new mission with the same request, lead AI settings and choice to
-review the plan, and with the same auto-approve level, except **Everything**, which has to be
+menu or its report's, starts a new mission with the same request, lead AI settings, choice to
+review the plan and [done checks](#done-checks), and with the same auto-approve level, except **Everything**, which has to be
 chosen and confirmed afresh, so the new mission starts at your default level instead. **Archive**, in a mission's
 **⋯** menu, puts a mission away out of the chips without deleting anything; **Archived (n)** beside
 the chips shows the archived ones, and **Bring back from the archive** returns one. A mission that
@@ -468,7 +530,7 @@ rather than jumping, so you can see where you have been taken. Each chip has a *
 | **Plan ready** | You asked to review the plan first, and the lead has drafted it. See [Reviewing the plan first](#reviewing-the-plan-first) |
 | **Looks stuck** | Mission Control stopped driving the mission because it was getting nowhere. The mission card says why, with **Carry on**. See [When a mission gets stuck](#when-a-mission-gets-stuck) |
 | **Failed** | The lead's latest reply ended in an error it could not recover from, or every automatic retry failed. Where the kind of error is known, the mission card says what went wrong and what to do: a rejected API key, a model that was not found, a request too long for the model, a rate limit, no connection, trouble at the AI service, or no AI backend for the model's provider; hover over it to read what the AI service said. The mission card says so, with **Retry** to send the same request to the lead again (the error and any partial reply are removed first), and **Open the lead's conversation** to see why. Sending a message also tries again. **Resume** is offered only to an **Interrupted** mission |
-| **Completed** | The lead reports that everything you asked for is done, and every task in its plan is completed |
+| **Completed** | The lead reports that everything you asked for is done, every task in its plan is completed, and every [done check](#done-checks), if you set any, has passed |
 | **Paused** | You paused the mission: nothing is approved automatically and the lead does not carry on by itself until you click **Continue** |
 | **Stopped** | You stopped the mission |
 

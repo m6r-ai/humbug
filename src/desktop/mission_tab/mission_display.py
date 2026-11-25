@@ -108,6 +108,25 @@ class MissionFileView:
     review_sequence: int | None = None
 
 
+@dataclass(frozen=True)
+class MissionCheckView:
+    """
+    One of the user's done checks, with where it stands.
+
+    Attributes:
+        text: The check, as the user wrote it
+        glyph: Symbol for its result
+        tone: Colour of that symbol
+        state_text: Its result in words
+        evidence: What the lead saw when it ran the check, or ""
+    """
+    text: str
+    glyph: str
+    tone: MissionTone
+    state_text: str
+    evidence: str = ""
+
+
 class MissionDiffLineKind(Enum):
     """What a line of a file's diff is: added, removed, unchanged, or a run of unchanged lines left out."""
     ADDED = auto()
@@ -172,6 +191,9 @@ class MissionStepView:
         agent_title: Conversation working on the step, if any
         agent_context_id: Context of that conversation while it is open, otherwise ""
         can_stop: Whether the user can stop the step
+        arrangeable: Whether the user can move the step or skip it, as they can while the plan waits
+            for their approval
+        skipped: Whether the user chose to skip the step
     """
     task_id: str
     number: str
@@ -185,6 +207,8 @@ class MissionStepView:
     agent_title: str
     agent_context_id: str
     can_stop: bool
+    arrangeable: bool = False
+    skipped: bool = False
 
 
 @dataclass(frozen=True)
@@ -210,6 +234,8 @@ class MissionAgentView:
         wait_seconds: Length of a wait the agent is in that the user can cut short, or 0
         wait_started: When that wait started, in seconds since the epoch, or 0
         model_text: The AI model the agent uses, or "" when not known
+        asks_to_start: Whether the agent is the lead asking whether to carry out the plan it drafted,
+            answered from its speech bubble
     """
     context_id: str
     title: str
@@ -228,6 +254,7 @@ class MissionAgentView:
     wait_seconds: float = 0.0
     wait_started: float = 0.0
     model_text: str = ""
+    asks_to_start: bool = False
 
 
 @dataclass(frozen=True)
@@ -381,4 +408,6 @@ class MissionView:
     celebrate: bool = False
     files: list[MissionFileView] = field(default_factory=list)
     files_summary: str = ""
+    checks: list[MissionCheckView] = field(default_factory=list)
+    checks_summary: str = ""
     report_files: list[str] = field(default_factory=list)

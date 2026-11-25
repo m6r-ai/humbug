@@ -804,6 +804,7 @@ def get_french_strings() -> LanguageStrings:
         mission_milestone_round="Terminé : {0}",
         mission_milestone_next="Ensuite : {0}",
         mission_milestone_planning="Ensuite : planifier ce qui reste de l'objectif",
+        mission_milestone_checks="Suite : faire réussir les vérifications de fin",
         mission_milestone_follow_up="Ensuite : planifier votre nouvelle demande",
         mission_glance_now="Maintenant",
         mission_chips_back="Afficher les missions précédentes",
@@ -1098,6 +1099,32 @@ def get_french_strings() -> LanguageStrings:
             "fichier n’est plus conservée."
         ),
         mission_file_diff_empty="Aucune ligne modifiée.",
+        mission_checks_option="Ajouter des vérifications de fin (facultatif)",
+        mission_checks_placeholder=(
+            "Une vérification par ligne, par exemple :\nnpm test réussit\nPOC/about.html est lié depuis "
+            "le tableau de bord"
+        ),
+        mission_checks_explain=(
+            "La mission n’est accomplie que lorsque le responsable indique que chaque vérification a "
+            "réussi. Si l’une échoue, il est renvoyé la corriger, jusqu’à 3 fois."
+        ),
+        mission_checks_title="Vérifications de fin",
+        mission_checks_hint=(
+            "Le responsable exécute chaque vérification et rapporte ce qu’il a constaté. Les commandes "
+            "qu’il lance demandent toujours votre approbation."
+        ),
+        mission_checks_count="{0}/{1} réussies",
+        mission_check_passed="Réussie",
+        mission_check_failed="Échouée",
+        mission_check_pending="Pas encore exécutée",
+        mission_stuck_checks=(
+            "Les vérifications de fin échouaient encore après {0} essais : Mission Control a cessé de "
+            "renvoyer le responsable. Consultez les résultats, puis envoyez des instructions ou appuyez "
+            "sur Continuer pour lui accorder {0} essais de plus."
+        ),
+        mission_activity_checks_passed="Les {0} vérifications de fin ont réussi",
+        mission_activity_checks_failed="Vérifications de fin non réussies : {0}",
+        mission_activity_files_undone="Vous avez annulé les modifications de {0} fichiers",
         mission_file_open="Ouvrir",
         mission_file_undo="Annuler",
         mission_file_open_tip="Ouvrir {0} dans un onglet d’éditeur",
@@ -1128,6 +1155,19 @@ def get_french_strings() -> LanguageStrings:
         ),
         mission_status_plan_ready="Plan prêt",
         mission_say_plan_ready="Voici mon plan. Je commence ?",
+        mission_say_plan_edited="Vous avez modifié le plan. Dois-je continuer avec le plan modifié ?",
+        mission_step_skipped="Ignorée",
+        mission_step_skip="Ignorer",
+        mission_step_unskip="Inclure",
+        mission_step_move_tip="Faites glisser pour déplacer cette étape, ou appuyez sur Alt+Haut ou Alt+Bas",
+        mission_plan_arrange_hint=(
+            "Faites glisser les étapes pour changer leur ordre, ou ignorez celles dont vous ne voulez "
+            "pas, avant de lancer le travail."
+        ),
+        mission_plan_yes="Oui, commencer",
+        mission_plan_no="Non",
+        mission_composer_plan_change="Dites au responsable ce qu’il faut changer dans le plan… ({key} pour envoyer)",
+        mission_activity_plan_approved_edited="Vous avez approuvé le plan avec vos modifications",
         mission_activity_plan_approved="Vous avez approuvé le plan",
         mission_start_work="Lancer le travail",
         mission_plan_ready_notice=(
