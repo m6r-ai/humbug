@@ -157,7 +157,10 @@ such as an approval it was waiting for, is not carried over; resuming starts a n
 When a mission is selected, Mission Control shows, from the top:
 
 - **A reminder when something needs you**: while requests wait in the Decision Inbox, a banner
-  says how many, and **Review now** takes you to the oldest one.
+  says how many, and **Review now** takes you to the oldest one. The banner sits above the page
+  rather than in it, so it stays in view however far you scroll, at any window width. The Decision
+  Inbox itself gains an amber border, and Recent Activity gives up some of its height, until
+  nothing is waiting.
 - **Working on your message**: from the moment you send the lead a message, including a follow-up
   to a mission that is already done, until the lead replies to it, a strip at the top names your
   message and says it is being worked on. It is not shown if the lead's reply fails or the mission
@@ -167,25 +170,29 @@ When a mission is selected, Mission Control shows, from the top:
   way: **You asked**, **AI plans it**, **AI team works** and **Job done**. The current stage glows,
   and while the AI is working a small moon circles it and a soft pulse spreads out from it; it turns amber when the mission is waiting for you. While the
   team works, the track beyond **AI team works** fills with the share of the plan that is done.
-  Below it, a line gives what the lead is doing right now, in its own words. While the mission is
-  still going, a green line under that says how far it has got and what comes next, such as
-  **Step 2 of 4 done: Write the user guide · Next: Add a changelog**; after a follow-up starts new
-  work, it names the work finished before. A finished step is never shown as the mission being
-  done. Under the
-  **Auto-approve** choice, a sentence says what the chosen level means.
-- **At a glance**: four lines that sum the mission up: what is happening **Now**, what is
-  **Holding it up** (your decision on a request, a pause, a blocked step, a failed reply, an
-  interruption or a stop, or **Nothing**), how many requests are **Waiting for you**, and what it
-  **Last finished**. **Hide details** folds away the figures, the plan, the agents, the conversation,
-  earlier results and recent activity, leaving the mission card, this summary, the lead's latest
-  message and the Decision Inbox; **Show details** brings them back. Classic missions do not have it.
+  Below the journey, the mission is summed up at a glance. **Now** gives what the lead is doing,
+  in its own words; it is left out while the mission is interrupted, paused or failed, because a
+  notice on the card says so instead, with what you can do about it. **Progress** says how far the
+  mission has got and what comes next, such as **Step 2 of 4 done: Write the user guide · Next:
+  Add a changelog**, and names a blocked step; after a follow-up starts new work, it names the work
+  finished before. A finished step is never shown as the mission being done. At a narrow width the
+  two are stacked. Requests waiting for you are not repeated here: they are in the banner and the
+  Decision Inbox. **Hide details**, beside the mission's buttons, folds away the figures, the plan,
+  the agents, the conversation, earlier results and recent activity, leaving the mission card, the
+  lead's latest message and the Decision Inbox; **Show details** brings them back. Classic missions
+  do not have the summary. Under the **Auto-approve** choice, a sentence says what the chosen level
+  means.
 - **Mission accomplished**: when every step is done and nothing you sent is still waiting for a
   reply, a report card appears at the top of the dashboard. A message you send to a finished
   mission makes it **Running** again until the lead has answered it. If you watched the mission
   finish, it is celebrated with a burst of confetti, once: opening it later, or the lead answering
   a follow-up, does not celebrate it again. It shows the lead's final report, how many steps were done and
   how many agents took part, with **Ask a follow-up** (to continue the same mission) and
-  **New mission**. While the report is showing, the lead's last message is not repeated in
+  **New mission**. The report itself spans the card's full width below its headline. While you
+  read a long report, its headline (**Mission accomplished** with the steps done and agents on the
+  team) stays pinned at the top of the view, over the card itself, once the card's own headline has
+  scrolled away, and goes once you have scrolled past the report. **Back to top** on the pinned
+  headline takes you back to the start of the report. While the report is showing, the lead's last message is not repeated in
   **Latest from the mission lead**. If you then ask a question that the lead just answers, the report
   stays as it was and the answer is shown in **Latest from the mission lead**.
 - **Earlier results**: once you have asked a follow-up, the rounds that finished before it are
@@ -196,8 +203,8 @@ When a mission is selected, Mission Control shows, from the top:
   Humbug closes.
 - **Latest from the mission lead**: the lead's most recent reply in full, without its plan. The card
   is always just as tall as the reply, growing for a long one and shrinking for a short one. This is where
-  the lead reports progress and asks you questions. When it has stopped to wait for you, the card
-  is highlighted and marked **Waiting for your reply**: click **Reply**, or type in the box at the
+  the lead reports progress and asks you questions. It is a plain card until the lead has stopped
+  to wait for you; then the card is highlighted and marked **Waiting for your reply**: click **Reply**, or type in the box at the
   bottom, to answer it. The **Reply** button only appears when the lead is waiting for you.
 - **Statistics**: tasks in the plan, tasks completed, tasks in progress, approvals waiting for
   you, and agents currently working. Click **Completed** or **In progress** to show only those
@@ -249,7 +256,7 @@ When a mission is selected, Mission Control shows, from the top:
   conversation. Click the step again to close it. What a step shows is only as complete as the
   lead's report: a step the lead has said nothing about shows that no progress has been
   reported.
-- **Recent Activity**: a tall scrolling feed, newest first, of what has happened in this mission
+- **Recent Activity**: a scrolling feed, newest first, as tall as its entries up to a limit, of what has happened in this mission
   since Mission Control was first opened in this mindspace. It includes the objective you started
   it with, each message you sent from Mission Control, and anything you typed directly into one of
   the mission's conversations. Entries marked **▶** have more to show: click one to open it and see

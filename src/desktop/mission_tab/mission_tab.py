@@ -639,7 +639,6 @@ class MissionTab(TabBase):
                 (agent.context_id for agent in snapshot.agents if agent.is_lead), ""
             ),
             can_retry=snapshot.status == MissionStatus.FAILED and not classic,
-            milestone_text="" if classic else self._milestone_text(snapshot),
             can_pause=not classic and not mission.paused and snapshot.status in (
                 MissionStatus.PLANNING, MissionStatus.RUNNING, MissionStatus.NEEDS_YOU, MissionStatus.IDLE
             ),
@@ -690,18 +689,7 @@ class MissionTab(TabBase):
             for agent in snapshot.agents
         ]
 
-        # The header says what is happening now, in the lead's own words.
         lead_view = next((agent for agent in agents if agent.is_lead), None)
-        if lead_view is not None and lead_view.speech:
-            header = dataclasses.replace(
-                header, now_text=f"{lead_view.name}: {lead_view.speech}",
-                now_tone=(
-                    MissionTone.SUCCESS if snapshot.status in (MissionStatus.COMPLETED, MissionStatus.REPLIED)
-                    else MissionTone.DANGER if snapshot.status == MissionStatus.FAILED
-                    else MissionTone.ACCENT
-                )
-            )
-
         lead_name = lead_view.name if lead_view is not None else strings.mission_chat_lead
         conversation = [self._chat_view(entry, lead_name) for entry in snapshot.conversation]
 
@@ -730,7 +718,7 @@ class MissionTab(TabBase):
             results=results,
             report_message=report_message,
             conversation=conversation,
-            glance=None if classic else self._glance_view(snapshot, header.now_text),
+            glance=None if classic else self._glance_view(snapshot, lead_view),
             working_on_text="" if classic else self._working_on_text(snapshot),
         )
 
@@ -788,37 +776,33 @@ class MissionTab(TabBase):
         planning = strings.mission_milestone_follow_up if mission.follow_up else strings.mission_milestone_planning
         return f"{text}  ·  {planning}"
 
-    def _glance_view(self, snapshot: MissionSnapshot, now_text: str) -> MissionGlanceView:
-        """Sum the mission up: what it is doing, what holds it up, what waits and what it last finished."""
-        strings = self._strings()
+    def _glance_view(self, snapshot: MissionSnapshot, lead: MissionAgentView | None) -> MissionGlanceView:
+        """Sum the mission up beside its title: what it is doing now, in the lead's words, and how far it has got."""
+        # An interrupted, paused or failed mission has a notice saying so, with what to do about it,
+        # and the lead would only repeat it.
+        noticed = snapshot.status in (MissionStatus.INTERRUPTED, MissionStatus.PAUSED, MissionStatus.FAILED)
+        now_text = f"{lead.name}: {lead.speech}" if lead is not None and lead.speech and not noticed else ""
         mission = snapshot.mission
+        progress = self._milestone_text(snapshot)
+        if not progress:
+            # Steps finish in plan order, so the last completed one in the plan is the latest; before
+            # any step of this plan is done, the plan finished before it is.
+            done = [task.title for task in mission.tasks if task.status == MissionTaskStatus.COMPLETED]
+            last_done = done[-1] if done else mission.history[-1].title if mission.history else ""
+            progress = self._strings().mission_milestone_round.format(last_done) if last_done else ""
+
         blocked_step = next((t.title for t in mission.tasks if t.status == MissionTaskStatus.BLOCKED), "")
-        blocking = {
-            MissionStatus.NEEDS_YOU: (strings.mission_glance_blocked_decision, MissionTone.WARNING),
-            MissionStatus.PAUSED: (strings.mission_glance_blocked_paused, MissionTone.WARNING),
-            MissionStatus.FAILED: (strings.mission_glance_blocked_failed, MissionTone.DANGER),
-            MissionStatus.INTERRUPTED: (strings.mission_glance_blocked_interrupted, MissionTone.WARNING),
-            MissionStatus.STOPPED: (strings.mission_glance_blocked_stopped, MissionTone.DANGER),
-        }.get(snapshot.status)
-        if blocking is None and blocked_step:
-            blocking = (strings.mission_glance_blocked_step.format(blocked_step), MissionTone.WARNING)
+        if blocked_step:
+            blocked = self._strings().mission_glance_blocked_step.format(blocked_step)
+            progress = f"{progress}  ·  {blocked}" if progress else blocked
 
-        if blocking is None:
-            blocking = (strings.mission_glance_nothing, MissionTone.SUCCESS)
-
-        # Steps finish in plan order, so the last completed one in the plan is the latest; before
-        # any step of this plan is done, the plan finished before it is.
-        done = [task.title for task in mission.tasks if task.status == MissionTaskStatus.COMPLETED]
-        last_done = done[-1] if done else mission.history[-1].title if mission.history else ""
-        waiting = len(snapshot.decisions)
         return MissionGlanceView(
-            now_text=now_text or strings.mission_glance_idle,
-            blocking_text=blocking[0],
-            blocking_tone=blocking[1],
-            approvals_text=strings.mission_glance_approvals_count.format(waiting) if waiting
-            else strings.mission_glance_approvals_none,
-            approvals_tone=MissionTone.WARNING if waiting else MissionTone.NEUTRAL,
-            last_done_text=last_done or strings.mission_glance_last_done_none,
+            now_text=now_text,
+            now_tone=(
+                MissionTone.SUCCESS if snapshot.status in (MissionStatus.COMPLETED, MissionStatus.REPLIED)
+                else MissionTone.ACCENT
+            ),
+            progress_text=progress,
         )
 
     def _working_on_text(self, snapshot: MissionSnapshot) -> str:

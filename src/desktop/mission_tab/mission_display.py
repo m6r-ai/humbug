@@ -59,13 +59,10 @@ class MissionHeaderView:
     auto_approve: str
     stage: int = 0
     stage_tone: MissionTone = MissionTone.ACCENT
-    now_text: str = ""
-    now_tone: MissionTone = MissionTone.ACCENT
     lead_context_id: str = ""
     can_retry: bool = False
     can_pause: bool = False
     paused: bool = False
-    milestone_text: str = ""
 
 
 @dataclass(frozen=True)
@@ -257,22 +254,20 @@ class MissionChatView:
 @dataclass(frozen=True)
 class MissionGlanceView:
     """
-    The mission at a glance: what it is doing, what holds it up, what waits for the user and what it last finished.
+    The mission at a glance, shown with its title: what it is doing now and how far it has got.
+
+    Each fact has one place on the dashboard, so neither repeats what is said elsewhere: a notice
+    that the mission was interrupted, paused or failed says what is happening instead of the lead,
+    and requests waiting for the user are in the call to action and the Decision Inbox.
 
     Attributes:
-        now_text: What is happening now, in the lead's words
-        blocking_text: What is holding the mission up, or a word saying nothing is
-        blocking_tone: Colour of that, by how much it needs the user
-        approvals_text: How many requests wait for the user
-        approvals_tone: Colour of that
-        last_done_text: The step or plan the mission last finished
+        now_text: What is happening now, in the lead's words, or "" when something else says it
+        now_tone: Colour of that
+        progress_text: How far the mission has got and what comes next, or "" before any step is done
     """
     now_text: str
-    blocking_text: str
-    blocking_tone: MissionTone
-    approvals_text: str
-    approvals_tone: MissionTone
-    last_done_text: str
+    now_tone: MissionTone
+    progress_text: str
 
 
 @dataclass(frozen=True)

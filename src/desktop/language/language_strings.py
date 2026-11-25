@@ -688,22 +688,11 @@ class LanguageStrings:
     mission_milestone_next: str
     mission_milestone_planning: str
     mission_milestone_follow_up: str
-    mission_glance_title: str
     mission_glance_now: str
-    mission_glance_blocking: str
-    mission_glance_approvals: str
-    mission_glance_last_done: str
-    mission_glance_idle: str
-    mission_glance_nothing: str
-    mission_glance_blocked_decision: str
-    mission_glance_blocked_paused: str
-    mission_glance_blocked_failed: str
-    mission_glance_blocked_interrupted: str
-    mission_glance_blocked_stopped: str
+    mission_chips_back: str
+    mission_chips_more: str
+    mission_glance_progress: str
     mission_glance_blocked_step: str
-    mission_glance_approvals_count: str
-    mission_glance_approvals_none: str
-    mission_glance_last_done_none: str
     mission_details_show: str
     mission_details_hide: str
     mission_working_on_message: str
@@ -828,6 +817,7 @@ class LanguageStrings:
     mission_stage_done: str
     mission_report_title: str
     mission_report_caption: str
+    mission_report_back_to_top: str
     mission_report_stats: str
     mission_follow_up: str
     mission_activity_reversible_approved: str

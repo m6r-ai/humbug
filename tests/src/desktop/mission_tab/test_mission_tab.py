@@ -1073,33 +1073,31 @@ class TestMissionAtAGlance:
             ],
         )
 
-    def test_glance_says_what_holds_the_mission_up_and_what_it_last_finished(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
-        """Each status that needs the user says so; otherwise nothing holds it up."""
+    def test_glance_says_what_is_happening_and_how_far_the_mission_has_got(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """The lead says what is happening unless a notice already does; progress names the steps done and next."""
         tab = MissionTab("mission")
         mission = self._mission()
 
-        running = tab._glance_view(self._snapshot(mission, MissionStatus.RUNNING), "")  # pylint: disable=protected-access
-        assert running.blocking_text == "Nothing" and running.blocking_tone == MissionTone.SUCCESS
-        assert running.last_done_text == "Draft"
-        assert running.approvals_text == "None"
-        assert running.now_text == "Nothing running"
+        running = tab._mission_view(self._snapshot(mission, MissionStatus.RUNNING, MissionAgentState.THINKING)).glance  # pylint: disable=protected-access
+        assert running is not None
+        assert running.now_text.startswith(f"{agent_names('m', [MissionAgent('lead', 'lead', True, MissionAgentState.IDLE, '')])['lead']}: ")
+        assert running.progress_text == "Step 2 of 3 done: Draft  ·  Next: Review"
 
-        waiting = tab._glance_view(self._snapshot(mission, MissionStatus.NEEDS_YOU, decisions=2), "LEAD: Running make")  # pylint: disable=protected-access
-        assert waiting.blocking_tone == MissionTone.WARNING
-        assert waiting.approvals_text == "2 request(s)"
-        assert waiting.now_text == "LEAD: Running make"
+        for noticed in (MissionStatus.INTERRUPTED, MissionStatus.PAUSED, MissionStatus.FAILED):
+            glance = tab._mission_view(self._snapshot(mission, noticed)).glance  # pylint: disable=protected-access
+            assert glance is not None and glance.now_text == ""
 
-        paused = tab._glance_view(self._snapshot(mission, MissionStatus.PAUSED), "")  # pylint: disable=protected-access
-        assert paused.blocking_text == "Paused by you"
+        stopped = tab._mission_view(self._snapshot(mission, MissionStatus.STOPPED)).glance  # pylint: disable=protected-access
+        assert stopped is not None and stopped.progress_text == "Finished: Draft"
 
         mission.tasks[2].status = MissionTaskStatus.BLOCKED
-        blocked = tab._glance_view(self._snapshot(mission, MissionStatus.IDLE), "")  # pylint: disable=protected-access
-        assert blocked.blocking_text == "Blocked step: Review"
+        blocked = tab._mission_view(self._snapshot(mission, MissionStatus.IDLE)).glance  # pylint: disable=protected-access
+        assert blocked is not None and blocked.progress_text.endswith("Blocked step: Review")
 
         mission.tasks = []
         mission.history = [MissionPhase("Earlier docs", "", [], "2026-11-09T09:00:00+00:00")]
-        fresh = tab._glance_view(self._snapshot(mission, MissionStatus.PLANNING), "")  # pylint: disable=protected-access
-        assert fresh.last_done_text == "Earlier docs"
+        fresh = tab._mission_view(self._snapshot(mission, MissionStatus.PLANNING)).glance  # pylint: disable=protected-access
+        assert fresh is not None and fresh.progress_text.startswith("Finished: Earlier docs")
         tab.deleteLater()
 
     def test_follow_up_to_a_finished_mission_shows_it_is_being_worked_on(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
@@ -1142,19 +1140,19 @@ class TestMissionAtAGlance:
     def test_details_fold_away_and_come_back(self, qapp) -> None:  # pylint: disable=unused-argument
         """Hiding the details leaves the glance, the header and the inbox; showing them brings everything back."""
         widget = MissionWidget()
-        glance = MissionGlanceView("LEAD: Drafting", "Nothing", MissionTone.SUCCESS, "None", MissionTone.NEUTRAL, "Outline")
+        glance = MissionGlanceView("LEAD: Drafting", MissionTone.ACCENT, "Step 1 of 2 done: Outline")
         view = dataclasses.replace(
             _view(completed=False, stage=2), glance=glance,
             results=[MissionResultView("r1", "Round 1", "You asked: docs", "Done.")],
         )
         widget.set_mission(view)
         details = (widget._lower_container, widget._activity_card, widget._results_card)  # pylint: disable=protected-access
-        assert not widget._glance_card.isHidden()  # pylint: disable=protected-access
+        assert not widget._glance.isHidden()  # pylint: disable=protected-access
         assert all(not card.isHidden() for card in details)
 
         widget._details_button.click()  # pylint: disable=protected-access
         assert all(card.isHidden() for card in details)
-        assert not widget._glance_card.isHidden() and not widget._inbox_card.isHidden()  # pylint: disable=protected-access
+        assert not widget._glance.isHidden() and not widget._inbox_card.isHidden()  # pylint: disable=protected-access
 
         widget._details_button.click()  # pylint: disable=protected-access
         assert all(not card.isHidden() for card in details)
@@ -1246,20 +1244,25 @@ class TestMilestonesAndCelebration:
         assert marked == ["m"]
         tab.deleteLater()
 
-    def test_milestone_is_shown_on_the_mission_card(self, qapp) -> None:  # pylint: disable=unused-argument
-        """The line appears with its text, and goes when there is none."""
+    def test_glance_facts_show_with_their_text_and_hide_without(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Each fact under the title appears only when it has something to say, and the facts go when neither has."""
         widget = MissionWidget()
         view = _view(completed=False, stage=2)
+        now_cell, _badge, _caption, now_value = widget._glance_cells["now"]  # pylint: disable=protected-access
+        progress_cell, _badge, _caption, progress_value = widget._glance_cells["progress"]  # pylint: disable=protected-access
+
         widget.set_mission(dataclasses.replace(
-            view, header=dataclasses.replace(view.header, milestone_text="Step 1 of 3 done: Outline")
+            view, glance=MissionGlanceView("Theo: Drafting", MissionTone.ACCENT, "Step 1 of 3 done: Outline")
         ))
-        assert not widget._milestone_row.isHidden()  # pylint: disable=protected-access
-        assert widget._milestone_text.text() == "Step 1 of 3 done: Outline"  # pylint: disable=protected-access
+        assert not widget._glance.isHidden()  # pylint: disable=protected-access
+        assert now_value.text() == "Theo: Drafting" and progress_value.text() == "Step 1 of 3 done: Outline"
 
-        widget.set_mission(view)
-        assert widget._milestone_row.isHidden()  # pylint: disable=protected-access
+        widget.set_mission(dataclasses.replace(view, glance=MissionGlanceView("", MissionTone.ACCENT, "Finished: Draft")))
+        assert now_cell.isHidden() and not progress_cell.isHidden()
+
+        widget.set_mission(dataclasses.replace(view, glance=MissionGlanceView("", MissionTone.ACCENT, "")))
+        assert widget._glance.isHidden()  # pylint: disable=protected-access
         widget.deleteLater()
-
 
 class TestApprovalComprehension:
     """A destructive request shows its target and whether it can be undone before it can be approved."""
@@ -1442,15 +1445,36 @@ class TestMissionJourney:
         assert requested == [True]
         widget.deleteLater()
 
-    def test_activity_feed_uses_its_set_height(self, qapp) -> None:  # pylint: disable=unused-argument
-        """The activity feed is given its own height, scaled with the zoom, whatever it holds."""
+    def test_activity_feed_gives_way_while_requests_wait(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The feed grows to its own limit, a shorter one while requests wait, and the inbox is marked as needing the user."""
         widget = MissionWidget()
         widget.apply_style()
+        widget.set_mission(_view(completed=False, stage=2))
+        zoom = StyleManager().zoom_factor()
 
-        expected = round(mission_widget_module._ACTIVITY_HEIGHT * StyleManager().zoom_factor())  # pylint: disable=protected-access
-        assert widget._activity_scroll.height() == expected  # pylint: disable=protected-access
+        assert widget._activity_scroll.maximumHeight() == round(mission_widget_module._ACTIVITY_HEIGHT * zoom)  # pylint: disable=protected-access
+        assert widget._inbox_card.objectName() == "MissionInboxCard"  # pylint: disable=protected-access
+
+        widget.set_decisions([_decision()])
+        assert widget._activity_scroll.maximumHeight() == round(mission_widget_module._ACTIVITY_WAITING_HEIGHT * zoom)  # pylint: disable=protected-access
+        assert widget._inbox_card.objectName() == "MissionInboxCardActive"  # pylint: disable=protected-access
+
+        widget.set_decisions([])
+        assert widget._activity_scroll.maximumHeight() == round(mission_widget_module._ACTIVITY_HEIGHT * zoom)  # pylint: disable=protected-access
         widget.deleteLater()
 
+    def test_call_to_action_stays_in_view_outside_the_page(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The request banner sits above the scrolling page, so scrolling never hides it."""
+        widget = MissionWidget()
+        widget.set_mission(_view(completed=False, stage=2))
+        widget.set_decisions([_decision()])
+
+        assert not widget._attention_bar.isHidden()  # pylint: disable=protected-access
+        assert not widget._scroll.widget().isAncestorOf(widget._attention)  # pylint: disable=protected-access
+
+        widget.set_decisions([])
+        assert widget._attention_bar.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
 
 class TestMissionScene:
     """The painted scenes keep their state and stop animating when they are done."""
@@ -1662,20 +1686,6 @@ class TestFriendlyDashboard:
 
         widget._agents_list_button.click()  # pylint: disable=protected-access
         assert widget._agents_list.isHidden()  # pylint: disable=protected-access
-        widget.deleteLater()
-
-    def test_now_line_shows_what_the_lead_says(self, qapp) -> None:  # pylint: disable=unused-argument
-        """The header repeats the lead's latest words, and hides the line when there are none."""
-        widget = MissionWidget()
-        view = _view(completed=False, stage=2)
-        widget.set_mission(dataclasses.replace(
-            view, header=dataclasses.replace(view.header, now_text="Theo: Waiting for Ada to finish…")
-        ))
-        assert not widget._now_row.isHidden()  # pylint: disable=protected-access
-        assert widget._now_text.text() == "Theo: Waiting for Ada to finish…"  # pylint: disable=protected-access
-
-        widget.set_mission(view)
-        assert widget._now_row.isHidden()  # pylint: disable=protected-access
         widget.deleteLater()
 
     def test_journey_fill_follows_the_plan_while_the_team_works(self, qapp) -> None:  # pylint: disable=unused-argument
@@ -3447,3 +3457,92 @@ class TestEverythingNeedsNoAnswer:
             MissionServiceHolder().release()
 
         asyncio.run(run())
+
+
+class TestIconLabels:
+    """Controls drawn only as a symbol say what they do."""
+
+    def test_chip_arrows_are_labelled(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The arrows that scroll the missions have a tooltip and a name for assistive technology."""
+        widget = MissionWidget()
+
+        for arrow in (widget._chip_left, widget._chip_right):  # pylint: disable=protected-access
+            assert arrow.toolTip() and arrow.accessibleName() == arrow.toolTip()
+
+        widget.deleteLater()
+
+
+class TestReportHeadlineStaysInView:
+    """A long final report keeps its headline above the page while it is read, and uses the card's whole width."""
+
+    def test_headline_is_pinned_only_while_the_report_is_read_below_it(self, qapp) -> None:
+        """At the top the headline is on the page; reading further pins it; scrolling past the report lets it go."""
+        widget = MissionWidget()
+        report = "\n\n".join(f"Paragraph {i} of the final report, long enough to take up some room." for i in range(60))
+        widget.set_mission(dataclasses.replace(_view(completed=True, stage=3), report_message=report))
+        # Short enough that what follows the report fills the view once the report has scrolled past.
+        widget.resize(1400, 480)
+        widget.show()
+        qapp.processEvents()
+        scrollbar = widget._scroll.verticalScrollBar()  # pylint: disable=protected-access
+        pin = widget._report_pin  # pylint: disable=protected-access
+
+        assert pin.isHidden()
+
+        header = widget._report_header  # pylint: disable=protected-access
+        scrollbar.setValue(header.mapTo(widget._scroll.widget(), QPoint(0, header.height())).y() + 40)  # pylint: disable=protected-access
+        qapp.processEvents()
+        assert not pin.isHidden()
+        assert widget._report_pin_title.text() and "2 of 2" in widget._report_pin_stats.text()  # pylint: disable=protected-access
+        card = widget._report_card  # pylint: disable=protected-access
+        card_left = card.mapTo(widget._scroll.viewport(), QPoint(0, 0)).x()  # pylint: disable=protected-access
+        assert (pin.x(), pin.y(), pin.width()) == (card_left, 0, card.width())
+        shadow = widget._report_pin_shadow  # pylint: disable=protected-access
+        assert not shadow.isHidden() and shadow.y() == pin.height()
+        assert card_left < shadow.x() and shadow.x() + shadow.width() < card_left + card.width()
+
+        scrollbar.setValue(scrollbar.maximum())
+        qapp.processEvents()
+        assert card.mapTo(widget._scroll.viewport(), QPoint(0, card.height())).y() <= 0  # pylint: disable=protected-access
+        assert pin.isHidden()
+
+        scrollbar.setValue(0)
+        qapp.processEvents()
+        assert pin.isHidden() and widget._report_pin_shadow.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_back_to_top_brings_the_report_headline_back(self, qapp) -> None:
+        """Back to top on the pinned headline scrolls the report's own headline into view, and the pin goes."""
+        widget = MissionWidget()
+        report = "\n\n".join(f"Paragraph {i} of the final report, long enough to take up some room." for i in range(60))
+        widget.set_mission(dataclasses.replace(_view(completed=True, stage=3), report_message=report))
+        widget.set_reduce_motion(True)
+        widget.resize(1400, 480)
+        widget.show()
+        qapp.processEvents()
+        header = widget._report_header  # pylint: disable=protected-access
+        scrollbar = widget._scroll.verticalScrollBar()  # pylint: disable=protected-access
+        scrollbar.setValue(header.mapTo(widget._scroll.widget(), QPoint(0, header.height())).y() + 200)  # pylint: disable=protected-access
+        qapp.processEvents()
+        assert not widget._report_pin.isHidden()  # pylint: disable=protected-access
+
+        widget._report_pin_top.click()  # pylint: disable=protected-access
+        QTest.qWait(600)
+
+        assert header.mapTo(widget._scroll.viewport(), QPoint(0, 0)).y() >= 0  # pylint: disable=protected-access
+        assert widget._report_pin.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_report_body_spans_the_card_below_the_headline(self, qapp) -> None:
+        """The report starts below the orb and headline, at the card's left edge, not beside the orb."""
+        widget = MissionWidget()
+        widget.set_mission(dataclasses.replace(_view(completed=True, stage=3), report_message="All done."))
+        widget.resize(1400, 900)
+        widget.show()
+        qapp.processEvents()
+        body = widget._report_body  # pylint: disable=protected-access
+        header = widget._report_header  # pylint: disable=protected-access
+
+        assert body.geometry().top() >= header.geometry().bottom()
+        assert body.geometry().left() == header.geometry().left()
+        widget.deleteLater()
