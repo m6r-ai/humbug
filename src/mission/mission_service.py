@@ -1431,23 +1431,26 @@ class MissionService:
         tracked.state = MissionAgentState.THINKING
         return True
 
-    def _consider_recovery(self, mission: Mission, tracked: _TrackedConversation) -> None:
+    def _consider_recovery(self, mission: Mission, tracked: _TrackedConversation) -> bool:
         """
         Schedule an automatic retry of a lead turn that failed for a reason that may pass.
 
         Each retry waits longer than the last.  Once every retry has been used, the mission
         is left failed for the user, as it is straight away for an error that will not pass.
+
+        Returns:
+            True if a retry was scheduled
         """
         mission_id = mission.mission_id
         if (
             not self._started or mission.stopped or mission.paused or mission.mode == MissionMode.CLASSIC
             or mission_id in self._scheduled_recoveries
         ):
-            return
+            return False
 
         messages = tracked.transcript.get_conversation_history().get_messages()
         if not messages or messages[-1].source != AIMessageSource.SYSTEM or not is_transient_error(messages[-1].error):
-            return
+            return False
 
         attempt = self._recovery_attempts.get(mission_id, 0)
         attempts = len(AUTO_RETRY_DELAYS_SECONDS)
@@ -1456,7 +1459,7 @@ class MissionService:
                 self._recovery_attempts[mission_id] = attempt + 1
                 self._record(MissionActivityKind.RECOVERY_GAVE_UP, mission.title, str(attempts), mission_id)
 
-            return
+            return False
 
         delay = AUTO_RETRY_DELAYS_SECONDS[attempt]
         error = messages[-1].content
@@ -1471,6 +1474,7 @@ class MissionService:
             delay, self._start_recovery, mission_id
         )
         self._record(MissionActivityKind.RECOVERY_SCHEDULED, mission.title, str(delay), mission_id, more=error)
+        return True
 
     def _cancel_recovery(self, mission_id: str) -> None:
         """Cancel an automatic retry that has not happened yet, so retrying starts afresh."""
@@ -1525,9 +1529,11 @@ class MissionService:
 
         tracked.repeats.reset()
         title = self._title_for(tracked.context_id)
-        action = f"{tracked.last_tool_name} {tracked.last_tool_target}".strip()
+        tool_name = tracked.last_tool_name
+        target = tracked.last_tool_target
         self._stuck[mission.mission_id] = MissionStuck(
-            reason=MissionStuckReason.REPEATING, count=count, agent_title=title, action=action
+            reason=MissionStuckReason.REPEATING, count=count, agent_title=title, tool_name=tool_name,
+            tool_target=target
         )
         tracked.transcript.cancel_current_tasks(notify=False)
         tracked.state = MissionAgentState.IDLE
@@ -1537,10 +1543,11 @@ class MissionService:
         if self._is_lead(mission, tracked):
             self._set_active(mission, False)
 
-        self._record(MissionActivityKind.LOOP_DETECTED, title, action, mission.mission_id, more=str(count))
+        self._record(MissionActivityKind.LOOP_DETECTED, title, tool_name, mission.mission_id, more=target)
+        repeated = f"{tool_name} {target}".strip()
         self._mindspace.add_interaction(
             MindspaceLogLevel.WARN,
-            f"Mission Control paused mission '{mission.title}': {title} repeated '{action}' {count} times "
+            f"Mission Control paused mission '{mission.title}': {title} repeated '{repeated}' {count} times "
             "with the same result",
             context=self._mindspace.conversation_log_context(tracked.conversation)
         )
@@ -1570,11 +1577,16 @@ class MissionService:
         self._approvals.forget(tracked.context_id)
         mission_id = self._members.get(tracked.context_id)
         if mission_id is not None:
-            kind = MissionActivityKind.ERROR if failed else MissionActivityKind.TURN_FINISHED
-            self._record(kind, self._title_for(tracked.context_id), "", mission_id)
             mission = self._missions.get(mission_id)
-            if failed and mission is not None and self._is_lead(mission, tracked):
+            retrying = failed and mission is not None and self._is_lead(mission, tracked) and (
                 self._consider_recovery(mission, tracked)
+            )
+
+            # A failure that is about to be retried is not reported as an error: the feed says it
+            # will be tried again instead.
+            if not retrying:
+                kind = MissionActivityKind.ERROR if failed else MissionActivityKind.TURN_FINISHED
+                self._record(kind, self._title_for(tracked.context_id), "", mission_id)
 
             if not failed and mission is not None and self._is_lead(mission, tracked):
                 # The AI service answered, so a later failure starts its automatic retries afresh.

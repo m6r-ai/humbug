@@ -676,7 +676,6 @@ def get_arabic_strings() -> LanguageStrings:
         mission_example_2="اعثر على الاختبارات الفاشلة وأصلحها",
         mission_example_3="أضف التحقق من المدخلات إلى نموذج الإعدادات مع الاختبارات",
         mission_new="مهمة جديدة",
-        mission_caption="مهمة",
         mission_status_planning="قيد التخطيط",
         mission_status_running="قيد التنفيذ",
         mission_status_needs_you="بانتظارك",
@@ -685,11 +684,8 @@ def get_arabic_strings() -> LanguageStrings:
         mission_status_stopped="متوقفة",
         mission_progress="اكتمل {0}%",
         mission_stop="إيقاف",
-        mission_stat_tasks="الخطوات",
         mission_stat_completed="مكتملة",
         mission_stat_in_progress="قيد التنفيذ",
-        mission_stat_approvals="بانتظار موافقتك",
-        mission_stat_agents="وكلاء نشطون",
         mission_plan_title="خطة المهمة",
         mission_plan_empty="ستظهر الخطة هنا بمجرد أن يصيغها الذكاء الاصطناعي الرئيسي.",
         mission_task_pending="معلّقة",
@@ -707,7 +703,6 @@ def get_arabic_strings() -> LanguageStrings:
         mission_agent_idle="خامل",
         mission_agent_error="توقّف بسبب خطأ",
         mission_inbox_title="صندوق القرارات",
-        mission_inbox_empty="لا شيء بانتظار قرارك.",
         mission_approve="موافقة",
         mission_unsure="غير متأكد",
         mission_reject="رفض",
@@ -749,7 +744,6 @@ def get_arabic_strings() -> LanguageStrings:
         mission_task_open_agent="فتح المحادثة",
         mission_plan_hint="انقر على خطوة لعرض تقدّمها.",
         mission_plan_filter_empty="لا توجد خطوات مطابقة لهذا الفلتر.",
-        mission_plan_show_all="عرض الكل",
         mission_activity_auto_continued="طُلب من القائد المتابعة",
         mission_activity_auto_paused="توقّف مؤقتًا: لم تكتمل أي خطوة بعد {0} محاولات متابعة تلقائية",
         mission_status_interrupted="متوقفة بشكل مفاجئ",
@@ -852,7 +846,6 @@ def get_arabic_strings() -> LanguageStrings:
         mission_delete_title="حذف المهمة",
         mission_delete_confirm="هل تريد حذف \"{0}\" من مركز المهام؟ سيتم الاحتفاظ بمحادثاتها.",
         mission_error_rename="تعذّرت إعادة تسمية المهمة: {0}",
-        mission_you="أنت",
         mission_plan_history="السجل ({0})",
         mission_plan_history_tip="الخطط التي أنهتها هذه المهمة قبل العمل الحالي",
         mission_plan_history_title="الخطط السابقة",
@@ -926,13 +919,9 @@ def get_arabic_strings() -> LanguageStrings:
         mission_activity_recovery_scheduled="تعذر الوصول إلى خدمة الذكاء الاصطناعي؛ إعادة المحاولة بعد {0} ثانية",
         mission_activity_auto_retried="أعيدت محاولة الطلب الفاشل تلقائيًا (المحاولة {0})",
         mission_activity_recovery_gave_up="توقفت إعادة المحاولة بعد {0} محاولات تلقائية",
-        mission_activity_loop_detected="كرر {0} {1} بالنتيجة نفسها؛ أوقفت المهمة مؤقتًا",
+        mission_activity_loop_detected="{0} مرارًا بالنتيجة نفسها؛ أوقفت المهمة مؤقتًا",
         mission_say_reconnecting="فقدت الاتصال بخدمة الذكاء الاصطناعي. سأعيد المحاولة بنفسي قريبًا…",
         mission_say_stuck="يبدو أنني أدور في حلقة. أخبرني بما أفعل، أو دعني أتابع.",
-        mission_recovery_notice=(
-            "تعذر الوصول إلى خدمة الذكاء الاصطناعي ({0}). سيعيد Mission Control إرسال الطلب بنفسه عند {1} "
-            "(المحاولة {2} من {3})، أو اضغط أعد المحاولة الآن."
-        ),
         mission_retry_now="أعد المحاولة الآن",
         mission_carry_on="تابع",
         mission_stuck_no_progress=(
@@ -940,14 +929,35 @@ def get_arabic_strings() -> LanguageStrings:
             "أو اضغط تابع ليحاول مجددًا."
         ),
         mission_stuck_repeating=(
-            "أوقف Mission Control هذه المهمة مؤقتًا: كرر {0} الشيء نفسه {1} مرات متتالية بالنتيجة نفسها في كل مرة "
-            "({2}). أرسل توجيهًا، أو اضغط تابع ليحاول مجددًا."
+            "أوقف Mission Control هذه المهمة مؤقتًا: {0} {1} مرات متتالية بالنتيجة نفسها في كل مرة. "
+            "أرسل توجيهًا، أو اضغط تابع ليحاول مجددًا."
         ),
         mission_notify_decision="بحاجة إلى موافقتك",
         mission_notify_completed="أنجزت المهمة",
         mission_notify_replied="رد القائد",
         mission_notify_failed="فشلت المهمة",
         mission_notify_stuck="تبدو المهمة متعثرة",
+        mission_steps_count="اكتملت {0} من {1} خطوات",
+        mission_report_copy="نسخ التقرير",
+        mission_report_copied="تم النسخ",
+        mission_report_show_steps="إظهار الخطوات",
+        mission_report_hide_steps="إخفاء الخطوات",
+        mission_report_show_activity="إظهار ما حدث",
+        mission_report_hide_activity="إخفاء ما حدث",
+        mission_plan_filter_all="الكل",
+        mission_inbox_clear="لا شيء بانتظارك",
+        mission_activity_tool_read="قرأ {0} {1}",
+        mission_activity_tool_wrote="كتب {0} {1}",
+        mission_activity_tool_deleted="حذف {0} {1}",
+        mission_activity_tool_files="عمل {0} على الملفات",
+        mission_activity_tool_edited="عدّل {0} {1}",
+        mission_activity_tool_delegated="أسند {0} عملًا إلى مساعد",
+        mission_activity_tool_ran="شغّل {0} {1}",
+        mission_activity_tool_web="بحث {0} عن شيء على الويب",
+        mission_recovery_notice=(
+            "تعذر الوصول إلى خدمة الذكاء الاصطناعي. سيعيد Mission Control إرسال الطلب بنفسه عند {0} "
+            "(المحاولة {1} من {2})، أو اضغط أعد المحاولة الآن."
+        ),
         mission_report_stats="الخطوات المكتملة: {0} من {1}  ·  الوكلاء في الفريق: {2}",
         mission_follow_up="اطرح سؤال متابعة",
         mission_activity_reversible_approved="تمت الموافقة على {0} — مُسجَّل في السجل",

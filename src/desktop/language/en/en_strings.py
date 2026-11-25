@@ -680,7 +680,6 @@ def get_english_strings() -> LanguageStrings:
         mission_example_2="Find the failing tests and fix them",
         mission_example_3="Add input validation to the settings form, with tests",
         mission_new="New mission",
-        mission_caption="MISSION",
         mission_status_planning="Planning",
         mission_status_running="Running",
         mission_status_needs_you="Needs you",
@@ -689,11 +688,8 @@ def get_english_strings() -> LanguageStrings:
         mission_status_stopped="Stopped",
         mission_progress="{0}% complete",
         mission_stop="Stop",
-        mission_stat_tasks="Tasks",
         mission_stat_completed="Completed",
         mission_stat_in_progress="In progress",
-        mission_stat_approvals="Need your approval",
-        mission_stat_agents="Active agents",
         mission_plan_title="Mission Plan",
         mission_plan_empty="The plan appears here once the lead AI has drafted it.",
         mission_task_pending="Pending",
@@ -711,7 +707,6 @@ def get_english_strings() -> LanguageStrings:
         mission_agent_idle="Idle",
         mission_agent_error="Stopped with an error",
         mission_inbox_title="Decision Inbox",
-        mission_inbox_empty="Nothing needs your decision.",
         mission_approve="Approve",
         mission_unsure="Unsure",
         mission_reject="Reject",
@@ -753,7 +748,6 @@ def get_english_strings() -> LanguageStrings:
         mission_task_open_agent="Open conversation",
         mission_plan_hint="Click a step to see its progress.",
         mission_plan_filter_empty="No steps match this filter.",
-        mission_plan_show_all="Show all",
         mission_activity_auto_continued="Asked the lead to carry on",
         mission_activity_auto_paused="Paused: no step finished after {0} automatic continues",
         mission_status_interrupted="Interrupted",
@@ -861,7 +855,6 @@ def get_english_strings() -> LanguageStrings:
         mission_delete_title="Delete mission",
         mission_delete_confirm="Delete \"{0}\" from Mission Control? Its conversations are kept.",
         mission_error_rename="Could not rename the mission: {0}",
-        mission_you="You",
         mission_plan_history="History ({0})",
         mission_plan_history_tip="Plans this mission finished before the current work",
         mission_plan_history_title="Earlier plans",
@@ -938,13 +931,9 @@ def get_english_strings() -> LanguageStrings:
         mission_activity_recovery_scheduled="Couldn't reach the AI service; trying again in {0}s",
         mission_activity_auto_retried="Failed request retried automatically (attempt {0})",
         mission_activity_recovery_gave_up="Stopped retrying after {0} automatic attempts",
-        mission_activity_loop_detected="{0} kept repeating {1} with the same result; mission paused",
+        mission_activity_loop_detected="{0} again and again with the same result; mission paused",
         mission_say_reconnecting="I lost contact with the AI service. I'll try again by myself shortly…",
         mission_say_stuck="I seem to be going round in circles. Tell me what to do, or let me carry on.",
-        mission_recovery_notice=(
-            "The AI service couldn't be reached ({0}). Mission Control will send the request again by itself at "
-            "{1} (attempt {2} of {3}), or press Retry now."
-        ),
         mission_retry_now="Retry now",
         mission_carry_on="Carry on",
         mission_stuck_no_progress=(
@@ -952,14 +941,35 @@ def get_english_strings() -> LanguageStrings:
             "guidance, or press Carry on to let it try again."
         ),
         mission_stuck_repeating=(
-            "Mission Control paused this mission: {0} did the same thing {1} times in a row and got the same "
-            "result each time ({2}). Send guidance, or press Carry on to let it try again."
+            "Mission Control paused this mission: {0} {1} times in a row, getting the same result each time. "
+            "Send guidance, or press Carry on to let it try again."
         ),
         mission_notify_decision="Needs your approval",
         mission_notify_completed="Mission accomplished",
         mission_notify_replied="The lead replied",
         mission_notify_failed="Mission failed",
         mission_notify_stuck="Mission looks stuck",
+        mission_steps_count="{0} of {1} steps done",
+        mission_report_copy="Copy report",
+        mission_report_copied="Copied",
+        mission_report_show_steps="Show the steps",
+        mission_report_hide_steps="Hide the steps",
+        mission_report_show_activity="Show what happened",
+        mission_report_hide_activity="Hide what happened",
+        mission_plan_filter_all="All",
+        mission_inbox_clear="All clear",
+        mission_activity_tool_read="{0} read {1}",
+        mission_activity_tool_wrote="{0} wrote {1}",
+        mission_activity_tool_deleted="{0} deleted {1}",
+        mission_activity_tool_files="{0} worked with files",
+        mission_activity_tool_edited="{0} edited {1}",
+        mission_activity_tool_delegated="{0} handed work to a helper",
+        mission_activity_tool_ran="{0} ran {1}",
+        mission_activity_tool_web="{0} looked something up on the web",
+        mission_recovery_notice=(
+            "The AI service couldn't be reached. Mission Control will send the request again by itself at {0} "
+            "(attempt {1} of {2}), or press Retry now."
+        ),
         mission_report_stats="Steps done: {0} of {1}  ·  Agents on the team: {2}",
         mission_follow_up="Ask a follow-up",
         mission_activity_reversible_approved="Approved {0} — recorded in the journal",

@@ -707,7 +707,6 @@ def get_french_strings() -> LanguageStrings:
         mission_example_2="Trouver les tests en échec et les corriger",
         mission_example_3="Ajouter une validation des saisies au formulaire de paramètres, avec des tests",
         mission_new="Nouvelle mission",
-        mission_caption="MISSION",
         mission_status_planning="Planification",
         mission_status_running="En cours",
         mission_status_needs_you="Votre avis est requis",
@@ -716,11 +715,8 @@ def get_french_strings() -> LanguageStrings:
         mission_status_stopped="Arrêtée",
         mission_progress="{0} % terminé",
         mission_stop="Arrêter",
-        mission_stat_tasks="Tâches",
         mission_stat_completed="Terminées",
         mission_stat_in_progress="En cours",
-        mission_stat_approvals="Attendent votre approbation",
-        mission_stat_agents="Agents actifs",
         mission_plan_title="Plan de mission",
         mission_plan_empty="Le plan s'affichera ici dès que l'IA principale l'aura rédigé.",
         mission_task_pending="En attente",
@@ -741,7 +737,6 @@ def get_french_strings() -> LanguageStrings:
         mission_agent_idle="Inactif",
         mission_agent_error="Arrêté sur une erreur",
         mission_inbox_title="Décisions en attente",
-        mission_inbox_empty="Aucune décision n'est requise.",
         mission_approve="Approuver",
         mission_unsure="Pas sûr",
         mission_reject="Refuser",
@@ -783,7 +778,6 @@ def get_french_strings() -> LanguageStrings:
         mission_task_open_agent="Ouvrir la conversation",
         mission_plan_hint="Cliquez sur une étape pour voir son avancement.",
         mission_plan_filter_empty="Aucune étape ne correspond à ce filtre.",
-        mission_plan_show_all="Tout afficher",
         mission_activity_auto_continued="Le responsable a été relancé",
         mission_activity_auto_paused="En pause : aucune étape terminée après {0} relances automatiques",
         mission_status_interrupted="Interrompue",
@@ -901,7 +895,6 @@ def get_french_strings() -> LanguageStrings:
         mission_delete_title="Supprimer la mission",
         mission_delete_confirm="Supprimer « {0} » du centre de missions ? Ses conversations sont conservées.",
         mission_error_rename="Impossible de renommer la mission : {0}",
-        mission_you="Vous",
         mission_plan_history="Historique ({0})",
         mission_plan_history_tip="Plans que cette mission a terminés avant le travail en cours",
         mission_plan_history_title="Plans précédents",
@@ -984,13 +977,9 @@ def get_french_strings() -> LanguageStrings:
         mission_activity_recovery_scheduled="Service d'IA injoignable ; nouvel essai dans {0} s",
         mission_activity_auto_retried="Requête échouée relancée automatiquement (essai {0})",
         mission_activity_recovery_gave_up="Nouveaux essais arrêtés après {0} tentatives automatiques",
-        mission_activity_loop_detected="{0} a répété {1} avec le même résultat ; mission en pause",
+        mission_activity_loop_detected="{0} encore et encore avec le même résultat ; mission en pause",
         mission_say_reconnecting="J'ai perdu le contact avec le service d'IA. Je réessaierai moi-même sous peu…",
         mission_say_stuck="Je semble tourner en rond. Dites-moi quoi faire, ou laissez-moi continuer.",
-        mission_recovery_notice=(
-            "Le service d'IA est injoignable ({0}). Mission Control renverra la requête de lui-même à {1} (essai "
-            "{2} sur {3}), ou appuyez sur Réessayer maintenant."
-        ),
         mission_retry_now="Réessayer maintenant",
         mission_carry_on="Continuer",
         mission_stuck_no_progress=(
@@ -998,14 +987,35 @@ def get_french_strings() -> LanguageStrings:
             "terminé aucune étape. Envoyez des instructions, ou appuyez sur Continuer pour le laisser réessayer."
         ),
         mission_stuck_repeating=(
-            "Mission Control a mis cette mission en pause : {0} a fait la même chose {1} fois d'affilée avec le "
-            "même résultat ({2}). Envoyez des instructions, ou appuyez sur Continuer pour le laisser réessayer."
+            "Mission Control a mis cette mission en pause : {0} {1} fois d'affilée, avec le même résultat "
+            "à chaque fois. Envoyez des instructions, ou appuyez sur Continuer pour le laisser réessayer."
         ),
         mission_notify_decision="Votre approbation est requise",
         mission_notify_completed="Mission accomplie",
         mission_notify_replied="Le responsable a répondu",
         mission_notify_failed="Mission échouée",
         mission_notify_stuck="La mission semble bloquée",
+        mission_steps_count="{0} étape(s) sur {1} terminée(s)",
+        mission_report_copy="Copier le rapport",
+        mission_report_copied="Copié",
+        mission_report_show_steps="Afficher les étapes",
+        mission_report_hide_steps="Masquer les étapes",
+        mission_report_show_activity="Afficher ce qui s'est passé",
+        mission_report_hide_activity="Masquer ce qui s'est passé",
+        mission_plan_filter_all="Toutes",
+        mission_inbox_clear="Rien en attente",
+        mission_activity_tool_read="{0} a lu {1}",
+        mission_activity_tool_wrote="{0} a écrit {1}",
+        mission_activity_tool_deleted="{0} a supprimé {1}",
+        mission_activity_tool_files="{0} a travaillé sur des fichiers",
+        mission_activity_tool_edited="{0} a modifié {1}",
+        mission_activity_tool_delegated="{0} a confié du travail à un assistant",
+        mission_activity_tool_ran="{0} a exécuté {1}",
+        mission_activity_tool_web="{0} a fait une recherche sur le web",
+        mission_recovery_notice=(
+            "Le service d'IA est injoignable. Mission Control renverra la requête de lui-même à {0} "
+            "(essai {1} sur {2}), ou appuyez sur Réessayer maintenant."
+        ),
         mission_report_stats="Étapes terminées : {0} sur {1}  ·  Agents dans l'équipe : {2}",
         mission_follow_up="Poser une question de suivi",
         mission_activity_reversible_approved="{0} approuvé — enregistré dans le journal",

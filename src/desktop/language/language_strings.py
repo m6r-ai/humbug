@@ -604,7 +604,6 @@ class LanguageStrings:
     mission_example_2: str
     mission_example_3: str
     mission_new: str
-    mission_caption: str
     mission_status_planning: str
     mission_status_running: str
     mission_status_needs_you: str
@@ -613,11 +612,8 @@ class LanguageStrings:
     mission_status_stopped: str
     mission_progress: str
     mission_stop: str
-    mission_stat_tasks: str
     mission_stat_completed: str
     mission_stat_in_progress: str
-    mission_stat_approvals: str
-    mission_stat_agents: str
     mission_plan_title: str
     mission_plan_empty: str
     mission_task_pending: str
@@ -635,7 +631,6 @@ class LanguageStrings:
     mission_agent_idle: str
     mission_agent_error: str
     mission_inbox_title: str
-    mission_inbox_empty: str
     mission_approve: str
     mission_unsure: str
     mission_reject: str
@@ -674,7 +669,6 @@ class LanguageStrings:
     mission_task_open_agent: str
     mission_plan_hint: str
     mission_plan_filter_empty: str
-    mission_plan_show_all: str
     mission_activity_auto_continued: str
     mission_activity_auto_paused: str
     mission_status_interrupted: str
@@ -752,7 +746,6 @@ class LanguageStrings:
     mission_delete_title: str
     mission_delete_confirm: str
     mission_error_rename: str
-    mission_you: str
     mission_plan_history: str
     mission_plan_history_tip: str
     mission_plan_history_title: str
@@ -826,7 +819,6 @@ class LanguageStrings:
     mission_activity_loop_detected: str
     mission_say_reconnecting: str
     mission_say_stuck: str
-    mission_recovery_notice: str
     mission_retry_now: str
     mission_carry_on: str
     mission_stuck_no_progress: str
@@ -836,6 +828,24 @@ class LanguageStrings:
     mission_notify_replied: str
     mission_notify_failed: str
     mission_notify_stuck: str
+    mission_steps_count: str
+    mission_report_copy: str
+    mission_report_copied: str
+    mission_report_show_steps: str
+    mission_report_hide_steps: str
+    mission_report_show_activity: str
+    mission_report_hide_activity: str
+    mission_plan_filter_all: str
+    mission_inbox_clear: str
+    mission_activity_tool_read: str
+    mission_activity_tool_wrote: str
+    mission_activity_tool_deleted: str
+    mission_activity_tool_files: str
+    mission_activity_tool_edited: str
+    mission_activity_tool_delegated: str
+    mission_activity_tool_ran: str
+    mission_activity_tool_web: str
+    mission_recovery_notice: str
     mission_report_stats: str
     mission_follow_up: str
     mission_activity_reversible_approved: str

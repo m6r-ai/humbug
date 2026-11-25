@@ -98,12 +98,14 @@ class MissionStuck:
         reason: What gave it away
         count: How many continues finished no step, or how many times the action was repeated
         agent_title: The conversation that repeated itself, for REPEATING
-        action: The action it repeated, for REPEATING
+        tool_name: The tool call it repeated, for REPEATING
+        tool_target: What that tool call worked on, such as a file or a command, when known
     """
     reason: MissionStuckReason
     count: int
     agent_title: str = ""
-    action: str = ""
+    tool_name: str = ""
+    tool_target: str = ""
 
 
 @dataclass(frozen=True)

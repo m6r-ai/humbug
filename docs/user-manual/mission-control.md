@@ -31,13 +31,21 @@ them until the mindspace is closed, so reopening the tab shows everything that h
 If movement on screen is uncomfortable or distracting, turn on **Reduce motion** at the top of
 Mission Control. Everything is then drawn still and in its final state: the agents do not move,
 their remarks appear whole instead of being typed out, status dots do not pulse, cards do not
-fade in, the page jumps rather than glides, and a finished mission is not celebrated with
-confetti. Nothing is hidden; only the movement goes. The choice is saved for the mindspace, as a
+fade in, the page jumps rather than glides, the picture on the new-mission screen is shown as
+it ends, and a finished mission is not celebrated with confetti. Nothing is hidden; only the movement goes. The choice is saved for the mindspace, as a
 [mindspace setting](mindspace-settings.md#mission-control) you can also change in **Settings**.
 
 ---
 
 ## Starting a mission
+
+The new-mission screen opens with a short animation of Humbug's logo arriving. Two streams of
+light fly in and meet, the logo turns into view out of the flash with rings of light circling it,
+a sheen crosses it, and it comes to rest over a pedestal of light with its reflection on the
+floor. It plays once, the first time you open the screen in a Mission Control tab; after that,
+the picture rests on the logo. The Decision Inbox is not shown
+here while nothing is waiting, so the welcome has the whole width; if a conversation outside any
+mission asks for an approval, the inbox appears beside it.
 
 Type what you want to achieve in the box at the bottom (**Tell Humbug what you want to
 achieve…**) and press **Ctrl+Enter** (macOS: **Cmd+Enter**) or click the send button (the paper plane), just as you
@@ -128,10 +136,10 @@ for something that has not changed yet) can be taken for one. In that case press
 If the lead's reply fails because the AI service could not be reached, refused for being too busy
 (a rate limit), or had a server error, the mission shows **Reconnecting** rather than **Failed**,
 and tries the same request again by itself: after 15 seconds, then 30 seconds, 1, 2, 5 and 10
-minutes. The mission card says what went wrong and when the next attempt is due, with
-**Retry now** to try straight away. **Pause** and **Stop** cancel the wait; continuing a paused
-mission starts the attempts again. Once the AI service answers, a later failure gets every attempt
-again.
+minutes. The mission card says when the next attempt is due (hover over it for the AI service's own
+error), with **Retry now** to try straight away. **Pause** and **Stop** cancel the wait; continuing
+a paused mission starts the attempts again. Once the AI service answers, a later failure gets every
+attempt again.
 
 If every attempt fails, the mission is shown as **Failed**, and the activity feed says the attempts
 stopped. Errors that waiting will not fix, such as a rejected API key or a request the service
@@ -214,19 +222,19 @@ When a mission is selected, Mission Control shows, from the top:
   to a mission that is already done, until the lead replies to it, a strip at the top names your
   message and says it is being worked on. It is not shown if the lead's reply fails or the mission
   is stopped or interrupted; the mission card says so instead.
-- **The mission card** with the mission's title, summary, status and progress. Progress counts a
-  task in progress as half done. Under the title, a journey bar shows where the mission is on its
-  way: **You asked**, **AI plans it**, **AI team works** and **Job done**. The current stage glows,
-  and while the AI is working a small moon circles it and a soft pulse spreads out from it; it turns amber when the mission is waiting for you. While the
-  team works, the track beyond **AI team works** fills with the share of the plan that is done.
-  Below the journey, the mission is summed up at a glance. **Now** gives what the lead is doing,
+- **The mission card** with the mission's status, title and summary. Once there is a plan, a ring
+  beside the title fills with how much of it is done (a task in progress counts as half done), with
+  how many steps are done and the step that comes next, or the step that is blocked. Under the
+  title, a journey bar shows where the mission is on its way, one slim bar for each stage:
+  **You asked**, **AI plans it**, **AI team works** and **Job done**. Stages passed are filled, the
+  current one fills with the share of the plan that is done, and while the AI is working a sheen
+  travels along it; it turns amber when the mission is waiting for you.
+  Below the journey, a tinted strip sums the mission up. **Now** gives what the lead is doing,
   in its own words; it is left out while the mission is interrupted, paused, reconnecting, stuck
-  or failed, because a notice on the card says so instead, with what you can do about it. **Progress** says how far the
-  mission has got and what comes next, such as **Step 2 of 4 done: Write the user guide · Next:
-  Add a changelog**, and names a blocked step; after a follow-up starts new work, it names the work
-  finished before. A finished step is never shown as the mission being done. At a narrow width the
-  two are stacked. Requests waiting for you are not repeated here: they are in the banner and the
-  Decision Inbox. **Hide details**, beside the mission's buttons, folds away the figures, the plan,
+  or failed, because a notice on the card says so instead, with what you can do about it. Before
+  there is a plan, the strip also says how far the mission has got, such as the work finished
+  before a follow-up started new work. A finished step is never shown as the mission being done. Requests waiting for you are not repeated here: they are in the banner and the
+  Decision Inbox. **Hide details**, beside the mission's buttons, folds away the plan,
   the agents, the conversation, earlier results and recent activity, leaving the mission card, the
   lead's latest message and the Decision Inbox; **Show details** brings them back. Classic missions
   do not have the summary. Under the **Auto-approve** choice, a sentence says what the chosen level
@@ -235,9 +243,22 @@ When a mission is selected, Mission Control shows, from the top:
   reply, a report card appears at the top of the dashboard. A message you send to a finished
   mission makes it **Running** again until the lead has answered it. If you watched the mission
   finish, it is celebrated with a burst of confetti, once: opening it later, or the lead answering
-  a follow-up, does not celebrate it again. It shows the lead's final report, how many steps were done and
-  how many agents took part, with **Ask a follow-up** (to continue the same mission) and
-  **New mission**. The report itself spans the card's full width below its headline. While you
+  a follow-up, does not celebrate it again. The card is headed by the mission's name under
+  **Mission accomplished**, with how many steps were done and how many agents took part. Below a
+  divider is the lead's final report, which spans the card's full width; its headings are drawn no
+  larger than bold text, so they never outweigh the mission's name. A finished mission's page is
+  its report and the Conversation beside it: the mission card, the Agents and the empty Decision
+  Inbox are put away. Under the mission's name and figures is a row of buttons. **Copy report**
+  puts the report on the clipboard twice over: formatted, so that pasting into a document, a mail
+  or a chat that keeps formatting gives its headings, lists, bold text and tables, and as the lead
+  wrote it, in Markdown, for anywhere that takes only plain text. Which one you get is decided by
+  where you paste, and the formatted copy takes that document's own fonts and colours rather than
+  Humbug's theme. You can also select any part of the report with the mouse.
+  **New mission** and **Ask a follow-up** (to continue the same mission) follow, and the **⋯** menu
+  has **Switch to Classic mode** and **Delete**. **Show the steps**, under the report, brings back
+  the Mission Plan, and **Show what happened** brings back Recent Activity; each folds them away
+  again. The Decision Inbox appears whenever a request is waiting. Sending a follow-up puts the
+  mission back to work, and all its cards return. While you
   read a long report, its headline (**Mission accomplished** with the steps done and agents on the
   team) stays pinned at the top of the view, over the card itself, once the card's own headline has
   scrolled away, and goes once you have scrolled past the report. **Back to top** on the pinned
@@ -255,12 +276,11 @@ When a mission is selected, Mission Control shows, from the top:
   the lead reports progress and asks you questions. It is a plain card until the lead has stopped
   to wait for you; then the card is highlighted and marked **Waiting for your reply**: click **Reply**, or type in the box at the
   bottom, to answer it. The **Reply** button only appears when the lead is waiting for you.
-- **Statistics**: tasks in the plan, tasks completed, tasks in progress, approvals waiting for
-  you, and agents currently working. Click **Completed** or **In progress** to show only those
-  steps in the plan, and click it again (or **Show all**) to see every step. Click the approvals
-  or agents figure to jump to the Decision Inbox or the Agents list.
-- **Agents**: a live picture of who is working on the mission, shown above the Mission Plan. You are at the top, the lead
-  below you, and each delegated agent below the agent that handed it the work. Every agent has a
+- **Agents**: a live picture of who is working on the mission, across the full width directly
+  under the mission card, so you see the team at work before anything else. The lead is at the
+  top, and each delegated agent below the agent that handed it the work. Each agent stands in a
+  soft pool of light tinted by what it is doing: the accent colour while it works or thinks, amber
+  while it waits for you. Every agent has a
   short name of its own (such as Atlas or Nova) that it keeps for the life of the mission, and is
   described by the plan step it is working on where the lead has said so. Each is drawn as a small
   robot that shows what it is doing: it types with a spinning gear while using a tool, shows a
@@ -300,15 +320,19 @@ When a mission is selected, Mission Control shows, from the top:
   is doing, and **Hide the list** folds it away again. The
   same names are used in the Decision Inbox and Recent Activity.
 - **Mission Plan**: the steps the lead has reported, each marked Pending, In progress, Completed
-  or Blocked. Click a step to open it and see the lead's latest progress note, the evidence for a
-  completed step, and the delegated conversation working on it, with a button to open that
-  conversation. Click the step again to close it. What a step shows is only as complete as the
-  lead's report: a step the lead has said nothing about shows that no progress has been
-  reported.
+  or Blocked, below the Agents. Click a step to open it and see the lead's latest
+  progress note, the evidence for a completed step, and the delegated conversation working on it,
+  with a button to open that conversation. Click the step again to close it. What a step shows is
+  only as complete as the lead's report: a step the lead has said nothing about shows that no
+  progress has been reported. The filters in the plan's heading, **All**, **Completed** and
+  **In progress**, each say how many steps they show: choose one to show only those steps, and
+  choose it again, or **All**, to see every step.
 - **Recent Activity**: a scrolling feed, newest first, as tall as its entries up to a limit, of what has happened in this mission
   since Mission Control was first opened in this mindspace. It includes the objective you started
   it with, each message you sent from Mission Control, and anything you typed directly into one of
-  the mission's conversations. Entries marked **▶** have more to show: click one to open it and see
+  the mission's conversations. Tools are described by what they did, such as **Nova read
+  install.md** or **Nova ran make docs**, and the same thing happening several times in a row is
+  one entry with how many times, such as **×4**, at the time it last happened. Entries marked **▶** have more to show: click one to open it and see
   the whole story, such as your full message, the full approval request, the file or command a tool
   worked on, or the reviewer's reasoning, and click it again to close it.
 - **Conversation**: in the right-hand column, below Recent Activity. It shows everything you and the
@@ -335,8 +359,8 @@ A mission waiting for your decision shows a pulsing amber count on its chip. Whe
 than the one you are looking at is waiting, a banner under the chips names it (or says how many
 are waiting), and **Go there** opens it.
 
-Whenever Mission Control moves the page for you, such as **Review now**, **Read more**, a
-statistic, opening a plan step or the plan history, or opening an activity entry, it glides there
+Whenever Mission Control moves the page for you, such as **Review now**, **Read more**,
+opening a plan step or the plan history, or opening an activity entry, it glides there
 rather than jumping, so you can see where you have been taken. Each chip has a **⋯** button (you can also right-click the chip) with:
 
 - **Rename**, to give the mission a name of your own. The name stays, even when the lead later
@@ -538,7 +562,8 @@ detail such as a diff, which conversation asked, and whether the operation is de
 Where the request names what it acts on (a file, a move from one path to another, a command or a
 URL), that is shown as **Acts on**. A destructive request also says, before you approve it,
 whether it can be undone: a file change that Humbug's file change journal records can be, and
-anything else, such as a terminal command or a network request, cannot be undone by Humbug.
+anything else, such as a terminal command or a network request, cannot be undone by Humbug. With
+nothing waiting, the inbox is a single line marked **All clear**.
 
 - **Approve** allows the operation. It is red for destructive operations.
 - **Unsure** declines the operation and asks the conversation to discuss it with you.

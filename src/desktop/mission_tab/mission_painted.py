@@ -427,3 +427,63 @@ class StatusPill(QWidget):
         painter.setPen(tone_text(self._tone))
         painter.drawText(text_rect, int(Qt.AlignmentFlag.AlignCenter), self._text)
         painter.end()
+
+
+class ProgressRing(QWidget):
+    """A ring that fills round with how much of something is done, with the share written inside."""
+
+    def __init__(self, diameter: int, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._diameter = diameter
+        self._fraction = 0.0
+        self._tone = MissionTone.ACCENT
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+
+    def set_progress(self, fraction: float, tone: MissionTone) -> None:
+        """Show how much is done, between 0.0 and 1.0, in a tone's colour."""
+        fraction = max(0.0, min(1.0, fraction))
+        if fraction != self._fraction or tone != self._tone:
+            self._fraction = fraction
+            self._tone = tone
+            self.update()
+
+    def sizeHint(self) -> QSize:
+        size = _scaled(self._diameter)
+        return QSize(size, size)
+
+    def minimumSizeHint(self) -> QSize:
+        return self.sizeHint()
+
+    def paintEvent(self, event: QPaintEvent) -> None:
+        """Draw the track, the filled arc and the share in the middle."""
+        super().paintEvent(event)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        size = min(self.width(), self.height())
+        thickness = size * 0.11
+        rect = QRectF(
+            (self.width() - size) / 2 + thickness / 2, (self.height() - size) / 2 + thickness / 2,
+            size - thickness, size - thickness
+        )
+        style = StyleManager()
+        track = QColor(style.get_color(ColorRole.TEXT_INACTIVE))
+        track.setAlphaF(0.18)
+        painter.setPen(QPen(track, thickness))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawEllipse(rect)
+        if self._fraction > 0.0:
+            pen = QPen(tone_color(self._tone), thickness)
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            painter.setPen(pen)
+            # Qt measures arcs anticlockwise from three o'clock in sixteenths of a degree; the fill runs clockwise from the top.
+            painter.drawArc(rect, 90 * 16, -round(360 * 16 * self._fraction))
+
+        font = QFont(self.font())
+        font.setPixelSize(max(8, round(size * 0.24)))
+        font.setBold(True)
+        painter.setFont(font)
+        _page, card = surface_colors()
+        painter.setPen(readable(style.get_color(ColorRole.TEXT_PRIMARY), card))
+        painter.drawText(rect, int(Qt.AlignmentFlag.AlignCenter), f"{round(self._fraction * 100)}%")
+        painter.end()

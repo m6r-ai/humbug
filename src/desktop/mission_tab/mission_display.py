@@ -15,12 +15,10 @@ class MissionTone(Enum):
 
 
 class MissionStatTarget(Enum):
-    """Where clicking a statistic takes the user."""
+    """Which steps of the plan a filter shows."""
     ALL_STEPS = auto()
     DONE_STEPS = auto()
     ACTIVE_STEPS = auto()
-    INBOX = auto()
-    AGENTS = auto()
 
 
 class MissionStepState(Enum):
@@ -64,16 +62,17 @@ class MissionHeaderView:
     can_pause: bool = False
     paused: bool = False
     recovery_text: str = ""
+    steps_text: str = ""
+    next_text: str = ""
+    recovery_error: str = ""
     stuck_text: str = ""
 
 
 @dataclass(frozen=True)
 class MissionStatView:
-    """One figure in the statistics row."""
-    glyph: str
+    """One of the plan's filters, with how many steps it shows."""
     value: str
     label: str
-    tone: MissionTone
     target: MissionStatTarget
 
 

@@ -2936,6 +2936,28 @@ class TestAutomaticRecovery:
 
         asyncio.run(run())
 
+    def test_failure_being_retried_is_not_reported_as_an_error(self, mindspace, submitted, started_turns, monkeypatch):  # pylint: disable=unused-argument
+        """The feed says the request will be tried again, not that the lead stopped with an error."""
+        monkeypatch.setattr(mission_service_module, "AUTO_RETRY_DELAYS_SECONDS", (60,))
+
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            await _fail_turn(conversation, "network_error")
+
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            kinds = [a.kind for a in snapshot.activity]
+            assert MissionActivityKind.RECOVERY_SCHEDULED in kinds
+            assert MissionActivityKind.ERROR not in kinds
+
+            await _fail_turn(conversation, "401")
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            assert snapshot.activity[0].kind == MissionActivityKind.ERROR
+            service.stop()
+
+        asyncio.run(run())
+
     def test_error_that_will_not_pass_fails_at_once(self, mindspace, submitted, started_turns, quick_retries):  # pylint: disable=unused-argument
         """A rejected request is not retried: the mission is failed for the user straight away."""
         async def run() -> None:
@@ -3070,7 +3092,8 @@ class TestStuckMissions:
             assert snapshot is not None and snapshot.stuck is not None
             assert snapshot.stuck.reason == MissionStuckReason.REPEATING
             assert snapshot.stuck.count == mission_service_module.MAX_REPEATED_ACTIONS
-            assert "a.txt" in snapshot.stuck.action
+            assert snapshot.stuck.tool_target == "a.txt"
+            assert snapshot.stuck.tool_name.startswith("filesystem")
             assert snapshot.activity[0].kind == MissionActivityKind.LOOP_DETECTED
             assert snapshot.agents[0].state == MissionAgentState.IDLE
             service.stop()

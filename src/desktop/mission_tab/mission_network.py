@@ -30,8 +30,6 @@ _IDLE_FRAME_MS = 90
 _STILL_FRAME_MS = 1000
 _STILL_PAST = 1.0e6
 
-_USER_ID = "__user__"
-
 # How fast an agent's words appear, in characters per second, and how long a new remark makes it wave.
 _TYPING_RATE = 45.0
 _WAVE_SECONDS = 1.4
@@ -41,14 +39,22 @@ _CARD_LINES = 3
 # How far below a robot's centre its name sits, in robot sizes, clearing the pedestal it stands on.
 _LABEL_DROP = 0.94
 
+# What colours the light under an agent, by what the agent is doing.
+_LIGHT_TONES = {
+    "working": MissionTone.ACCENT,
+    "thinking": MissionTone.ACCENT,
+    "waiting": MissionTone.WARNING,
+    "error": MissionTone.DANGER,
+}
+
 
 @dataclass
 class _Node:
-    """A node of the network: the user, or an agent."""
+    """An agent in the network."""
     node_id: str
     label: str
     caption: str
-    agent: MissionAgentView | None
+    agent: MissionAgentView
     level: int = 0
     center: QPointF = field(default_factory=QPointF)
 
@@ -92,7 +98,6 @@ class AgentNetworkView(QWidget):
         self._style_manager = StyleManager()
         self._nodes: list[_Node] = []
         self._edges: list[tuple[_Node, _Node]] = []
-        self._user_label = ""
         self._phase = 0.0
         self._hover_id = ""
         self._speech: dict[str, tuple[str, float]] = {}
@@ -110,7 +115,6 @@ class AgentNetworkView(QWidget):
     def set_agents(
         self,
         agents: list[MissionAgentView],
-        user_label: str,
         approve_label: str = "",
         reject_label: str = "",
         finish_label: str = "",
@@ -124,7 +128,6 @@ class AgentNetworkView(QWidget):
 
         Args:
             agents: The agents, lead first
-            user_label: Label for the user's own node
             approve_label: Label of the Approve button shown in a waiting agent's card
             reject_label: Label of the Reject button shown in a waiting agent's card
             finish_label: Label of the button that cuts a wait short
@@ -134,7 +137,6 @@ class AgentNetworkView(QWidget):
             review_label: Label of the button that opens a destructive request in the inbox, offered in
                 place of Approve so that it is approved only where its target and consequence are shown
         """
-        self._user_label = user_label
         self._labels = {
             "approve": approve_label, "reject": reject_label, "finish": finish_label, "left": left_label,
             "more": more_label, "unsure": unsure_label, "review": review_label
@@ -152,30 +154,26 @@ class AgentNetworkView(QWidget):
 
         self._speech = speech
         self._sync_buttons(agents)
-        user = _Node(_USER_ID, user_label, "", None)
-        nodes = {_USER_ID: user}
+        nodes = {agent.context_id: _Node(agent.context_id, agent.name, agent.role_text, agent) for agent in agents}
         lead_id = next((agent.context_id for agent in agents if agent.is_lead), "")
-        for agent in agents:
-            nodes[agent.context_id] = _Node(agent.context_id, agent.name, agent.role_text, agent)
-
+        # The lead heads the team; each helper hangs below the agent that delegated to it, or below
+        # the lead when that agent is not open.
         edges: list[tuple[_Node, _Node]] = []
         for agent in agents:
             if agent.is_lead:
-                parent_id = _USER_ID
+                continue
 
-            elif agent.parent_id in nodes:
-                parent_id = agent.parent_id
-
-            else:
-                parent_id = lead_id or _USER_ID
-
-            edges.append((nodes[parent_id], nodes[agent.context_id]))
+            parent_id = agent.parent_id if agent.parent_id in nodes else lead_id
+            if parent_id:
+                edges.append((nodes[parent_id], nodes[agent.context_id]))
 
         children: dict[str, list[_Node]] = {}
         for parent, child in edges:
             children.setdefault(parent.node_id, []).append(child)
 
-        pending = [user]
+        pending = [node for node in nodes.values() if node.agent.is_lead or node.node_id not in {
+            child.node_id for _parent, child in edges
+        }]
         while pending:
             node = pending.pop(0)
             for child in children.get(node.node_id, []):
@@ -493,19 +491,14 @@ class AgentNetworkView(QWidget):
     def _metrics(self) -> tuple[float, float, float]:
         """Return the robot size, the gap between agent levels and the top margin, scaled by zoom."""
         zoom = self._style_manager.zoom_factor()
-        size = 56 * zoom
+        size = 72 * zoom
         gap = size * _LABEL_DROP + self._name_height() + 6 * zoom + self._card_reserve() + 40 * zoom + size * 0.8
-        return size, gap, 40 * zoom
+        return size, gap, 22 * zoom
 
     def _level_y(self, level: int) -> float:
-        """Return the vertical centre of a level; the user's level is shorter, having no card."""
+        """Return the vertical centre of a level, the lead's at the top."""
         size, gap, top = self._metrics()
-        first = top + size / 2
-        if level == 0:
-            return first
-
-        user_gap = size * 0.46 + self._name_height() + 40 * self._style_manager.zoom_factor() + size * 0.8
-        return first + user_gap + (level - 1) * gap
+        return top + size * 0.6 + level * gap
 
     def _layout_nodes(self) -> None:
         """Spread each level's nodes evenly across the width."""
@@ -524,8 +517,7 @@ class AgentNetworkView(QWidget):
         size, _gap, _top = self._metrics()
         deepest = max((node.level for node in self._nodes), default=0)
         bottom = self._level_y(deepest) + size * _LABEL_DROP + self._name_height()
-        if deepest > 0:
-            bottom += 6 * self._style_manager.zoom_factor() + self._card_reserve()
+        bottom += 6 * self._style_manager.zoom_factor() + self._card_reserve()
 
         return QSize(400, round(bottom + 12 * self._style_manager.zoom_factor()))
 
@@ -551,7 +543,7 @@ class AgentNetworkView(QWidget):
     def _any_active(self) -> bool:
         """Return True if any agent is working, thinking, waiting or still speaking."""
         return any(
-            node.agent is not None and (node.agent.activity != "idle" or self._typing(node.node_id))
+            node.agent.activity != "idle" or self._typing(node.node_id)
             for node in self._nodes
         )
 
@@ -571,13 +563,13 @@ class AgentNetworkView(QWidget):
 
     def _update_timer(self) -> None:
         """Animate quickly while agents work and slowly at rest; not at all when there is nothing to show."""
-        if not self._nodes or len(self._nodes) == 1 or not self.isVisible():
+        if not self._nodes or not self.isVisible():
             self._timer.stop()
             return
 
         if MissionMotion().reduced():
             # Nothing moves, but a wait's countdown is still kept up to date.
-            if any(node.agent is not None and node.agent.wait_started for node in self._nodes):
+            if any(node.agent.wait_started for node in self._nodes):
                 self._timer.setInterval(_STILL_FRAME_MS)
                 if not self._timer.isActive():
                     self._timer.start()
@@ -625,11 +617,11 @@ class AgentNetworkView(QWidget):
         hover_id = node.node_id if node is not None else ""
         if hover_id != self._hover_id:
             self._hover_id = hover_id
-            clickable = node is not None and node.agent is not None and node.agent.clickable
+            clickable = node is not None and node.agent.clickable
             self.setCursor(Qt.CursorShape.PointingHandCursor if clickable else Qt.CursorShape.ArrowCursor)
             self.update()
 
-        if node is not None and node.agent is not None:
+        if node is not None:
             QToolTip.showText(
                 event.globalPosition().toPoint(), self._describe(node), self
             )
@@ -683,7 +675,7 @@ class AgentNetworkView(QWidget):
 
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
             node = self._node_by_id(self._hover_id)
-            if node is not None and node.agent is not None and node.agent.clickable:
+            if node is not None and node.agent.clickable:
                 self.agent_clicked.emit(node.agent.context_id)
                 event.accept()
                 return
@@ -714,8 +706,7 @@ class AgentNetworkView(QWidget):
         node = self._nodes[index]
         self._hover_id = node.node_id
         self.update()
-        if node.agent is not None:
-            QToolTip.showText(self.mapToGlobal(self.rect().center()), self._describe(node), self)
+        QToolTip.showText(self.mapToGlobal(self.rect().center()), self._describe(node), self)
 
         # A screen reader cannot see the drawing, so the highlighted agent is announced in words.
         self._update_accessible_description()
@@ -728,10 +719,9 @@ class AgentNetworkView(QWidget):
         The highlighted agent comes first, then every agent in the order it is drawn, each with
         what it is doing, so the picture carries the same information as the agents list.
         """
-        agents = [node for node in self._nodes if node.agent is not None]
         highlighted = self._node_by_id(self._hover_id)
-        lines = [self._describe(highlighted).replace("\n", " — ")] if highlighted in agents else []
-        lines += [self._describe(node).replace("\n", " — ") for node in agents if node is not highlighted]
+        lines = [self._describe(highlighted).replace("\n", " — ")] if highlighted is not None else []
+        lines += [self._describe(node).replace("\n", " — ") for node in self._nodes if node is not highlighted]
         self.setAccessibleDescription("\n".join(lines))
 
     def _node_by_id(self, node_id: str) -> _Node | None:
@@ -741,9 +731,6 @@ class AgentNetworkView(QWidget):
     def _describe(self, node: _Node) -> str:
         """Return the summary shown when an agent is hovered over or focused."""
         agent = node.agent
-        if agent is None:
-            return node.label
-
         return (
             f"{node.label} · {node.caption}"
             + (f" · {agent.model_text}" if agent.model_text else "")
@@ -753,7 +740,7 @@ class AgentNetworkView(QWidget):
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Open the conversation of a clicked agent."""
         node = self._node_at(event.position())
-        if node is not None and node.agent is not None and node.agent.clickable:
+        if node is not None and node.agent.clickable:
             self.agent_clicked.emit(node.agent.context_id)
             event.accept()
             return
@@ -761,66 +748,49 @@ class AgentNetworkView(QWidget):
         super().mousePressEvent(event)
 
     def paintEvent(self, event: QPaintEvent) -> None:
-        """Draw the grid, the arrows and the robots."""
+        """Draw the light under each robot, the arrows and the robots."""
         super().paintEvent(event)
-        if len(self._nodes) < 2:
+        if not self._nodes:
             return
 
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        self._paint_grid(painter)
+        self._paint_floor_light(painter)
         for parent, child in self._edges:
             self._paint_edge(painter, parent, child)
 
         for node in self._nodes:
-            if node.agent is None:
-                self._paint_user(painter, node)
-
-            else:
-                self._paint_robot(painter, node)
+            self._paint_robot(painter, node)
 
         # Speech goes on top, so arrows and neighbours never cover what an agent says.
         for node in self._nodes:
-            if node.agent is not None and node.node_id in self._speech:
+            if node.node_id in self._speech:
                 self._paint_speech(painter, node)
 
         painter.end()
 
-    def _paint_grid(self, painter: QPainter) -> None:
-        """Draw a floor grid receding in perspective, so the robots stand in a room rather than on a page."""
-        line = QColor(self._style_manager.get_color(ColorRole.TEXT_PRIMARY))
-        width, height = float(self.width()), float(self.height())
-        horizon = -height * 0.35
-        vanish = QPointF(width / 2, horizon)
-        spacing = 46 * self._style_manager.zoom_factor()
+    def _paint_floor_light(self, painter: QPainter) -> None:
+        """
+        Draw a pool of light on the floor under each robot, tinted by what it is doing.
 
-        # Lines running into the distance, all meeting at the vanishing point above the view.
-        count = int(width / spacing) + 6
-        for index in range(-count, count + 1):
-            foot = QPointF(width / 2 + index * spacing * 1.6, height)
-            line.setAlphaF(0.06)
-            painter.setPen(QPen(line, 1.0))
-            painter.drawLine(vanish + (foot - vanish) * 0.42, foot)
-
-        # Cross lines, closer together towards the horizon.
-        rows = 9
-        for row in range(1, rows + 1):
-            depth = row / rows
-            y = horizon + (height - horizon) * (0.42 + 0.58 * depth * depth)
-            line.setAlphaF(0.025 + 0.05 * depth)
-            painter.setPen(QPen(line, 1.0))
-            painter.drawLine(QPointF(0, y), QPointF(width, y))
-
-        # Fade the far end out, so the floor dissolves into the card rather than stopping.
-        _page, card = surface_colors()
-        mist = QLinearGradient(0, 0, 0, height * 0.45)
-        top = QColor(card)
-        top.setAlphaF(0.9)
-        mist.setColorAt(0.0, top)
-        clear = QColor(card)
-        clear.setAlphaF(0.0)
-        mist.setColorAt(1.0, clear)
-        painter.fillRect(QRectF(0, 0, width, height * 0.45), QBrush(mist))
+        A working agent stands in the accent colour, one waiting for the user in the warning
+        colour, so the team's state reads at a glance before any word is read.
+        """
+        size, _gap, _top = self._metrics()
+        for node in self._nodes:
+            agent = node.agent
+            color = tone_color(_LIGHT_TONES.get(agent.activity, MissionTone.NEUTRAL))
+            floor = QPointF(node.center.x(), node.center.y() + size * 0.62)
+            glow = QRadialGradient(floor, size * 1.1)
+            light = QColor(color)
+            light.setAlphaF(0.30 if agent.activity in ("working", "thinking", "waiting") else 0.12)
+            glow.setColorAt(0.0, light)
+            clear = QColor(color)
+            clear.setAlphaF(0.0)
+            glow.setColorAt(1.0, clear)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QBrush(glow))
+            painter.drawEllipse(floor, size * 1.1, size * 0.34)
 
     def _paint_edge(self, painter: QPainter, parent: _Node, child: _Node) -> None:
         """Draw a curved arrow from a delegator to its agent, with particles while work flows."""
@@ -828,18 +798,18 @@ class AgentNetworkView(QWidget):
         zoom = self._style_manager.zoom_factor()
         # Arrows leave from the bottom of what the delegator is saying, or below its name when it
         # is quiet, so the link visibly joins the two agents without crossing either label.
-        if parent.agent is not None and parent.node_id in self._speech:
+        if parent.node_id in self._speech:
             start = QPointF(parent.center.x(), self._bubble_rect(parent).bottom())
 
         else:
-            start = QPointF(parent.center.x(), parent.center.y() + self._name_bottom(parent))
+            start = QPointF(parent.center.x(), parent.center.y() + self._name_bottom())
 
         end = QPointF(child.center.x(), child.center.y() - size * 0.78)
         bend = (end.y() - start.y()) * 0.55
         path = QPainterPath(start)
         path.cubicTo(QPointF(start.x(), start.y() + bend), QPointF(end.x(), end.y() - bend), end)
 
-        activity = child.agent.activity if child.agent is not None else "idle"
+        activity = child.agent.activity
         tone = {
             "waiting": MissionTone.WARNING, "error": MissionTone.DANGER, "idle": MissionTone.NEUTRAL,
         }.get(activity, MissionTone.ACCENT)
@@ -896,12 +866,9 @@ class AgentNetworkView(QWidget):
                 painter.setBrush(QBrush(glow))
                 painter.drawEllipse(point, 7 * self._style_manager.zoom_factor(), 7 * self._style_manager.zoom_factor())
 
-    def _name_bottom(self, node: _Node) -> float:
-        """Return how far below a node's centre its name and caption end."""
+    def _name_bottom(self) -> float:
+        """Return how far below an agent's centre its name, caption and model end."""
         size, _gap, _top = self._metrics()
-        if node.agent is None:
-            return size * 0.5 + self._name_height()
-
         return size * _LABEL_DROP + self._name_height() + 4 * self._style_manager.zoom_factor()
 
     def _paint_label(self, painter: QPainter, node: _Node, below: float) -> None:
@@ -934,7 +901,7 @@ class AgentNetworkView(QWidget):
         painter.drawText(caption_rect, int(Qt.AlignmentFlag.AlignCenter), caption_metrics.elidedText(
             node.caption, Qt.TextElideMode.ElideRight, round(width)
         ))
-        if node.agent is not None and node.agent.model_text:
+        if node.agent.model_text:
             self._paint_model(painter, node.agent.model_text, node.center.x(), caption_rect.bottom() + 3 * zoom, width)
 
     def _paint_model(self, painter: QPainter, model: str, center_x: float, top: float, width: float) -> None:
@@ -958,31 +925,9 @@ class AgentNetworkView(QWidget):
         painter.setPen(readable(tone_color(MissionTone.ACCENT), card))
         painter.drawText(tag, int(Qt.AlignmentFlag.AlignCenter), text)
 
-    def _paint_user(self, painter: QPainter, node: _Node) -> None:
-        """Draw the user's node: a simple person in a circle."""
-        size, _gap, _top = self._metrics()
-        radius = size * 0.42
-        color = tone_color(MissionTone.INFO)
-        gradient = QRadialGradient(node.center - QPointF(radius * 0.4, radius * 0.4), radius * 1.6)
-        gradient.setColorAt(0.0, _shade(color, 160))
-        gradient.setColorAt(1.0, color)
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QBrush(gradient))
-        painter.drawEllipse(node.center, radius, radius)
-        white = QColor("#ffffff")
-        painter.setBrush(white)
-        painter.drawEllipse(node.center - QPointF(0, radius * 0.25), radius * 0.28, radius * 0.28)
-        body = QPainterPath()
-        body.addEllipse(QRectF(node.center.x() - radius * 0.5, node.center.y() + radius * 0.12, radius, radius * 0.75))
-        clip = QPainterPath()
-        clip.addEllipse(node.center, radius, radius)
-        painter.drawPath(body.intersected(clip))
-        self._paint_label(painter, node, node.center.y() + radius + 4)
-
     def _paint_robot(self, painter: QPainter, node: _Node) -> None:
         """Draw an agent as a shaded robot whose motion shows what it is doing."""
         agent = node.agent
-        assert agent is not None
         size, _gap, _top = self._metrics()
         activity = agent.activity
         phase = self._phase + (hash(node.node_id) % 100) / 37.0
@@ -1286,7 +1231,6 @@ class AgentNetworkView(QWidget):
     def _paint_speech(self, painter: QPainter, node: _Node) -> None:
         """Draw what an agent is saying, typed out, in a card under its name."""
         agent = node.agent
-        assert agent is not None
         zoom = self._style_manager.zoom_factor()
         pad = 10 * zoom
         _full_text, started = self._speech[node.node_id]

@@ -133,9 +133,6 @@ _AGENT_NAMES = (
     "Rhea", "Zeno", "Mira", "Theo", "Cleo", "Ravi", "Luna", "Felix", "Ada", "Milo",
 )
 
-# How much of the AI service's error a reconnecting mission quotes.
-_MAX_ERROR_LENGTH = 120
-
 _AGENT_ACTIVITY = {
     MissionAgentState.THINKING: "thinking",
     MissionAgentState.WORKING: "working",
@@ -181,6 +178,46 @@ _REFRESH_DELAY_MS = 120
 
 
 _SPEECH_REQUEST_LENGTH = 90
+
+
+def _tool_kind(tool_name: str, target: str) -> tuple[str, str]:
+    """
+    Return what kind of thing a tool call does, and what to name in saying so.
+
+    The kind is one of reading, writing, deleting, files, editing, delegating, terminal, web and
+    tool; what is named is a file's name, a command, or for a tool of no known kind its own name.
+    """
+    tool, _dot, operation = tool_name.partition(".")
+    # A file path reads better as just the file's name.
+    short = (os.path.basename(target.rstrip("/\\")) or target) if tool in ("filesystem", "editor") else target
+    if tool == "filesystem":
+        if not short:
+            return "files", ""
+
+        if operation.startswith(("read", "list", "search", "get", "find")):
+            return "reading", short
+
+        if operation.startswith(("write", "append", "apply", "create")):
+            return "writing", short
+
+        if operation.startswith(("delete", "remove")):
+            return "deleting", short
+
+        return "files", ""
+
+    if tool == "editor" and short:
+        return "editing", short
+
+    if tool == "delegate_ai":
+        return "delegating", ""
+
+    if tool == "terminal" and target:
+        return "terminal", target
+
+    if tool in ("http", "preview"):
+        return "web", ""
+
+    return "tool", tool_name
 
 
 def _first_line(text: str) -> str:
@@ -356,16 +393,25 @@ class MissionTab(TabBase):
         name: str,
         task_title: str,
         speech: str = "",
-        decision: MissionDecision | None = None
+        decision: MissionDecision | None = None,
+        reconnecting: bool = False
     ) -> MissionAgentView:
-        """Turn an agent into its display record, named and described by the task it is doing."""
+        """
+        Turn an agent into its display record, named and described by the task it is doing.
+
+        reconnecting says the mission will retry the request that failed, so a failed agent is
+        shown as reconnecting rather than as stopped.
+        """
         strings = self._strings()
         states = {
             MissionAgentState.THINKING: (strings.mission_agent_thinking, MissionTone.ACCENT, True),
             MissionAgentState.WORKING: (strings.mission_agent_working.format(agent.tool_name), MissionTone.INFO, True),
             MissionAgentState.WAITING_FOR_APPROVAL: (strings.mission_agent_waiting, MissionTone.WARNING, False),
             MissionAgentState.IDLE: (strings.mission_agent_idle, MissionTone.NEUTRAL, False),
-            MissionAgentState.ERROR: (strings.mission_agent_error, MissionTone.DANGER, False),
+            MissionAgentState.ERROR: (
+                (strings.mission_status_recovering, MissionTone.WARNING, False) if reconnecting
+                else (strings.mission_agent_error, MissionTone.DANGER, False)
+            ),
         }
         text, tone, busy = states[agent.state]
         return MissionAgentView(
@@ -409,34 +455,24 @@ class MissionTab(TabBase):
             "web": strings.mission_say_after_web if done else strings.mission_say_web,
             "tool": strings.mission_say_after_tool if done else strings.mission_say_tool,
         }
-        tool, _dot, operation = tool_name.partition(".")
-        # A file path reads better as just the file's name.
-        short = (os.path.basename(target.rstrip("/\\")) or target) if tool in ("filesystem", "editor") else target
-        if tool == "filesystem":
-            if operation.startswith(("read", "list", "search", "get", "find")):
-                return say["reading"].format(short) if short else say["files"]
+        kind, shown = _tool_kind(tool_name, target)
+        return say[kind] if kind in ("files", "delegating", "web") else say[kind].format(shown)
 
-            if operation.startswith(("write", "append", "apply", "create")):
-                return say["writing"].format(short) if short else say["files"]
-
-            if operation.startswith(("delete", "remove")):
-                return say["deleting"].format(short) if short else say["files"]
-
-            return say["files"]
-
-        if tool == "editor":
-            return say["editing"].format(short) if short else say["tool"].format(tool_name)
-
-        if tool == "delegate_ai":
-            return say["delegating"]
-
-        if tool == "terminal":
-            return say["terminal"].format(target) if target else say["tool"].format(tool_name)
-
-        if tool in ("http", "preview"):
-            return say["web"]
-
-        return say["tool"].format(tool_name)
+    def _tool_action(self, agent: str, tool_name: str, target: str) -> str:
+        """Say, for the activity feed, what an agent did with a tool."""
+        strings = self._strings()
+        kind, shown = _tool_kind(tool_name, target)
+        return {
+            "reading": strings.mission_activity_tool_read,
+            "writing": strings.mission_activity_tool_wrote,
+            "deleting": strings.mission_activity_tool_deleted,
+            "files": strings.mission_activity_tool_files,
+            "editing": strings.mission_activity_tool_edited,
+            "delegating": strings.mission_activity_tool_delegated,
+            "terminal": strings.mission_activity_tool_ran,
+            "web": strings.mission_activity_tool_web,
+            "tool": strings.mission_activity_tool_used,
+        }[kind].format(agent, shown)
 
     def _progress_speech(self, agent: MissionAgent) -> str:
         """Say what the agent has just done and how far it has got, while it works out its next step."""
@@ -519,6 +555,32 @@ class MissionTab(TabBase):
 
         return strings.mission_say_reply if snapshot.lead_message else strings.mission_say_ready
 
+    def _activity_views(self, entries: list[MissionActivity]) -> list[MissionActivityView]:
+        """
+        Turn the activity feed into its display records, newest first.
+
+        The same thing happening several times in a row, such as an agent reading the same file
+        again, is shown once with how many times it happened, at the time it last happened.
+        """
+        views: list[MissionActivityView] = []
+        repeats: list[int] = []
+        previous: MissionActivity | None = None
+        for entry in entries:
+            if previous is not None and (entry.kind, entry.subject, entry.detail, entry.more) == (
+                previous.kind, previous.subject, previous.detail, previous.more
+            ):
+                repeats[-1] += 1
+                continue
+
+            views.append(self._activity_view(entry))
+            repeats.append(1)
+            previous = entry
+
+        return [
+            dataclasses.replace(view, text=f"{view.text}  ×{count}") if count > 1 else view
+            for view, count in zip(views, repeats)
+        ]
+
     def _activity_view(self, entry: MissionActivity) -> MissionActivityView:
         """Turn an activity entry into its display record, calling agents by their names."""
         strings = self._strings()
@@ -532,7 +594,7 @@ class MissionTab(TabBase):
             MissionActivityKind.AGENT_JOINED: strings.mission_activity_agent_joined.format(subject),
             MissionActivityKind.TURN_STARTED: strings.mission_activity_turn_started.format(subject),
             MissionActivityKind.TURN_FINISHED: strings.mission_activity_turn_finished.format(subject),
-            MissionActivityKind.TOOL_USED: strings.mission_activity_tool_used.format(subject, entry.detail),
+            MissionActivityKind.TOOL_USED: self._tool_action(subject, entry.detail, entry.more),
             MissionActivityKind.APPROVAL_REQUESTED: strings.mission_activity_approval_requested.format(
                 subject, entry.detail
             ),
@@ -564,7 +626,9 @@ class MissionTab(TabBase):
             MissionActivityKind.RECOVERY_SCHEDULED: strings.mission_activity_recovery_scheduled.format(entry.detail),
             MissionActivityKind.AUTO_RETRIED: strings.mission_activity_auto_retried.format(entry.detail),
             MissionActivityKind.RECOVERY_GAVE_UP: strings.mission_activity_recovery_gave_up.format(entry.detail),
-            MissionActivityKind.LOOP_DETECTED: strings.mission_activity_loop_detected.format(subject, entry.detail),
+            MissionActivityKind.LOOP_DETECTED: strings.mission_activity_loop_detected.format(
+                self._tool_action(subject, entry.detail, entry.more)
+            ),
         }
         glyph, tone = _ACTIVITY_STYLES[entry.kind]
         return MissionActivityView(
@@ -667,17 +731,18 @@ class MissionTab(TabBase):
             # A mission paused because it looked stuck says so, and is carried on rather than unpaused.
             paused=not classic and mission.paused and not mission.stopped and snapshot.status != MissionStatus.STUCK,
             recovery_text="" if classic else self._recovery_text(snapshot),
+            recovery_error=snapshot.recovery.error if snapshot.recovery is not None and not classic else "",
             stuck_text="" if classic else self._stuck_text(snapshot),
+            steps_text=(
+                strings.mission_steps_count.format(mission.completed_count(), len(mission.tasks))
+                if mission.tasks and not classic else ""
+            ),
+            next_text="" if classic else self._next_text(snapshot),
         )
         stats = [
-            MissionStatView("✓", str(mission.completed_count()), strings.mission_stat_completed, MissionTone.SUCCESS,
-                            MissionStatTarget.DONE_STEPS),
-            MissionStatView("▶", str(in_progress), strings.mission_stat_in_progress, MissionTone.INFO,
-                            MissionStatTarget.ACTIVE_STEPS),
-            MissionStatView("!", str(len(snapshot.decisions)), strings.mission_stat_approvals, MissionTone.WARNING,
-                            MissionStatTarget.INBOX),
-            MissionStatView("◆", str(busy_agents), strings.mission_stat_agents, MissionTone.ACCENT,
-                            MissionStatTarget.AGENTS),
+            MissionStatView(str(len(mission.tasks)), strings.mission_plan_filter_all, MissionStatTarget.ALL_STEPS),
+            MissionStatView(str(mission.completed_count()), strings.mission_stat_completed, MissionStatTarget.DONE_STEPS),
+            MissionStatView(str(in_progress), strings.mission_stat_in_progress, MissionStatTarget.ACTIVE_STEPS),
         ]
         open_agents = {agent.title: agent.context_id for agent in snapshot.agents}
         names = agent_names(mission.mission_id, snapshot.agents)
@@ -710,6 +775,7 @@ class MissionTab(TabBase):
                     ]
                 ),
                 decisions_by_context.get(agent.context_id),
+                reconnecting=agent.is_lead and snapshot.status == MissionStatus.RECOVERING,
             )
             for agent in snapshot.agents
         ]
@@ -729,7 +795,7 @@ class MissionTab(TabBase):
             steps=steps,
             agents=agents,
             agents_badge=strings.mission_agents_active.format(busy_agents),
-            activity=[self._activity_view(entry) for entry in snapshot.activity],
+            activity=self._activity_views(snapshot.activity),
             lead_message=lead_message,
             lead_message_time=(
                 _local_time(snapshot.lead_message_at, with_seconds=False) if snapshot.lead_message_at else ""
@@ -747,6 +813,23 @@ class MissionTab(TabBase):
             working_on_text="" if classic else self._working_on_text(snapshot),
         )
 
+    def _next_text(self, snapshot: MissionSnapshot) -> str:
+        """Name the step a mission that is still going will do next, or say that its plan is done."""
+        mission = snapshot.mission
+        if snapshot.status in (MissionStatus.COMPLETED, MissionStatus.REPLIED, MissionStatus.STOPPED):
+            return ""
+
+        strings = self._strings()
+        blocked = next((task.title for task in mission.tasks if task.status == MissionTaskStatus.BLOCKED), "")
+        if blocked:
+            return strings.mission_glance_blocked_step.format(blocked)
+
+        upcoming = next(
+            (task for task in mission.tasks if task.status == MissionTaskStatus.IN_PROGRESS),
+            next((task for task in mission.tasks if task.status == MissionTaskStatus.PENDING), None)
+        )
+        return strings.mission_milestone_next.format(upcoming.title) if upcoming is not None else ""
+
     def _recovery_text(self, snapshot: MissionSnapshot) -> str:
         """Say when a mission whose lead lost the AI service will try again, or return "" if it will not."""
         recovery = snapshot.recovery
@@ -754,8 +837,7 @@ class MissionTab(TabBase):
             return ""
 
         return self._strings().mission_recovery_notice.format(
-            _first_line(recovery.error)[:_MAX_ERROR_LENGTH], _local_time(recovery.retry_at, with_seconds=True),
-            recovery.attempt, recovery.attempts
+            _local_time(recovery.retry_at, with_seconds=True), recovery.attempt, recovery.attempts
         )
 
     def _stuck_text(self, snapshot: MissionSnapshot) -> str:
@@ -769,7 +851,7 @@ class MissionTab(TabBase):
             return strings.mission_stuck_no_progress.format(stuck.count)
 
         name = self._agent_display_names.get(stuck.agent_title, stuck.agent_title)
-        return strings.mission_stuck_repeating.format(name, stuck.count, stuck.action)
+        return strings.mission_stuck_repeating.format(self._tool_action(name, stuck.tool_name, stuck.tool_target), stuck.count)
 
     def _with_celebration(self, service: MissionService, snapshot: MissionSnapshot, view: MissionView) -> MissionView:
         """
