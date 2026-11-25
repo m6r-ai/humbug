@@ -818,6 +818,24 @@ class LanguageStrings:
     mission_report_title: str
     mission_report_caption: str
     mission_report_back_to_top: str
+    mission_status_recovering: str
+    mission_status_stuck: str
+    mission_activity_recovery_scheduled: str
+    mission_activity_auto_retried: str
+    mission_activity_recovery_gave_up: str
+    mission_activity_loop_detected: str
+    mission_say_reconnecting: str
+    mission_say_stuck: str
+    mission_recovery_notice: str
+    mission_retry_now: str
+    mission_carry_on: str
+    mission_stuck_no_progress: str
+    mission_stuck_repeating: str
+    mission_notify_decision: str
+    mission_notify_completed: str
+    mission_notify_replied: str
+    mission_notify_failed: str
+    mission_notify_stuck: str
     mission_report_stats: str
     mission_follow_up: str
     mission_activity_reversible_approved: str

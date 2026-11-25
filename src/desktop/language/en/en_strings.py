@@ -933,6 +933,33 @@ def get_english_strings() -> LanguageStrings:
         mission_report_title="Mission accomplished",
         mission_report_caption="Final report from your AI lead",
         mission_report_back_to_top="Back to top",
+        mission_status_recovering="Reconnecting",
+        mission_status_stuck="Looks stuck",
+        mission_activity_recovery_scheduled="Couldn't reach the AI service; trying again in {0}s",
+        mission_activity_auto_retried="Failed request retried automatically (attempt {0})",
+        mission_activity_recovery_gave_up="Stopped retrying after {0} automatic attempts",
+        mission_activity_loop_detected="{0} kept repeating {1} with the same result; mission paused",
+        mission_say_reconnecting="I lost contact with the AI service. I'll try again by myself shortly…",
+        mission_say_stuck="I seem to be going round in circles. Tell me what to do, or let me carry on.",
+        mission_recovery_notice=(
+            "The AI service couldn't be reached ({0}). Mission Control will send the request again by itself at "
+            "{1} (attempt {2} of {3}), or press Retry now."
+        ),
+        mission_retry_now="Retry now",
+        mission_carry_on="Carry on",
+        mission_stuck_no_progress=(
+            "Mission Control stopped asking the lead to continue: {0} continues in a row finished no step. Send "
+            "guidance, or press Carry on to let it try again."
+        ),
+        mission_stuck_repeating=(
+            "Mission Control paused this mission: {0} did the same thing {1} times in a row and got the same "
+            "result each time ({2}). Send guidance, or press Carry on to let it try again."
+        ),
+        mission_notify_decision="Needs your approval",
+        mission_notify_completed="Mission accomplished",
+        mission_notify_replied="The lead replied",
+        mission_notify_failed="Mission failed",
+        mission_notify_stuck="Mission looks stuck",
         mission_report_stats="Steps done: {0} of {1}  ·  Agents on the team: {2}",
         mission_follow_up="Ask a follow-up",
         mission_activity_reversible_approved="Approved {0} — recorded in the journal",

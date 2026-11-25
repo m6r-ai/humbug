@@ -979,6 +979,33 @@ def get_french_strings() -> LanguageStrings:
         mission_report_title="Mission accomplie",
         mission_report_caption="Rapport final de votre IA principale",
         mission_report_back_to_top="Revenir en haut",
+        mission_status_recovering="Reconnexion",
+        mission_status_stuck="Semble bloquée",
+        mission_activity_recovery_scheduled="Service d'IA injoignable ; nouvel essai dans {0} s",
+        mission_activity_auto_retried="Requête échouée relancée automatiquement (essai {0})",
+        mission_activity_recovery_gave_up="Nouveaux essais arrêtés après {0} tentatives automatiques",
+        mission_activity_loop_detected="{0} a répété {1} avec le même résultat ; mission en pause",
+        mission_say_reconnecting="J'ai perdu le contact avec le service d'IA. Je réessaierai moi-même sous peu…",
+        mission_say_stuck="Je semble tourner en rond. Dites-moi quoi faire, ou laissez-moi continuer.",
+        mission_recovery_notice=(
+            "Le service d'IA est injoignable ({0}). Mission Control renverra la requête de lui-même à {1} (essai "
+            "{2} sur {3}), ou appuyez sur Réessayer maintenant."
+        ),
+        mission_retry_now="Réessayer maintenant",
+        mission_carry_on="Continuer",
+        mission_stuck_no_progress=(
+            "Mission Control a cessé de demander au responsable de continuer : {0} relances d'affilée n'ont "
+            "terminé aucune étape. Envoyez des instructions, ou appuyez sur Continuer pour le laisser réessayer."
+        ),
+        mission_stuck_repeating=(
+            "Mission Control a mis cette mission en pause : {0} a fait la même chose {1} fois d'affilée avec le "
+            "même résultat ({2}). Envoyez des instructions, ou appuyez sur Continuer pour le laisser réessayer."
+        ),
+        mission_notify_decision="Votre approbation est requise",
+        mission_notify_completed="Mission accomplie",
+        mission_notify_replied="Le responsable a répondu",
+        mission_notify_failed="Mission échouée",
+        mission_notify_stuck="La mission semble bloquée",
         mission_report_stats="Étapes terminées : {0} sur {1}  ·  Agents dans l'équipe : {2}",
         mission_follow_up="Poser une question de suivi",
         mission_activity_reversible_approved="{0} approuvé — enregistré dans le journal",

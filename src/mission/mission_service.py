@@ -4,7 +4,7 @@ import asyncio
 from collections import deque
 from collections.abc import Callable
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import logging
 import os
 from typing import Any
@@ -32,10 +32,11 @@ from mission.mission_prompt import build_lead_prompt
 from mission.mission_approvals import MissionApprovals, MissionApprovalsHost
 from mission.mission_reviewer import MissionApprovalReviewer
 from mission.mission_snapshot import (
-    MissionActivity, MissionActivityKind, MissionAgent, MissionAgentState,
-    MissionDecision, MissionExchange, MissionSnapshot, MissionSpeaker, MissionStatus
+    MissionActivity, MissionActivityKind, MissionAgent, MissionAgentState, MissionDecision, MissionExchange,
+    MissionRecovery, MissionSnapshot, MissionSpeaker, MissionStatus, MissionStuck, MissionStuckReason
 )
 from mission.mission_store import MissionStore
+from mission.mission_watchdog import RepeatedActionCounter, is_transient_error
 
 
 MISSIONS_DIR = "missions"
@@ -51,6 +52,14 @@ AUTO_CONTINUE_DELAY_SECONDS = 1.5
 # How many times the lead is asked to carry on without completing a step before
 # Mission Control stops asking and leaves the mission waiting for the user.
 MAX_CONTINUES_WITHOUT_PROGRESS = 3
+
+# When a lead's turn fails for a reason that may pass, such as a lost connection, it is tried again
+# after each of these waits in turn, each longer than the last, before the mission is left failed.
+AUTO_RETRY_DELAYS_SECONDS = (15, 30, 60, 120, 300, 600)
+
+# How many times in a row a conversation may make the same tool call and get the same result before
+# Mission Control decides it is going round in circles.
+MAX_REPEATED_ACTIONS = 4
 
 _CONTINUE_MESSAGE = (
     "Continue the mission: work on the next unfinished task. Make reasonable assumptions for details "
@@ -164,6 +173,7 @@ class _TrackedConversation:
         self.actions = 0
         self.last_tool_name = ""
         self.last_tool_target = ""
+        self.repeats = RepeatedActionCounter()
         for message in transcript.get_conversation_history().get_messages():
             if message.source == AIMessageSource.TOOL_CALL and message.tool_calls:
                 self._note_tool_call(message.tool_calls[0])
@@ -238,6 +248,7 @@ class _TrackedConversation:
         self.tool_name = tool_call_label(message.tool_calls[0])
         self.tool_target = _short_target(message.tool_calls[0])
         self._note_tool_call(message.tool_calls[0])
+        self.repeats.note_calls(message.tool_calls)
         self._service.handle_tool_used(self, self.tool_name)
 
     def _note_tool_call(self, tool_call: AIToolCall) -> None:
@@ -335,6 +346,10 @@ class MissionService:
         self._scheduled_continues: dict[str, asyncio.TimerHandle] = {}
         self._background_tasks: dict[asyncio.Task, str | None] = {}
         self._interrupted: set[str] = set()
+        self._recoveries: dict[str, MissionRecovery] = {}
+        self._scheduled_recoveries: dict[str, asyncio.TimerHandle] = {}
+        self._recovery_attempts: dict[str, int] = {}
+        self._stuck: dict[str, MissionStuck] = {}
         self._auditors: dict[str, MissionConversationAuditor] = {}
         self._approvals = MissionApprovals(
             mindspace,
@@ -417,10 +432,12 @@ class MissionService:
         self._tracked.clear()
         self._approvals.clear()
         self._members.clear()
-        for handle in self._scheduled_continues.values():
+        for handle in [*self._scheduled_continues.values(), *self._scheduled_recoveries.values()]:
             handle.cancel()
 
         self._scheduled_continues.clear()
+        self._scheduled_recoveries.clear()
+        self._recoveries.clear()
 
     def add_listener(self, listener: Callable[[], None]) -> None:
         """
@@ -504,6 +521,8 @@ class MissionService:
             lead_message=lead_message,
             lead_message_at=lead_message_at,
             conversation=self._conversation(mission),
+            recovery=self._recoveries.get(mission_id),
+            stuck=self._stuck.get(mission_id),
         )
 
     def _shown_mission(self, mission: Mission, status: MissionStatus) -> Mission:
@@ -516,7 +535,8 @@ class MissionService:
         question, so this is a copy.
         """
         if status not in (
-            MissionStatus.PLANNING, MissionStatus.NEEDS_YOU, MissionStatus.PAUSED, MissionStatus.INTERRUPTED
+            MissionStatus.PLANNING, MissionStatus.NEEDS_YOU, MissionStatus.PAUSED, MissionStatus.INTERRUPTED,
+            MissionStatus.STUCK
         ) or not mission.plan_finished() or (mission.is_complete() and not mission.follow_up):
             return mission
 
@@ -785,9 +805,11 @@ class MissionService:
             self._save(mission)
             text = f"{text}\n\n{_FOLLOW_UP_NOTE}"
 
-        # The user has stepped in, so automatic continuing starts afresh.
+        # The user has stepped in, so automatic continuing and retrying start afresh.
         self._continues_without_progress.pop(mission_id, None)
         self._cancel_continue(mission_id)
+        self._cancel_recovery(mission_id)
+        self._stuck.pop(mission_id, None)
         self._record(MissionActivityKind.GUIDANCE_SENT, mission.title, _excerpt(user_text), mission_id, more=user_text)
         self._expect_message(tracked.context_id, text)
         self._mindspace.add_interaction(
@@ -872,6 +894,8 @@ class MissionService:
         self._set_active(mission, False)
         self._interrupted.discard(mission_id)
         self._cancel_continue(mission_id)
+        self._cancel_recovery(mission_id)
+        self._stuck.pop(mission_id, None)
         for tracked in list(self._tracked.values()):
             if self._members.get(tracked.context_id) == mission_id:
                 tracked.transcript.cancel_current_tasks()
@@ -900,6 +924,8 @@ class MissionService:
 
         self._store.delete(mission_id)
         self._cancel_continue(mission_id)
+        self._cancel_recovery(mission_id)
+        self._stuck.pop(mission_id, None)
         for task, task_mission_id in list(self._background_tasks.items()):
             if task_mission_id == mission_id:
                 task.cancel()
@@ -1256,10 +1282,7 @@ class MissionService:
         if mission.paused:
             return
 
-        mission.paused = True
-        self._cancel_continue(mission_id)
-        self._approvals.withdraw_standing_approvals(mission_id)
-        self._save(mission)
+        self._hold(mission)
         self._record(MissionActivityKind.PAUSED, mission.title, "", mission_id)
         self._mindspace.add_interaction(MindspaceLogLevel.INFO, f"Human paused mission '{mission.title}'")
         self._notify()
@@ -1285,6 +1308,7 @@ class MissionService:
             return
 
         mission.paused = False
+        self._stuck.pop(mission_id, None)
         self._save(mission)
         self._record(MissionActivityKind.UNPAUSED, mission.title, "", mission_id)
         self._mindspace.add_interaction(MindspaceLogLevel.INFO, f"Human continued paused mission '{mission.title}'")
@@ -1293,11 +1317,60 @@ class MissionService:
         self._continues_without_progress.pop(mission_id, None)
         self._approvals.review_waiting(mission_id)
 
+        # A lead whose turn failed is retried, if that failure may pass, rather than asked to continue.
+        lead = self._lead_for(mission)
+        if lead is not None and self._lead_failed(mission):
+            self._consider_recovery(mission, lead)
+
+        else:
+            self._consider_continuing(mission)
+            if mission_id in self._scheduled_continues:
+                self._set_active(mission, True)
+
+        self._notify()
+
+    def carry_on(self, mission_id: str) -> None:
+        """
+        Let a mission Mission Control stopped driving, because it looked stuck, carry on.
+
+        A mission paused because a conversation repeated itself is unpaused; one left waiting
+        because its continues finished no step is asked to continue again.
+
+        Args:
+            mission_id: Mission to carry on with
+
+        Raises:
+            MissionError: If there is no such mission
+        """
+        mission = self._missions.get(mission_id)
+        if mission is None:
+            raise MissionError("There is no such mission")
+
+        if mission.paused:
+            self.unpause_mission(mission_id)
+            return
+
+        self._stuck.pop(mission_id, None)
+        self._continues_without_progress.pop(mission_id, None)
+        self._record(MissionActivityKind.UNPAUSED, mission.title, "", mission_id)
+        self._mindspace.add_interaction(MindspaceLogLevel.INFO, f"Human let stuck mission '{mission.title}' carry on")
         self._consider_continuing(mission)
         if mission_id in self._scheduled_continues:
             self._set_active(mission, True)
 
         self._notify()
+
+    def _hold(self, mission: Mission) -> None:
+        """
+        Pause a mission: stop asking its lead to continue or retry, and withdraw its standing approvals.
+
+        Whatever its conversations are doing is left alone; the caller records why.
+        """
+        mission.paused = True
+        self._cancel_continue(mission.mission_id)
+        self._cancel_recovery(mission.mission_id)
+        self._approvals.withdraw_standing_approvals(mission.mission_id)
+        self._save(mission)
 
     async def retry_mission(self, mission_id: str) -> None:
         """
@@ -1313,14 +1386,15 @@ class MissionService:
             MissionError: If the mission has not failed or its last request cannot be retried
         """
         mission = self._missions.get(mission_id)
-        if mission is None or self._status_for(mission) != MissionStatus.FAILED:
+        if mission is None or self._status_for(mission) not in (MissionStatus.FAILED, MissionStatus.RECOVERING):
             raise MissionError("This mission has not failed")
 
         tracked = self._lead_for(mission)
         if tracked is None:
             raise MissionError("The mission's lead conversation could not be opened")
 
-        if not await tracked.transcript.retry_last_request():
+        self._cancel_recovery(mission_id)
+        if not await self._retry_lead(tracked):
             raise MissionError("The lead's last request cannot be retried; send it a message instead")
 
         self._continues_without_progress.pop(mission_id, None)
@@ -1343,6 +1417,133 @@ class MissionService:
                 self._logger.warning("Could not resume mission '%s': %s", mission_id, e)
 
         self._run_task(resume(), mission_id)
+
+    async def _retry_lead(self, tracked: _TrackedConversation) -> bool:
+        """
+        Send a lead's failed request again, returning False if it cannot be retried.
+
+        The lead is working from the moment the request is sent, not only once the AI
+        service answers, which may take a while when it is still hard to reach.
+        """
+        if not await tracked.transcript.retry_last_request():
+            return False
+
+        tracked.state = MissionAgentState.THINKING
+        return True
+
+    def _consider_recovery(self, mission: Mission, tracked: _TrackedConversation) -> None:
+        """
+        Schedule an automatic retry of a lead turn that failed for a reason that may pass.
+
+        Each retry waits longer than the last.  Once every retry has been used, the mission
+        is left failed for the user, as it is straight away for an error that will not pass.
+        """
+        mission_id = mission.mission_id
+        if (
+            not self._started or mission.stopped or mission.paused or mission.mode == MissionMode.CLASSIC
+            or mission_id in self._scheduled_recoveries
+        ):
+            return
+
+        messages = tracked.transcript.get_conversation_history().get_messages()
+        if not messages or messages[-1].source != AIMessageSource.SYSTEM or not is_transient_error(messages[-1].error):
+            return
+
+        attempt = self._recovery_attempts.get(mission_id, 0)
+        attempts = len(AUTO_RETRY_DELAYS_SECONDS)
+        if attempt >= attempts:
+            if attempt == attempts:
+                self._recovery_attempts[mission_id] = attempt + 1
+                self._record(MissionActivityKind.RECOVERY_GAVE_UP, mission.title, str(attempts), mission_id)
+
+            return
+
+        delay = AUTO_RETRY_DELAYS_SECONDS[attempt]
+        error = messages[-1].content
+        self._recovery_attempts[mission_id] = attempt + 1
+        self._recoveries[mission_id] = MissionRecovery(
+            attempt=attempt + 1,
+            attempts=attempts,
+            retry_at=datetime.now(timezone.utc) + timedelta(seconds=delay),
+            error=error,
+        )
+        self._scheduled_recoveries[mission_id] = asyncio.get_running_loop().call_later(
+            delay, self._start_recovery, mission_id
+        )
+        self._record(MissionActivityKind.RECOVERY_SCHEDULED, mission.title, str(delay), mission_id, more=error)
+
+    def _cancel_recovery(self, mission_id: str) -> None:
+        """Cancel an automatic retry that has not happened yet, so retrying starts afresh."""
+        handle = self._scheduled_recoveries.pop(mission_id, None)
+        if handle is not None:
+            handle.cancel()
+
+        self._recoveries.pop(mission_id, None)
+        self._recovery_attempts.pop(mission_id, None)
+
+    def _start_recovery(self, mission_id: str) -> None:
+        """Run a scheduled automatic retry."""
+        self._scheduled_recoveries.pop(mission_id, None)
+        self._run_task(self._recover(mission_id), mission_id)
+
+    async def _recover(self, mission_id: str) -> None:
+        """Send a failed lead's request again, if the mission still wants that."""
+        recovery = self._recoveries.pop(mission_id, None)
+        mission = self._missions.get(mission_id)
+        tracked = self._lead_for(mission) if mission is not None else None
+        wanted = mission is not None and not mission.stopped and not mission.paused and self._lead_failed(mission)
+        if recovery is None or mission is None or tracked is None or not wanted or not await self._retry_lead(tracked):
+            self._notify()
+            return
+
+        self._set_active(mission, True)
+        self._record(MissionActivityKind.AUTO_RETRIED, mission.title, str(recovery.attempt), mission_id)
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"Mission Control retried the failed request of mission '{mission.title}' "
+            f"(attempt {recovery.attempt} of {recovery.attempts})",
+            context=self._mindspace.conversation_log_context(tracked.conversation)
+        )
+        self._notify()
+
+    def _watch_for_repeats(self, tracked: _TrackedConversation, message: AIMessage) -> None:
+        """
+        Stop a conversation that keeps making the same tool call and getting the same result.
+
+        It is going round in circles, so it is cancelled and its mission is paused, for the
+        user to look at and either guide or let carry on.  Missions run from a tab are left
+        to the user, who is watching them.
+        """
+        count = tracked.repeats.note_results(message.tool_results or [])
+        mission_id = self._members.get(tracked.context_id)
+        mission = self._missions.get(mission_id) if mission_id is not None else None
+        if (
+            count < MAX_REPEATED_ACTIONS or mission is None or mission.mode == MissionMode.CLASSIC
+            or mission.stopped or mission.paused
+        ):
+            return
+
+        tracked.repeats.reset()
+        title = self._title_for(tracked.context_id)
+        action = f"{tracked.last_tool_name} {tracked.last_tool_target}".strip()
+        self._stuck[mission.mission_id] = MissionStuck(
+            reason=MissionStuckReason.REPEATING, count=count, agent_title=title, action=action
+        )
+        tracked.transcript.cancel_current_tasks(notify=False)
+        tracked.state = MissionAgentState.IDLE
+        tracked.tool_name = ""
+        tracked.tool_target = ""
+        self._hold(mission)
+        if self._is_lead(mission, tracked):
+            self._set_active(mission, False)
+
+        self._record(MissionActivityKind.LOOP_DETECTED, title, action, mission.mission_id, more=str(count))
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.WARN,
+            f"Mission Control paused mission '{mission.title}': {title} repeated '{action}' {count} times "
+            "with the same result",
+            context=self._mindspace.conversation_log_context(tracked.conversation)
+        )
 
     def _set_active(self, mission: Mission, active: bool) -> None:
         """Record whether a mission is working, saving only when that changes."""
@@ -1372,7 +1573,12 @@ class MissionService:
             kind = MissionActivityKind.ERROR if failed else MissionActivityKind.TURN_FINISHED
             self._record(kind, self._title_for(tracked.context_id), "", mission_id)
             mission = self._missions.get(mission_id)
+            if failed and mission is not None and self._is_lead(mission, tracked):
+                self._consider_recovery(mission, tracked)
+
             if not failed and mission is not None and self._is_lead(mission, tracked):
+                # The AI service answered, so a later failure starts its automatic retries afresh.
+                self._recovery_attempts.pop(mission_id, None)
                 self._consider_continuing(mission)
 
                 # Unless it is about to carry on, the mission is now waiting for the user.  A failed
@@ -1430,11 +1636,15 @@ class MissionService:
         completed = mission.completed_count()
         if completed > self._completed_at_last_continue.get(mission_id, -1):
             self._continues_without_progress[mission_id] = 0
+            self._stuck.pop(mission_id, None)
 
         attempts = self._continues_without_progress.get(mission_id, 0)
         if attempts >= MAX_CONTINUES_WITHOUT_PROGRESS:
             if attempts == MAX_CONTINUES_WITHOUT_PROGRESS:
                 self._continues_without_progress[mission_id] = attempts + 1
+                self._stuck[mission_id] = MissionStuck(
+                    reason=MissionStuckReason.NO_PROGRESS, count=MAX_CONTINUES_WITHOUT_PROGRESS
+                )
                 self._record(
                     MissionActivityKind.AUTO_PAUSED, mission.title, str(MAX_CONTINUES_WITHOUT_PROGRESS), mission_id
                 )
@@ -1523,6 +1733,9 @@ class MissionService:
         """Clear answered decisions, note what the user typed and pick up plan updates from the lead."""
         if message.source in (AIMessageSource.USER, AIMessageSource.USER_QUEUED):
             self._record_user_message(tracked, message)
+
+        if message.source == AIMessageSource.TOOL_RESULT and message.tool_results:
+            self._watch_for_repeats(tracked, message)
 
         if self._approvals.clear_answered(tracked.context_id, message.id):
             if tracked.state == MissionAgentState.WAITING_FOR_APPROVAL:
@@ -1992,6 +2205,8 @@ class MissionService:
             return None
 
         self._cancel_continue(mission_id)
+        self._cancel_recovery(mission_id)
+        self._stuck.pop(mission_id, None)
         # Revoked before the conversation goes to its tab, so no standing approval goes with it.
         self._approvals.revoke_everything(mission, "the mission was switched to classic mode")
         tracked = self._detach_headless(mission_id)
@@ -2202,6 +2417,10 @@ class MissionService:
         if any(d.mission_id == mission.mission_id and not d.reviewing for d in live):
             return MissionStatus.NEEDS_YOU
 
+        # Mission Control stopped driving a mission that was getting nowhere; it waits for the user.
+        if mission.mission_id in self._stuck and mission.mode == MissionMode.AUTONOMOUS:
+            return MissionStatus.STUCK
+
         if mission.paused and mission.mode == MissionMode.AUTONOMOUS:
             return MissionStatus.PAUSED
 
@@ -2220,7 +2439,7 @@ class MissionService:
 
         # The lead's latest turn failing matters more than anything it finished before.
         if mission.mode == MissionMode.AUTONOMOUS and self._lead_failed(mission):
-            return MissionStatus.FAILED
+            return MissionStatus.RECOVERING if mission.mission_id in self._recoveries else MissionStatus.FAILED
 
         # A message the user sent is being worked on, even before the lead has started its reply, so
         # a finished plan does not make the mission look done while it is still answering the user.

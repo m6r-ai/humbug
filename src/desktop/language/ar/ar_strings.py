@@ -921,6 +921,33 @@ def get_arabic_strings() -> LanguageStrings:
         mission_report_title="تم إنجاز المهمة",
         mission_report_caption="التقرير النهائي من قائد المهمة",
         mission_report_back_to_top="العودة إلى الأعلى",
+        mission_status_recovering="إعادة الاتصال",
+        mission_status_stuck="تبدو متعثرة",
+        mission_activity_recovery_scheduled="تعذر الوصول إلى خدمة الذكاء الاصطناعي؛ إعادة المحاولة بعد {0} ثانية",
+        mission_activity_auto_retried="أعيدت محاولة الطلب الفاشل تلقائيًا (المحاولة {0})",
+        mission_activity_recovery_gave_up="توقفت إعادة المحاولة بعد {0} محاولات تلقائية",
+        mission_activity_loop_detected="كرر {0} {1} بالنتيجة نفسها؛ أوقفت المهمة مؤقتًا",
+        mission_say_reconnecting="فقدت الاتصال بخدمة الذكاء الاصطناعي. سأعيد المحاولة بنفسي قريبًا…",
+        mission_say_stuck="يبدو أنني أدور في حلقة. أخبرني بما أفعل، أو دعني أتابع.",
+        mission_recovery_notice=(
+            "تعذر الوصول إلى خدمة الذكاء الاصطناعي ({0}). سيعيد Mission Control إرسال الطلب بنفسه عند {1} "
+            "(المحاولة {2} من {3})، أو اضغط أعد المحاولة الآن."
+        ),
+        mission_retry_now="أعد المحاولة الآن",
+        mission_carry_on="تابع",
+        mission_stuck_no_progress=(
+            "توقف Mission Control عن مطالبة القائد بالمتابعة: {0} مطالبات متتالية لم تُنهِ أي خطوة. أرسل توجيهًا، "
+            "أو اضغط تابع ليحاول مجددًا."
+        ),
+        mission_stuck_repeating=(
+            "أوقف Mission Control هذه المهمة مؤقتًا: كرر {0} الشيء نفسه {1} مرات متتالية بالنتيجة نفسها في كل مرة "
+            "({2}). أرسل توجيهًا، أو اضغط تابع ليحاول مجددًا."
+        ),
+        mission_notify_decision="بحاجة إلى موافقتك",
+        mission_notify_completed="أنجزت المهمة",
+        mission_notify_replied="رد القائد",
+        mission_notify_failed="فشلت المهمة",
+        mission_notify_stuck="تبدو المهمة متعثرة",
         mission_report_stats="الخطوات المكتملة: {0} من {1}  ·  الوكلاء في الفريق: {2}",
         mission_follow_up="اطرح سؤال متابعة",
         mission_activity_reversible_approved="تمت الموافقة على {0} — مُسجَّل في السجل",

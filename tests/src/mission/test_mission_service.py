@@ -9,13 +9,15 @@ from ai import (
     AIConversation, AIConversationEvent, AIConversationParent, AIConversationSettings, AIMessage, AIMessageSource
 )
 from ai_transcript_conversation import AITranscriptConversation
-from ai_tool import AIToolApprovalKind, AIToolCall
+from ai_tool import AIToolApprovalKind, AIToolCall, AIToolResult
 from mindspace.mindspace import Mindspace
 from mindspace.mindspace_settings import MindspaceSettings
 from mission import mission_service as mission_service_module
 from mission.mission_error import MissionError
 from mission.mission_service import MAX_CONTINUES_WITHOUT_PROGRESS, MISSION_REQUESTER, MissionService
-from mission.mission_snapshot import MissionActivityKind, MissionAgentState, MissionSpeaker, MissionStatus
+from mission.mission_snapshot import (
+    MissionActivityKind, MissionAgentState, MissionSpeaker, MissionStatus, MissionStuckReason
+)
 from mission.mission import AutoApproveLevel, MissionMode, MissionTaskStatus
 from mission.mission_reviewer import ReviewRequest, ReviewVerdict
 from mission.mission_store import MissionStore
@@ -2861,6 +2863,295 @@ class TestAttachmentsAndLeadSettings:
             service.switch_to_autonomous(mission.mission_id)
 
             assert service.lead_settings(mission.mission_id).model == "tab-model"
+            service.stop()
+
+        asyncio.run(run())
+
+
+@pytest.fixture
+def quick_retries(monkeypatch):
+    """Retry a failed lead turn straight away, twice at most."""
+    monkeypatch.setattr(mission_service_module, "AUTO_RETRY_DELAYS_SECONDS", (0, 0))
+
+
+@pytest.fixture
+def started_turns(monkeypatch):
+    """Record each turn a conversation starts instead of asking an AI."""
+    started: list[AIConversation] = []
+
+    async def fake_start_ai(self) -> None:
+        started.append(self)
+
+    monkeypatch.setattr(AIConversation, "_start_ai", fake_start_ai)
+    return started
+
+
+async def _fail_turn(conversation: AIConversation, code: str) -> None:
+    """End the lead's turn with an error it could not recover from, as the AI service reported it."""
+    history = conversation.get_conversation_history()
+    if not history.get_messages() or history.get_messages()[-1].source != AIMessageSource.USER:
+        history.add_message(AIMessage.create(source=AIMessageSource.USER, content="Carry on"))
+
+    error = AIMessage.create(source=AIMessageSource.SYSTEM, content=f"Request failed: {code}", error={"code": code})
+    history.add_message(error)
+    await conversation._trigger_event(AIConversationEvent.ERROR, True, error)  # pylint: disable=protected-access
+
+
+async def _settle() -> None:
+    """Let scheduled work run."""
+    for _ in range(5):
+        await asyncio.sleep(0)
+
+
+class TestAutomaticRecovery:
+    """A lead turn that fails for a reason that may pass is retried by itself, waiting longer each time."""
+
+    def test_lost_connection_is_retried_automatically(self, mindspace, submitted, started_turns, monkeypatch):  # pylint: disable=unused-argument
+        """A network failure schedules a retry the user can see, and the retry sends the request again."""
+        monkeypatch.setattr(mission_service_module, "AUTO_RETRY_DELAYS_SECONDS", (60, 120))
+
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            await _fail_turn(conversation, "network_error")
+
+            assert service.status(mission.mission_id) == MissionStatus.RECOVERING
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.recovery is not None
+            assert (snapshot.recovery.attempt, snapshot.recovery.attempts) == (1, 2)
+            assert "network_error" in snapshot.recovery.error
+            assert snapshot.activity[0].kind == MissionActivityKind.RECOVERY_SCHEDULED
+            assert snapshot.activity[0].detail == "60"
+            assert not started_turns
+
+            await service._recover(mission.mission_id)  # pylint: disable=protected-access
+            await _settle()
+
+            assert started_turns == [conversation]
+            assert conversation.get_conversation_history().get_messages()[-1].content == "Carry on"
+            assert service.status(mission.mission_id) not in (MissionStatus.FAILED, MissionStatus.RECOVERING)
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.recovery is None
+            assert snapshot.activity[0].kind == MissionActivityKind.AUTO_RETRIED
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_error_that_will_not_pass_fails_at_once(self, mindspace, submitted, started_turns, quick_retries):  # pylint: disable=unused-argument
+        """A rejected request is not retried: the mission is failed for the user straight away."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            await _fail_turn(conversation, "401")
+            await _settle()
+
+            assert service.status(mission.mission_id) == MissionStatus.FAILED
+            assert not started_turns
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_mission_fails_once_every_retry_is_used(self, mindspace, submitted, started_turns, quick_retries):  # pylint: disable=unused-argument
+        """After the last automatic retry fails too, the mission is left failed and the feed says retrying stopped."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            for _ in range(3):
+                await _fail_turn(conversation, "server_error")
+                await _settle()
+
+            assert len(started_turns) == 2
+            assert service.status(mission.mission_id) == MissionStatus.FAILED
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None
+            assert [a.kind for a in snapshot.activity].count(MissionActivityKind.RECOVERY_GAVE_UP) == 1
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_answered_turn_starts_retrying_afresh(self, mindspace, submitted, started_turns, quick_retries):  # pylint: disable=unused-argument
+        """Once the AI service answers again, a later failure gets every automatic retry again."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            for _ in range(2):
+                await _fail_turn(conversation, "rate_limit")
+                await _settle()
+
+            await conversation._trigger_event(AIConversationEvent.COMPLETED)  # pylint: disable=protected-access
+            await _fail_turn(conversation, "rate_limit")
+
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.recovery is not None
+            assert snapshot.recovery.attempt == 1
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_pausing_holds_the_retry_until_the_mission_carries_on(self, mindspace, submitted, started_turns, monkeypatch):  # pylint: disable=unused-argument
+        """A paused mission is not retried; carrying on schedules the retry again."""
+        monkeypatch.setattr(mission_service_module, "AUTO_RETRY_DELAYS_SECONDS", (60,))
+
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            await _fail_turn(conversation, "network_error")
+
+            service.pause_mission(mission.mission_id)
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.recovery is None
+            assert service.status(mission.mission_id) == MissionStatus.PAUSED
+
+            service.unpause_mission(mission.mission_id)
+            assert service.status(mission.mission_id) == MissionStatus.RECOVERING
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_retrying_by_hand_replaces_the_scheduled_retry(self, mindspace, submitted, started_turns, monkeypatch):  # pylint: disable=unused-argument
+        """Retry now sends the request at once, and the retry that was waiting does not happen as well."""
+        monkeypatch.setattr(mission_service_module, "AUTO_RETRY_DELAYS_SECONDS", (60,))
+
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            await _fail_turn(conversation, "network_error")
+
+            await service.retry_mission(mission.mission_id)
+            await _settle()
+
+            assert started_turns == [conversation]
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.recovery is None
+            assert not service._scheduled_recoveries  # pylint: disable=protected-access
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_classic_mission_is_not_retried(self, mindspace, submitted, started_turns, quick_retries):  # pylint: disable=unused-argument
+        """A mission run from a tab is left to the user watching it."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            mission.mode = MissionMode.CLASSIC
+            await _fail_turn(conversation, "network_error")
+            await _settle()
+
+            assert not started_turns
+            service.stop()
+
+        asyncio.run(run())
+
+
+async def _repeat_action(conversation: AIConversation, times: int, results: list[str] | None = None) -> None:
+    """Have a conversation make the same tool call several times, getting the given results, or the same one."""
+    for i in range(times):
+        call = AIToolCall(id=f"call-{i}", name="filesystem", arguments={"operation": "read_file", "path": "a.txt"})
+        await conversation._trigger_event(  # pylint: disable=protected-access
+            AIConversationEvent.MESSAGE_ADDED,
+            AIMessage.create(source=AIMessageSource.TOOL_CALL, content="", tool_calls=[call])
+        )
+        content = results[i] if results is not None else "File not found"
+        await conversation._trigger_event(  # pylint: disable=protected-access
+            AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED,
+            AIMessage.create(
+                source=AIMessageSource.TOOL_RESULT, content="",
+                tool_results=[AIToolResult(id=call.id, name=call.name, content=content)]
+            )
+        )
+
+
+class TestStuckMissions:
+    """A mission that is getting nowhere is stopped and shown to the user, rather than left spinning."""
+
+    def test_repeating_the_same_action_pauses_the_mission(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """The same tool call giving the same result again and again pauses the mission and says why."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+
+            await _repeat_action(conversation, mission_service_module.MAX_REPEATED_ACTIONS)
+
+            assert mission.paused
+            assert service.status(mission.mission_id) == MissionStatus.STUCK
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.stuck is not None
+            assert snapshot.stuck.reason == MissionStuckReason.REPEATING
+            assert snapshot.stuck.count == mission_service_module.MAX_REPEATED_ACTIONS
+            assert "a.txt" in snapshot.stuck.action
+            assert snapshot.activity[0].kind == MissionActivityKind.LOOP_DETECTED
+            assert snapshot.agents[0].state == MissionAgentState.IDLE
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_action_whose_result_changes_is_not_a_repeat(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Polling something that is changing, such as a build's output, is progress, not a loop."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            times = mission_service_module.MAX_REPEATED_ACTIONS + 2
+
+            await _repeat_action(conversation, times, [f"Building... {i}" for i in range(times)])
+
+            assert not mission.paused
+            assert service.status(mission.mission_id) != MissionStatus.STUCK
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_carrying_on_lets_a_repeating_mission_continue(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """Carry on unpauses the mission, clears why it stopped and asks the lead to continue."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            await _repeat_action(conversation, mission_service_module.MAX_REPEATED_ACTIONS)
+
+            service.carry_on(mission.mission_id)
+            await _settle()
+
+            assert not mission.paused
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.stuck is None
+            assert _continues(submitted) == 1
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_classic_mission_is_left_to_the_user(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A mission run from a tab is not stopped for repeating itself: the user is watching it."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            mission.mode = MissionMode.CLASSIC
+
+            await _repeat_action(conversation, mission_service_module.MAX_REPEATED_ACTIONS)
+
+            assert not mission.paused
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_continues_without_progress_show_the_mission_stuck(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """Once continuing stops finishing steps, the mission says it is stuck; carrying on asks once more."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending", "pending"])
+            for _ in range(MAX_CONTINUES_WITHOUT_PROGRESS + 1):
+                await _finish_turn(conversation)
+
+            assert service.status(mission.mission_id) == MissionStatus.STUCK
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.stuck is not None
+            assert snapshot.stuck.reason == MissionStuckReason.NO_PROGRESS
+
+            service.carry_on(mission.mission_id)
+            await _settle()
+
+            assert _continues(submitted) == MAX_CONTINUES_WITHOUT_PROGRESS + 1
+            assert service.status(mission.mission_id) != MissionStatus.STUCK
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_guidance_clears_a_stuck_mission(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """A message from the user is what a stuck mission was waiting for."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending", "pending"])
+            for _ in range(MAX_CONTINUES_WITHOUT_PROGRESS + 1):
+                await _finish_turn(conversation)
+
+            await service.send_guidance(mission.mission_id, "Skip the first step")
+
+            assert service.status(mission.mission_id) != MissionStatus.STUCK
             service.stop()
 
         asyncio.run(run())

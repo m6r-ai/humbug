@@ -19,6 +19,8 @@ class MissionStatus(Enum):
     PAUSED = auto()
     REPLIED = auto()
     FAILED = auto()
+    RECOVERING = auto()
+    STUCK = auto()
 
 
 class MissionAgentState(Enum):
@@ -58,6 +60,50 @@ class MissionActivityKind(Enum):
     REVIEW_DEFERRED = auto()
     PLAN_ARCHIVED = auto()
     ERROR = auto()
+    RECOVERY_SCHEDULED = auto()
+    AUTO_RETRIED = auto()
+    RECOVERY_GAVE_UP = auto()
+    LOOP_DETECTED = auto()
+
+
+@dataclass(frozen=True)
+class MissionRecovery:
+    """
+    An automatic retry of a lead turn that failed for a reason that may pass, such as a lost connection.
+
+    Attributes:
+        attempt: Which automatic retry this is, counting from 1
+        attempts: How many automatic retries are made before the mission is left failed
+        retry_at: When the retry happens
+        error: What went wrong, as the AI service reported it
+    """
+    attempt: int
+    attempts: int
+    retry_at: datetime
+    error: str
+
+
+class MissionStuckReason(Enum):
+    """Why Mission Control thinks a mission is stuck."""
+    NO_PROGRESS = auto()
+    REPEATING = auto()
+
+
+@dataclass(frozen=True)
+class MissionStuck:
+    """
+    A mission Mission Control stopped driving because it was getting nowhere.
+
+    Attributes:
+        reason: What gave it away
+        count: How many continues finished no step, or how many times the action was repeated
+        agent_title: The conversation that repeated itself, for REPEATING
+        action: The action it repeated, for REPEATING
+    """
+    reason: MissionStuckReason
+    count: int
+    agent_title: str = ""
+    action: str = ""
 
 
 @dataclass(frozen=True)
@@ -190,6 +236,8 @@ class MissionSnapshot:
         lead_message: The lead's latest reply without its plan block, or "" if there is none
         lead_message_at: When that reply was written, if there is one
         conversation: The user's messages, the lead's replies and the tools it used, oldest first
+        recovery: The automatic retry waiting to happen, if the lead's last turn failed and will be retried
+        stuck: Why Mission Control stopped driving the mission, if it looked stuck
     """
     mission: Mission
     status: MissionStatus
@@ -199,3 +247,5 @@ class MissionSnapshot:
     lead_message: str
     lead_message_at: datetime | None
     conversation: list[MissionExchange] = field(default_factory=list)
+    recovery: MissionRecovery | None = None
+    stuck: MissionStuck | None = None

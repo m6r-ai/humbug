@@ -36,6 +36,7 @@ from mission import (
     MissionError, MissionExchange, MissionMode, MissionPhase, MissionService, MissionSnapshot, MissionSpeaker,
     MissionStatus, MissionTask, MissionTaskStatus
 )
+from mission.mission_snapshot import MissionStuckReason
 
 
 _STATUS_TONES = {
@@ -49,6 +50,8 @@ _STATUS_TONES = {
     MissionStatus.PAUSED: MissionTone.WARNING,
     MissionStatus.REPLIED: MissionTone.SUCCESS,
     MissionStatus.FAILED: MissionTone.DANGER,
+    MissionStatus.RECOVERING: MissionTone.WARNING,
+    MissionStatus.STUCK: MissionTone.WARNING,
 }
 
 _TASK_STATES = {
@@ -86,6 +89,10 @@ _ACTIVITY_STYLES = {
     MissionActivityKind.REVIEW_DEFERRED: ("?", MissionTone.WARNING),
     MissionActivityKind.PLAN_ARCHIVED: ("▣", MissionTone.INFO),
     MissionActivityKind.ERROR: ("!", MissionTone.DANGER),
+    MissionActivityKind.RECOVERY_SCHEDULED: ("↻", MissionTone.WARNING),
+    MissionActivityKind.AUTO_RETRIED: ("↻", MissionTone.INFO),
+    MissionActivityKind.RECOVERY_GAVE_UP: ("!", MissionTone.DANGER),
+    MissionActivityKind.LOOP_DETECTED: ("∞", MissionTone.WARNING),
 }
 
 # Colour of the current stage of the journey, where it differs from the status colour.
@@ -99,6 +106,8 @@ _STAGE_TONES = {
     MissionStatus.COMPLETED: MissionTone.SUCCESS,
     MissionStatus.REPLIED: MissionTone.SUCCESS,
     MissionStatus.FAILED: MissionTone.DANGER,
+    MissionStatus.RECOVERING: MissionTone.WARNING,
+    MissionStatus.STUCK: MissionTone.WARNING,
 }
 
 
@@ -123,6 +132,9 @@ _AGENT_NAMES = (
     "Atlas", "Nova", "Orion", "Lyra", "Vega", "Juno", "Sol", "Echo", "Iris", "Kai",
     "Rhea", "Zeno", "Mira", "Theo", "Cleo", "Ravi", "Luna", "Felix", "Ada", "Milo",
 )
+
+# How much of the AI service's error a reconnecting mission quotes.
+_MAX_ERROR_LENGTH = 120
 
 _AGENT_ACTIVITY = {
     MissionAgentState.THINKING: "thinking",
@@ -257,6 +269,7 @@ class MissionTab(TabBase):
         self._widget.stop_requested.connect(self._on_stop_requested)
         self._widget.pause_requested.connect(self._on_pause_requested)
         self._widget.unpause_requested.connect(self._on_unpause_requested)
+        self._widget.carry_on_requested.connect(self._on_carry_on_requested)
         self._widget.remove_requested.connect(self._on_remove_requested)
         self._widget.mission_rename_requested.connect(self._rename_mission)
         self._widget.mission_delete_requested.connect(self._delete_mission)
@@ -321,6 +334,8 @@ class MissionTab(TabBase):
             MissionStatus.PAUSED: strings.mission_status_paused,
             MissionStatus.REPLIED: strings.mission_status_replied,
             MissionStatus.FAILED: strings.mission_status_failed,
+            MissionStatus.RECOVERING: strings.mission_status_recovering,
+            MissionStatus.STUCK: strings.mission_status_stuck,
         }[status]
 
     def _task_text(self, status: MissionTaskStatus) -> str:
@@ -467,7 +482,7 @@ class MissionTab(TabBase):
             return self._tool_speech(agent.tool_name, agent.tool_target)
 
         if agent.state == MissionAgentState.ERROR:
-            return strings.mission_say_error
+            return strings.mission_say_reconnecting if snapshot.status == MissionStatus.RECOVERING else strings.mission_say_error
 
         if agent.state == MissionAgentState.THINKING:
             # Once the agent has done something, it says what that was and how far it has got,
@@ -496,6 +511,8 @@ class MissionTab(TabBase):
             MissionStatus.NEEDS_YOU: strings.mission_say_helper_waiting,
             MissionStatus.REPLIED: strings.mission_say_replied,
             MissionStatus.FAILED: strings.mission_say_error,
+            MissionStatus.RECOVERING: strings.mission_say_reconnecting,
+            MissionStatus.STUCK: strings.mission_say_stuck,
         }
         if snapshot.status in idle_speech:
             return idle_speech[snapshot.status]
@@ -544,6 +561,10 @@ class MissionTab(TabBase):
                 else strings.mission_activity_mode_autonomous
             ),
             MissionActivityKind.ERROR: strings.mission_activity_error.format(subject),
+            MissionActivityKind.RECOVERY_SCHEDULED: strings.mission_activity_recovery_scheduled.format(entry.detail),
+            MissionActivityKind.AUTO_RETRIED: strings.mission_activity_auto_retried.format(entry.detail),
+            MissionActivityKind.RECOVERY_GAVE_UP: strings.mission_activity_recovery_gave_up.format(entry.detail),
+            MissionActivityKind.LOOP_DETECTED: strings.mission_activity_loop_detected.format(subject, entry.detail),
         }
         glyph, tone = _ACTIVITY_STYLES[entry.kind]
         return MissionActivityView(
@@ -627,7 +648,7 @@ class MissionTab(TabBase):
             progress_text=strings.mission_progress.format(percent),
             can_stop=snapshot.status in (
                 MissionStatus.PLANNING, MissionStatus.RUNNING, MissionStatus.NEEDS_YOU, MissionStatus.INTERRUPTED,
-                MissionStatus.PAUSED
+                MissionStatus.PAUSED, MissionStatus.RECOVERING, MissionStatus.STUCK
             ),
             can_resume=snapshot.status == MissionStatus.INTERRUPTED and not classic,
             is_classic=classic,
@@ -638,11 +659,15 @@ class MissionTab(TabBase):
             lead_context_id=next(
                 (agent.context_id for agent in snapshot.agents if agent.is_lead), ""
             ),
-            can_retry=snapshot.status == MissionStatus.FAILED and not classic,
+            can_retry=snapshot.status in (MissionStatus.FAILED, MissionStatus.RECOVERING) and not classic,
             can_pause=not classic and not mission.paused and snapshot.status in (
-                MissionStatus.PLANNING, MissionStatus.RUNNING, MissionStatus.NEEDS_YOU, MissionStatus.IDLE
+                MissionStatus.PLANNING, MissionStatus.RUNNING, MissionStatus.NEEDS_YOU, MissionStatus.IDLE,
+                MissionStatus.RECOVERING
             ),
-            paused=not classic and mission.paused and not mission.stopped,
+            # A mission paused because it looked stuck says so, and is carried on rather than unpaused.
+            paused=not classic and mission.paused and not mission.stopped and snapshot.status != MissionStatus.STUCK,
+            recovery_text="" if classic else self._recovery_text(snapshot),
+            stuck_text="" if classic else self._stuck_text(snapshot),
         )
         stats = [
             MissionStatView("✓", str(mission.completed_count()), strings.mission_stat_completed, MissionTone.SUCCESS,
@@ -722,6 +747,30 @@ class MissionTab(TabBase):
             working_on_text="" if classic else self._working_on_text(snapshot),
         )
 
+    def _recovery_text(self, snapshot: MissionSnapshot) -> str:
+        """Say when a mission whose lead lost the AI service will try again, or return "" if it will not."""
+        recovery = snapshot.recovery
+        if recovery is None or snapshot.status != MissionStatus.RECOVERING:
+            return ""
+
+        return self._strings().mission_recovery_notice.format(
+            _first_line(recovery.error)[:_MAX_ERROR_LENGTH], _local_time(recovery.retry_at, with_seconds=True),
+            recovery.attempt, recovery.attempts
+        )
+
+    def _stuck_text(self, snapshot: MissionSnapshot) -> str:
+        """Say why Mission Control stopped driving a mission that looked stuck, or return "" if it did not."""
+        stuck = snapshot.stuck
+        if stuck is None or snapshot.status != MissionStatus.STUCK:
+            return ""
+
+        strings = self._strings()
+        if stuck.reason == MissionStuckReason.NO_PROGRESS:
+            return strings.mission_stuck_no_progress.format(stuck.count)
+
+        name = self._agent_display_names.get(stuck.agent_title, stuck.agent_title)
+        return strings.mission_stuck_repeating.format(name, stuck.count, stuck.action)
+
     def _with_celebration(self, service: MissionService, snapshot: MissionSnapshot, view: MissionView) -> MissionView:
         """
         Celebrate a mission's completion once, and only when the user watched it finish.
@@ -780,7 +829,10 @@ class MissionTab(TabBase):
         """Sum the mission up beside its title: what it is doing now, in the lead's words, and how far it has got."""
         # An interrupted, paused or failed mission has a notice saying so, with what to do about it,
         # and the lead would only repeat it.
-        noticed = snapshot.status in (MissionStatus.INTERRUPTED, MissionStatus.PAUSED, MissionStatus.FAILED)
+        noticed = snapshot.status in (
+            MissionStatus.INTERRUPTED, MissionStatus.PAUSED, MissionStatus.FAILED, MissionStatus.RECOVERING,
+            MissionStatus.STUCK
+        )
         now_text = f"{lead.name}: {lead.speech}" if lead is not None and lead.speech and not noticed else ""
         mission = snapshot.mission
         progress = self._milestone_text(snapshot)
@@ -1308,6 +1360,15 @@ class MissionTab(TabBase):
         if self._service is not None and self._selected_mission_id is not None:
             try:
                 self._service.pause_mission(self._selected_mission_id)
+
+            except MissionError as e:
+                self._show_error(str(e))
+
+    def _on_carry_on_requested(self) -> None:
+        """Let the selected mission, which looked stuck, carry on."""
+        if self._service is not None and self._selected_mission_id is not None:
+            try:
+                self._service.carry_on(self._selected_mission_id)
 
             except MissionError as e:
                 self._show_error(str(e))

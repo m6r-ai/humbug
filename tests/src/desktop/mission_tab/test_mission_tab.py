@@ -20,6 +20,7 @@ from mission import (
     AutoApproveLevel, Mission, MissionAgent, MissionAgentState, MissionDecision, MissionExchange, MissionMode,
     MissionPhase, MissionSnapshot, MissionSpeaker, MissionStatus, MissionTask, MissionTaskStatus
 )
+from mission.mission_snapshot import MissionRecovery, MissionStuck, MissionStuckReason
 from PySide6.QtWidgets import QLabel
 
 from desktop.mission_tab import mission_tab as mission_tab_module
@@ -36,6 +37,7 @@ from desktop.message_box import MessageBoxButton
 from desktop.mission_tab.mission_mode_menus import MissionModeMenus
 from desktop.mission_tab.mission_service_holder import MissionServiceHolder
 from desktop.mission_tab.mission_motion import MissionMotion
+from desktop.mission_tab.mission_notifier import MissionNotifier
 from desktop.mission_tab.mission_network import AgentNetworkView
 from desktop.mission_tab.mission_painted import BusySpinner, StatusPill, fade_in
 from desktop.mission_tab.mission_scene import ConfettiOverlay, MissionJourney, MissionOrb
@@ -3546,3 +3548,192 @@ class TestReportHeadlineStaysInView:
         assert body.geometry().top() >= header.geometry().bottom()
         assert body.geometry().left() == header.geometry().left()
         widget.deleteLater()
+
+
+def _snapshot(status: MissionStatus, **kwargs) -> MissionSnapshot:
+    """A snapshot of a mission with one pending step, in the given status."""
+    mission = Mission(
+        mission_id="m", objective="Write the guide", title="Write the guide", lead_path="lead.conv",
+        created_at="2026-11-25T09:00:00+00:00",
+        tasks=[MissionTask(task_id="1", title="Outline", status=MissionTaskStatus.PENDING)],
+    )
+    return MissionSnapshot(
+        mission=mission, status=status, agents=[], decisions=[], activity=[], lead_message="", lead_message_at=None,
+        **kwargs,
+    )
+
+
+class TestReconnectingMission:
+    """A mission that lost the AI service says when it will try again, and can be retried at once."""
+
+    def test_reconnecting_mission_says_when_it_will_retry(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """The notice names the error and the attempt, and Retry now replaces the failure notice."""
+        tab = MissionTab("mission")
+        recovery = MissionRecovery(
+            attempt=2, attempts=6, retry_at=datetime(2026, 11, 25, 9, 30, tzinfo=timezone.utc),
+            error="Network error: Cannot connect to host\nmore detail",
+        )
+        view = tab._mission_view(_snapshot(MissionStatus.RECOVERING, recovery=recovery))  # pylint: disable=protected-access
+
+        header = view.header
+        assert header.status_text == "Reconnecting"
+        assert header.can_retry and header.can_stop and header.can_pause
+        assert "Network error: Cannot connect to host" in header.recovery_text
+        assert "more detail" not in header.recovery_text
+        assert "attempt 2 of 6" in header.recovery_text
+
+        widget = tab._widget  # pylint: disable=protected-access
+        widget.set_mission(view)
+        assert not widget._recovery_notice.isHidden()  # pylint: disable=protected-access
+        assert widget._failed_notice.isHidden()  # pylint: disable=protected-access
+        assert widget._lead_conversation_button.isHidden()  # pylint: disable=protected-access
+        assert widget._retry_button.text().endswith("Retry now")  # pylint: disable=protected-access
+        tab.deleteLater()
+
+    def test_failed_mission_has_no_reconnecting_notice(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """Once retrying is over, the mission is shown failed, with Retry."""
+        tab = MissionTab("mission")
+        view = tab._mission_view(_snapshot(MissionStatus.FAILED))  # pylint: disable=protected-access
+
+        assert view.header.recovery_text == ""
+        widget = tab._widget  # pylint: disable=protected-access
+        widget.set_mission(view)
+        assert widget._recovery_notice.isHidden()  # pylint: disable=protected-access
+        assert not widget._failed_notice.isHidden()  # pylint: disable=protected-access
+        assert widget._retry_button.text().endswith("Retry")  # pylint: disable=protected-access
+        tab.deleteLater()
+
+
+class TestStuckMission:
+    """A mission Mission Control stopped driving says why, and offers to carry on."""
+
+    def test_repeating_mission_names_the_agent_and_the_action(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """The notice says who repeated what and how often, and Carry on replaces Continue."""
+        tab = MissionTab("mission")
+        stuck = MissionStuck(
+            reason=MissionStuckReason.REPEATING, count=4, agent_title="Lead", action="Reading a file a.txt"
+        )
+        snapshot = _snapshot(MissionStatus.STUCK, stuck=stuck)
+        snapshot.mission.paused = True
+        tab._agent_display_names = {"Lead": "Atlas"}  # pylint: disable=protected-access
+        view = tab._mission_view(snapshot)  # pylint: disable=protected-access
+
+        header = view.header
+        assert header.status_text == "Looks stuck"
+        assert not header.paused
+        assert "Atlas" in header.stuck_text and "4 times" in header.stuck_text
+        assert "Reading a file a.txt" in header.stuck_text
+
+        widget = tab._widget  # pylint: disable=protected-access
+        widget.set_mission(view)
+        assert not widget._stuck_notice.isHidden()  # pylint: disable=protected-access
+        assert not widget._carry_on_button.isHidden()  # pylint: disable=protected-access
+        assert widget._unpause_button.isHidden()  # pylint: disable=protected-access
+        assert widget._paused_notice.isHidden()  # pylint: disable=protected-access
+
+        carried: list[bool] = []
+        widget.carry_on_requested.connect(lambda: carried.append(True))
+        widget._carry_on_button.click()  # pylint: disable=protected-access
+        assert carried == [True]
+        tab.deleteLater()
+
+    def test_mission_without_progress_says_how_many_continues_were_tried(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """A mission whose continues finished nothing says so."""
+        tab = MissionTab("mission")
+        stuck = MissionStuck(reason=MissionStuckReason.NO_PROGRESS, count=3)
+        view = tab._mission_view(_snapshot(MissionStatus.STUCK, stuck=stuck))  # pylint: disable=protected-access
+
+        assert "3 continues in a row" in view.header.stuck_text
+        tab.deleteLater()
+
+    def test_carry_on_reaches_the_service(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """Pressing Carry on asks the service to let the selected mission carry on."""
+        tab = MissionTab("mission")
+        carried: list[str] = []
+        tab._service = types.SimpleNamespace(carry_on=carried.append)  # pylint: disable=protected-access
+        tab._selected_mission_id = "m"  # pylint: disable=protected-access
+
+        tab._on_carry_on_requested()  # pylint: disable=protected-access
+
+        assert carried == ["m"]
+        tab._service = None  # pylint: disable=protected-access
+        tab.deleteLater()
+
+    def test_running_mission_shows_neither_notice(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A mission that is working says nothing about reconnecting or being stuck."""
+        widget = MissionWidget()
+        widget.set_mission(_view(completed=False, stage=2))
+
+        assert widget._recovery_notice.isHidden()  # pylint: disable=protected-access
+        assert widget._stuck_notice.isHidden()  # pylint: disable=protected-access
+        assert widget._carry_on_button.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+
+class TestMissionNotifier:
+    """Mission Control's news reaches the user wherever they are looking."""
+
+    @staticmethod
+    def _notifier(window_active: bool) -> tuple[MissionNotifier, types.SimpleNamespace, list[str], list[tuple]]:
+        window = QWidget()
+        window.isActiveWindow = lambda: window_active  # type: ignore[method-assign]
+        marked: list[str] = []
+        shown: list[tuple] = []
+        notifier = MissionNotifier(window, lambda _mission_id: None, lambda: marked.append("marked"))
+        notifier._notify = lambda *args: shown.append(args)  # type: ignore[method-assign]  # pylint: disable=protected-access
+        listeners: list = []
+        service = types.SimpleNamespace(
+            mission_list=[], statuses={},
+            add_listener=listeners.append, remove_listener=listeners.remove,
+            decisions=lambda: [],
+        )
+        service.missions = lambda: service.mission_list
+        service.status = service.statuses.get
+        service.listeners = listeners
+        return notifier, service, marked, shown
+
+    @staticmethod
+    def _add(service: types.SimpleNamespace, status: MissionStatus) -> None:
+        service.mission_list.append(types.SimpleNamespace(mission_id="m", title="Write the guide"))
+        service.statuses["m"] = status
+
+    def test_finished_mission_in_the_background_is_announced(self, qapp) -> None:  # pylint: disable=unused-argument
+        """While the window is in the background, a finished mission marks Mission Control and shows a notification."""
+        notifier, service, marked, shown = self._notifier(window_active=False)
+        self._add(service, MissionStatus.RUNNING)
+        notifier.follow(service)  # type: ignore[arg-type]
+        assert service.listeners
+
+        service.statuses["m"] = MissionStatus.COMPLETED
+        with mock.patch.object(QApplication, "alert") as alert:
+            notifier._check()  # pylint: disable=protected-access
+
+        assert marked == ["marked"]
+        alert.assert_called_once()
+        assert shown == [("m", "Mission accomplished", "Write the guide")]
+        notifier.follow(None)
+        assert not service.listeners
+
+    def test_user_in_the_window_only_sees_the_tab_marked(self, qapp) -> None:  # pylint: disable=unused-argument
+        """While the user is in Humbug, nothing pops up: Mission Control is only marked as updated."""
+        notifier, service, marked, shown = self._notifier(window_active=True)
+        self._add(service, MissionStatus.RUNNING)
+        notifier.follow(service)  # type: ignore[arg-type]
+
+        service.statuses["m"] = MissionStatus.STUCK
+        with mock.patch.object(QApplication, "alert") as alert:
+            notifier._check()  # pylint: disable=protected-access
+
+        assert marked == ["marked"]
+        alert.assert_not_called()
+        assert not shown
+
+    def test_what_was_already_so_is_not_announced(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A mission that had finished before watching began is not news."""
+        notifier, service, marked, shown = self._notifier(window_active=False)
+        self._add(service, MissionStatus.COMPLETED)
+        notifier.follow(service)  # type: ignore[arg-type]
+
+        notifier._check()  # pylint: disable=protected-access
+
+        assert not marked and not shown

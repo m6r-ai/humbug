@@ -101,10 +101,59 @@ It does not ask when:
 - the mission is finished, stopped or paused;
 - the lead's reply ended in an error, or you cancelled it.
 
-If the lead is asked to continue three times without finishing a step, Mission Control stops
-asking and the activity feed shows that it paused, so a mission that is going round in circles
-does not run on indefinitely. Sending the lead a message, or the lead finishing a step, starts
-the count again.
+### When a mission gets stuck
+
+Mission Control watches for a mission that is getting nowhere, so it does not run on
+indefinitely, and shows it as **Looks stuck** with a note saying what it saw:
+
+- **The lead keeps being asked to continue without finishing a step.** After three continues in
+  a row that finish no step, Mission Control stops asking. Sending the lead a message, or the lead
+  finishing a step, starts the count again.
+- **A conversation keeps doing the same thing and getting the same answer.** When the lead or one
+  of its helpers makes the same tool call four times in a row and gets exactly the same result
+  each time (reading a file that is not there, or running a command that fails the same way),
+  Mission Control cancels that conversation's reply and pauses the mission. A call whose result
+  changes, such as checking on a build that is still running, is not counted.
+
+**Carry on** lets the mission continue, and sending the lead a message also clears it. Only
+missions in Autonomous mode are watched this way: in Classic mode you are watching the
+conversation yourself.
+
+These are rules of thumb, not an understanding of the work. A mission can go round in circles in
+ways they do not catch, such as alternating between two actions, and a legitimate repeat (waiting
+for something that has not changed yet) can be taken for one. In that case press **Carry on**.
+
+### When the AI service cannot be reached
+
+If the lead's reply fails because the AI service could not be reached, refused for being too busy
+(a rate limit), or had a server error, the mission shows **Reconnecting** rather than **Failed**,
+and tries the same request again by itself: after 15 seconds, then 30 seconds, 1, 2, 5 and 10
+minutes. The mission card says what went wrong and when the next attempt is due, with
+**Retry now** to try straight away. **Pause** and **Stop** cancel the wait; continuing a paused
+mission starts the attempts again. Once the AI service answers, a later failure gets every attempt
+again.
+
+If every attempt fails, the mission is shown as **Failed**, and the activity feed says the attempts
+stopped. Errors that waiting will not fix, such as a rejected API key or a request the service
+cannot accept, are shown as **Failed** straight away. A mission that had failed when Humbug closed
+is not retried by itself when it opens again. Missions in Classic mode are not retried
+automatically.
+
+### Being told when a mission needs you
+
+Mission Control tells you when:
+
+- a mission is waiting for a decision only you can make (one an AI reviewer is still considering
+  is not announced until it is left to you),
+- a mission is accomplished, or the lead has answered your question,
+- a mission has failed for good, or looks stuck.
+
+While you are working in Humbug, the Mission Control tab is highlighted as having something new.
+While Humbug is in the background, it also asks for your attention the way your system does
+(bouncing the Dock icon on macOS, flashing the taskbar button on Windows and Linux) and shows a
+notification naming the mission; clicking the notification opens the mission. Whether the
+notification appears depends on your system: some desktops do not support them, and your system
+settings may hide them. What had already happened when the mindspace was opened is not announced.
 
 Carrying on by itself does not include approving anything: unless you turn on
 [Auto-approve](#auto-approve), every action that changes files, runs commands or sends data still
@@ -171,8 +220,8 @@ When a mission is selected, Mission Control shows, from the top:
   and while the AI is working a small moon circles it and a soft pulse spreads out from it; it turns amber when the mission is waiting for you. While the
   team works, the track beyond **AI team works** fills with the share of the plan that is done.
   Below the journey, the mission is summed up at a glance. **Now** gives what the lead is doing,
-  in its own words; it is left out while the mission is interrupted, paused or failed, because a
-  notice on the card says so instead, with what you can do about it. **Progress** says how far the
+  in its own words; it is left out while the mission is interrupted, paused, reconnecting, stuck
+  or failed, because a notice on the card says so instead, with what you can do about it. **Progress** says how far the
   mission has got and what comes next, such as **Step 2 of 4 done: Write the user guide · Next:
   Add a changelog**, and names a blocked step; after a follow-up starts new work, it names the work
   finished before. A finished step is never shown as the mission being done. At a narrow width the
@@ -305,7 +354,9 @@ rather than jumping, so you can see where you have been taken. Each chip has a *
 | **Needs you** | A conversation in the mission is waiting for your approval |
 | **Waiting for you** | Nothing is running; the lead may have asked you a question |
 | **Answered** | The lead answered your question; no work was needed, so there is no plan |
-| **Failed** | The lead's latest reply ended in an error it could not recover from. The mission card says so, with **Retry** to send the same request to the lead again (the error and any partial reply are removed first), and **Open the lead's conversation** to see why. Sending a message also tries again. **Resume** is offered only to an **Interrupted** mission |
+| **Reconnecting** | The AI service could not be reached; Mission Control will send the lead's request again by itself, and the mission card says when. See [When the AI service cannot be reached](#when-the-ai-service-cannot-be-reached) |
+| **Looks stuck** | Mission Control stopped driving the mission because it was getting nowhere. The mission card says why, with **Carry on**. See [When a mission gets stuck](#when-a-mission-gets-stuck) |
+| **Failed** | The lead's latest reply ended in an error it could not recover from, or every automatic retry failed. The mission card says so, with **Retry** to send the same request to the lead again (the error and any partial reply are removed first), and **Open the lead's conversation** to see why. Sending a message also tries again. **Resume** is offered only to an **Interrupted** mission |
 | **Completed** | The lead reports that everything you asked for is done, and every task in its plan is completed |
 | **Paused** | You paused the mission: nothing is approved automatically and the lead does not carry on by itself until you click **Continue** |
 | **Stopped** | You stopped the mission |

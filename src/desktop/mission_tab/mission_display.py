@@ -63,6 +63,8 @@ class MissionHeaderView:
     can_retry: bool = False
     can_pause: bool = False
     paused: bool = False
+    recovery_text: str = ""
+    stuck_text: str = ""
 
 
 @dataclass(frozen=True)

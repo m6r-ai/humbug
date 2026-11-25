@@ -80,6 +80,7 @@ from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar_manager import SidebarManager
 from desktop.usage_tab.usage_tab import UsageTab
 from desktop.mission_tab.mission_mode_menus import MissionModeMenus
+from desktop.mission_tab.mission_notifier import MissionNotifier
 from desktop.mission_tab.mission_service_holder import MissionServiceHolder
 from desktop.mission_tab.mission_tab import MissionTab
 from desktop.style_manager import StyleManager
@@ -779,6 +780,8 @@ class MainWindow(QMainWindow):
 
         # Mission conversations offer to switch between classic and autonomous mode.
         self._mission_mode_menus = MissionModeMenus(self, self._show_mission)
+        # Missions that need the user, or have finished, say so wherever the user is looking.
+        self._mission_notifier = MissionNotifier(self, self._show_mission, self._mark_mission_control_updated)
         tab_manager.add_tab_menu_provider(self._mission_mode_menus.tab_entries)
         # Conversations working for an autonomous mission open without taking focus.
         tab_manager.add_background_open_provider(self._mission_mode_menus.opens_in_background)
@@ -1837,6 +1840,7 @@ class MainWindow(QMainWindow):
             if not self._close_all_tabs():
                 return
 
+            self._mission_notifier.follow(None)
             MissionServiceHolder().release()
             self._mindspace_manager.close_mindspace()
 
@@ -1897,6 +1901,7 @@ class MainWindow(QMainWindow):
         MindspaceChangePoller().stop()
         self._sidebar_manager.set_mindspace("")
 
+        self._mission_notifier.follow(None)
         MissionServiceHolder().release()
         self._mindspace_manager.close_mindspace()
         self._update_instance_registry()
@@ -2760,7 +2765,7 @@ class MainWindow(QMainWindow):
         and resumed if the user chose that, without Mission Control being open.
         """
         if self._mindspace_manager.has_mindspace():
-            MissionServiceHolder().service_for(self._mindspace_manager.mindspace())
+            self._mission_notifier.follow(MissionServiceHolder().service_for(self._mindspace_manager.mindspace()))
 
     def _show_mission(self, mission_id: str) -> None:
         """Open Mission Control showing a particular mission."""
@@ -2769,6 +2774,13 @@ class MainWindow(QMainWindow):
         tab = self._tab_manager.get_tab_by_id(info.context_id) if info is not None else None
         if isinstance(tab, MissionTab):
             tab.show_mission(mission_id)
+
+    def _mark_mission_control_updated(self) -> None:
+        """Highlight Mission Control's tab, if it is open, as having something new."""
+        info = self._mission_control_context()
+        tab = self._tab_manager.get_tab_by_id(info.context_id) if info is not None else None
+        if tab is not None:
+            tab.set_updated(True)
 
     def _mission_control_context(self) -> ContextInfo | None:
         """Return the context of the open Mission Control tab, if there is one."""
@@ -3574,6 +3586,7 @@ class MainWindow(QMainWindow):
             event.ignore()
             return
 
+        self._mission_notifier.follow(None)
         MissionServiceHolder().release()
         self._instance_registry.unregister()
         event.accept()
