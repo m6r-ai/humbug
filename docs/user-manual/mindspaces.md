@@ -16,6 +16,25 @@ marks a folder as a mindspace by creating a hidden `.humbug` subdirectory inside
 directory holds your settings, your session state (which tabs were open and where), the system
 log, and token usage data. Everything else in the folder is yours to organise however you like.
 
+Every new mindspace also has a `menai-lib` directory at its root. This is the mindspace's library
+of reusable [Menai](ai-tools.md) modules: programs your AIs write once and every future
+conversation can use. It sits on the Menai module search path ahead of the standard library, so a
+module here with the same name as a standard library module takes precedence. The directory is
+yours to edit — you can add modules yourself, and delete or rename anything in it. The Menai
+tool's help lists the modules in your `menai-lib`, so every conversation discovers them without
+you doing anything. It lists modules only: a test suite is a test for a module rather than a
+module itself, so it is left out.
+
+Each module's help entry ends with a description, which is read from the module's own first line:
+a comment of the form `; <name> — <one-line description>`, the convention the standard library
+follows. That is what makes the listing worth reading — a name and its exports say what a module
+offers, and the line says what it is for.
+
+A module can have a test suite beside it — a file named `<module>.test.menai`, the naming
+convention the language lays down — and the AI can run any such suite in your mindspace and report
+which tests passed. Because the suites live in the mindspace too, the tests your AI writes stay
+with the code they check and are there for the next conversation that changes it.
+
 You can have as many mindspaces as you like — one per project, or one per area of work. Humbug
 remembers the last mindspace you had open and restores it automatically on the next launch.
 
@@ -29,9 +48,10 @@ To create a new mindspace:
    area will prompt you to open one.
 2. Choose **New Mindspace** and select a folder. This can be a new empty folder or an existing
    project folder.
-3. Humbug will ask which sub-folders to create. The suggested options are **conversations**,
-   **src**, and others depending on your project type. You can choose any combination or none —
-   these are just conveniences to help you get organised from the start.
+3. Humbug will ask which sub-folders to create. `.humbug` and `menai-lib` are shown with
+   switches locked on: they are part of the mindspace itself, so they cannot be turned off.
+   **src** is optional — you can choose any combination or none; these folders are just
+   conveniences to help you get organised from the start.
 
 Humbug will initialise the mindspace and open it immediately.
 

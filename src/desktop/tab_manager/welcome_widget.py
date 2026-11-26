@@ -9,8 +9,8 @@ from desktop.drop_payload import read_drop_payload
 from desktop.style_manager import StyleManager
 from desktop.language.language_manager import LanguageManager
 from desktop.user.user_settings import UserSettings
-from desktop.version import CURRENT_VERSION
 from desktop.widgets.gradient_label import GradientBorderLabel, GradientLabel
+from version import CURRENT_VERSION
 
 
 class WelcomeWidget(QFrame):

@@ -25,6 +25,7 @@ from conversation_context.conversation_context import ConversationContext
 from mindspace.mindspace_error import MindspaceError
 from mindspace.mindspace_log_level import MindspaceLogLevel
 from mindspace.mindspace import Mindspace
+from version import CURRENT_VERSION
 
 
 class SystemAITool(AITool):
@@ -1003,7 +1004,7 @@ class SystemAITool(AITool):
         """Get system and mindspace information."""
         try:
             system_info = {
-                "version": "v55",
+                "version": str(CURRENT_VERSION),
                 "platform": sys.platform,
                 "platform_details": platform.platform(),
                 "architecture": platform.machine()

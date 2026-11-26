@@ -152,7 +152,7 @@ it should not be added.
 humbug/
 ├── docs/                   # Documentation
 ├── icons/                  # Application icons
-├── menai_modules/          # Humbug-specific Menai modules
+├── menai-lib/              # Reusable Menai library modules for this mindspace
 ├── src/                    # Main source code
 ├── tests/                  # Test suite
 ├── tools/                  # Development and analysis tools
@@ -323,7 +323,8 @@ Advanced markdown support, including converting to/from a markdown AST.
 Includes `doc_ir_to_markdown.py` for serialising a doc_ir tree to Markdown text.
 
 ### `src/menai_ai_tool/`
-AI tool implementation for Menai language execution.
+AI tool implementation for Menai language execution and for running Menai test suites
+(`*.test.menai`) from the mindspace.
 
 ### `src/mindspace/`
 Front-end-agnostic mindspace model. Manages the mindspace path, settings, search,
@@ -474,6 +475,12 @@ AI tool implementation for terminal tab operations (read, write, status).
 
 ### `src/terminal_context/`
 Context model for open terminal tabs (`TerminalContext`).
+
+### `src/version/`
+The single source of truth for the Humbug version number (`CURRENT_VERSION`).  The
+desktop app, `system_ai_tool`'s `get_system_info`, `pyproject.toml` (via
+`[tool.hatch.version]`) and the build scripts all read it from here, so bumping the
+version is a one-line change in `src/version/version.py`.
 
 ## `tools/` Directory
 

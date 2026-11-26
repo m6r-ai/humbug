@@ -228,6 +228,7 @@ def get_english_strings() -> LanguageStrings:
         mindspace_folders_title="Configure Mindspace Folders",
         mindspace_path="Mindspace Path",
         humbug_folder='Create ".humbug" Folder',
+        menai_lib_folder='Create "menai-lib" Folder',
         src_folder='Create "src" Folder',
 
         # Mindspace settings

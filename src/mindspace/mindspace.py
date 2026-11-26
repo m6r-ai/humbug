@@ -43,6 +43,7 @@ class Mindspace:
     CONVERSATIONS_DIR = "conversations"
     TRASH_DIR = "trash"
     JOURNAL_DIR = "journal"
+    MENAI_LIB_DIR = "menai-lib"
 
     def __init__(
         self,
@@ -113,6 +114,7 @@ class Mindspace:
             raise MindspaceExistsError(f"Mindspace already exists at {path}")
 
         try:
+            self._ensure_menai_lib(path)
             os.makedirs(mindspace_dir)
 
             for folder in folders:
@@ -130,6 +132,9 @@ class Mindspace:
             self._logger.error("Failed to create mindspace at %s: %s", path, str(e))
             if os.path.exists(mindspace_dir):
                 shutil.rmtree(mindspace_dir, ignore_errors=True)
+
+            if os.path.exists(os.path.join(path, self.MENAI_LIB_DIR)):
+                shutil.rmtree(os.path.join(path, self.MENAI_LIB_DIR), ignore_errors=True)
 
             for folder in folders:
                 folder_path = os.path.join(path, folder)
@@ -163,6 +168,28 @@ class Mindspace:
         with open(gitignore_path, 'w', encoding='utf-8') as f:
             f.write("*\n")
 
+    def _ensure_menai_lib(self, path: str) -> None:
+        """
+        Ensure the mindspace has its menai-lib convention directory.
+
+        Every mindspace has a menai-lib directory at its root, holding the
+        mindspace's reusable Menai library modules.  Mindspaces created before
+        the convention existed get theirs when opened.
+
+        Args:
+            path: The mindspace root directory.
+
+        Raises:
+            OSError: The directory could not be created.
+        """
+        menai_lib_dir = os.path.join(path, self.MENAI_LIB_DIR)
+        if os.path.exists(menai_lib_dir):
+            return
+
+        os.makedirs(menai_lib_dir)
+        with open(os.path.join(menai_lib_dir, ".gitkeep"), "w", encoding="utf-8") as f:
+            f.write("")
+
     def open_mindspace(self, path: str) -> None:
         """
         Open an existing mindspace.
@@ -185,6 +212,14 @@ class Mindspace:
 
         except OSError as e:
             self._logger.warning("Failed to write %s in %s: %s", self.GITIGNORE_FILE, mindspace_dir, str(e))
+
+        # Mindspaces created before menai-lib existed get theirs now.  Like the
+        # gitignore above, not having it is no reason to refuse to open.
+        try:
+            self._ensure_menai_lib(path)
+
+        except OSError as e:
+            self._logger.warning("Failed to create %s in %s: %s", self.MENAI_LIB_DIR, path, str(e))
 
         try:
             settings = MindspaceSettings.load(os.path.join(mindspace_dir, self.SETTINGS_FILE))

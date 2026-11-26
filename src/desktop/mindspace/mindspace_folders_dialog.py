@@ -54,6 +54,11 @@ class MindspaceFoldersDialog(QDialog):
         self._humbug_check.setEnabled(False)
         self._settings_container.add_setting(self._humbug_check)
 
+        self._menai_lib_check = SettingsFactory.create_switch(strings.menai_lib_folder)
+        self._menai_lib_check.set_value(True)
+        self._menai_lib_check.setEnabled(False)
+        self._settings_container.add_setting(self._menai_lib_check)
+
         self._src_check = SettingsFactory.create_switch(strings.src_folder)
         self._src_check.set_value(False)
         self._settings_container.add_setting(self._src_check)

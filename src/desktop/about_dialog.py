@@ -8,8 +8,8 @@ from desktop.color_role import ColorRole
 from desktop.language.language_manager import LanguageManager
 from desktop.style_manager import StyleManager
 from desktop.url_opener import open_url
-from desktop.version import CURRENT_VERSION
 from desktop.widgets.gradient_label import GradientBorderLabel, GradientLabel
+from version import CURRENT_VERSION
 
 
 class AboutDialog(QDialog):

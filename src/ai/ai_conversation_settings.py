@@ -11,7 +11,11 @@ from ai.ai_model import AIModel, AIReasoningCapability, AIReasoningEffort, ToolC
 class AIConversationSettings:
     """Data class for conversation settings."""
 
-    # Registry keyed by (model_name, provider) — the canonical identity of a model.
+    # Registry keyed by (model_name, provider) — the canonical identity of a model.  Each
+    # provider's models are listed newest group first, so a newly released group is inserted at
+    # the top of its provider's section rather than appended.  The order is not cosmetic: the
+    # first model listed for a provider is the default new conversations start with (see
+    # get_default_model).
     MODELS: dict[tuple[str, str], AIModel] = {
         # Anthropic models
         ("claude-opus-5-5", "anthropic"): AIModel(
@@ -56,6 +60,24 @@ class AIConversationSettings:
             name="claude-haiku-5-5",
             provider="anthropic",
             display_name="Claude Haiku 5.5",
+            context_window=1000000,
+            max_output_tokens=64000,  # This is actually 128k but that's too much
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
+            ],
+            adaptive_thinking_only=True,
+        ),
+        ("claude-fable-5-2", "anthropic"): AIModel(
+            name="claude-fable-5-2",
+            provider="anthropic",
+            display_name="Claude Fable 5.2",
             context_window=1000000,
             max_output_tokens=64000,  # This is actually 128k but that's too much
             supports_temperature=False,
@@ -438,6 +460,40 @@ class AIConversationSettings:
         ),
 
         # OpenAI models
+        ("gpt-6.2-astra", "openai"): AIModel(
+            name="gpt-6.2-astra",
+            provider="openai",
+            display_name="GPT 6.2 Astra",
+            context_window=1050000,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
+            ],
+        ),
+        ("gpt-6.2-sol", "openai"): AIModel(
+            name="gpt-6.2-sol",
+            provider="openai",
+            display_name="GPT 6.2 Sol",
+            context_window=1050000,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+            supported_reasoning_efforts=[
+                AIReasoningEffort.LOW,
+                AIReasoningEffort.MEDIUM,
+                AIReasoningEffort.HIGH,
+                AIReasoningEffort.XHIGH,
+                AIReasoningEffort.MAX
+            ],
+        ),
         ("gpt-6.1-sol", "openai"): AIModel(
             name="gpt-6.1-sol",
             provider="openai",

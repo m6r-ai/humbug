@@ -4,14 +4,18 @@ build-backend = "hatchling.build"
 
 [project]
 name = "humbug"
-version = "60"
+dynamic = ["version"]
 requires-python = ">=3.10"
 dependencies = [
     "certifi",
-    "menai >= 0.9.0",
+    "menai >= 0.11.0",
     "pyside6",
     "qasync"
 ]
+
+[tool.hatch.version]
+path = "src/version/version.py"
+pattern = '(?m)^CURRENT_VERSION = (?P<version>\S+)$'
 
 [project.optional-dependencies]
 dev = [
@@ -42,11 +46,12 @@ exclude_lines = [
 # Package discovery configuration
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["desktop*"]
+include = ["desktop*", "version*"]
 
 [tool.hatch.build.targets.wheel]
 packages = [
-    "src/desktop"
+    "src/desktop",
+    "src/version"
 ]
 
 [tool.mypy]

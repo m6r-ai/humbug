@@ -230,6 +230,7 @@ def get_arabic_strings() -> LanguageStrings:
         mindspace_folders_title="تكوين مجلدات المساحة الذهنية",
         mindspace_path="مسار المساحة الذهنية",
         humbug_folder='إنشاء مجلد ".humbug"',
+        menai_lib_folder='إنشاء مجلد "menai-lib"',
         src_folder='إنشاء مجلد "src"',
 
         # Mindspace settings

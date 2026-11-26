@@ -16,11 +16,17 @@ from mindspace.mindspace_ignored_dirs import IGNORED_DIRS
 # used in place of this list rather than added to it, so a mindspace can prune
 # less than this as well as more.
 #
+# An entry is a pattern as well as a name, so a kind of file that is never content
+# is pruned by its extension.  An editor's swap file is the clearest case: it
+# exists only while the file it belongs to is open, and it is written and deleted
+# in bursts that say nothing about the file itself.
+#
 # This is a separate set from IGNORED_DIRS because that set also decides what
 # global search and the Quick Switcher show.  The two deliberately differ: search
 # should not hide generated output a user might want to read, while the change
 # list should not fill with it.
 DEFAULT_SCAN_PRUNED_PATHS = IGNORED_DIRS | frozenset({
+    "*.swp",
     ".cache",
     ".hypothesis",
     ".mypy_cache",

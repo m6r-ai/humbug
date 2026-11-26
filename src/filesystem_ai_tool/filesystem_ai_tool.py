@@ -93,8 +93,9 @@ class FileSystemAITool(AITool):
         Compose the Menai module search path for the active mindspace.
 
         The path is composed by the Menai library, which places the mindspace's
-        ``menai_modules`` directory ahead of the standard library.  When no
-        mindspace is open the path falls back to the standard library alone.
+        ``menai-lib`` directory (the mindspace's reusable Menai library) ahead
+        of the standard library.  When no mindspace is open the path falls back
+        to the standard library alone.
 
         Returns:
             The composed module search path.
@@ -102,7 +103,7 @@ class FileSystemAITool(AITool):
         source_dir: str | None = None
         mindspace_path = self._mindspace.mindspace_path()
         if mindspace_path:
-            source_dir = str(Path(mindspace_path) / "menai_modules")
+            source_dir = str(Path(mindspace_path) / Mindspace.MENAI_LIB_DIR)
 
         return Menai.build_module_path(source_dir)
 

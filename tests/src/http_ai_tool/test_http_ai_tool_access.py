@@ -452,6 +452,31 @@ class TestRedirectHandling:
 
         auth.assert_called_once()
 
+    def test_redirect_prompt_says_where_the_request_was_redirected_from(self) -> None:
+        """The prompt for a redirect target names the URL the AI actually asked for."""
+        tool = _make_tool(allowlist=["example.com"])
+        tool_call = _make_tool_call(url="https://example.com/start")
+        auth = _make_auth_callback(authorized=True)
+
+        redirect_response = _make_mock_response(
+            status=302, headers={"location": "https://other.com/final"}
+        )
+        final_response = _make_mock_response(text="done")
+
+        with patch("http_ai_tool.http_ai_tool.HttpClient") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client.get = AsyncMock(side_effect=[redirect_response, final_response])
+            mock_client_class.return_value = mock_client
+
+            asyncio.run(tool.execute(tool_call, None, auth))
+
+        reason = auth.call_args.args[2]
+        assert "https://other.com/final" in reason
+        assert "https://example.com/start" in reason
+        assert "redirected" in reason
+
     def test_redirect_loop_is_capped(self) -> None:
         """A chain of redirects longer than the limit should raise an execution error."""
         from ai_tool import AIToolExecutionError

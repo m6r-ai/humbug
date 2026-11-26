@@ -217,6 +217,7 @@ class LanguageStrings:
     mindspace_folders_title: str
     mindspace_path: str
     humbug_folder: str
+    menai_lib_folder: str
     src_folder: str
 
     # Mindspace settings

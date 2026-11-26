@@ -32,7 +32,7 @@ It enables your LLMs to:
 - Query git repositories — status, diffs, history, and file contents at a commit
 - Fetch URLs and call HTTP APIs, under allow and deny lists you control
 - Check the time, wait for time to pass
-- Apply complex logic with a custom pure functional programming language (Menai)
+- Apply complex logic, and run tests for it, with a custom pure functional programming language (Menai)
 - Interact with local shells (Linux and MacOS) and command prompts (Windows)
 - Convert documents between different formats
 - Read and search rendered previews and conversation histories
@@ -142,6 +142,8 @@ It supports higher-order functions and tail-call optimizations.
 Menai supports simple calculations and string processing, all the way through to highly complex algorithmic tasks.
 Being side-effect free, Menai is intrinsically safe for AIs to use and does not require any user approvals.
 The Menai tool implementation has detailed error reporting to make it easier for AIs to debug any issues in their own code.
+The AI can also write test suites for the Menai modules in a mindspace and run them, so a module can
+be checked by both the conversation that wrote it and the ones that change it later.
 
 Over time Menai will be used in more parts of Humbug's design.
 An example of this is that AIs are able to write Menai programs to edit files and edit code in editor buffers.

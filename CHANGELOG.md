@@ -4,12 +4,35 @@
 
 New features:
 
+- Renamed the mindspace's Menai module directory from `menai_modules` to `menai-lib`, matching
+  the Menai standard library's kebab-case naming convention. The module search path now uses
+  `menai-lib` for the menai, editor, and filesystem tools.
+- New mindspaces are now created with a `menai-lib` directory at their root (with a `.gitkeep`
+  so it is preserved in git). This is a convention directory, like `.humbug`, and holds the
+  mindspace's reusable Menai library modules.
+- Existing mindspaces get a `menai-lib` directory automatically when opened, so mindspaces
+  created before the convention existed are brought up to date.
+- The new-mindspace folder dialog now shows `menai-lib` alongside `.humbug` with a disabled
+  (always-on) switch, making clear that it is part of the mindspace itself rather than an
+  optional folder.
+- The system prompt now tells AIs about `menai-lib`: to check it before writing non-trivial data
+  processing logic, and to factor reusable logic into it for future conversations. This makes the
+  convention work in every mindspace, without needing per-mindspace AGENTS.md instructions.
+- The Menai tool help now ends with an inventory of the mindspace's `menai-lib` modules, listing
+  each module's import name and its exported names.
+- The Menai tool now has a `run_tests` operation alongside `evaluate`, which runs a
+  `*.test.menai` suite from the mindspace and reports the totals and any failures. Each test runs
+  on a fresh VM invocation, so one failing test does not stop the rest, and a failing test is a
+  result rather than an error. Suites are confined to the mindspace, like every other tool path,
+  and the operation times out after 30 seconds.
+- Humbug now requires `menai` 0.11.0 or later, which supplies the library test runner.
 - The editor AI tool now writes a file automatically as part of the edit: applying a diff to an open file, or
   rewriting its buffer with a Menai program.
 - Resting the pointer on a conversation in the Conversations panel now describes it as well as naming its path.
 - Panel tooltips now give a path as it sits in the mindspace instead of in full.
 - Editor auto backup now keeps its copies under `.humbug/backups`, rather than saving one as `file.txt.backup`
   beside the file itself.
+<<<<<<< HEAD
 - Mission Control stays responsive while the mission lead writes a long reply: updating a busy mission now takes
   a few milliseconds instead of more than 40, because the conversation's messages are no longer measured again on
   every update. The stage journey also redraws only the parts that move while the AI works.
@@ -76,6 +99,12 @@ Behaviour changes:
 - The mission lead now plans any big task, even one that changes nothing, such as reviewing a pull request, a
   branch or several files, investigating a problem or researching a topic in depth. Only a simple question, or a
   quick explanation or opinion that needs at most a brief look at a file or two, is answered without a plan.
+=======
+- The change journal now ignores editor swap files (`*.swp`) by default, so they no longer appear in the
+  change list.
+- Added GPT 6.2 models.
+- Added Claude Fable 5.2.
+>>>>>>> 598a20f85d87f6c192b47c00d5cd77ea765db448
 
 Bug fixes:
 
@@ -91,6 +120,12 @@ Bug fixes:
 - Panel and window updates that were deferred to the end of the current event-loop turn are now held by
   timers that belong to the widget, so a pending update cannot run after the widgets it touches are gone.
 - Don't display diffs twice when the editor AI tool is invoked.
+- A single-backtick inline code span in Markdown now stays highlighted when it runs across a line break,
+  for example inside a list item, instead of only being styled up to the end of its first line.
+- The approval prompt for a redirected HTTP request did not say it was a redirect target, so a host the
+  AI never asked for appeared with no explanation.  The prompt now names the URL that was redirected.
+- A tool call that asked for approval more than once, such as an HTTP request whose redirect targets each
+  need approving, showed only the first prompt.  Every request is now shown.
 
 ## v59 (2026-11-07)
 

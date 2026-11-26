@@ -31,6 +31,17 @@ The conversation is the primary unit of collaboration.
 AIs discover what they need, edit content, run tools, and orchestrate the UI — all from
 within a conversation, without requiring a separate orchestration layer.
 
+### The mindspace's Menai library
+Every mindspace has a `menai-lib` directory at its root: the mindspace's library of reusable
+Menai modules, shared by every conversation and delegated AI instance working in that mindspace.
+It sits on the Menai module search path ahead of the standard library, and is created
+automatically with every new mindspace. Because Menai is pure and side-effect free, the library
+grows through use — a conversation that solves a problem once can factor the solution into a
+module for future conversations — with no sandboxing or approval machinery beyond the normal
+write approvals that create the module files. This is the platform's primary extension mechanism
+for AI-built tooling: the extension language is the safe language, so extensions are just
+readable, version-controlled text files in the mindspace.
+
 ### Transparency over automation
 Humbug does not hide what is happening.
 Every tool call, approval request, and AI action is visible to the user.

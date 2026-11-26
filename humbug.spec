@@ -11,7 +11,7 @@ codesign_id = os.environ['CODESIGN_IDENTITY'] if 'CODESIGN_IDENTITY' in os.envir
 
 # Read version from version.py
 import importlib.util
-_spec = importlib.util.spec_from_file_location("version", "src/desktop/version.py")
+_spec = importlib.util.spec_from_file_location("version", "src/version/version.py")
 _version_module = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_version_module)
 APP_VERSION = str(_version_module.CURRENT_VERSION)
