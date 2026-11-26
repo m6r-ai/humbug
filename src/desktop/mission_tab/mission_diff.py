@@ -104,6 +104,8 @@ class FileDiffPanel(QWidget):
         super().__init__(parent)
         self._lines = lines
         self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+        # Code reads left to right whatever the language around it.
+        self.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
 
     def _metrics(self) -> tuple[QFontMetricsF, float, float]:
         """Return the font's metrics, the height of a row, and the width of a line-number column."""

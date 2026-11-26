@@ -27,6 +27,10 @@ and brings it to the front if it is already open; your missions stay in the row 
 A notification, or the mission button on a conversation, opens the mission it is about instead.
 Like any other tab, it is restored when you reopen the mindspace.
 
+When Humbug is set to Arabic, Mission Control reads from right to left: the send button, the
+arrows on folded sections, the journey bar and the order of buttons all follow, and labels are
+not letter-spaced. File names, code and diffs still read left to right.
+
 Closing the tab does not stop anything. Missions keep running, and Mission Control keeps following
 them until the mindspace is closed, so reopening the tab shows everything that happened meanwhile.
 
@@ -41,9 +45,9 @@ it ends, and a finished mission is not celebrated with confetti. Nothing is hidd
 
 ## Starting a mission
 
-The first time you open the new-mission screen, a short guide, **How Mission Control works**,
-explains in three steps what happens to a request, how you follow the work, and how you stay in
-charge of what it changes. **Got it** puts it away; the **How does Mission Control work?** link brings it
+The first time you open the new-mission screen, a short guide explains Mission Control in three
+steps: **Define your mission** (what happens to a request), **Watch it unfold** (how you follow
+the work) and **Stay in control** (how you stay in charge of what it changes). **Got it** puts it away; the **How does Mission Control work?** link brings it
 back. Putting it away is remembered for you, in every mindspace.
 
 The new-mission screen opens with a short animation of Humbug's logo arriving. Two streams of
@@ -90,7 +94,23 @@ marked, and the feed says **You approved the plan with your changes**. Mission C
 skipped steps skipped whatever the lead reports afterwards. Skipping a step is not the same as
 stopping one: the mission is still accomplished only when the lead reports the goal met, and
 your [done checks](#done-checks), if any, pass. If you ask the lead for a revised plan instead,
-its new plan replaces your changes. Only the mission's first plan is reviewed this way; once you have started the work, the
+its new plan replaces your changes.
+
+### Changing the plan while a mission is paused
+
+Pause a mission and you can rearrange its plan the same way: drag a step by its handle, use
+**Alt+Up** and **Alt+Down**, or **Skip** and **Include** it. Only steps that have not started can
+be moved or skipped. A step that is under way or done keeps its place, has no handle and no
+**Skip**, and a move that would shift it is not made. The lead says **You changed the plan. I'll
+follow the changed plan when you resume.**
+
+When you press **Continue** to end the pause, Mission Control sends the lead the plan in your order, with the
+skipped steps marked, in place of its usual request to continue. If you send the lead a message
+first, the changed plan goes with it. The lead is told once; after that it carries on from the
+changed plan as from any other. As with a plan you change before approving it, it is the lead
+that follows your order; Mission Control keeps skipped steps skipped whatever the lead reports.
+If the lead reports a plan with different steps before you resume, its plan replaces your
+changes. Only the mission's first plan is reviewed this way; once you have started the work, the
 lead carries on as any mission does. The choice is kept with the mission, so a mission waiting
 for you is still waiting after Humbug restarts.
 
@@ -282,6 +302,9 @@ Mission Control remembers whether each mission was working. If Humbug closes, or
 switched, while a mission is still working, the mission is marked **Interrupted** when you open the
 mindspace again, with a short note explaining why.
 
+A mission you had paused stays **Paused** instead: it is not resumed until you click **Continue**,
+which also does what **Resume** would.
+
 A mission followed in Mission Control has no tab of its own to warn you, so before Humbug quits, or
 the mindspace is closed or switched, it names the missions whose lead is still replying and asks
 whether to stop them. Choosing **No** leaves everything open. Choosing **Yes** stops their current
@@ -390,7 +413,13 @@ When a mission is selected, Mission Control shows, from the top:
   under the mission card, so you see the team at work before anything else. The lead is at the
   top, and each delegated agent below the agent that handed it the work. Each agent stands in a
   soft pool of light tinted by what it is doing: the accent colour while it works or thinks, amber
-  while it waits for you. Every agent has a
+  while it waits for you. Robots come in two looks: **Classic**, square-headed with an antenna,
+  and **Rounded**, with a rounder head and a flared body. **Lead's look**, at the top of the
+  card, chooses which the lead of every mission has, and is remembered for you; helpers come in
+  both looks, each keeping the same one. When Humbug is set to Arabic the robots wear traditional
+  dress: a Classic robot a white kandura with a ghutra held by a black agal, and a Rounded robot
+  a black abaya with a shayla. The light that shows what an agent is doing then sits at the
+  neck of the robe instead of on an antenna. Every agent has a
   short name of its own (such as Atlas or Nova) that it keeps for the life of the mission, and is
   described by the plan step it is working on where the lead has said so. Each is drawn as a small
   robot that shows what it is doing: it types with a spinning gear while using a tool, shows a
@@ -539,13 +568,17 @@ rather than jumping, so you can see where you have been taken. Each chip has a *
 **Pause** and **Stop** are in the mission card. **Switch to Classic mode** and **Delete** are in the **⋯** menu
 beside them, so a mission cannot be deleted by a slip of the mouse aimed at **Stop**.
 
-- **Pause** lets whatever is running now finish, then holds the mission so you can look at the
-  work. While it is paused, nothing is approved automatically, whatever its auto-approve level:
+- **Pause** stops whatever the lead and its helpers are doing straight away, as **Stop** does,
+  and holds the mission so you can look at the work; a request they were waiting on is rejected.
+  An action already under way when you pause, such as a command running in a terminal, may still
+  finish, because it is cancelled from the conversation's side. While it is paused, nothing is approved automatically, whatever its auto-approve level:
   every request waits in the Decision Inbox. The approval a conversation may hold for file
   changes for the rest of its turn is withdrawn, and the lead is not asked to continue. A
   paused mission stays paused if Humbug restarts, and **Auto-resume after restart** leaves it
   alone. **Continue** lifts the pause: requests still waiting are considered again under the
-  mission's auto-approve level, and the lead is asked to carry on if there is work left.
+  mission's auto-approve level, and the lead is asked to carry on if there is work left. If the
+  pause stopped the lead part way, it is told so, checks what was actually finished, and carries
+  on from there; the stopped reply is not shown as an error.
   Messages you send while it is paused are delivered as usual.
 - **Switch to Classic mode** opens the lead conversation as a tab beside Mission Control and
   moves the mission to Classic mode.

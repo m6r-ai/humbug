@@ -107,6 +107,23 @@ _PLAN_APPROVED_MESSAGE = (
     "updated plan as you go."
 )
 
+_PAUSE_RESUMED_MESSAGE = (
+    "The user paused this mission, which stopped what you and any helpers were doing part way, and has now "
+    "continued it. Check what was actually finished: an action may not have completed, and a delegated task may not "
+    "have reported back. Then carry on with the next unfinished task and report the updated plan."
+)
+
+_PLAN_CHANGED_MESSAGE = (
+    "While the mission was paused, the user changed your plan. Carry on with the unfinished tasks in this order, "
+    "keeping their ids, and do not do the ones marked skipped:\n\n{0}\n\nReport the plan in this order as you go. "
+    "Leave the skipped tasks in it as they are: Mission Control shows them as skipped."
+)
+
+_PLAN_CHANGED_NOTE = (
+    "(Mission Control: the user also changed your plan. Carry on with the unfinished tasks in this order, keeping "
+    "their ids, and do not do the ones marked skipped:\n\n{0})"
+)
+
 _EDITED_PLAN_APPROVED_MESSAGE = (
     "The user changed your plan before approving it. Carry out the tasks in this order, keeping their ids, and do "
     "not do the ones marked skipped:\n\n{0}\n\nReport the plan in this order as you go. Leave the skipped tasks "
@@ -891,6 +908,9 @@ class MissionService:
             self._save(mission)
             text = f"{text}\n\n{_FOLLOW_UP_NOTE}"
 
+        if mission.plan_edited() and not self._awaiting_plan_approval(mission):
+            text = f"{text}\n\n{_PLAN_CHANGED_NOTE.format(self._take_plan_changes(mission))}"
+
         # The user has stepped in, so automatic continuing, retrying and checking start afresh.
         if mission.check_rounds:
             mission.check_rounds = 0
@@ -1473,10 +1493,11 @@ class MissionService:
         """
         Pause a mission so that nothing more happens in it without the user.
 
-        Whatever the mission's conversations are doing now is left to finish, but no
-        request is approved automatically, whatever the auto-approve level, and the lead
-        is not asked to continue.  Standing approvals for file changes are withdrawn, so
-        the next change comes to the user too.
+        Whatever the mission's conversations are doing now is stopped where it is, as
+        stopping does, and a request they were waiting on is rejected.  Until the user
+        continues, no request is approved automatically, whatever the auto-approve level,
+        and the lead is not asked to continue.  Standing approvals for file changes are
+        withdrawn, so the next change comes to the user too.
 
         Args:
             mission_id: Mission to pause
@@ -1494,6 +1515,13 @@ class MissionService:
         self._hold(mission)
         self._record(MissionActivityKind.PAUSED, mission.title, "", mission_id)
         self._mindspace.add_interaction(MindspaceLogLevel.INFO, f"Human paused mission '{mission.title}'")
+        for tracked in list(self._tracked.values()):
+            if self._members.get(tracked.context_id) == mission_id:
+                tracked.transcript.cancel_current_tasks()
+                tracked.state = MissionAgentState.IDLE
+                tracked.tool_name = ""
+                tracked.tool_target = ""
+
         self._notify()
 
     def unpause_mission(self, mission_id: str) -> None:
@@ -1526,9 +1554,23 @@ class MissionService:
         self._continues_without_progress.pop(mission_id, None)
         self._approvals.review_waiting(mission_id)
 
-        # A lead whose turn failed is retried, if that failure may pass, rather than asked to continue.
         lead = self._lead_for(mission)
-        if lead is not None and self._lead_failed(mission):
+        if lead is not None and self._lead_cancelled(mission):
+            # The pause stopped the lead part way, so it checks what was finished before it carries on.
+            message = _PAUSE_RESUMED_MESSAGE
+            if mission.plan_edited():
+                message = f"{message}\n\n{_PLAN_CHANGED_NOTE.format(self._take_plan_changes(mission))}"
+
+            self._interrupted.discard(mission_id)
+            self._set_active(mission, True)
+            self._run_task(lead.transcript.submit_message(MISSION_REQUESTER, message), mission_id)
+
+        # Humbug closed while the mission was paused, part way through its work, so it is resumed.
+        elif mission_id in self._interrupted:
+            self._start_resume(mission_id)
+
+        # A lead whose turn failed is retried, if that failure may pass, rather than asked to continue.
+        elif lead is not None and self._lead_failed(mission):
             self._consider_recovery(mission, lead)
 
         else:
@@ -1801,8 +1843,12 @@ class MissionService:
             )
 
             # A failure that is about to be retried is not reported as an error: the feed says it
-            # will be tried again instead.
-            if not retrying:
+            # will be tried again instead.  Neither is a turn the user's pause cut short.
+            paused = failed and mission is not None and mission.paused
+            if paused:
+                tracked.state = MissionAgentState.IDLE
+
+            if not retrying and not paused:
                 kind = MissionActivityKind.ERROR if failed else MissionActivityKind.TURN_FINISHED
                 self._record(kind, self._title_for(tracked.context_id), "", mission_id)
 
@@ -1957,7 +2003,11 @@ class MissionService:
         )
         # A finished plan whose goal is not yet met needs its next part planned, not its next task done,
         # and one reported done while a check fails needs that check fixed.
-        if checking:
+        if mission.plan_edited():
+            # The user changed the plan while the mission was paused, so the lead carries on from that.
+            message = _PLAN_CHANGED_MESSAGE.format(self._take_plan_changes(mission))
+
+        elif checking:
             message = _CHECKS_FAILED_MESSAGE.format(self._failing_checks(mission))
 
         else:
@@ -2539,14 +2589,18 @@ class MissionService:
             self._archive_plan(mission, report)
             mission.request = follow_up
 
-        if self._awaiting_plan_approval(mission) and mission.reviewed_order:
-            if [task.task_id for task in plan.tasks] == mission.reviewed_order:
-                # The lead's plan as the user found it: their changes to it stand.
-                return
+        if mission.reviewed_order:
+            position = {task.task_id: index for index, task in enumerate(mission.tasks)}
+            if sorted(task.task_id for task in plan.tasks) == sorted(position):
+                # The same steps the user rearranged, before the lead has been told: their order stands,
+                # with whatever progress the lead reports.
+                plan.tasks.sort(key=lambda task: position[task.task_id])
 
-            # The lead revised its plan, as the user asked, so the changes made to the old one go.
-            mission.skipped_tasks = []
-            mission.reviewed_order = []
+            else:
+                # The lead has other steps now, so the user's changes to the old ones go.
+                mission.skipped_tasks = list(mission.reviewed_skipped)
+                mission.reviewed_order = []
+                mission.reviewed_skipped = []
 
         for task in plan.tasks:
             if task.task_id in mission.stopped_tasks or task.task_id in mission.skipped_tasks:
@@ -3018,7 +3072,9 @@ class MissionService:
         if mission.stopped:
             return MissionStatus.STOPPED
 
-        if mission.mission_id in self._interrupted:
+        # A mission paused when Humbug closed is still paused: continuing it also resumes it.
+        paused = mission.paused and mission.mode == MissionMode.AUTONOMOUS
+        if mission.mission_id in self._interrupted and not paused:
             return MissionStatus.INTERRUPTED
 
         live = decisions if decisions is not None else self.decisions()
@@ -3043,6 +3099,10 @@ class MissionService:
             if self._members.get(tracked.context_id) == mission.mission_id
         )
         if busy:
+            return self._working_status(mission)
+
+        # A turn the user's pause cut short is not a failure: once continued, the lead is picking it up.
+        if mission.active and self._lead_cancelled(mission):
             return self._working_status(mission)
 
         # The lead's latest turn failing matters more than anything it finished before.
@@ -3089,15 +3149,8 @@ class MissionService:
             raise MissionError("The mission's lead conversation could not be opened")
 
         edited = mission.plan_edited()
-        if edited:
-            listed = "\n".join(
-                f"{index}. [{task.task_id}] {task.title}" + (" (skipped)" if task.task_id in mission.skipped_tasks else "")
-                for index, task in enumerate(mission.tasks, start=1)
-            )
-            message = _EDITED_PLAN_APPROVED_MESSAGE.format(listed)
-
-        else:
-            message = _PLAN_APPROVED_MESSAGE
+        changes = self._take_plan_changes(mission)
+        message = _EDITED_PLAN_APPROVED_MESSAGE.format(changes) if edited else _PLAN_APPROVED_MESSAGE
 
         mission.plan_approved = True
         self._save(mission)
@@ -3114,11 +3167,14 @@ class MissionService:
 
     def edit_plan(self, mission_id: str, order: list[str], skipped: list[str]) -> None:
         """
-        Rearrange a plan waiting for the user's approval: put its steps in a new order, and skip some.
+        Rearrange a plan: put its steps in a new order, and skip some.
 
-        The lead is told what changed when the user approves the plan.  Until then the lead's own
-        plan, reported again unchanged, does not undo the user's changes; a revised plan from the
-        lead, asked for by the user, replaces them.
+        This is possible while the plan waits for the user's approval, or while the mission is
+        paused.  Only steps not yet started move or are skipped; a step that is under way or done
+        keeps its place.  The lead is told what changed when the user approves the plan, resumes
+        the mission or sends the lead a message.  Until then the lead's own plan, reported again
+        with the same steps, keeps the user's order and skips; a plan from the lead with other
+        steps replaces the changes.
 
         Args:
             mission_id: The mission
@@ -3126,12 +3182,13 @@ class MissionService:
             skipped: The ids of the steps to leave out
 
         Raises:
-            MissionError: If the plan is not waiting for approval, the order does not hold each step
-                once, or every step would be skipped
+            MissionError: If the plan cannot be changed now, the order does not hold each step once,
+                a step under way or done would move or be skipped, or every step would be skipped
         """
         mission = self._missions.get(mission_id)
-        if mission is None or not self._awaiting_plan_approval(mission):
-            raise MissionError("Only a plan waiting for your approval can be changed")
+        paused = mission is not None and mission.paused and mission.mode == MissionMode.AUTONOMOUS
+        if mission is None or not (self._awaiting_plan_approval(mission) or paused) or not mission.tasks:
+            raise MissionError("The plan can be changed only while it waits for your approval or the mission is paused")
 
         by_id = {task.task_id: task for task in mission.tasks}
         if sorted(order) != sorted(by_id) or len(set(order)) != len(order):
@@ -3143,20 +3200,44 @@ class MissionService:
         if set(skipped) == set(by_id):
             raise MissionError("At least one step has to be kept")
 
+        for index, task in enumerate(mission.tasks):
+            if mission.step_movable(task):
+                continue
+
+            if order[index] != task.task_id or task.task_id in skipped:
+                raise MissionError("Only steps that have not started can be moved or skipped")
+
         if not mission.reviewed_order:
             mission.reviewed_order = [task.task_id for task in mission.tasks]
+            mission.reviewed_skipped = list(mission.skipped_tasks)
 
+        previously_skipped = set(mission.skipped_tasks)
         mission.tasks = [by_id[task_id] for task_id in order]
         mission.skipped_tasks = [task_id for task_id in order if task_id in skipped]
         for task in mission.tasks:
             if task.task_id in mission.skipped_tasks:
                 task.status = MissionTaskStatus.STOPPED
 
-            elif task.status == MissionTaskStatus.STOPPED:
+            elif task.task_id in previously_skipped:
                 task.status = MissionTaskStatus.PENDING
 
         self._save(mission)
         self._notify()
+
+    def _take_plan_changes(self, mission: Mission) -> str:
+        """
+        Return the plan as the user changed it, to tell the lead, and note that the lead now knows it.
+
+        Each step is listed in order with its id, and marked when skipped.
+        """
+        listed = "\n".join(
+            f"{index}. [{task.task_id}] {task.title}" + (" (skipped)" if task.task_id in mission.skipped_tasks else "")
+            for index, task in enumerate(mission.tasks, start=1)
+        )
+        mission.reviewed_order = []
+        mission.reviewed_skipped = []
+        self._save(mission)
+        return listed
 
     def _working_status(self, mission: Mission) -> MissionStatus:
         """
@@ -3193,6 +3274,18 @@ class MissionService:
                 return True
 
         return False
+
+    def _lead_cancelled(self, mission: Mission) -> bool:
+        """Return True if the lead's latest turn was cancelled part way, as pausing a mission does."""
+        tracked = self._lead_for(mission)
+        if tracked is None:
+            return False
+
+        messages = tracked.transcript.get_conversation_history().get_messages()
+        return (
+            bool(messages) and messages[-1].source == AIMessageSource.SYSTEM and bool(messages[-1].error)
+            and str((messages[-1].error or {}).get("code", "")) == "cancelled"
+        )
 
     def _lead_failed(self, mission: Mission) -> bool:
         """

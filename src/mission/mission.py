@@ -269,10 +269,13 @@ class Mission:
     counts as done, one each, or none when they set none; `check_results` are the
     results the lead last reported for them, and `check_rounds` counts the times the
     lead reported the goal met while a check had not passed.  While a plan waits
-    for the user's approval they may rearrange it: `skipped_tasks` are the steps
-    they chose to leave out, which stay skipped whatever the lead reports later,
-    and `reviewed_order` is the order the lead first gave, kept so that what the
-    user changed can be told and the lead's unchanged plan is not taken as a new one.
+    for the user's approval, or the mission is paused, they may rearrange the steps
+    not yet started: `skipped_tasks` are the steps they chose to leave out, which
+    stay skipped whatever the lead reports later.  `reviewed_order` and
+    `reviewed_skipped` are the plan as the lead last knew it, kept from the user's
+    first change until the lead is told, so that what changed can be told and the
+    lead's unchanged plan is not taken as a new one; both are empty when the lead
+    knows the plan as it is.
     """
     mission_id: str
     objective: str
@@ -310,6 +313,7 @@ class Mission:
     check_rounds: int = 0
     skipped_tasks: list[str] = field(default_factory=list)
     reviewed_order: list[str] = field(default_factory=list)
+    reviewed_skipped: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Return the mission as a JSON-safe dictionary."""
@@ -351,6 +355,7 @@ class Mission:
             "checkRounds": self.check_rounds,
             "skippedTasks": list(self.skipped_tasks),
             "reviewedOrder": list(self.reviewed_order),
+            "reviewedSkipped": list(self.reviewed_skipped),
         }
 
     @classmethod
@@ -416,6 +421,7 @@ class Mission:
             check_rounds=_count(data.get("checkRounds")),
             skipped_tasks=_texts(data.get("skippedTasks")),
             reviewed_order=_texts(data.get("reviewedOrder")),
+            reviewed_skipped=_texts(data.get("reviewedSkipped")),
         )
         if "celebrated" not in data:
             # A record from before completions were remembered: one already finished has been seen finished.
@@ -452,11 +458,18 @@ class Mission:
         return (self.goal_met or not self.reports_goal) and self.checks_passed()
 
     def plan_edited(self) -> bool:
-        """Return True when the user has changed the lead's plan: moved a step, or chosen to skip one."""
-        if self.skipped_tasks:
-            return True
+        """Return True when the user has changed the plan since the lead last knew it: moved a step, or skipped one."""
+        if not self.reviewed_order:
+            return False
 
-        return bool(self.reviewed_order) and [task.task_id for task in self.tasks] != self.reviewed_order
+        return (
+            [task.task_id for task in self.tasks] != self.reviewed_order
+            or sorted(self.skipped_tasks) != sorted(self.reviewed_skipped)
+        )
+
+    def step_movable(self, task: MissionTask) -> bool:
+        """Return True if the user may move or skip a step: it has not started, or it is one they skipped."""
+        return task.status == MissionTaskStatus.PENDING or task.task_id in self.skipped_tasks
 
     def checks_passed(self) -> bool:
         """

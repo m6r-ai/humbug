@@ -15,7 +15,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QPushButton, QSizePolicy, QToolTip, QWidget
 
 from desktop.color_role import ColorRole
-from desktop.mission_tab.mission_display import MissionAgentView, MissionTone
+from desktop.mission_tab.mission_display import MissionAgentView, MissionRobotLook, MissionTone
 from desktop.mission_tab.mission_motion import MissionMotion
 from desktop.mission_tab.mission_painted import readable, surface_colors, tone_color
 from desktop.style_manager import StyleManager
@@ -107,12 +107,31 @@ class AgentNetworkView(QWidget):
         self._buttons: dict[str, tuple[str, list[QPushButton]]] = {}
         self._time_shown: dict[str, bool] = {}
         self._labels = {"approve": "", "reject": "", "finish": "", "left": "{0}"}
+        self._dressed = False
         # Sizes a button the way the stylesheet will, so space for buttons is reserved before any exist.
         self._probe = QPushButton("Approve", self)
         self._probe.setObjectName("MissionButtonProbe")
         self._probe.hide()
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
+
+    def set_dressed(self, dressed: bool) -> None:
+        """
+        Dress the robots in traditional Gulf dress, or in nothing but their own casing.
+
+        Classic robots wear the white kandura with a ghutra and agal; rounded robots wear the black
+        abaya with a shayla.
+
+        Args:
+            dressed: Whether the robots are dressed, as they are when Humbug speaks Arabic
+        """
+        if dressed != self._dressed:
+            self._dressed = dressed
+            self.update()
+
+    def dressed(self) -> bool:
+        """Return whether the robots wear traditional dress."""
+        return self._dressed
 
     def set_agents(
         self,
@@ -486,9 +505,10 @@ class AgentNetworkView(QWidget):
                 # Read more sits on its own row above the answer buttons.
                 link = buttons[-1]
                 link_height = link.sizeHint().height()
+                link_width = min(link.sizeHint().width(), round(card.width() - pad * 2))
                 link.setGeometry(
-                    round(card.left() + pad), round(y - pad * 0.4 - link_height),
-                    min(link.sizeHint().width(), round(card.width() - pad * 2)), link_height
+                    round(card.right() - pad - link_width if self.isRightToLeft() else card.left() + pad),
+                    round(y - pad * 0.4 - link_height), link_width, link_height
                 )
                 if link.isHidden():
                     link.show()
@@ -509,10 +529,13 @@ class AgentNetworkView(QWidget):
                     limit -= time_width
 
             scale = min(1.0, limit / max(1, sum(natural)))
-            x = card.left() + pad
+            # The first button, the one most often wanted, comes first the way the text reads.
+            rtl = self.isRightToLeft()
+            x = card.right() - pad if rtl else card.left() + pad
             for button, width in zip(buttons, natural):
-                button.setGeometry(round(x), y, round(width * scale), row)
-                x += width * scale + pad * 0.8
+                left = x - width * scale if rtl else x
+                button.setGeometry(round(left), y, round(width * scale), row)
+                x += -(width * scale + pad * 0.8) if rtl else width * scale + pad * 0.8
                 if button.isHidden():
                     button.show()
 
@@ -1000,47 +1023,96 @@ class AgentNetworkView(QWidget):
         spread = 1.0 - bob / size
         painter.drawEllipse(QPointF(node.center.x(), node.center.y() + size * 0.6), size * 0.4 * spread, size * 0.08)
 
-        # Torso.
-        torso = QRectF(cx - size * 0.28, cy + size * 0.1, size * 0.56, size * 0.42)
-        torso_gradient = QLinearGradient(torso.topLeft(), torso.bottomRight())
-        torso_gradient.setColorAt(0.0, _shade(body_color, 130))
-        torso_gradient.setColorAt(1.0, _shade(body_color, 70))
-        painter.setBrush(QBrush(torso_gradient))
-        painter.drawRoundedRect(torso, size * 0.1, size * 0.1)
+        # The status light: on the antenna, or at the neck of the robe when the robot wears one.
+        pulse = 0.5 + 0.5 * math.sin(phase * (8.0 if busy else 2.0))
+        light = QColor(tone_color(
+            MissionTone.WARNING if activity == "waiting" else MissionTone.DANGER if activity == "error"
+            else MissionTone.SUCCESS if busy else MissionTone.NEUTRAL
+        ))
 
-        # Arms that type while working.
-        arm_pen = QPen(_shade(body_color, 80), size * 0.08)
-        arm_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-        painter.setPen(arm_pen)
+        # Torso, or a robe over it: the kandura, or the abaya for a rounded robot.  A rounded robot's
+        # own torso flares out towards the base.
+        rounded = agent.look == MissionRobotLook.ROUNDED
+        torso = QRectF(cx - size * 0.28, cy + size * 0.1, size * 0.56, size * 0.42)
+        if self._dressed:
+            self._paint_robe(painter, torso, size, rounded)
+
+        elif rounded:
+            flare = QPainterPath()
+            flare.moveTo(cx - size * 0.2, torso.top())
+            flare.lineTo(cx + size * 0.2, torso.top())
+            flare.quadTo(cx + size * 0.25, torso.top() + size * 0.02, cx + size * 0.34, torso.bottom() - size * 0.06)
+            flare.quadTo(cx + size * 0.35, torso.bottom(), cx + size * 0.28, torso.bottom())
+            flare.lineTo(cx - size * 0.28, torso.bottom())
+            flare.quadTo(cx - size * 0.35, torso.bottom(), cx - size * 0.34, torso.bottom() - size * 0.06)
+            flare.quadTo(cx - size * 0.25, torso.top() + size * 0.02, cx - size * 0.2, torso.top())
+            flare.closeSubpath()
+            torso_gradient = QLinearGradient(torso.topLeft(), torso.bottomRight())
+            torso_gradient.setColorAt(0.0, _shade(body_color, 130))
+            torso_gradient.setColorAt(1.0, _shade(body_color, 70))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QBrush(torso_gradient))
+            painter.drawPath(flare)
+
+        else:
+            torso_gradient = QLinearGradient(torso.topLeft(), torso.bottomRight())
+            torso_gradient.setColorAt(0.0, _shade(body_color, 130))
+            torso_gradient.setColorAt(1.0, _shade(body_color, 70))
+            painter.setBrush(QBrush(torso_gradient))
+            painter.drawRoundedRect(torso, size * 0.1, size * 0.1)
+
+        # Arms that type while working, in the robe's sleeves when it wears one.
         swing = math.sin(phase * 14) * size * 0.08 if activity == "working" else 0.0
-        painter.drawLine(QPointF(torso.left(), torso.top() + size * 0.1),
-                         QPointF(torso.left() - size * 0.12, torso.top() + size * 0.3 + swing))
+        arms = [(QPointF(torso.left(), torso.top() + size * 0.1),
+                 QPointF(torso.left() - size * 0.12, torso.top() + size * 0.3 + swing))]
         remark = self._speech.get(node.node_id)
         if remark is not None and self._phase - remark[1] < _WAVE_SECONDS:
             # A new remark: wave at the user.
             wave = math.sin((self._phase - remark[1]) * 16) * size * 0.09
-            painter.drawLine(QPointF(torso.right(), torso.top() + size * 0.1),
-                             QPointF(torso.right() + size * 0.2 + wave, torso.top() - size * 0.22))
+            arms.append((QPointF(torso.right(), torso.top() + size * 0.1),
+                         QPointF(torso.right() + size * 0.2 + wave, torso.top() - size * 0.22)))
 
         else:
-            painter.drawLine(QPointF(torso.right(), torso.top() + size * 0.1),
-                             QPointF(torso.right() + size * 0.12, torso.top() + size * 0.3 - swing))
+            arms.append((QPointF(torso.right(), torso.top() + size * 0.1),
+                         QPointF(torso.right() + size * 0.12, torso.top() + size * 0.3 - swing)))
+
+        for shoulder, hand in arms:
+            if self._dressed:
+                self._paint_sleeve(painter, shoulder, hand, _shade(body_color, 80), size, rounded)
+
+            else:
+                arm_pen = QPen(_shade(body_color, 80), size * 0.08)
+                arm_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+                painter.setPen(arm_pen)
+                painter.drawLine(shoulder, hand)
 
         # Head, lit from the top left.  It turns slowly from side to side, and the side
         # face that shows as it turns gives it depth.
         head = QRectF(cx - size * 0.4, cy - size * 0.5, size * 0.8, size * 0.6)
+        corner = size * (0.29 if rounded else 0.2)
+        if self._dressed:
+            # The ghutra or shayla falls behind the head to the shoulders.
+            self._paint_head_drape(painter, head, size, rounded)
+
+        elif rounded:
+            # Two round pods high on either side of the head.
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(_shade(body_color, 85))
+            for side_x in (head.left() + size * 0.04, head.right() - size * 0.04):
+                painter.drawEllipse(QPointF(side_x, head.top() + size * 0.06), size * 0.12, size * 0.12)
+
         turn = math.sin(phase * (0.9 if busy else 0.5)) * size * 0.07
         side = QRectF(head.translated(turn, size * 0.04))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(_shade(body_color, 50))
-        painter.drawRoundedRect(side, size * 0.2, size * 0.2)
+        painter.drawRoundedRect(side, corner, corner)
         head_gradient = QLinearGradient(head.topLeft(), head.bottomRight())
         head_gradient.setColorAt(0.0, _shade(body_color, 165))
         head_gradient.setColorAt(0.55, body_color)
         head_gradient.setColorAt(1.0, _shade(body_color, 65))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QBrush(head_gradient))
-        painter.drawRoundedRect(head, size * 0.2, size * 0.2)
+        painter.drawRoundedRect(head, corner, corner)
         shine = QColor(255, 255, 255, 70)
         painter.setBrush(shine)
         painter.drawRoundedRect(
@@ -1048,28 +1120,18 @@ class AgentNetworkView(QWidget):
             size * 0.04, size * 0.04
         )
 
-        # Antenna with a light that pulses faster while busy.
-        top = QPointF(cx, head.top())
-        tip = QPointF(cx, head.top() - size * 0.16)
-        painter.setPen(QPen(_shade(body_color, 75), size * 0.04))
-        painter.drawLine(top, tip)
-        pulse = 0.5 + 0.5 * math.sin(phase * (8.0 if busy else 2.0))
-        light = QColor(tone_color(
-            MissionTone.WARNING if activity == "waiting" else MissionTone.DANGER if activity == "error"
-            else MissionTone.SUCCESS if busy else MissionTone.NEUTRAL
-        ))
-        bulb = QRadialGradient(tip, size * 0.14)
-        bright = QColor(light.lighter(140))
-        bright.setAlphaF(0.55 + 0.45 * pulse)
-        bulb.setColorAt(0.0, bright)
-        faded = QColor(light)
-        faded.setAlphaF(0.0)
-        bulb.setColorAt(1.0, faded)
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QBrush(bulb))
-        painter.drawEllipse(tip, size * 0.14, size * 0.14)
-        painter.setBrush(light)
-        painter.drawEllipse(tip, size * 0.05, size * 0.05)
+        if self._dressed:
+            # The ghutra or shayla covers the top of the head; the light sits at the neck of the robe.
+            self._paint_head_cover(painter, head, size, rounded)
+            self._paint_light(painter, QPointF(cx, torso.top() + size * (0.1 if rounded else 0.24)), light, pulse, size * 0.7)
+
+        else:
+            # Antenna with a light that pulses faster while busy.
+            top = QPointF(cx, head.top())
+            tip = QPointF(cx, head.top() - size * 0.16)
+            painter.setPen(QPen(_shade(body_color, 75), size * 0.04))
+            painter.drawLine(top, tip)
+            self._paint_light(painter, tip, light, pulse, size)
 
         # Visor and eyes, which blink, and glance about while thinking.
         visor = QRectF(head.left() + size * 0.1, head.top() + size * 0.17, head.width() - size * 0.2, size * 0.28)
@@ -1085,8 +1147,28 @@ class AgentNetworkView(QWidget):
             eye = QPointF(cx + size * offset + glance, visor.center().y())
             painter.drawRoundedRect(
                 QRectF(eye.x() - size * 0.05, eye.y() - eye_height / 2, size * 0.1, eye_height),
-                size * 0.03, size * 0.03
+                size * (0.05 if rounded else 0.03), size * (0.05 if rounded else 0.03)
             )
+            if rounded and not blink:
+                # Lashes flick up and outward from the top of each eye.
+                lash = QPen(eye_color, max(1.0, size * 0.018))
+                lash.setCapStyle(Qt.PenCapStyle.RoundCap)
+                painter.setPen(lash)
+                outward = -1 if offset < 0 else 1
+                for step in (0, 1):
+                    start = QPointF(eye.x() + outward * size * (0.02 + step * 0.03), eye.y() - eye_height / 2)
+                    painter.drawLine(start, start + QPointF(outward * size * 0.025, -size * 0.04))
+
+                painter.setPen(Qt.PenStyle.NoPen)
+
+        if rounded:
+            # Soft cheeks below the visor.
+            cheek = QColor(255, 140, 170, 120)
+            painter.setBrush(cheek)
+            for offset in (-0.25, 0.25):
+                painter.drawEllipse(QPointF(cx + size * offset, visor.bottom() + size * 0.05), size * 0.05, size * 0.03)
+
+            painter.setBrush(eye_color)
 
         if self._typing(node.node_id):
             # A mouth that moves while the agent speaks.
@@ -1107,6 +1189,154 @@ class AgentNetworkView(QWidget):
             self._paint_bubble(painter, activity, QPointF(head.right() + size * 0.18, head.top() - size * 0.12), size)
 
         self._paint_label(painter, node, node.center.y() + size * _LABEL_DROP)
+
+    @staticmethod
+    def _paint_light(painter: QPainter, center: QPointF, light: QColor, pulse: float, size: float) -> None:
+        """Draw the status light, glowing brighter as it pulses."""
+        bulb = QRadialGradient(center, size * 0.14)
+        bright = QColor(light.lighter(140))
+        bright.setAlphaF(0.55 + 0.45 * pulse)
+        bulb.setColorAt(0.0, bright)
+        faded = QColor(light)
+        faded.setAlphaF(0.0)
+        bulb.setColorAt(1.0, faded)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QBrush(bulb))
+        painter.drawEllipse(center, size * 0.14, size * 0.14)
+        painter.setBrush(light)
+        painter.drawEllipse(center, size * 0.05, size * 0.05)
+
+    @staticmethod
+    def _fabric(dark: bool) -> tuple[QColor, QColor, QColor]:
+        """Return the colours of a garment, lit at the top and in shade at the bottom, and its outline."""
+        if dark:
+            return QColor("#3b3d44"), QColor("#141519"), QColor("#0b0c0e")
+
+        return QColor("#ffffff"), QColor("#dfe3ea"), QColor("#c3c9d2")
+
+    def _cloth(self, top: QPointF, bottom: QPointF, dark: bool) -> QBrush:
+        """Return a garment's fabric, shaded softly from top to bottom."""
+        lit, shade, _outline = self._fabric(dark)
+        gradient = QLinearGradient(top, bottom)
+        gradient.setColorAt(0.0, lit)
+        gradient.setColorAt(1.0, shade)
+        return QBrush(gradient)
+
+    def _paint_robe(self, painter: QPainter, torso: QRectF, size: float, dark: bool) -> None:
+        """
+        Draw a robe over the torso, falling almost to the pedestal.
+
+        A light robe is the white kandura, with its collar, placket and tassel; a dark one is the
+        black abaya, a little fuller at the hem, edged with a fine gold trim down its front.
+        """
+        cx = torso.center().x()
+        hem = size * (0.4 if dark else 0.36)
+        robe = QPainterPath()
+        robe.moveTo(cx - size * 0.2, torso.top())
+        robe.quadTo(cx - size * 0.3, torso.top() + size * 0.01, cx - size * 0.31, torso.top() + size * 0.12)
+        robe.lineTo(cx - hem, torso.bottom() + size * 0.1)
+        robe.quadTo(cx, torso.bottom() + size * 0.15, cx + hem, torso.bottom() + size * 0.1)
+        robe.lineTo(cx + size * 0.31, torso.top() + size * 0.12)
+        robe.quadTo(cx + size * 0.3, torso.top() + size * 0.01, cx + size * 0.2, torso.top())
+        robe.closeSubpath()
+        outline = self._fabric(dark)[2]
+        painter.setPen(QPen(outline, max(1.0, size * 0.015)))
+        painter.setBrush(self._cloth(QPointF(cx, torso.top()), QPointF(cx, torso.bottom() + size * 0.15), dark))
+        painter.drawPath(robe)
+
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        if dark:
+            trim = QPen(QColor("#b8945a"), max(1.0, size * 0.012))
+            painter.setPen(trim)
+            for side in (-1, 1):
+                painter.drawLine(
+                    QPointF(cx + side * size * 0.05, torso.top() + size * 0.06),
+                    QPointF(cx + side * size * 0.07, torso.bottom() + size * 0.13)
+                )
+
+            return
+
+        # The round collar, the placket below it, and the tassel that hangs from the collar.
+        painter.setPen(QPen(outline, max(1.0, size * 0.012)))
+        painter.drawArc(
+            QRectF(cx - size * 0.09, torso.top() - size * 0.05, size * 0.18, size * 0.12), 200 * 16, 140 * 16
+        )
+        painter.drawLine(QPointF(cx, torso.top() + size * 0.07), QPointF(cx, torso.top() + size * 0.3))
+        painter.setPen(QPen(QColor("#b9c0ca"), max(1.0, size * 0.018)))
+        painter.drawLine(QPointF(cx, torso.top() + size * 0.07), QPointF(cx, torso.top() + size * 0.22))
+
+    def _paint_sleeve(
+        self, painter: QPainter, shoulder: QPointF, hand: QPointF, hand_color: QColor, size: float, dark: bool
+    ) -> None:
+        """Draw an arm in the robe's sleeve, with the robot's hand at its end."""
+        lit, _shade, outline_color = self._fabric(dark)
+        outline = QPen(outline_color, size * 0.11)
+        outline.setCapStyle(Qt.PenCapStyle.RoundCap)
+        painter.setPen(outline)
+        painter.drawLine(shoulder, hand)
+        cloth = QPen(lit if dark else QColor("#f7f8fa"), size * 0.085)
+        cloth.setCapStyle(Qt.PenCapStyle.RoundCap)
+        painter.setPen(cloth)
+        painter.drawLine(shoulder, hand)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(hand_color)
+        painter.drawEllipse(hand, size * 0.045, size * 0.045)
+
+    def _paint_head_drape(self, painter: QPainter, head: QRectF, size: float, dark: bool) -> None:
+        """Draw the ends of the ghutra, or of the shayla, which fall from either side of the head over the shoulders."""
+        drape = QPainterPath()
+        for side in (-1, 1):
+            edge = head.left() if side < 0 else head.right()
+            drape.moveTo(edge + side * size * 0.07, head.top() + size * 0.2)
+            drape.lineTo(edge + side * size * 0.12, head.bottom() + size * 0.27)
+            drape.quadTo(
+                edge - side * size * 0.01, head.bottom() + size * 0.24, edge - side * size * 0.1, head.bottom() + size * 0.16
+            )
+            drape.lineTo(edge - side * size * 0.1, head.top() + size * 0.2)
+            drape.closeSubpath()
+
+        painter.setPen(QPen(self._fabric(dark)[2], max(1.0, size * 0.015)))
+        painter.setBrush(self._cloth(QPointF(0, head.top()), QPointF(0, head.bottom() + size * 0.27), dark))
+        painter.drawPath(drape.simplified())
+
+    def _paint_head_cover(self, painter: QPainter, head: QRectF, size: float, dark: bool) -> None:
+        """
+        Draw the cloth over the top and sides of the head, framing the face.
+
+        The white ghutra is held by the black agal; the black shayla is worn without one.
+        """
+        cap = QPainterPath()
+        left, right = head.left() - size * 0.07, head.right() + size * 0.07
+        brim = head.top() + size * 0.15
+        cap.moveTo(left, brim)
+        cap.lineTo(left, head.top() + size * 0.05)
+        cap.quadTo(left, head.top() - size * 0.12, head.center().x(), head.top() - size * 0.12)
+        cap.quadTo(right, head.top() - size * 0.12, right, head.top() + size * 0.05)
+        cap.lineTo(right, brim)
+        cap.quadTo(head.center().x(), brim - size * 0.05, left, brim)
+        cap.closeSubpath()
+        # It comes down both sides of the head too, framing the face.
+        for edge in (left, right - size * 0.14):
+            band = QPainterPath()
+            band.addRoundedRect(QRectF(edge, head.top(), size * 0.14, head.height() + size * 0.04), size * 0.06, size * 0.06)
+            cap = cap.united(band)
+
+        painter.setPen(QPen(self._fabric(dark)[2], max(1.0, size * 0.015)))
+        painter.setBrush(self._cloth(QPointF(0, head.top() - size * 0.12), QPointF(0, head.bottom()), dark))
+        painter.drawPath(cap)
+        if dark:
+            return
+
+        # The agal: two black cords ringing the crown of the head.
+        agal = QPen(QColor("#1d1f24"), size * 0.042)
+        agal.setCapStyle(Qt.PenCapStyle.RoundCap)
+        painter.setPen(agal)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        for drop in (0.0, size * 0.055):
+            painter.drawArc(
+                QRectF(head.left() - size * 0.02, head.top() - size * 0.06 + drop, head.width() + size * 0.04, size * 0.12),
+                190 * 16, 160 * 16
+            )
 
     def _paint_pedestal(
         self, painter: QPainter, node: _Node, color: QColor, busy: bool, phase: float, size: float

@@ -23,9 +23,9 @@ from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.mission_tab.mission_display import (
     MissionActivityView, MissionAgentView, MissionChatView, MissionCheckView, MissionChipView, MissionDecisionView,
-    MissionDiffLineKind,
-    MissionDiffLineView, MissionDiffView, MissionHeaderView, MissionFileView, MissionGlanceView, MissionPhaseView,
-    MissionResultView, MissionStatTarget, MissionStatView, MissionStepState, MissionStepView, MissionTone, MissionView
+    MissionDiffLineKind, MissionDiffLineView, MissionDiffView, MissionFileView, MissionGlanceView, MissionHeaderView,
+    MissionPhaseView, MissionResultView, MissionRobotLook, MissionStatTarget, MissionStatView, MissionStepState,
+    MissionStepView, MissionTone, MissionView
 )
 from desktop.mission_tab.mission_report import report_as_word, report_files, save_report
 from desktop.mission_tab.mission_service_holder import MissionServiceHolder
@@ -335,6 +335,7 @@ class MissionTab(TabBase):
         self._widget.new_mission_level_remembered.connect(self._on_new_mission_level_remembered)
         self._widget.start_work_requested.connect(self._on_start_work_requested)
         self._widget.plan_rearranged.connect(self._on_plan_rearranged)
+        self._widget.lead_look_selected.connect(self._on_lead_look_selected)
         self._widget.file_open_requested.connect(self._on_file_open_requested)
         self._widget.file_undo_requested.connect(self._on_file_undo_requested)
         self._widget.file_review_requested.connect(self._on_file_review_requested)
@@ -357,6 +358,7 @@ class MissionTab(TabBase):
         self._widget.mission_rerun_requested.connect(self._on_rerun_requested)
         self._widget.guide_dismissed.connect(self._on_guide_dismissed)
         self._widget.set_guide_visible(not UserManager().settings().mission_guide_dismissed)
+        self._widget.set_lead_look(UserManager().settings().mission_lead_look)
         self._widget.conversation_requested.connect(self._on_conversation_requested)
         self._widget.decision_approved.connect(lambda d: self._answer(lambda s: s.approve(d)))
         self._widget.wait_finish_requested.connect(self._on_wait_finish_requested)
@@ -397,8 +399,9 @@ class MissionTab(TabBase):
                 self._service.remove_listener(self._on_service_changed)
 
     def _on_language_changed(self) -> None:
-        """Apply a new language."""
+        """Apply a new language, and its direction: arrows, icons and spacing differ from right to left."""
         self._widget.retranslate()
+        self._widget.apply_style()
         self._refresh()
 
     def _strings(self) -> LanguageStrings:
@@ -444,7 +447,8 @@ class MissionTab(TabBase):
         speech: str = "",
         decision: MissionDecision | None = None,
         reconnecting: bool = False,
-        asks_to_start: bool = False
+        asks_to_start: bool = False,
+        look: MissionRobotLook = MissionRobotLook.CLASSIC
     ) -> MissionAgentView:
         """
         Turn an agent into its display record, named and described by the task it is doing.
@@ -487,7 +491,33 @@ class MissionTab(TabBase):
             wait_started=agent.wait_started_at.timestamp() if agent.wait_started_at is not None else 0.0,
             model_text=agent.model,
             asks_to_start=asks_to_start,
+            look=look,
         )
+
+    @staticmethod
+    def _robot_look(is_lead: bool, name: str) -> MissionRobotLook:
+        """
+        Return how an agent's robot looks.
+
+        The lead looks as the user chose.  Helpers are a mix of both looks, each always looking
+        the same, decided by its name.
+        """
+        if is_lead:
+            return MissionRobotLook(UserManager().settings().mission_lead_look)
+
+        return MissionRobotLook.ROUNDED if zlib.crc32(name.encode("utf-8")) % 2 else MissionRobotLook.CLASSIC
+
+    def _on_lead_look_selected(self, look: str) -> None:
+        """Keep how the user wants mission leads to look, and show it."""
+        try:
+            UserManager().update_settings_fields(mission_lead_look=look)
+
+        except UserError as e:
+            self._show_error(str(e))
+            return
+
+        self._widget.set_lead_look(look)
+        self._refresh()
 
     def _tool_speech(self, tool_name: str, target: str, done: bool = False) -> str:
         """
@@ -595,7 +625,9 @@ class MissionTab(TabBase):
             MissionStatus.COMPLETED: strings.mission_say_done,
             MissionStatus.STOPPED: strings.mission_say_stopped,
             MissionStatus.INTERRUPTED: strings.mission_say_interrupted,
-            MissionStatus.PAUSED: strings.mission_say_paused,
+            MissionStatus.PAUSED: (
+                strings.mission_say_paused_edited if mission.plan_edited() else strings.mission_say_paused
+            ),
             MissionStatus.NEEDS_YOU: strings.mission_say_helper_waiting,
             MissionStatus.REPLIED: strings.mission_say_replied,
             MissionStatus.FAILED: strings.mission_say_error,
@@ -693,6 +725,10 @@ class MissionTab(TabBase):
             ),
         }
         glyph, tone = _ACTIVITY_STYLES[entry.kind]
+        if glyph == "›" and not self._language_manager.left_to_right():
+            # The arrow points the way the text reads.
+            glyph = "‹"
+
         return MissionActivityView(
             glyph=glyph,
             text=texts[entry.kind],
@@ -824,7 +860,8 @@ class MissionTab(TabBase):
 
         steps = self._step_views(
             mission.tasks, names_by_title, open_agents, can_stop=not classic,
-            arrangeable=snapshot.status == MissionStatus.PLAN_READY and not classic, skipped=mission.skipped_tasks,
+            arrangeable=snapshot.status in (MissionStatus.PLAN_READY, MissionStatus.PAUSED) and not classic,
+            skipped=mission.skipped_tasks,
         )
         decisions_by_context = {decision.context_id: decision for decision in snapshot.decisions}
         history = [
@@ -850,6 +887,7 @@ class MissionTab(TabBase):
                 decisions_by_context.get(agent.context_id),
                 reconnecting=agent.is_lead and snapshot.status == MissionStatus.RECOVERING,
                 asks_to_start=agent.is_lead and snapshot.status == MissionStatus.PLAN_READY and not classic,
+                look=self._robot_look(agent.is_lead, names[agent.context_id]),
             )
             for agent in snapshot.agents
         ]
@@ -1341,8 +1379,9 @@ class MissionTab(TabBase):
         """
         Turn a plan's tasks into step display records.
 
-        arrangeable says the user can move steps and skip them, as they can while the plan waits for
-        their approval; skipped names the steps they chose to leave out.
+        arrangeable says the user can rearrange the plan, as they can while it waits for their approval
+        or the mission is paused; even then only steps not yet started move or are skipped.  skipped
+        names the steps they chose to leave out.
         """
         strings = self._strings()
         skipped = skipped or []
@@ -1368,7 +1407,7 @@ class MissionTab(TabBase):
                     can_stop and not arrangeable
                     and task.status not in (MissionTaskStatus.COMPLETED, MissionTaskStatus.STOPPED)
                 ),
-                arrangeable=arrangeable,
+                arrangeable=arrangeable and (task.status == MissionTaskStatus.PENDING or is_skipped),
                 skipped=is_skipped,
             ))
 

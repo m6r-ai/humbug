@@ -707,6 +707,10 @@ def get_english_strings() -> LanguageStrings:
         mission_task_completed="Completed",
         mission_task_blocked="Blocked",
         mission_agents_title="Agents",
+        mission_lead_look="Lead's look",
+        mission_look_classic="Classic",
+        mission_look_rounded="Rounded",
+        mission_lead_look_tip="Choose how the robot leading each mission looks. Helpers come in both looks.",
         mission_agents_active="{0} active",
         mission_agents_empty="No conversation is open for this mission. Open the lead conversation to continue.",
         mission_agent_lead="Mission lead",
@@ -795,11 +799,11 @@ def get_english_strings() -> LanguageStrings:
         mission_decision_not_undoable="Cannot be undone by Humbug once approved.",
         mission_review_request="Review",
         mission_status_paused="Paused",
-        mission_say_paused="Paused. I'll finish what I'm doing now, then wait for you.",
+        mission_say_paused="Paused. I've stopped where I was and I'll wait for you.",
         mission_pause="Pause",
         mission_pause_tip=(
-            "Let what is running now finish, then wait: nothing is approved automatically and "
-            "the lead does not carry on by itself until you continue"
+            "Stop what is running now and wait: nothing is approved automatically and the lead does not "
+            "carry on until you continue"
         ),
         mission_unpause="Continue",
         mission_paused_notice=(
@@ -989,24 +993,17 @@ def get_english_strings() -> LanguageStrings:
             "or choose another model with the cog beside the message box."
         ),
         mission_failed_cut_short="The AI service stopped before finishing its reply. Press Retry to ask again.",
-        mission_guide_title="How Mission Control works",
+        mission_guide_title="Mission Control",
         mission_guide_dismiss="Got it",
         mission_guide_link="How does Mission Control work?",
-        mission_guide_1_title="Say what you want done",
-        mission_guide_1=(
-            "Describe the job in the box below. An AI lead plans it, and brings in helper agents for "
-            "the parts that can run side by side."
-        ),
-        mission_guide_2_title="Watch it work",
-        mission_guide_2=(
-            "The plan, the robots doing it and what they are saying are shown as they happen. You can "
-            "send the lead a message at any time."
-        ),
-        mission_guide_3_title="Stay in charge",
-        mission_guide_3=(
-            "Anything that changes files or runs commands waits in the Decision Inbox for you, unless "
-            "you let auto-approve handle it. Every file change can be undone."
-        ),
+        mission_guide_subtitle="From your idea to execution — with you in control.",
+        mission_guide_footer="Human oversight · Live collaboration · Reversible changes",
+        mission_guide_1_title="Define your mission",
+        mission_guide_1="Describe your goal. Your AI lead creates a plan and assembles the right agents.",
+        mission_guide_2_title="Watch it unfold",
+        mission_guide_2="Follow live progress, monitor agents and collaborate with your AI lead.",
+        mission_guide_3_title="Stay in control",
+        mission_guide_3="Approve risky actions and undo file changes whenever needed.",
         mission_run_again="Run again",
         mission_archive="Archive",
         mission_unarchive="Bring back from the archive",
@@ -1092,11 +1089,15 @@ def get_english_strings() -> LanguageStrings:
         mission_status_plan_ready="Plan ready",
         mission_say_plan_ready="Here's my plan. Shall I start?",
         mission_say_plan_edited="You changed the plan. Shall I go ahead with the changed plan?",
+        mission_say_paused_edited="You changed the plan. I'll follow the changed plan when you resume.",
         mission_step_skipped="Skipped",
         mission_step_skip="Skip",
         mission_step_unskip="Include",
         mission_step_move_tip="Drag to move this step, or press Alt+Up or Alt+Down",
-        mission_plan_arrange_hint="Drag steps to change their order, or skip the ones you don't want, before you start the work.",
+        mission_plan_arrange_hint=(
+            "Drag steps that have not started to change their order, or skip the ones you don't want. "
+            "The lead follows the changed plan when the work starts or resumes."
+        ),
         mission_plan_yes="Yes, start",
         mission_plan_no="No",
         mission_composer_plan_change="Tell the lead what to change in the plan… ({key} to submit)",

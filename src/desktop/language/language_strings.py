@@ -621,6 +621,10 @@ class LanguageStrings:
     mission_task_completed: str
     mission_task_blocked: str
     mission_agents_title: str
+    mission_lead_look: str
+    mission_look_classic: str
+    mission_look_rounded: str
+    mission_lead_look_tip: str
     mission_agents_active: str
     mission_agents_empty: str
     mission_agent_lead: str
@@ -841,6 +845,8 @@ class LanguageStrings:
     mission_guide_title: str
     mission_guide_dismiss: str
     mission_guide_link: str
+    mission_guide_subtitle: str
+    mission_guide_footer: str
     mission_guide_1_title: str
     mission_guide_1: str
     mission_guide_2_title: str
@@ -913,6 +919,7 @@ class LanguageStrings:
     mission_status_plan_ready: str
     mission_say_plan_ready: str
     mission_say_plan_edited: str
+    mission_say_paused_edited: str
     mission_step_skipped: str
     mission_step_skip: str
     mission_step_unskip: str

@@ -1282,6 +1282,90 @@ class TestPausingAMission:
 
         asyncio.run(run())
 
+    def test_mission_paused_when_humbug_closed_offers_only_continue(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A paused mission still working when Humbug closed comes back paused, and continuing resumes it."""
+        async def run() -> None:
+            service, mission, _conversation = await _start_mission_with_plan(mindspace, ["in_progress", "pending"])
+            service.pause_mission(mission.mission_id)
+            service.stop()
+
+            restarted = MissionService(mindspace)
+            restarted.start()
+            assert restarted.status(mission.mission_id) == MissionStatus.PAUSED
+
+            sent = len(submitted)
+            restarted.unpause_mission(mission.mission_id)
+            for _ in range(5):
+                await asyncio.sleep(0)
+
+            assert len(submitted) == sent + 1
+            assert restarted.status(mission.mission_id) != MissionStatus.INTERRUPTED
+            restarted.stop()
+
+        asyncio.run(run())
+
+    def test_pausing_stops_what_is_running(self, mindspace, submitted, monkeypatch):  # pylint: disable=unused-argument
+        """Pausing cancels the lead's turn straight away rather than letting it run to its end."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["in_progress"])
+            cancelled: list[AIConversation] = []
+            monkeypatch.setattr(AIConversation, "cancel_current_tasks", lambda self, notify=True: cancelled.append(self))
+
+            service.pause_mission(mission.mission_id)
+
+            assert conversation in cancelled
+            assert service.status(mission.mission_id) == MissionStatus.PAUSED
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_continuing_picks_up_the_turn_the_pause_stopped(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """The cancelled turn is not shown as an error, and continuing asks the lead to check and carry on."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["in_progress", "pending"])
+            service.pause_mission(mission.mission_id)
+            conversation.get_conversation_history().add_message(AIMessage.create(
+                source=AIMessageSource.SYSTEM, content="Request cancelled by user", error={"code": "cancelled"}
+            ))
+            await conversation._trigger_event(AIConversationEvent.ERROR, True, None)  # pylint: disable=protected-access
+            snapshot = service.snapshot(mission.mission_id)
+            assert snapshot is not None and snapshot.status == MissionStatus.PAUSED
+            assert MissionActivityKind.ERROR not in [entry.kind for entry in snapshot.activity]
+            assert all(agent.state != MissionAgentState.ERROR for agent in snapshot.agents)
+
+            sent = len(submitted)
+            service.unpause_mission(mission.mission_id)
+            for _ in range(5):
+                await asyncio.sleep(0)
+
+            assert len(submitted) == sent + 1
+            assert submitted[-1][1].startswith("The user paused this mission")
+            assert service.status(mission.mission_id) != MissionStatus.FAILED
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_continuing_a_stopped_turn_takes_plan_changes_with_it(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """Changes made to the plan while paused go to the lead with the request to carry on."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["in_progress", "pending", "pending"])
+            service.pause_mission(mission.mission_id)
+            conversation.get_conversation_history().add_message(AIMessage.create(
+                source=AIMessageSource.SYSTEM, content="Request cancelled by user", error={"code": "cancelled"}
+            ))
+            service.edit_plan(mission.mission_id, ["1", "3", "2"], [])
+
+            service.unpause_mission(mission.mission_id)
+            for _ in range(5):
+                await asyncio.sleep(0)
+
+            text = submitted[-1][1]
+            assert text.startswith("The user paused this mission") and "the user also changed your plan" in text
+            assert not mission.plan_edited()
+            service.stop()
+
+        asyncio.run(run())
+
     def test_stopping_ends_the_pause(self, mindspace, submitted):  # pylint: disable=unused-argument
         """A stopped mission is no longer paused, so a message starts it again as usual."""
         async def run() -> None:
@@ -3385,6 +3469,74 @@ class TestPlanReview:
                 AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["completed", "pending"], goal_met=True)
             )
             assert mission.is_complete()
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_paused_plan_can_be_changed_only_where_work_has_not_started(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """While paused, steps not started move and are skipped; a step under way or done keeps its place."""
+        async def run() -> None:
+            service, mission, _conversation = await _start_mission_with_plan(
+                mindspace, ["completed", "in_progress", "pending", "pending"]
+            )
+            with pytest.raises(MissionError):
+                service.edit_plan(mission.mission_id, ["1", "2", "4", "3"], [])
+
+            service.pause_mission(mission.mission_id)
+            service.edit_plan(mission.mission_id, ["1", "2", "4", "3"], ["3"])
+            assert [task.task_id for task in mission.tasks] == ["1", "2", "4", "3"]
+            assert mission.plan_edited()
+
+            for order, skipped in ((["2", "1", "4", "3"], []), (["1", "2", "4", "3"], ["1"]), (["1", "4", "2", "3"], [])):
+                with pytest.raises(MissionError):
+                    service.edit_plan(mission.mission_id, order, skipped)
+
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_resuming_tells_the_lead_about_the_changed_plan(self, mindspace, submitted, no_continue_delay):  # pylint: disable=unused-argument
+        """On resuming, the lead is sent the changed plan rather than a plain continue, and told only once."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(
+                mindspace, ["completed", "pending", "pending"]
+            )
+            await _finish_turn(conversation)
+            service.pause_mission(mission.mission_id)
+            sent = len(submitted)
+            service.edit_plan(mission.mission_id, ["1", "3", "2"], ["2"])
+
+            service.unpause_mission(mission.mission_id)
+            for _ in range(5):
+                await asyncio.sleep(0)
+
+            changes = submitted[sent:]
+            assert len(changes) == 1 and "While the mission was paused, the user changed your plan" in changes[0][1]
+            assert changes[0][1].index("[3] Task 3") < changes[0][1].index("[2] Task 2 (skipped)")
+            assert not mission.plan_edited()
+
+            # Whatever the lead reports for a skipped step, it stays skipped.
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, _plan_message(["completed", "pending", "in_progress"])
+            )
+            assert next(task for task in mission.tasks if task.task_id == "2").status == MissionTaskStatus.STOPPED
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_message_while_plan_changed_carries_the_changes(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A message sent before resuming takes the changed plan to the lead with it."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["completed", "pending", "pending"])
+            await _finish_turn(conversation)
+            service.pause_mission(mission.mission_id)
+            service.edit_plan(mission.mission_id, ["1", "3", "2"], [])
+
+            await service.send_guidance(mission.mission_id, "Do the link first")
+
+            text = submitted[-1][1]
+            assert "Do the link first" in text and "the user also changed your plan" in text
+            assert not mission.plan_edited()
             service.stop()
 
         asyncio.run(run())

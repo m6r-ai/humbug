@@ -14,6 +14,12 @@ class MissionTone(Enum):
     NEUTRAL = auto()
 
 
+class MissionRobotLook(Enum):
+    """How a robot is drawn: the classic square-headed robot, or a rounder one."""
+    CLASSIC = "classic"
+    ROUNDED = "rounded"
+
+
 class MissionStatTarget(Enum):
     """Which steps of the plan a filter shows."""
     ALL_STEPS = auto()
@@ -236,6 +242,7 @@ class MissionAgentView:
         model_text: The AI model the agent uses, or "" when not known
         asks_to_start: Whether the agent is the lead asking whether to carry out the plan it drafted,
             answered from its speech bubble
+        look: How the agent's robot is drawn
     """
     context_id: str
     title: str
@@ -255,6 +262,7 @@ class MissionAgentView:
     wait_started: float = 0.0
     model_text: str = ""
     asks_to_start: bool = False
+    look: MissionRobotLook = MissionRobotLook.CLASSIC
 
 
 @dataclass(frozen=True)

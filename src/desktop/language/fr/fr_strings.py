@@ -735,6 +735,10 @@ def get_french_strings() -> LanguageStrings:
         mission_task_completed="Terminée",
         mission_task_blocked="Bloquée",
         mission_agents_title="Agents",
+        mission_lead_look="Apparence du responsable",
+        mission_look_classic="Classique",
+        mission_look_rounded="Arrondie",
+        mission_lead_look_tip="Choisissez l’apparence du robot qui mène chaque mission. Les assistants ont les deux apparences.",
         mission_agents_active="{0} actif(s)",
         mission_agents_empty=(
             "Aucune conversation n'est ouverte pour cette mission. Ouvrez la conversation principale "
@@ -828,11 +832,11 @@ def get_french_strings() -> LanguageStrings:
         mission_decision_not_undoable="Humbug ne pourra pas l'annuler une fois approuvé.",
         mission_review_request="Examiner",
         mission_status_paused="En pause",
-        mission_say_paused="En pause. Je termine ce que je fais, puis je vous attends.",
+        mission_say_paused="En pause. Je me suis arrêté là où j'en étais et je vous attends.",
         mission_pause="Pause",
         mission_pause_tip=(
-            "Laisser se terminer ce qui est en cours, puis attendre : rien n'est approuvé "
-            "automatiquement et le responsable ne continue pas seul tant que vous ne reprenez pas"
+            "Arrêter ce qui est en cours et attendre : rien n'est approuvé automatiquement et le "
+            "responsable ne reprend pas tant que vous ne continuez pas"
         ),
         mission_unpause="Continuer",
         mission_paused_notice=(
@@ -1042,25 +1046,17 @@ def get_french_strings() -> LanguageStrings:
             "Le service d'IA s'est arrêté avant d'avoir fini sa réponse. Appuyez sur Réessayer pour la "
             "redemander."
         ),
-        mission_guide_title="Comment fonctionne Mission Control",
+        mission_guide_title="Mission Control",
         mission_guide_dismiss="Compris",
         mission_guide_link="Comment fonctionne Mission Control ?",
-        mission_guide_1_title="Dites ce que vous voulez",
-        mission_guide_1=(
-            "Décrivez la tâche dans la zone ci-dessous. Un responsable IA la planifie et fait appel à "
-            "des agents pour les parties qui peuvent avancer en parallèle."
-        ),
-        mission_guide_2_title="Suivez le travail",
-        mission_guide_2=(
-            "Le plan, les robots qui l'exécutent et ce qu'ils disent s'affichent au fur et à mesure. "
-            "Vous pouvez écrire au responsable à tout moment."
-        ),
-        mission_guide_3_title="Gardez la main",
-        mission_guide_3=(
-            "Tout ce qui modifie des fichiers ou lance des commandes attend votre décision dans la "
-            "boîte de décisions, sauf si vous laissez l'approbation automatique s'en charger. Chaque "
-            "modification de fichier peut être annulée."
-        ),
+        mission_guide_subtitle="De votre idée à son exécution, en gardant la main.",
+        mission_guide_footer="Supervision humaine · Collaboration en direct · Modifications réversibles",
+        mission_guide_1_title="Définissez votre mission",
+        mission_guide_1="Décrivez votre objectif. Votre responsable IA établit un plan et réunit les bons agents.",
+        mission_guide_2_title="Suivez son déroulement",
+        mission_guide_2="Suivez l'avancement en direct, surveillez les agents et échangez avec votre responsable IA.",
+        mission_guide_3_title="Gardez le contrôle",
+        mission_guide_3="Approuvez les actions sensibles et annulez les modifications de fichiers quand il le faut.",
         mission_run_again="Relancer",
         mission_archive="Archiver",
         mission_unarchive="Sortir de l'archive",
@@ -1156,13 +1152,15 @@ def get_french_strings() -> LanguageStrings:
         mission_status_plan_ready="Plan prêt",
         mission_say_plan_ready="Voici mon plan. Je commence ?",
         mission_say_plan_edited="Vous avez modifié le plan. Dois-je continuer avec le plan modifié ?",
+        mission_say_paused_edited="Vous avez modifié le plan. Je suivrai le plan modifié quand vous reprendrez.",
         mission_step_skipped="Ignorée",
         mission_step_skip="Ignorer",
         mission_step_unskip="Inclure",
         mission_step_move_tip="Faites glisser pour déplacer cette étape, ou appuyez sur Alt+Haut ou Alt+Bas",
         mission_plan_arrange_hint=(
-            "Faites glisser les étapes pour changer leur ordre, ou ignorez celles dont vous ne voulez "
-            "pas, avant de lancer le travail."
+            "Faites glisser les étapes qui n’ont pas commencé pour changer leur ordre, ou ignorez "
+            "celles dont vous ne voulez pas. Le responsable suit le plan modifié quand le travail "
+            "commence ou reprend."
         ),
         mission_plan_yes="Oui, commencer",
         mission_plan_no="Non",

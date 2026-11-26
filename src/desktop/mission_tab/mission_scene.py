@@ -309,9 +309,11 @@ class MissionJourney(QWidget):
         font = self._label_font()
         metrics = QFontMetrics(font)
         finished = self._stage == count - 1 and self._tone == MissionTone.SUCCESS
+        # In a right-to-left language the journey starts at the right and fills towards the left.
+        rtl = self.isRightToLeft()
 
         for index, label in enumerate(self._labels):
-            x = index * (width + gap)
+            x = self.width() - width - index * (width + gap) if rtl else index * (width + gap)
             segment = QRectF(x, top, width, height)
             painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(track)
@@ -328,11 +330,13 @@ class MissionJourney(QWidget):
 
             if filled > 0.0:
                 painter.setBrush(color)
-                painter.drawRoundedRect(QRectF(x, top, max(height, width * filled), height), height / 2, height / 2)
+                fill = max(height, width * filled)
+                painter.drawRoundedRect(QRectF(x + width - fill if rtl else x, top, fill, height), height / 2, height / 2)
 
             if index == self._stage and self._live and not finished:
                 # A sheen travels along the current stage, so the work reads as moving forward.
-                sweep = x + width * ((phase * 0.45) % 1.0)
+                travelled = (phase * 0.45) % 1.0
+                sweep = x + width * (1.0 - travelled if rtl else travelled)
                 sheen = QLinearGradient(sweep - width * 0.25, 0, sweep + width * 0.25, 0)
                 clear = QColor(card)
                 clear.setAlphaF(0.0)

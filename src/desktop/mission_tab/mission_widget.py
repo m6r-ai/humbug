@@ -14,16 +14,17 @@ from PySide6.QtCore import (
 from PySide6.QtGui import (
     QColor, QDrag, QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent, QHideEvent, QIcon, QKeyEvent,
     QMouseEvent, QPainter, QPainterPath, QPen, QPixmap, QResizeEvent, QLinearGradient, QPaintEvent, QShowEvent,
-    QTextCursor, QTextDocument, QWheelEvent
+    QTextCursor, QTextDocument, QTransform, QWheelEvent
 )
 from PySide6.QtWidgets import (
     QApplication, QBoxLayout, QCheckBox, QFrame, QHBoxLayout, QLabel, QLayout, QLayoutItem, QLineEdit, QPlainTextEdit,
     QPushButton,
-    QScrollArea, QScroller, QSizePolicy, QToolButton, QVBoxLayout, QWidget
+    QScrollArea, QScroller, QSizePolicy, QToolButton, QVBoxLayout, QWidget, QWidgetItem
 )
 
 from desktop.attachments_bar import AttachmentsBar
 from desktop.color_role import ColorRole
+from desktop.language.language_code import LanguageCode
 from desktop.language.language_manager import LanguageManager
 from desktop.mission_tab.mission_display import (
     MissionActivityView, MissionAgentView, MissionChatView, MissionCheckView, MissionChipView, MissionDecisionView,
@@ -38,8 +39,8 @@ from desktop.mission_tab.mission_network import AgentNetworkView
 from desktop.mission_tab.mission_intro import MissionIntro
 from desktop.mission_tab.mission_scene import ConfettiOverlay, MissionJourney
 from desktop.mission_tab.mission_painted import (
-    BusySpinner, GlyphBadge, ProgressRing, StatusPill, StepMarker, blend, fade_in, readable, surface_colors,
-    tone_color, tone_rgba, tone_text
+    BusySpinner, GlyphBadge, GuideIcon, ProgressRing, StatusPill, StepMarker, blend, fade_in,
+    readable, surface_colors, tone_color, tone_rgba, tone_text
 )
 from desktop.style_manager import StyleManager
 from desktop.widgets.elided_label import ElidedLabel
@@ -49,6 +50,9 @@ from desktop.widgets.elided_label import ElidedLabel
 _SIDE_BY_SIDE_WIDTH = 1020
 _SPLIT_LOWER_WIDTH = 900
 _SIDE_COLUMN_WIDTH = 360
+_STACKED_WIDTH = 640
+# The narrowest the guide to Mission Control can be with its steps still side by side.
+_GUIDE_SIDE_BY_SIDE_WIDTH = 560
 
 _DETAIL_MAX_LINES = 10
 _DETAIL_MAX_CHARS = 900
@@ -232,8 +236,8 @@ def _first_report_line(report: str) -> str:
     return ""
 
 
-def _send_icon(color: QColor, size: int) -> QIcon:
-    """Return a paper-plane icon, the usual sign for sending a message."""
+def _send_icon(color: QColor, size: int, right_to_left: bool = False) -> QIcon:
+    """Return a paper-plane icon, the usual sign for sending a message, flying the way the text reads."""
     ratio = 2
     pixmap = QPixmap(size * ratio, size * ratio)
     pixmap.fill(Qt.GlobalColor.transparent)
@@ -255,6 +259,10 @@ def _send_icon(color: QColor, size: int) -> QIcon:
     painter.setPen(QPen(Qt.GlobalColor.transparent, 1.6 * unit))
     painter.drawLine(QPointF(5.5 * unit, 12 * unit), QPointF(12 * unit, 12 * unit))
     painter.end()
+    if right_to_left:
+        pixmap = pixmap.transformed(QTransform().scale(-1, 1))
+        pixmap.setDevicePixelRatio(ratio)
+
     return QIcon(pixmap)
 
 
@@ -410,20 +418,28 @@ class _FlowLayout(QLayout):
     buttons never holds the page wider than the window.
     """
 
-    def __init__(self, spacing: int) -> None:
+    def __init__(self, spacing: int, centred: bool = False) -> None:
         """
         Initialise the layout.
 
         Args:
             spacing: The gap between widgets, across and down
+            centred: Whether each row is centred rather than starting at the reading edge
         """
         super().__init__()
         self._items: list[QLayoutItem] = []
         self._gap = spacing
+        self._centred = centred
 
     def addItem(self, item: QLayoutItem) -> None:  # pylint: disable=invalid-name
         """Add a widget's item at the end."""
         self._items.append(item)
+
+    def insert_widget(self, index: int, widget: QWidget) -> None:
+        """Insert a widget before the item at an index."""
+        self.addChildWidget(widget)
+        self._items.insert(index, QWidgetItem(widget))
+        self.invalidate()
 
     def count(self) -> int:
         """Return how many items the layout holds."""
@@ -466,9 +482,14 @@ class _FlowLayout(QLayout):
         margins = self.contentsMargins()
         size = QSize()
         for item in self._items:
-            size = size.expandedTo(item.sizeHint())
+            size = size.expandedTo(item.minimumSize())
 
         return size.grownBy(margins)
+
+    def _right_to_left(self) -> bool:
+        """Return whether the widgets run from right to left, as they do in Arabic."""
+        parent = self.parentWidget()
+        return parent.isRightToLeft() if parent is not None else QApplication.isRightToLeft()
 
     def _arrange(self, rect: QRect, place: bool) -> int:
         """
@@ -479,23 +500,174 @@ class _FlowLayout(QLayout):
         """
         margins = self.contentsMargins()
         rect = rect.marginsRemoved(margins)
+        rows: list[list[tuple[QLayoutItem, QSize]]] = [[]]
         x = rect.x()
-        y = rect.y()
-        row_height = 0
         for item in self._items:
             hint = item.sizeHint()
-            if x > rect.x() and x + hint.width() > rect.right() + 1:
+            if hint.isEmpty():
+                continue
+
+            # An item wider than the whole row, such as another flow, is narrowed to fit and wraps itself.
+            width = max(min(hint.width(), rect.width()), item.minimumSize().width())
+            size = QSize(width, item.heightForWidth(width) if item.hasHeightForWidth() else hint.height())
+            if x > rect.x() and x + width > rect.right() + 1:
+                rows.append([])
                 x = rect.x()
-                y += row_height + self._gap
-                row_height = 0
 
-            if place:
-                item.setGeometry(QRect(QPoint(x, y), hint))
+            rows[-1].append((item, size))
+            x += width + self._gap
 
-            x += hint.width() + self._gap
-            row_height = max(row_height, hint.height())
+        y = rect.y()
+        for row in rows:
+            row_width = sum(size.width() for _item, size in row) + self._gap * max(0, len(row) - 1)
+            x = rect.x() + (max(0, rect.width() - row_width) // 2 if self._centred else 0)
+            for item, size in row:
+                if place:
+                    # In a right-to-left layout the rows start at the right.
+                    left = rect.left() + rect.right() - x - size.width() + 1 if self._right_to_left() else x
+                    item.setGeometry(QRect(QPoint(left, y), size))
 
-        return y + row_height - rect.y() + margins.top() + margins.bottom()
+                x += size.width() + self._gap
+
+            y += max((size.height() for _item, size in row), default=0) + self._gap
+
+        return max(0, y - self._gap - rect.y()) + margins.top() + margins.bottom()
+
+
+class _OneLineLabel(QLabel):
+    """A label that wraps only when it must: it asks for room for its text on one line."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        """Create the label, wrapping its words when it is given less room than it asks for."""
+        super().__init__(parent)
+        self.setWordWrap(True)
+
+    def sizeHint(self) -> QSize:
+        width = self.fontMetrics().horizontalAdvance(self.text()) + 2
+        return QSize(width, self.heightForWidth(width))
+
+
+class _MissionGuide(QFrame):
+    """
+    The short guide to how Mission Control works, for someone using it for the first time.
+
+    Its three steps are tiles, each with an icon, its number, a heading and a sentence, side by side
+    where there is room and stacked where there is not, above a line saying what keeps the user safe.
+    """
+
+    dismissed = Signal()
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        """Create the guide; its words are set by set_texts."""
+        super().__init__(parent)
+        self.setObjectName("MissionGuide")
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 20, 24, 16)
+        layout.setSpacing(0)
+
+        header = QHBoxLayout()
+        header.setSpacing(10)
+        header.addWidget(GuideIcon("orbit", 26, False), 0, Qt.AlignmentFlag.AlignVCenter)
+        self._title = QLabel()
+        self._title.setObjectName("MissionGuideTitle")
+        self._title.setWordWrap(True)
+        header.addWidget(self._title, 1)
+        self._dismiss = QPushButton()
+        self._dismiss.setObjectName("MissionGuideDismiss")
+        self._dismiss.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._dismiss.clicked.connect(self.dismissed)
+        header.addWidget(self._dismiss, 0, Qt.AlignmentFlag.AlignVCenter)
+        layout.addLayout(header)
+        layout.addSpacing(10)
+
+        self._subtitle = QLabel()
+        self._subtitle.setObjectName("MissionGuideSubtitle")
+        self._subtitle.setWordWrap(True)
+        layout.addWidget(self._subtitle)
+        layout.addSpacing(16)
+
+        self._steps_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self._steps_layout.setSpacing(12)
+        self._steps: list[tuple[QLabel, QLabel]] = []
+        for number, kind in enumerate(("bubble", "agents", "shield"), 1):
+            tile = QFrame()
+            tile.setObjectName("MissionGuideTile")
+            tile_layout = QVBoxLayout(tile)
+            tile_layout.setContentsMargins(18, 18, 18, 18)
+            tile_layout.setSpacing(0)
+            top = QHBoxLayout()
+            top.addWidget(GuideIcon(kind, 44, True))
+            top.addStretch(1)
+            step_number = QLabel(f"{number:02d}")
+            step_number.setObjectName("MissionGuideNumber")
+            top.addWidget(step_number, 0, Qt.AlignmentFlag.AlignVCenter)
+            tile_layout.addLayout(top)
+            tile_layout.addSpacing(16)
+            heading = QLabel()
+            heading.setObjectName("MissionGuideHeading")
+            heading.setWordWrap(True)
+            tile_layout.addWidget(heading)
+            tile_layout.addSpacing(8)
+            body = QLabel()
+            body.setObjectName("MissionGuideText")
+            body.setWordWrap(True)
+            body.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+            tile_layout.addWidget(body)
+            tile_layout.addStretch(1)
+            self._steps_layout.addWidget(tile, 1)
+            self._steps.append((heading, body))
+
+        layout.addLayout(self._steps_layout)
+        layout.addSpacing(18)
+        rule = QFrame()
+        rule.setObjectName("MissionGuideRule")
+        rule.setFixedHeight(1)
+        layout.addWidget(rule)
+        layout.addSpacing(14)
+
+        footer = QHBoxLayout()
+        footer.setSpacing(8)
+        footer.addStretch(1)
+        self._footer_icon = GuideIcon("shield", 16, False)
+        footer.addWidget(self._footer_icon, 0, Qt.AlignmentFlag.AlignVCenter)
+        self._footer = _OneLineLabel()
+        self._footer.setObjectName("MissionGuideFooter")
+        self._footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        footer.addWidget(self._footer)
+        footer.addStretch(1)
+        layout.addLayout(footer)
+
+    def set_texts(self, title: str, subtitle: str, dismiss: str, steps: list[tuple[str, str]], footer: str) -> None:
+        """
+        Set the guide's words.
+
+        Args:
+            title: The guide's title
+            subtitle: The line under the title
+            dismiss: The label of the button that puts the guide away
+            steps: Each step's heading and explanation, in order
+            footer: The line at the foot of the guide
+        """
+        self._title.setText(title)
+        self._subtitle.setText(subtitle)
+        self._dismiss.setText(dismiss + "   ✕")
+        for (heading, body), (heading_text, body_text) in zip(self._steps, steps):
+            heading.setText(heading_text)
+            body.setText(body_text)
+
+        # A narrow footer wraps between its points, never inside one.
+        self._footer.setText("\u00a0·  ".join(point.replace(" ", "\u00a0") for point in footer.split(" · ")))
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        """Set the steps side by side where the guide has room for them, and stack them where it does not."""
+        super().resizeEvent(event)
+        side_by_side = self.width() >= _GUIDE_SIDE_BY_SIDE_WIDTH * StyleManager().zoom_factor()
+        self._steps_layout.setDirection(
+            QBoxLayout.Direction.LeftToRight if side_by_side else QBoxLayout.Direction.TopToBottom
+        )
+        # The footer's shield sits beside it only while it fits on one line; it would be stranded otherwise.
+        room = self.contentsRect().width() - 48
+        self._footer_icon.setVisible(self._footer.sizeHint().width() + self._footer_icon.sizeHint().width() + 8 <= room)
 
 
 class _FittedScroll(QScrollArea):
@@ -992,6 +1164,7 @@ class MissionWidget(QWidget):
     new_mission_level_remembered = Signal(bool)
     start_work_requested = Signal()
     plan_rearranged = Signal(list, list)
+    lead_look_selected = Signal(str)
     file_open_requested = Signal(str)
     file_undo_requested = Signal(str)
     file_review_requested = Signal(str, int)
@@ -1260,12 +1433,16 @@ class MissionWidget(QWidget):
         """Create the title bar."""
         top_bar = QFrame()
         top_bar.setObjectName("MissionTopBar")
-        layout = QHBoxLayout(top_bar)
+        layout = QBoxLayout(QBoxLayout.Direction.LeftToRight, top_bar)
         layout.setContentsMargins(20, 12, 20, 12)
         layout.setSpacing(12)
+        self._top_layout = layout
+        heading = QHBoxLayout()
+        heading.setSpacing(12)
+        layout.addLayout(heading)
 
         self._top_badge = GlyphBadge("◎", MissionTone.ACCENT, 36)
-        layout.addWidget(self._top_badge)
+        heading.addWidget(self._top_badge)
 
         titles = QVBoxLayout()
         titles.setSpacing(0)
@@ -1275,7 +1452,7 @@ class MissionWidget(QWidget):
         self._top_subtitle = QLabel()
         self._top_subtitle.setObjectName("MissionTopSubtitle")
         titles.addWidget(self._top_subtitle)
-        layout.addLayout(titles)
+        heading.addLayout(titles, 1)
         layout.addStretch(1)
         # Side by side when there is room, one above the other when the window is narrow.
         self._top_options = _FlowLayout(16)
@@ -1332,12 +1509,9 @@ class MissionWidget(QWidget):
             The row, its label, its buttons by level, and the note
         """
         row = QWidget()
-        row_layout = QHBoxLayout(row)
+        row_layout = _FlowLayout(10, centred)
+        row.setLayout(row_layout)
         row_layout.setContentsMargins(0, 8, 0, 0)
-        row_layout.setSpacing(10)
-        if centred:
-            row_layout.addStretch(1)
-
         label = QLabel()
         label.setObjectName("MissionFieldLabel")
         row_layout.addWidget(label)
@@ -1357,7 +1531,6 @@ class MissionWidget(QWidget):
             buttons[level] = button
 
         row_layout.addWidget(segment)
-        row_layout.addStretch(1)
         # What the chosen level means, in plain words, so the user need not hover for a tooltip.
         note = QLabel()
         note.setObjectName("MissionHintText")
@@ -1373,7 +1546,7 @@ class MissionWidget(QWidget):
         hero = QFrame()
         hero.setObjectName("MissionHero")
         layout = QVBoxLayout(hero)
-        layout.setContentsMargins(28, 28, 28, 40)
+        layout.setContentsMargins(28, 24, 28, 24)
         layout.setSpacing(12)
 
         # Humbug's logo arrives on stage, once, to open the page.
@@ -1392,9 +1565,8 @@ class MissionWidget(QWidget):
         self._hero_subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._hero_subtitle.setWordWrap(True)
         layout.addWidget(self._hero_subtitle)
-        (
-            self._guide, self._guide_title, self._guide_steps, self._guide_steps_layout, self._guide_dismiss
-        ) = self._build_guide()
+        self._guide = _MissionGuide()
+        self._guide.dismissed.connect(lambda: self.guide_dismissed.emit(True))
         layout.addWidget(self._guide)
         self._guide_link = QPushButton()
         self._guide_link.setObjectName("MissionLinkButton")
@@ -1413,18 +1585,23 @@ class MissionWidget(QWidget):
         self._remember_level_check.setObjectName("MissionReviewPlan")
         self._remember_level_check.setCursor(Qt.CursorShape.PointingHandCursor)
         self._remember_level_check.clicked.connect(self.new_mission_level_remembered)
-        layout.addWidget(self._remember_level_check, 0, Qt.AlignmentFlag.AlignHCenter)
+        # The mission's options share a row, wrapping only when the window is too narrow for them.
+        options = QWidget()
+        options_layout = _FlowLayout(20, True)
+        options.setLayout(options_layout)
+        options_layout.addWidget(self._remember_level_check)
+        layout.addWidget(options)
         self._review_plan_check = QCheckBox()
         self._review_plan_check.setObjectName("MissionReviewPlan")
         self._review_plan_check.setCursor(Qt.CursorShape.PointingHandCursor)
         self._review_plan_check.toggled.connect(self.new_mission_review_plan_toggled)
-        layout.addWidget(self._review_plan_check, 0, Qt.AlignmentFlag.AlignHCenter)
+        options_layout.addWidget(self._review_plan_check)
         # Done checks are optional, so their box only appears once asked for.
         self._checks_option = QCheckBox()
         self._checks_option.setObjectName("MissionReviewPlan")
         self._checks_option.setCursor(Qt.CursorShape.PointingHandCursor)
         self._checks_option.toggled.connect(self._show_checks_editor)
-        layout.addWidget(self._checks_option, 0, Qt.AlignmentFlag.AlignHCenter)
+        options_layout.addWidget(self._checks_option)
         self._checks_editor = QWidget()
         checks_layout = QVBoxLayout(self._checks_editor)
         checks_layout.setContentsMargins(0, 0, 0, 0)
@@ -1447,12 +1624,16 @@ class MissionWidget(QWidget):
         layout.addWidget(self._examples_label)
 
         self._example_buttons: list[QPushButton] = []
+        examples = QWidget()
+        examples_layout = _FlowLayout(8, True)
+        examples.setLayout(examples_layout)
+        layout.addWidget(examples)
         for _ in range(3):
             button = QPushButton()
             button.setObjectName("MissionExampleChip")
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             button.clicked.connect(lambda _checked=False, b=button: self._use_example(b.text()))
-            layout.addWidget(button, 0, Qt.AlignmentFlag.AlignHCenter)
+            examples_layout.addWidget(button)
             self._example_buttons.append(button)
 
         # The user's own saved requests, to start the missions they run again and again.
@@ -1474,54 +1655,6 @@ class MissionWidget(QWidget):
         self._templates_label.hide()
         return hero
 
-    def _build_guide(self) -> tuple[QFrame, QLabel, list[tuple[QLabel, QLabel]], QBoxLayout, QPushButton]:
-        """
-        Create the short guide to how Mission Control works, for someone using it for the first time.
-
-        Returns:
-            The guide, its title, each step's heading and words, the layout of its steps, and its dismiss button
-        """
-        guide = QFrame()
-        guide.setObjectName("MissionGuide")
-        layout = QVBoxLayout(guide)
-        layout.setContentsMargins(20, 16, 20, 16)
-        layout.setSpacing(10)
-        title = QLabel()
-        title.setObjectName("MissionCardTitle")
-        layout.addWidget(title)
-        steps = QBoxLayout(QBoxLayout.Direction.LeftToRight)
-        steps.setSpacing(18)
-        step_texts: list[tuple[QLabel, QLabel]] = []
-        for number in range(1, 4):
-            step = QHBoxLayout()
-            step.setSpacing(10)
-            step.addWidget(GlyphBadge(str(number), MissionTone.ACCENT, 28), 0, Qt.AlignmentFlag.AlignTop)
-            texts = QVBoxLayout()
-            texts.setSpacing(2)
-            heading = QLabel()
-            heading.setObjectName("MissionStepsLabel")
-            heading.setWordWrap(True)
-            texts.addWidget(heading)
-            body = QLabel()
-            body.setObjectName("MissionHintText")
-            body.setWordWrap(True)
-            body.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
-            texts.addWidget(body)
-            step.addLayout(texts, 1)
-            steps.addLayout(step, 1)
-            step_texts.append((heading, body))
-
-        layout.addLayout(steps)
-        dismiss_row = QHBoxLayout()
-        dismiss_row.addStretch(1)
-        dismiss = QPushButton()
-        dismiss.setObjectName("MissionReplyButton")
-        dismiss.setCursor(Qt.CursorShape.PointingHandCursor)
-        dismiss.clicked.connect(lambda: self.guide_dismissed.emit(True))
-        dismiss_row.addWidget(dismiss)
-        layout.addLayout(dismiss_row)
-        return guide, title, step_texts, steps, dismiss
-
     def _show_checks_editor(self, shown: bool) -> None:
         """Show the box for done checks when the user asks to add some, and hide it again when they do not."""
         self._checks_editor.setVisible(shown)
@@ -1539,6 +1672,19 @@ class MissionWidget(QWidget):
         """Forget the done checks once a mission has started with them, so the next one starts without."""
         self._checks_input.clear()
         self._checks_option.setChecked(False)
+
+    def set_lead_look(self, look: str) -> None:
+        """Show which look mission leads have: "classic" or "rounded"."""
+        for name, button in self._look_buttons.items():
+            wanted = "MissionPlanFilterActive" if name == look else "MissionPlanFilter"
+            if button.objectName() != wanted:
+                button.setObjectName(wanted)
+                button.style().unpolish(button)
+                button.style().polish(button)
+
+    def _closed_arrow(self) -> str:
+        """Return the arrow on something folded away, pointing the way the text reads."""
+        return "▶" if self._language_manager.left_to_right() else "◀"
 
     def set_guide_visible(self, visible: bool) -> None:
         """Show the guide to how Mission Control works, or the link that brings it back."""
@@ -1589,8 +1735,14 @@ class MissionWidget(QWidget):
         layout.setSpacing(10)
         return card, layout
 
-    def _card_header(self, glyph: str, tone: MissionTone) -> tuple[QHBoxLayout, QLabel, StatusPill]:
-        """Create a card heading with a badge, a title and a count pill."""
+    def _card_header(self, glyph: str, tone: MissionTone) -> tuple[QHBoxLayout, _FlowLayout, QLabel, StatusPill]:
+        """
+        Create a card heading with a badge, a title and a count pill.
+
+        Returns:
+            The heading, the controls after the title (which wrap when the card is narrow), the
+            title, and the pill, which is the last of the controls
+        """
         header = QHBoxLayout()
         header.setSpacing(10)
         header.addWidget(GlyphBadge(glyph, tone, 26))
@@ -1598,10 +1750,12 @@ class MissionWidget(QWidget):
         title.setObjectName("MissionCardTitle")
         header.addWidget(title)
         header.addStretch(1)
+        controls = _FlowLayout(8)
+        header.addLayout(controls)
         pill = StatusPill()
         self._pills.append(pill)
-        header.addWidget(pill)
-        return header, title, pill
+        controls.addWidget(pill)
+        return header, controls, title, pill
 
     def _build_glance(self) -> QWidget:
         """Create the facts shown under the mission's title: what it is doing now and how far it has got."""
@@ -1646,7 +1800,8 @@ class MissionWidget(QWidget):
         for key, text, tone in cells:
             cell, badge, _caption, value = self._glance_cells[key]
             cell.setVisible(bool(text))
-            badge.set_badge(_GLANCE_GLYPHS[key], tone)
+            # The marker for what is happening now points the way the text reads.
+            badge.set_badge(self._closed_arrow() if key == "now" else _GLANCE_GLYPHS[key], tone)
             value.setText(text)
 
     def _details(self, visible: bool) -> bool:
@@ -1677,7 +1832,7 @@ class MissionWidget(QWidget):
         self._header_card = QFrame()
         self._header_card.setObjectName("MissionHeaderCard")
         header_layout = QHBoxLayout(self._header_card)
-        header_layout.setContentsMargins(26, 24, 26, 24)
+        self._header_layout = header_layout
         header_layout.setSpacing(18)
 
         text_column = QVBoxLayout()
@@ -1685,8 +1840,9 @@ class MissionWidget(QWidget):
 
         # Status and title on the left, a ring showing how much of the plan is done on the
         # right, so the mission's state is read together with its name at any width.
-        title_row = QHBoxLayout()
+        title_row = QBoxLayout(QBoxLayout.Direction.LeftToRight)
         title_row.setSpacing(18)
+        self._title_row = title_row
         titles = QVBoxLayout()
         titles.setSpacing(6)
         status_row = QHBoxLayout()
@@ -1734,7 +1890,7 @@ class MissionWidget(QWidget):
         progress_texts.addWidget(self._progress_label)
         progress_texts.addStretch(1)
         progress_layout.addLayout(progress_texts)
-        title_row.addWidget(self._progress_box, 0, Qt.AlignmentFlag.AlignVCenter)
+        title_row.addWidget(self._progress_box, 0, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeading)
         text_column.addLayout(title_row)
 
         # Where the mission is on its way from the user's request to the AI's report.
@@ -1776,56 +1932,60 @@ class MissionWidget(QWidget):
         self._plan_ready_notice.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         text_column.addWidget(self._plan_ready_notice)
 
-        actions = QHBoxLayout()
+        actions = QBoxLayout(QBoxLayout.Direction.LeftToRight)
         actions.setSpacing(8)
         actions.setContentsMargins(0, 6, 0, 0)
+        self._actions_layout = actions
+        # The buttons wrap onto more rows when the window is narrow.
+        buttons = _FlowLayout(8)
+        actions.addLayout(buttons, 1)
         self._resume_button = QPushButton()
         self._resume_button.setObjectName("MissionReplyButton")
         self._resume_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._resume_button.clicked.connect(self.resume_requested)
-        actions.addWidget(self._resume_button)
+        buttons.addWidget(self._resume_button)
         self._retry_button = QPushButton()
         self._retry_button.setObjectName("MissionReplyButton")
         self._retry_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._retry_button.clicked.connect(self.retry_requested)
-        actions.addWidget(self._retry_button)
+        buttons.addWidget(self._retry_button)
         self._lead_conversation_button = QPushButton()
         self._lead_conversation_button.setObjectName("MissionReplyButton")
         self._lead_conversation_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._lead_conversation_button.clicked.connect(self._open_lead_conversation)
-        actions.addWidget(self._lead_conversation_button)
+        buttons.addWidget(self._lead_conversation_button)
         self._unpause_button = QPushButton()
         self._unpause_button.setObjectName("MissionReplyButton")
         self._unpause_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._unpause_button.clicked.connect(self.unpause_requested)
-        actions.addWidget(self._unpause_button)
+        buttons.addWidget(self._unpause_button)
         self._carry_on_button = QPushButton()
         self._carry_on_button.setObjectName("MissionReplyButton")
         self._carry_on_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._carry_on_button.clicked.connect(self.carry_on_requested)
-        actions.addWidget(self._carry_on_button)
+        buttons.addWidget(self._carry_on_button)
         self._start_work_button = QPushButton()
         self._start_work_button.setObjectName("MissionReplyButton")
         self._start_work_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._start_work_button.clicked.connect(self.start_work_requested)
-        actions.addWidget(self._start_work_button)
+        buttons.addWidget(self._start_work_button)
         self._pause_button = QPushButton()
         self._pause_button.setObjectName("MissionPauseButton")
         self._pause_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._pause_button.clicked.connect(self.pause_requested)
-        actions.addWidget(self._pause_button)
+        buttons.addWidget(self._pause_button)
         self._stop_button = QPushButton()
         self._stop_button.setObjectName("MissionStopButton")
         self._stop_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._stop_button.clicked.connect(self.stop_requested)
-        actions.addWidget(self._stop_button)
+        buttons.addWidget(self._stop_button)
         # Switching mode and deleting are rarer, and deleting is not to be hit by accident beside
         # Stop, so they wait behind a menu.
         self._more_button = QPushButton("⋯")
         self._more_button.setObjectName("MissionPauseButton")
         self._more_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._more_button.clicked.connect(lambda: self._show_more_actions(self._more_button))
-        actions.addWidget(self._more_button)
+        buttons.addWidget(self._more_button)
         self._can_switch_to_classic = True
         actions.addStretch(1)
         # The details below the header fold away, leaving the mission at a glance.
@@ -1833,7 +1993,7 @@ class MissionWidget(QWidget):
         self._details_button.setObjectName("MissionLinkButton")
         self._details_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._details_button.clicked.connect(self._toggle_details)
-        actions.addWidget(self._details_button)
+        actions.addWidget(self._details_button, 0, Qt.AlignmentFlag.AlignTrailing | Qt.AlignmentFlag.AlignVCenter)
         text_column.addLayout(actions)
 
         (
@@ -1887,24 +2047,25 @@ class MissionWidget(QWidget):
         self._lower.setSpacing(16)
 
         self._plan_card, plan_layout = self._card()
-        header, self._plan_title, plan_pill = self._card_header("≡", MissionTone.ACCENT)
+        header, controls, self._plan_title, plan_pill = self._card_header("≡", MissionTone.ACCENT)
         # The filters say how many steps there are and how many are done, so no count is needed.
         plan_pill.hide()
         self._plan_filters = QWidget()
-        self._plan_filters_layout = QHBoxLayout(self._plan_filters)
+        self._plan_filters_layout = _FlowLayout(6)
+        self._plan_filters.setLayout(self._plan_filters_layout)
         self._plan_filters_layout.setContentsMargins(0, 0, 0, 0)
-        self._plan_filters_layout.setSpacing(6)
-        header.insertWidget(header.count() - 1, self._plan_filters)
+        controls.insert_widget(controls.count() - 1, self._plan_filters)
         self._history_button = QPushButton()
         self._history_button.setObjectName("MissionHistoryButton")
         self._history_button.setCheckable(True)
         self._history_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._history_button.clicked.connect(self._toggle_history)
         self._history_button.hide()
-        header.insertWidget(header.count() - 1, self._history_button)
+        controls.insert_widget(controls.count() - 1, self._history_button)
         plan_layout.addLayout(header)
         self._plan_hint = QLabel()
         self._plan_hint.setObjectName("MissionHintText")
+        self._plan_hint.setWordWrap(True)
         plan_layout.addWidget(self._plan_hint)
         self._plan_empty = QLabel()
         self._plan_empty.setObjectName("MissionEmptyText")
@@ -1932,7 +2093,20 @@ class MissionWidget(QWidget):
         self._agents_card, agents_layout = self._card()
         self._agents_card.installEventFilter(self)
         self._scroll.verticalScrollBar().rangeChanged.connect(lambda _low, _high: self._keep_hold())
-        header, self._agents_title, self._agents_pill = self._card_header("◆", MissionTone.INFO)
+        header, controls, self._agents_title, self._agents_pill = self._card_header("◆", MissionTone.INFO)
+        # How the lead looks, chosen beside the team it leads.
+        self._look_label = QLabel()
+        self._look_label.setObjectName("MissionHintText")
+        controls.insert_widget(controls.count() - 1, self._look_label)
+        self._look_buttons: dict[str, QPushButton] = {}
+        for look in ("classic", "rounded"):
+            button = QPushButton()
+            button.setObjectName("MissionPlanFilter")
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.clicked.connect(lambda _checked=False, chosen=look: self.lead_look_selected.emit(chosen))
+            controls.insert_widget(controls.count() - 1, button)
+            self._look_buttons[look] = button
+
         agents_layout.addLayout(header)
         self._agents_empty = QLabel()
         self._agents_empty.setObjectName("MissionEmptyText")
@@ -1975,7 +2149,7 @@ class MissionWidget(QWidget):
 
         # The user's done checks, and what the lead found when it last ran them.
         self._checks_card, checks_layout = self._card()
-        header, self._checks_title, self._checks_pill = self._card_header("✓", MissionTone.SUCCESS)
+        header, controls, self._checks_title, self._checks_pill = self._card_header("✓", MissionTone.SUCCESS)
         checks_layout.addLayout(header)
         self._checks_hint = QLabel()
         self._checks_hint.setObjectName("MissionHintText")
@@ -1990,12 +2164,12 @@ class MissionWidget(QWidget):
 
         # What the mission did to the user's files, each change a click from being undone.
         self._files_card, files_layout = self._card()
-        header, self._files_title, self._files_pill = self._card_header("✎", MissionTone.ACCENT)
+        header, controls, self._files_title, self._files_pill = self._card_header("✎", MissionTone.ACCENT)
         self._files_undo_all = QPushButton()
         self._files_undo_all.setObjectName("MissionLinkButton")
         self._files_undo_all.setCursor(Qt.CursorShape.PointingHandCursor)
         self._files_undo_all.clicked.connect(lambda: self.file_undo_requested.emit(""))
-        header.insertWidget(header.count() - 1, self._files_undo_all)
+        controls.insert_widget(controls.count() - 1, self._files_undo_all)
         files_layout.addLayout(header)
         self._files_summary = QLabel()
         self._files_summary.setObjectName("MissionStepsLabel")
@@ -2015,7 +2189,7 @@ class MissionWidget(QWidget):
     def _build_chat_card(self) -> QWidget:
         """Create the card showing the conversation with the lead, as a conversation tab would, without its input."""
         card, layout = self._card()
-        header, self._chat_title, self._chat_pill = self._card_header("✉", MissionTone.ACCENT)
+        header, _controls, self._chat_title, self._chat_pill = self._card_header("✉", MissionTone.ACCENT)
         layout.addLayout(header)
         self._chat_hint = QLabel()
         self._chat_hint.setObjectName("MissionHintText")
@@ -2382,11 +2556,11 @@ class MissionWidget(QWidget):
         strings = self._language_manager.strings()
         self._report_steps_button.setText(
             ("▼  " + strings.mission_report_hide_steps) if self._report_steps_shown
-            else ("▶  " + strings.mission_report_show_steps)
+            else (self._closed_arrow() + "  " + strings.mission_report_show_steps)
         )
         self._report_activity_button.setText(
             ("▼  " + strings.mission_report_hide_activity) if self._report_activity_shown
-            else ("▶  " + strings.mission_report_show_activity)
+            else (self._closed_arrow() + "  " + strings.mission_report_show_activity)
         )
 
     def _build_report_pin(self) -> QFrame:
@@ -2481,7 +2655,7 @@ class MissionWidget(QWidget):
     def _build_results_card(self) -> QWidget:
         """Create the card that keeps the results of a mission's earlier rounds, for follow-ups to build on."""
         card, layout = self._card()
-        header, self._results_title, self._results_pill = self._card_header("✓", MissionTone.SUCCESS)
+        header, _controls, self._results_title, self._results_pill = self._card_header("✓", MissionTone.SUCCESS)
         layout.addLayout(header)
         self._results_hint = QLabel()
         self._results_hint.setObjectName("MissionHintText")
@@ -2520,7 +2694,7 @@ class MissionWidget(QWidget):
             heading.setObjectName("MissionResultHeading")
             heading.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
             top.addWidget(heading, 1)
-            chevron = QLabel("▼" if opened else "▶")
+            chevron = QLabel("▼" if opened else self._closed_arrow())
             chevron.setObjectName("MissionTimeText")
             top.addWidget(chevron, 0, Qt.AlignmentFlag.AlignTop)
             column.addLayout(top)
@@ -2621,7 +2795,7 @@ class MissionWidget(QWidget):
     def _build_inbox(self) -> QFrame:
         """Create the decision inbox card."""
         card, layout = self._card("MissionInboxCard")
-        header, self._inbox_title, self._inbox_pill = self._card_header("!", MissionTone.WARNING)
+        header, _controls, self._inbox_title, self._inbox_pill = self._card_header("!", MissionTone.WARNING)
         layout.addLayout(header)
         self._decisions_layout = QVBoxLayout()
         self._decisions_layout.setSpacing(10)
@@ -2636,7 +2810,7 @@ class MissionWidget(QWidget):
     def _build_activity(self) -> QWidget:
         """Create the recent activity card."""
         card, layout = self._card()
-        header, self._activity_title, self._activity_pill = self._card_header("↻", MissionTone.SUCCESS)
+        header, _controls, self._activity_title, self._activity_pill = self._card_header("↻", MissionTone.SUCCESS)
         self._activity_pill.hide()
         layout.addLayout(header)
         self._activity_empty = QLabel()
@@ -2714,22 +2888,29 @@ class MissionWidget(QWidget):
     def retranslate(self) -> None:
         """Apply the current language to fixed text."""
         strings = self._language_manager.strings()
+        # In Arabic the robots dress for the part.
+        self._agent_network.set_dressed(self._language_manager.current_language() == LanguageCode.AR)
+        self._look_label.setText(strings.mission_lead_look)
+        self._look_buttons["classic"].setText(strings.mission_look_classic)
+        self._look_buttons["rounded"].setText(strings.mission_look_rounded)
+        for button in self._look_buttons.values():
+            button.setToolTip(strings.mission_lead_look_tip)
+
         self._top_title.setText(strings.mission_control)
         self._top_subtitle.setText(strings.mission_subtitle)
         self._hero_title.setText(strings.mission_hero_title)
         self._hero_subtitle.setText(strings.mission_hero_subtitle)
         self._examples_label.setText(strings.mission_examples_label)
-        self._guide_title.setText(strings.mission_guide_title)
-        self._guide_dismiss.setText(strings.mission_guide_dismiss)
-        self._guide_link.setText(strings.mission_guide_link)
-        guide = (
-            (strings.mission_guide_1_title, strings.mission_guide_1),
-            (strings.mission_guide_2_title, strings.mission_guide_2),
-            (strings.mission_guide_3_title, strings.mission_guide_3),
+        self._guide.set_texts(
+            strings.mission_guide_title, strings.mission_guide_subtitle, strings.mission_guide_dismiss,
+            [
+                (strings.mission_guide_1_title, strings.mission_guide_1),
+                (strings.mission_guide_2_title, strings.mission_guide_2),
+                (strings.mission_guide_3_title, strings.mission_guide_3),
+            ],
+            strings.mission_guide_footer
         )
-        for (heading, body), (heading_text, body_text) in zip(self._guide_steps, guide):
-            heading.setText(heading_text)
-            body.setText(body_text)
+        self._guide_link.setText(strings.mission_guide_link)
 
         self._templates_label.setText(strings.mission_templates_label)
         self._save_template_button.setText("☆  " + strings.mission_template_save)
@@ -3200,7 +3381,7 @@ class MissionWidget(QWidget):
             outer.addLayout(layout)
             unfoldable = file.lines_added is not None
             row.set_clickable(unfoldable)
-            chevron = QLabel("▶" if unfoldable else "")
+            chevron = QLabel(self._closed_arrow() if unfoldable else "")
             chevron.setObjectName("MissionFileChevron")
             chevron.setFixedWidth(round(12 * self._style_manager.zoom_factor()))
             layout.addWidget(chevron)
@@ -3316,7 +3497,7 @@ class MissionWidget(QWidget):
         chevron, diff = self._file_rows[path]
         if path in self._expanded_files:
             self._expanded_files.discard(path)
-            chevron.setText("▶")
+            chevron.setText(self._closed_arrow())
             diff.hide()
             return
 
@@ -3579,7 +3760,7 @@ class MissionWidget(QWidget):
                 skip.clicked.connect(lambda _checked=False, t=step.task_id: self._toggle_skip(t))
                 side.addWidget(skip, 0, Qt.AlignmentFlag.AlignTop)
 
-            chevron = QLabel("▼" if expanded else "▶")
+            chevron = QLabel("▼" if expanded else self._closed_arrow())
             chevron.setObjectName("MissionStepChevron")
             side.addWidget(chevron, 0, Qt.AlignmentFlag.AlignTop)
             row_layout.addLayout(side)
@@ -3602,7 +3783,9 @@ class MissionWidget(QWidget):
 
         moved = [task_id for task_id in order if task_id != dragged]
         moved.insert(moved.index(target) + (1 if after else 0), dragged)
-        if moved != order:
+        # A step under way or done keeps its place, so a move that would shift one is not made.
+        fixed = [index for index, step in enumerate(self._steps or []) if not step.arrangeable]
+        if moved != order and all(moved[index] == order[index] for index in fixed):
             self.plan_rearranged.emit(moved, skipped)
 
     def _nudge_step(self, task_id: str, offset: int) -> None:
@@ -3610,6 +3793,10 @@ class MissionWidget(QWidget):
         order, skipped = self._plan_order()
         index = order.index(task_id) if task_id in order else -1
         if index < 0 or not 0 <= index + offset < len(order):
+            return
+
+        # A step under way or done keeps its place, so a step does not swap with one.
+        if not (self._steps or [])[index + offset].arrangeable:
             return
 
         order[index], order[index + offset] = order[index + offset], order[index]
@@ -3684,7 +3871,7 @@ class MissionWidget(QWidget):
             title.setObjectName("MissionStepTitle")
             title.setWordWrap(True)
             heading.addWidget(title, 1)
-            chevron = QLabel("▼" if expanded else "▶")
+            chevron = QLabel("▼" if expanded else self._closed_arrow())
             chevron.setObjectName("MissionStepChevron")
             heading.addWidget(chevron)
             row_layout.addLayout(heading)
@@ -3886,7 +4073,7 @@ class MissionWidget(QWidget):
             top = QHBoxLayout()
             top.setSpacing(8)
             top.addWidget(GlyphBadge(
-                "⚠" if decision.destructive else "›",
+                "⚠" if decision.destructive else ("›" if self._language_manager.left_to_right() else "‹"),
                 MissionTone.DANGER if decision.destructive else MissionTone.ACCENT, 26
             ))
             tool = QLabel(decision.tool_name)
@@ -4149,7 +4336,7 @@ class MissionWidget(QWidget):
         when.setObjectName("MissionTimeText")
         layout.addWidget(when, 0, Qt.AlignmentFlag.AlignTop)
         if entry.more:
-            chevron = QLabel("▼" if opened else "▶")
+            chevron = QLabel("▼" if opened else self._closed_arrow())
             chevron.setObjectName("MissionTimeText")
             layout.addWidget(chevron, 0, Qt.AlignmentFlag.AlignTop)
 
@@ -4298,7 +4485,7 @@ class MissionWidget(QWidget):
         strings = self._language_manager.strings()
         self._agents_list_button.setText(
             ("▼  " + strings.mission_agents_hide_list) if not self._agents_list.isHidden()
-            else ("▶  " + strings.mission_agents_show_list)
+            else (self._closed_arrow() + "  " + strings.mission_agents_show_list)
         )
 
     def _review_first_decision(self) -> None:
@@ -4423,20 +4610,44 @@ class MissionWidget(QWidget):
         )
         self._lower.setDirection(split)
         self._glance_row.setDirection(split)
-        self._guide_steps_layout.setDirection(split)
+
+        # On a narrow window the switches go under the page's title, and the progress ring and the
+        # mission's buttons under the mission's title, each given the whole width.
+        stacked = (
+            QBoxLayout.Direction.TopToBottom if width < _STACKED_WIDTH * zoom else QBoxLayout.Direction.LeftToRight
+        )
+        self._top_layout.setDirection(stacked)
+        self._apply_margins()
+        narrow_main = (
+            QBoxLayout.Direction.TopToBottom if main_width < _STACKED_WIDTH * zoom else QBoxLayout.Direction.LeftToRight
+        )
+        self._title_row.setDirection(narrow_main)
+        self._actions_layout.setDirection(narrow_main)
         self._update_report_pin()
+
+    def _apply_margins(self) -> None:
+        """Set the page's margins, and the mission card's, narrower on a narrow window so more is left for content."""
+        if self.width() < _STACKED_WIDTH * self._style_manager.zoom_factor():
+            self._content_layout.setContentsMargins(12, 12, 12, 16)
+            self._header_layout.setContentsMargins(16, 18, 16, 18)
+            return
+
+        self._content_layout.setContentsMargins(24, 20, 24, 24)
+        self._header_layout.setContentsMargins(26, 24, 26, 24)
 
     def apply_style(self) -> None:
         """Apply the current theme and zoom."""
         for pill in self._pills:
             pill.restyle()
 
-        self._content_layout.setContentsMargins(24, 20, 24, 24)
+        self._apply_margins()
         self._fit_activity()
         self._chat_scroll.setMaximumHeight(round(_CHAT_MAX_HEIGHT * self._style_manager.zoom_factor()))
         self._input.set_margin(round(6 * self._style_manager.zoom_factor()))
         icon_size = round(18 * self._style_manager.zoom_factor())
-        self._send_button.setIcon(_send_icon(self._style_manager.get_color(ColorRole.TEXT_RECOMMENDED), icon_size))
+        self._send_button.setIcon(_send_icon(
+            self._style_manager.get_color(ColorRole.TEXT_RECOMMENDED), icon_size, not self._language_manager.left_to_right()
+        ))
         self._send_button.setIconSize(QSize(icon_size, icon_size))
         tool_size = round(16 * self._style_manager.zoom_factor())
         for button, icon in ((self._attach_button, "paperclip"), (self._settings_button, "cog")):
@@ -4465,6 +4676,8 @@ class MissionWidget(QWidget):
         sm = self._style_manager
         zoom = sm.zoom_factor()
         fs = sm.base_font_size() * zoom
+        # Spaced-out capitals suit Latin labels, but spacing pulls Arabic's joined letters apart.
+        tracking = 1.0 if self._language_manager.left_to_right() else 0.0
         radius = round(18 * zoom)
         small_radius = round(10 * zoom)
         control_height = round(30 * zoom)
@@ -4607,7 +4820,7 @@ class MissionWidget(QWidget):
                 color: {muted};
                 font-size: {fs * 0.75:.1f}pt;
                 font-weight: bold;
-                letter-spacing: 1px;
+                letter-spacing: {1 * tracking:g}px;
             }}
             #MissionWidget QLabel#MissionGlanceValue {{
                 color: {heading};
@@ -4644,13 +4857,13 @@ class MissionWidget(QWidget):
                 color: {readable(tone_color(MissionTone.SUCCESS), card_color).name()};
                 font-size: {fs * 0.78:.1f}pt;
                 font-weight: bold;
-                letter-spacing: 1.5px;
+                letter-spacing: {1.5 * tracking:g}px;
             }}
             #MissionWidget QLabel#MissionReportSection {{
                 color: {muted};
                 font-size: {fs * 0.76:.1f}pt;
                 font-weight: bold;
-                letter-spacing: 1.5px;
+                letter-spacing: {1.5 * tracking:g}px;
             }}
             #MissionWidget QLabel#MissionReportBody {{
                 color: {text};
@@ -4802,7 +5015,7 @@ class MissionWidget(QWidget):
                 color: {muted};
                 font-size: {fs * 0.8:.1f}pt;
                 font-weight: 600;
-                letter-spacing: 1px;
+                letter-spacing: {1 * tracking:g}px;
             }}
             QPushButton#MissionExampleChip {{
                 background-color: {page};
@@ -4832,7 +5045,7 @@ class MissionWidget(QWidget):
                 color: {accent_text.name()};
                 font-size: {fs * 0.76:.1f}pt;
                 font-weight: bold;
-                letter-spacing: 2px;
+                letter-spacing: {2 * tracking:g}px;
             }}
             #MissionWidget QLabel#MissionTitle {{
                 color: {text};
@@ -4848,9 +5061,57 @@ class MissionWidget(QWidget):
                 font-weight: bold;
             }}
             #MissionGuide {{
-                background-color: {blend(tone_color(MissionTone.ACCENT), 0.05, card_color).name()};
-                border: 1px solid {tone_rgba(MissionTone.ACCENT, 0.22)};
+                background-color: {blend(tone_color(MissionTone.ACCENT), 0.02, blend(page_color, 0.5, card_color)).name()};
+                border: 1px solid {line};
+                border-radius: {radius * 2}px;
+            }}
+            #MissionGuideTile {{
+                background-color: {card};
+                border: 1px solid {line};
+                border-radius: {round(radius * 1.6)}px;
+            }}
+            #MissionGuideRule {{
+                background-color: {line};
+                border: none;
+            }}
+            #MissionWidget QLabel#MissionGuideTitle {{
+                color: {text};
+                font-size: {fs * 1.45:.1f}pt;
+                font-weight: 600;
+            }}
+            #MissionWidget QLabel#MissionGuideSubtitle {{
+                color: {muted};
+                font-size: {fs * 1.08:.1f}pt;
+            }}
+            #MissionWidget QPushButton#MissionGuideDismiss {{
+                background: transparent;
+                border: none;
                 border-radius: {radius}px;
+                color: {muted};
+                font-size: {fs * 1.05:.1f}pt;
+                padding: 4px 8px;
+            }}
+            #MissionWidget QPushButton#MissionGuideDismiss:hover {{
+                background-color: {tone_rgba(MissionTone.NEUTRAL, 0.12)};
+                color: {text};
+            }}
+            #MissionWidget QLabel#MissionGuideNumber {{
+                color: {tone_rgba(MissionTone.NEUTRAL, 0.55)};
+                font-size: {fs * 1.45:.1f}pt;
+                font-weight: 600;
+                letter-spacing: {1 * tracking:g}px;
+            }}
+            #MissionWidget QLabel#MissionGuideHeading {{
+                color: {text};
+                font-size: {fs * 1.25:.1f}pt;
+                font-weight: 600;
+            }}
+            #MissionWidget QLabel#MissionGuideText {{
+                color: {muted};
+                font-size: {fs * 1.02:.1f}pt;
+            }}
+            #MissionWidget QLabel#MissionGuideFooter {{
+                color: {muted};
             }}
             #MissionFileRow {{
                 background: transparent;
@@ -5180,7 +5441,7 @@ class MissionWidget(QWidget):
                 color: {link};
                 font-size: {fs * 0.72:.1f}pt;
                 font-weight: bold;
-                letter-spacing: 1px;
+                letter-spacing: {1 * tracking:g}px;
             }}
             #MissionWidget QLabel#MissionStepProgressText {{
                 font-size: {fs * 0.92:.1f}pt;

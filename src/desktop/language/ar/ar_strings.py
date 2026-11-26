@@ -708,6 +708,10 @@ def get_arabic_strings() -> LanguageStrings:
         mission_task_completed="مكتملة",
         mission_task_blocked="متعثّرة",
         mission_agents_title="الوكلاء",
+        mission_lead_look="مظهر القائد",
+        mission_look_classic="كلاسيكي",
+        mission_look_rounded="دائري",
+        mission_lead_look_tip="اختر مظهر الروبوت الذي يقود كل مهمة. يأتي المساعدون بالمظهرين.",
         mission_agents_active="{0} نشط",
         mission_agents_empty="لا توجد محادثة مفتوحة لهذه المهمة. افتح المحادثة الرئيسية للمتابعة.",
         mission_agent_lead="قائد المهمة",
@@ -793,12 +797,9 @@ def get_arabic_strings() -> LanguageStrings:
         mission_decision_not_undoable="لا يمكن لـ Humbug التراجع عنه بعد الموافقة.",
         mission_review_request="مراجعة",
         mission_status_paused="متوقفة مؤقتًا",
-        mission_say_paused="متوقف مؤقتًا. سأُنهي ما أعمل عليه الآن، ثم أنتظرك.",
+        mission_say_paused="متوقف مؤقتًا. توقفتُ حيث كنت، وسأنتظرك.",
         mission_pause="إيقاف مؤقت",
-        mission_pause_tip=(
-            "دع ما يعمل الآن ينتهي، ثم انتظر: لا يُوافَق على أي شيء تلقائيًا "
-            "ولا يتابع القائد من تلقاء نفسه حتى تتابع أنت"
-        ),
+        mission_pause_tip="أوقف ما يعمل الآن وانتظر: لا يُوافَق على أي شيء تلقائيًا ولا يتابع القائد حتى تتابع أنت",
         mission_unpause="متابعة",
         mission_paused_notice=(
             "هذه المهمة متوقفة مؤقتًا. لا يُوافَق على أي شيء تلقائيًا "
@@ -983,21 +984,17 @@ def get_arabic_strings() -> LanguageStrings:
             "الذكاء الاصطناعي، أو اختر نموذجًا آخر من الترس بجانب مربع الرسالة."
         ),
         mission_failed_cut_short="توقفت خدمة الذكاء الاصطناعي قبل إكمال ردها. اضغط إعادة المحاولة لتطلبه من جديد.",
-        mission_guide_title="كيف يعمل مركز المهام",
+        mission_guide_title="مركز المهام",
         mission_guide_dismiss="فهمت",
         mission_guide_link="كيف يعمل مركز المهام؟",
-        mission_guide_1_title="قل ما تريد إنجازه",
-        mission_guide_1=(
-            "صِف المهمة في المربع أدناه. يخطط لها قائد ذكاء اصطناعي ويستعين بمساعدين للأجزاء التي يمكن "
-            "تنفيذها بالتوازي."
-        ),
-        mission_guide_2_title="شاهده يعمل",
-        mission_guide_2="تُعرض الخطة والروبوتات التي تنفذها وما تقوله لحظة بلحظة. يمكنك مراسلة القائد في أي وقت.",
+        mission_guide_subtitle="من فكرتك إلى التنفيذ، وأنت صاحب القرار.",
+        mission_guide_footer="إشراف بشري · تعاون مباشر · تغييرات قابلة للتراجع",
+        mission_guide_1_title="حدِّد مهمتك",
+        mission_guide_1="صِف هدفك. يضع قائدك الذكي خطة ويجمع الوكلاء المناسبين.",
+        mission_guide_2_title="تابع سير العمل",
+        mission_guide_2="تابع التقدم مباشرةً، وراقب الوكلاء، وتعاون مع قائدك الذكي.",
         mission_guide_3_title="ابقَ صاحب القرار",
-        mission_guide_3=(
-            "كل ما يغيّر الملفات أو يشغّل الأوامر ينتظر قرارك في صندوق القرارات، ما لم تسمح للموافقة "
-            "التلقائية بالتعامل معه. ويمكن التراجع عن كل تعديل على الملفات."
-        ),
+        mission_guide_3="وافق على الإجراءات الحساسة وتراجع عن تغييرات الملفات متى احتجت.",
         mission_run_again="تشغيل مرة أخرى",
         mission_archive="أرشفة",
         mission_unarchive="إخراج من الأرشيف",
@@ -1020,7 +1017,7 @@ def get_arabic_strings() -> LanguageStrings:
         mission_files_created="أُنشئ {0}",
         mission_files_changed="عُدّل {0}",
         mission_files_deleted="حُذف {0}",
-        mission_files_lines="+{0} −{1} سطر",
+        mission_files_lines="أُضيف {0} وحُذف {1} سطرًا",
         mission_file_lines="أُضيف {0} سطر وحُذف {1}",
         mission_file_review="عرض التغييرات",
         mission_file_review_tip="قارن {0} كما كان قبل هذه المهمة بما هو عليه الآن",
@@ -1076,11 +1073,15 @@ def get_arabic_strings() -> LanguageStrings:
         mission_status_plan_ready="الخطة جاهزة",
         mission_say_plan_ready="هذه خطتي. هل أبدأ؟",
         mission_say_plan_edited="لقد غيّرت الخطة. هل أتابع بالخطة المعدّلة؟",
+        mission_say_paused_edited="لقد غيّرت الخطة. سأتّبع الخطة المعدّلة عندما تستأنف.",
         mission_step_skipped="متخطاة",
         mission_step_skip="تخطَّ",
         mission_step_unskip="أدرِج",
         mission_step_move_tip="اسحب لنقل هذه الخطوة، أو اضغط Alt+أعلى أو Alt+أسفل",
-        mission_plan_arrange_hint="اسحب الخطوات لتغيير ترتيبها، أو تخطَّ ما لا تريده، قبل بدء العمل.",
+        mission_plan_arrange_hint=(
+            "اسحب الخطوات التي لم تبدأ لتغيير ترتيبها، أو تخطَّ ما لا تريده. يتّبع القائد الخطة "
+            "المعدّلة عند بدء العمل أو استئنافه."
+        ),
         mission_plan_yes="نعم، ابدأ",
         mission_plan_no="لا",
         mission_composer_plan_change="أخبر القائد بما يجب تغييره في الخطة… ({key} للإرسال)",

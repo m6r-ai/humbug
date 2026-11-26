@@ -10,10 +10,10 @@ from unittest import mock
 
 import pytest
 
-from PySide6.QtCore import QEvent, QPoint, QPointF, QPropertyAnimation, QRectF, Qt
-from PySide6.QtGui import QFontMetrics, QImage, QMouseEvent, QPainterPath, QRegion, QWheelEvent
+from PySide6.QtCore import QEvent, QPoint, QPointF, QPropertyAnimation, QRect, QRectF, Qt
+from PySide6.QtGui import QColor, QFontMetrics, QImage, QMouseEvent, QPainterPath, QRegion, QWheelEvent
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QFrame, QPushButton, QToolButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QBoxLayout, QFrame, QPushButton, QToolButton, QVBoxLayout, QWidget
 
 from ai import AIConversation, AIConversationEvent, AIMessage, AIMessageSource
 from ai_tool import AIToolApprovalKind, AIToolCall
@@ -36,11 +36,13 @@ from desktop.mission_tab import mission_network as mission_network_module
 from desktop.mission_tab.mission_display import (
     MissionActivityView, MissionAgentView, MissionChatView, MissionCheckView, MissionChipView, MissionDecisionView,
     MissionDiffLineKind,
-    MissionDiffLineView, MissionDiffView, MissionFileView, MissionGlanceView,
+    MissionDiffLineView, MissionDiffView, MissionFileView, MissionGlanceView, MissionRobotLook,
     MissionHeaderView, MissionPhaseView,
     MissionResultView, MissionStatTarget,
     MissionStatView, MissionStepState, MissionStepView, MissionTone, MissionView
 )
+from desktop.language.language_code import LanguageCode
+from desktop.language.language_manager import LanguageManager
 from desktop.message_box import MessageBoxButton
 from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.mission_tab.mission_mode_menus import MissionModeMenus
@@ -659,6 +661,164 @@ def _agent_view(context_id: str, is_lead: bool = False, parent_id: str = "", act
         tone=MissionTone.NEUTRAL, busy=activity in ("working", "thinking"), clickable=not is_lead,
         name=context_id.upper(), parent_id=parent_id, activity=activity,
     )
+
+
+@pytest.fixture
+def arabic(qapp):
+    """Switch Humbug to Arabic, right to left, as the main window does, and back again afterwards."""
+    manager = LanguageManager()
+    original = manager.current_language()
+    manager.set_language(LanguageCode.AR)
+    qapp.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+    yield
+    manager.set_language(original)
+    qapp.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+
+
+class TestRightToLeft:
+    """In Arabic Mission Control reads from right to left: arrows, icons, rows and spacing follow."""
+
+    def test_send_icon_points_the_way_the_text_reads(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The paper plane flies right in English and left in Arabic."""
+        left_to_right = mission_widget_module._send_icon(QColor("black"), 24).pixmap(24, 24).toImage()  # pylint: disable=protected-access
+        right_to_left = mission_widget_module._send_icon(QColor("black"), 24, True).pixmap(24, 24).toImage()  # pylint: disable=protected-access
+        assert right_to_left == left_to_right.mirrored(True, False)
+
+    def test_arrows_spacing_and_rows_follow_arabic(self, arabic) -> None:  # pylint: disable=unused-argument
+        """Folded things point left, labels are not letter-spaced, and wrapping buttons start at the right."""
+        widget = MissionWidget()
+        widget.apply_style()
+        assert widget._closed_arrow() == "◀"  # pylint: disable=protected-access
+        assert "letter-spacing: 1px" not in widget.styleSheet() and "letter-spacing: 0px" in widget.styleSheet()
+
+        widget.set_mission(dataclasses.replace(_view(completed=True, stage=3), report_files=["a.md", "b.md"]))
+        widget.resize(900, 800)
+        widget._report_files_layout.setGeometry(QRect(0, 0, 600, 40))  # pylint: disable=protected-access
+        first = widget._report_files_layout.itemAt(0).geometry()  # pylint: disable=protected-access
+        second = widget._report_files_layout.itemAt(1).geometry()  # pylint: disable=protected-access
+        assert first.right() == 599 and second.right() < first.left()
+        widget.deleteLater()
+
+    def test_code_in_a_diff_stays_left_to_right(self, arabic) -> None:  # pylint: disable=unused-argument
+        """A diff shows code, which reads left to right whatever the language."""
+        panel = mission_diff_module.FileDiffPanel([MissionDiffLineView(MissionDiffLineKind.ADDED, "x = 1", "", "1")])
+        assert panel.layoutDirection() == Qt.LayoutDirection.LeftToRight
+        panel.deleteLater()
+
+    def test_first_answer_comes_first_in_arabic(self, arabic) -> None:  # pylint: disable=unused-argument
+        """Yes sits to the right of No in Arabic, where reading starts."""
+        view = AgentNetworkView()
+        view.resize(600, 500)
+        view.set_agents(
+            [dataclasses.replace(_agent_view("lead", is_lead=True), speech="Shall I start?", asks_to_start=True)],
+            yes_label="Yes", no_label="No",
+        )
+        view.show()
+        # Once the remark has been typed out, the buttons are placed under it.
+        view._phase += 60  # pylint: disable=protected-access
+        view._place_buttons()  # pylint: disable=protected-access
+        buttons = {b.text(): b for b in view.findChildren(QPushButton) if b.text() in ("Yes", "No")}
+        assert buttons["Yes"].geometry().left() > buttons["No"].geometry().left()
+        view.deleteLater()
+
+
+class TestKandura:
+    """In Arabic the robots wear a kandura, with a ghutra and agal; in other languages they do not."""
+
+    def test_robots_dress_when_humbug_speaks_arabic(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Switching to Arabic dresses the robots, and switching back undresses them."""
+        manager = LanguageManager()
+        original = manager.current_language()
+        widget = MissionWidget()
+        try:
+            manager.set_language(LanguageCode.AR)
+            widget.retranslate()
+            assert widget._agent_network.dressed()  # pylint: disable=protected-access
+
+            manager.set_language(LanguageCode.EN)
+            widget.retranslate()
+            assert not widget._agent_network.dressed()  # pylint: disable=protected-access
+
+        finally:
+            manager.set_language(original)
+            widget.deleteLater()
+
+    def test_dressed_robots_are_drawn_in_every_state(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Robots in a kandura draw whatever they are doing, and look different from plain ones."""
+        view = AgentNetworkView()
+        view.resize(500, 400)
+        view.set_agents([
+            _agent_view("lead", is_lead=True, activity="thinking"),
+            _agent_view("a", parent_id="lead", activity="working"),
+            _agent_view("b", parent_id="lead", activity="waiting"),
+            _agent_view("c", parent_id="lead", activity="error"),
+        ])
+        plain = view.grab().toImage()
+        view.set_dressed(True)
+        dressed = view.grab().toImage()
+        assert plain != dressed
+        view.deleteLater()
+
+
+class TestRobotLooks:
+    """The lead looks as the user chose; helpers come in both looks; the choice never names a gender."""
+
+    def test_lead_looks_as_chosen_and_helpers_keep_their_look(self, mindspace_sandbox, qapp, monkeypatch) -> None:  # pylint: disable=unused-argument
+        """The lead follows the setting; each helper always looks the same, and both looks appear among helpers."""
+        settings = types.SimpleNamespace(mission_lead_look="rounded")
+        monkeypatch.setattr(mission_tab_module.UserManager, "settings", lambda _self: settings)
+        assert MissionTab._robot_look(True, "Atlas") == MissionRobotLook.ROUNDED  # pylint: disable=protected-access
+        settings.mission_lead_look = "classic"
+        assert MissionTab._robot_look(True, "Atlas") == MissionRobotLook.CLASSIC  # pylint: disable=protected-access
+
+        names = ["Atlas", "Nova", "Iris", "Orion", "Vega", "Lumi", "Sol", "Milo"]
+        looks = [MissionTab._robot_look(False, name) for name in names]  # pylint: disable=protected-access
+        assert looks == [MissionTab._robot_look(False, name) for name in names]  # pylint: disable=protected-access
+        assert set(looks) == {MissionRobotLook.CLASSIC, MissionRobotLook.ROUNDED}
+
+    def test_choosing_a_look_is_kept_and_shown(self, mindspace_sandbox, qapp, monkeypatch) -> None:  # pylint: disable=unused-argument
+        """Clicking a look asks for it, keeps it for the user, and marks it chosen."""
+        tab = MissionTab("mission")
+        kept: list[str] = []
+        monkeypatch.setattr(
+            mission_tab_module.UserManager, "update_settings_fields",
+            lambda _self, **fields: kept.append(fields["mission_lead_look"])
+        )
+        widget = tab._widget  # pylint: disable=protected-access
+        widget._look_buttons["rounded"].click()  # pylint: disable=protected-access
+        assert kept == ["rounded"]
+        assert widget._look_buttons["rounded"].objectName() == "MissionPlanFilterActive"  # pylint: disable=protected-access
+        assert widget._look_buttons["classic"].objectName() == "MissionPlanFilter"  # pylint: disable=protected-access
+        tab.deleteLater()
+
+    def test_wording_never_names_a_gender(self) -> None:
+        """The look's labels and tip describe shape only, in every language."""
+        words = ("girl", "boy", "female", "male", "woman", "man ", "fille", "garçon", "فتاة", "ولد", "أنثى", "ذكر")
+        for code in (LanguageCode.EN, LanguageCode.FR, LanguageCode.AR):
+            manager = LanguageManager()
+            original = manager.current_language()
+            manager.set_language(code)
+            strings = manager.strings()
+            text = " ".join((
+                strings.mission_lead_look, strings.mission_look_classic, strings.mission_look_rounded,
+                strings.mission_lead_look_tip
+            )).lower()
+            manager.set_language(original)
+            assert not any(word in text for word in words)
+
+    def test_both_looks_are_drawn_plain_and_dressed(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The rounded look is drawn differently from the classic one, plain and in traditional dress."""
+        images = []
+        for dressed in (False, True):
+            for look in (MissionRobotLook.CLASSIC, MissionRobotLook.ROUNDED):
+                view = AgentNetworkView()
+                view.resize(400, 300)
+                view.set_dressed(dressed)
+                view.set_agents([dataclasses.replace(_agent_view("lead", is_lead=True), look=look)])
+                images.append(view.grab().toImage())
+                view.deleteLater()
+
+        assert images[0] != images[1] and images[2] != images[3] and images[0] != images[2]
 
 
 class TestAgentNames:
@@ -1429,6 +1589,32 @@ class TestPauseControls:
         assert not widget._unpause_button.isHidden() and not widget._paused_notice.isHidden()  # pylint: disable=protected-access
         widget._unpause_button.click()  # pylint: disable=protected-access
         assert asked == ["pause", "continue"]
+        widget.deleteLater()
+
+
+class TestNarrowWindows:
+    """Mission Control fits the window at any width, wrapping and stacking rather than being cut off."""
+
+    @pytest.mark.parametrize("width", [1400, 1050, 900, 700, 520, 360])
+    def test_paused_mission_with_a_plan_fits_the_window(self, qapp, width: int) -> None:  # pylint: disable=unused-argument
+        """No part of a paused mission's page asks for more width than the window gives it."""
+        widget = MissionWidget()
+        view = _view(completed=False, stage=2)
+        steps = [
+            dataclasses.replace(_step(n, MissionStepState.PENDING), arrangeable=True, title="Add synthetic blog data")
+            for n in ("1", "2", "3")
+        ]
+        widget.set_mission(dataclasses.replace(
+            view, steps=steps,
+            header=dataclasses.replace(view.header, paused=True, can_stop=True, title="Blog page for the CBDC POC"),
+        ))
+        widget.show()
+        widget.resize(width, 900)
+        qapp.processEvents()
+
+        content = widget._scroll.widget()  # pylint: disable=protected-access
+        assert content.minimumSizeHint().width() <= widget._scroll.viewport().width()  # pylint: disable=protected-access
+        assert widget.minimumSizeHint().width() <= width
         widget.deleteLater()
 
 
@@ -4301,6 +4487,7 @@ class TestPlanReady:
         snapshot = _snapshot(MissionStatus.PLAN_READY, agents=[lead])
         snapshot.mission.tasks.append(MissionTask(task_id="2", title="Write", status=MissionTaskStatus.STOPPED))
         snapshot.mission.skipped_tasks = ["2"]
+        snapshot.mission.reviewed_order = ["1", "2"]
         view = tab._mission_view(snapshot)  # pylint: disable=protected-access
 
         assert view.agents[0].speech == "You changed the plan. Shall I go ahead with the changed plan?"
@@ -4332,6 +4519,46 @@ class TestPlanReady:
         assert len(rows) == 1
         assert not rows[0].findChildren(QLabel, "MissionStepHandle")
         assert not [b for b in rows[0].findChildren(QPushButton) if b.text() == "Skip"]
+        widget.deleteLater()
+
+    def test_paused_mission_lets_only_steps_not_started_move(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """While paused, steps not started can be rearranged; done and running steps cannot."""
+        tab = MissionTab("mission")
+        lead = MissionAgent("lead", "Mission-1", True, MissionAgentState.IDLE, "")
+        snapshot = _snapshot(MissionStatus.PAUSED, agents=[lead])
+        snapshot.mission.tasks = [
+            MissionTask(task_id="1", title="Read", status=MissionTaskStatus.COMPLETED),
+            MissionTask(task_id="2", title="Write", status=MissionTaskStatus.IN_PROGRESS),
+            MissionTask(task_id="3", title="Link", status=MissionTaskStatus.PENDING),
+            MissionTask(task_id="4", title="Check", status=MissionTaskStatus.STOPPED),
+        ]
+        snapshot.mission.skipped_tasks = ["4"]
+        snapshot.mission.reviewed_order = ["1", "2", "4", "3"]
+        view = tab._mission_view(snapshot)  # pylint: disable=protected-access
+
+        assert [step.arrangeable for step in view.steps] == [False, False, True, True]
+        assert view.agents[0].speech == "You changed the plan. I'll follow the changed plan when you resume."
+        assert not view.agents[0].asks_to_start
+        tab.deleteLater()
+
+    def test_moves_never_shift_a_step_that_has_started(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Dragging or nudging a step past one under way or done is not done."""
+        widget = MissionWidget()
+        steps = [
+            _step("1", MissionStepState.DONE),
+            dataclasses.replace(_step("2", MissionStepState.PENDING), arrangeable=True),
+            dataclasses.replace(_step("3", MissionStepState.PENDING), arrangeable=True),
+        ]
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), steps=steps))
+        asked: list[list[str]] = []
+        widget.plan_rearranged.connect(lambda order, _skipped: asked.append(order))
+
+        widget._move_step("3", "1", False)  # pylint: disable=protected-access
+        widget._nudge_step("2", -1)  # pylint: disable=protected-access
+        assert not asked
+
+        widget._move_step("3", "2", False)  # pylint: disable=protected-access
+        assert asked == [["1", "3", "2"]]
         widget.deleteLater()
 
     def test_alt_arrows_move_a_step(self, qapp) -> None:  # pylint: disable=unused-argument
@@ -5065,7 +5292,7 @@ class TestGuide:
         answers: list[bool] = []
         widget.guide_dismissed.connect(answers.append)
 
-        widget._guide_dismiss.click()  # pylint: disable=protected-access
+        widget._guide._dismiss.click()  # pylint: disable=protected-access
         widget.set_guide_visible(False)
         assert widget._guide.isHidden() and not widget._guide_link.isHidden()  # pylint: disable=protected-access
         widget._guide_link.click()  # pylint: disable=protected-access
@@ -5076,8 +5303,21 @@ class TestGuide:
     def test_guide_has_three_steps(self, qapp) -> None:  # pylint: disable=unused-argument
         """The guide's three steps each have a heading and an explanation."""
         widget = MissionWidget()
-        assert len(widget._guide_steps) == 3  # pylint: disable=protected-access
-        assert all(heading.text() and body.text() for heading, body in widget._guide_steps)  # pylint: disable=protected-access
+        assert len(widget._guide._steps) == 3  # pylint: disable=protected-access
+        assert all(heading.text() and body.text() for heading, body in widget._guide._steps)  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    @pytest.mark.parametrize("width, side_by_side", [(1200, True), (500, False)])
+    def test_steps_sit_side_by_side_only_when_there_is_room(self, qapp, width: int, side_by_side: bool) -> None:  # pylint: disable=unused-argument
+        """On a wide window the steps sit side by side; on a narrow one they stack, one under another."""
+        widget = MissionWidget()
+        widget.set_guide_visible(True)
+        widget.show()
+        widget.resize(width, 900)
+        qapp.processEvents()
+
+        direction = widget._guide._steps_layout.direction()  # pylint: disable=protected-access
+        assert (direction == QBoxLayout.Direction.LeftToRight) == side_by_side
         widget.deleteLater()
 
     def test_dismissal_is_saved_for_the_user(self, mindspace_sandbox, qapp, monkeypatch) -> None:  # pylint: disable=unused-argument

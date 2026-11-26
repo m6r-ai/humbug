@@ -2,8 +2,10 @@
 
 import math
 
-from PySide6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, QSize, Qt, QTimer
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPaintEvent, QPen, QShowEvent
+from PySide6.QtCore import QEasingCurve, QPointF, QPropertyAnimation, QRectF, QSize, Qt, QTimer
+from PySide6.QtGui import (
+    QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPaintEvent, QPen, QShowEvent
+)
 from PySide6.QtWidgets import QGraphicsOpacityEffect, QSizePolicy, QWidget
 
 from desktop.color_role import ColorRole
@@ -486,4 +488,131 @@ class ProgressRing(QWidget):
         _page, card = surface_colors()
         painter.setPen(readable(style.get_color(ColorRole.TEXT_PRIMARY), card))
         painter.drawText(rect, int(Qt.AlignmentFlag.AlignCenter), f"{round(self._fraction * 100)}%")
+        painter.end()
+
+
+def guide_color(step: int) -> QColor:
+    """
+    Return the colour of a step in the guide to Mission Control: the accent, a violet beside it, then success.
+
+    Args:
+        step: The step, counted from 1
+    """
+    accent = tone_color(MissionTone.ACCENT)
+    if step == 1:
+        return accent
+
+    if step == 2:
+        return QColor.fromHslF((accent.hslHueF() + 0.11) % 1.0, accent.hslSaturationF(), accent.lightnessF())
+
+    return tone_color(MissionTone.SUCCESS)
+
+
+class GuideIcon(QWidget):
+    """
+    A line icon in the guide to Mission Control, optionally on a softly tinted square.
+
+    The icons are an orbit for Mission Control itself, a speech bubble for asking, two linked agents
+    for the work being done, and a shield with a tick for staying in charge.
+    """
+
+    # Each icon's colour, as a step of the guide: the orbit and the bubble share the accent.
+    _STEPS = {"orbit": 1, "bubble": 1, "agents": 2, "shield": 3}
+
+    def __init__(self, kind: str, size: int, tinted: bool, parent: QWidget | None = None) -> None:
+        """
+        Initialise the icon.
+
+        Args:
+            kind: Which icon: "orbit", "bubble", "agents" or "shield"
+            size: Its width and height before zooming
+            tinted: Whether it sits on a softly tinted square
+            parent: Parent widget
+        """
+        super().__init__(parent)
+        self._kind = kind
+        self._size = size
+        self._tinted = tinted
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+
+    def sizeHint(self) -> QSize:
+        size = _scaled(self._size)
+        return QSize(size, size)
+
+    def minimumSizeHint(self) -> QSize:
+        return self.sizeHint()
+
+    def paintEvent(self, event: QPaintEvent) -> None:
+        """Draw the square, if tinted, and the icon's lines."""
+        super().paintEvent(event)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        color = guide_color(self._STEPS[self._kind])
+        size = float(min(self.width(), self.height()))
+        if self._tinted:
+            _page, card = surface_colors()
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(blend(color, 0.13, card))
+            painter.drawRoundedRect(QRectF(0, 0, size, size), size * 0.24, size * 0.24)
+            glyph = size * 0.5
+
+        else:
+            glyph = size * 0.86
+
+        offset = (size - glyph) / 2
+        if self.isRightToLeft():
+            painter.translate(size, 0)
+            painter.scale(-1, 1)
+
+        painter.translate(offset, offset)
+        pen = QPen(color, max(1.4, glyph * 0.085))
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+
+        def at(x: float, y: float) -> QPointF:
+            return QPointF(x * glyph, y * glyph)
+
+        if self._kind == "orbit":
+            painter.drawEllipse(at(0.5, 0.5), glyph * 0.15, glyph * 0.15)
+            painter.drawArc(QRectF(at(0.06, 0.06), at(0.94, 0.94)), 70 * 16, 250 * 16)
+            painter.drawEllipse(at(0.8, 0.14), glyph * 0.09, glyph * 0.09)
+            painter.drawEllipse(at(0.2, 0.86), glyph * 0.07, glyph * 0.07)
+
+        elif self._kind == "bubble":
+            bubble = QPainterPath()
+            bubble.addEllipse(QRectF(at(0.04, 0.08), at(0.96, 0.84)))
+            tail = QPainterPath()
+            tail.moveTo(at(0.2, 0.7))
+            tail.lineTo(at(0.08, 0.96))
+            tail.lineTo(at(0.42, 0.82))
+            tail.closeSubpath()
+            painter.drawPath(bubble.united(tail))
+
+        elif self._kind == "agents":
+            radius = glyph * 0.08
+            painter.drawRoundedRect(QRectF(at(0.04, 0.04), at(0.42, 0.42)), radius, radius)
+            painter.drawRoundedRect(QRectF(at(0.58, 0.58), at(0.96, 0.96)), radius, radius)
+            link = QPainterPath()
+            link.moveTo(at(0.23, 0.42))
+            link.lineTo(at(0.23, 0.77))
+            link.lineTo(at(0.58, 0.77))
+            painter.drawPath(link)
+
+        else:
+            shield = QPainterPath()
+            shield.moveTo(at(0.5, 0.02))
+            shield.lineTo(at(0.9, 0.18))
+            shield.cubicTo(at(0.9, 0.6), at(0.76, 0.84), at(0.5, 0.98))
+            shield.cubicTo(at(0.24, 0.84), at(0.1, 0.6), at(0.1, 0.18))
+            shield.closeSubpath()
+            painter.drawPath(shield)
+            tick = QPainterPath()
+            tick.moveTo(at(0.34, 0.5))
+            tick.lineTo(at(0.46, 0.62))
+            tick.lineTo(at(0.67, 0.38))
+            painter.drawPath(tick)
+
         painter.end()
