@@ -846,6 +846,13 @@ class LanguageStrings:
     mission_guide_title: str
     mission_guide_dismiss: str
     mission_guide_link: str
+    mission_intro_replay: str
+    mission_options_title: str
+    mission_options_ai_settings: str
+    mission_options_tip: str
+    mission_option_chip_review: str
+    mission_option_chip_level: str
+    mission_option_chip_off: str
     mission_guide_subtitle: str
     mission_guide_footer: str
     mission_guide_1_title: str
@@ -975,8 +982,6 @@ class LanguageStrings:
     mission_auto_approve_off_note: str
     mission_auto_approve_safe_note: str
     mission_auto_approve_all_note: str
-    mission_scroll_left: str
-    mission_scroll_right: str
     mission_waiting_elsewhere: str
     mission_waiting_elsewhere_many: str
     mission_go_to_waiting: str

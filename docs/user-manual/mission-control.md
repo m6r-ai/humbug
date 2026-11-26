@@ -54,25 +54,37 @@ The new-mission screen opens with a short animation of Humbug's logo arriving. T
 light fly in and meet, the logo turns into view out of the flash with rings of light circling it,
 a sheen crosses it, and it comes to rest over a pedestal of light with its reflection on the
 floor. It plays once, the first time you open the screen in a Mission Control tab; after that,
-the picture rests on the logo. The Decision Inbox is not shown
+the picture rests on the logo. The round button in its top corner plays it again whenever you
+like, even with **Reduce motion** on, since you asked to see it. The Decision Inbox is not shown
 here while nothing is waiting, so the welcome has the whole width; if a conversation outside any
 mission asks for an approval, the inbox appears beside it.
 
 Type what you want to achieve in the box at the bottom (**Tell Humbug what you want to
 achieve…**) and press **Ctrl+Enter** (macOS: **Cmd+Enter**) or click the send button (the paper plane), just as you
-would in a conversation. **Enter** on its own starts a new line. You can also click one of the example objectives to
-fill in the box.
+would in a conversation. **Enter** on its own starts a new line. Until you have run your first mission, the screen
+also offers a few example objectives; click one to fill in the box.
+
+Below the title, the screen keeps to what starting needs: the **Auto-approve** choice. Hover over
+a level to read what it means. **Off** needs no explaining, so only **Safe actions** and
+**Everything**, which approve requests on your behalf, say what they do in a line under the choice.
+
+The options you choose once and rarely change are behind the cog at the right of the box: on the
+new-mission screen it opens **New mission options**, with **Start every new mission at this level**,
+**Let me review the plan before work starts**, **Add done checks (optional)**, **Save what you
+typed as a template**, and **AI settings…**. An option that is on shows as a small chip under the
+**Auto-approve** choice, such as **Plan review ✕**; click the chip to turn the option off.
 
 ### Starting every mission at the same auto-approve level
 
 New missions start with auto-approve **Off**. If you always want **Safe actions** for a project,
-choose it on the new-mission screen and tick **Start every new mission at this level**; clear the
-tick to go back to Off. The choice is kept with the mindspace's settings. **Everything** can never
+choose it on the new-mission screen and tick **Start every new mission at this level** in the
+cog's **New mission options**; clear the tick, or click the **Always this level** chip, to go back
+to Off. The choice is kept with the mindspace's settings. **Everything** can never
 be kept this way: it has to be chosen, and confirmed, for each mission.
 
 ### Reviewing the plan first
 
-Tick **Let me review the plan before work starts** on the new-mission screen, and the lead drafts
+Tick **Let me review the plan before work starts** in the cog's **New mission options**, and the lead drafts
 its plan and then waits, without starting any task, delegating or changing anything. The mission
 shows **Plan ready**, and Mission Control tells you, as it does when a decision is waiting. The
 lead's speech bubble asks **Here's my plan. Shall I start?** with two buttons: **Yes, start** lets
@@ -124,7 +136,8 @@ Done checks are optional. Without them a mission is accomplished when its lead s
 you asked for is done. With them, it is accomplished only when the lead reports that every check
 passed, so you get evidence rather than the lead's word.
 
-Tick **Add done checks (optional)** on the new-mission screen and write one check per line. A check
+Tick **Add done checks (optional)** in the cog's **New mission options**, and a box for them appears on
+the new-mission screen; write one check per line. A check
 can be a command to run, such as `npm test passes` or `python -m tools.code_checker passes`, or
 something to confirm, such as `POC/about.html is linked from the dashboard`. Leave the box ticked
 but empty, or untick it, and the mission has no checks.
@@ -160,8 +173,8 @@ What these checks can and cannot do:
 ### Templates
 
 A request you make again and again can be kept as a template. Type it in the box, click **Save
-what you typed as a template** on the new-mission screen, and give it a name. Your templates are
-listed under **Your templates**: click one to put its request in the box, ready to change or send
+what you typed as a template** in the cog's **New mission options**, and give it a name. On the
+new-mission screen your templates are listed just above the box, under **Your templates**: click one to put its request in the box, ready to change or send
 as it is, and click its **✕** to delete it. Saving under a name you already use replaces that
 template. Templates belong to the mindspace and are kept with its settings, so each project has
 its own.
@@ -172,7 +185,8 @@ The box works like a conversation's input box:
   files as the text in them. You are asked first if a file is larger than 100 KB. Each attached file is shown
   above the box; click its **×** to remove it. The files go to the mission lead with your message, and you still
   need to type a message to send them.
-- Click the cog to change the AI settings, such as the model. Before a mission starts, these are the settings its
+- Click the cog to change the AI settings, such as the model. On the new-mission screen the cog opens **New mission
+  options** first, where **AI settings…** opens them. Before a mission starts, these are the settings its
   lead starts with. With a mission selected, they are its lead's settings, and apply to its next reply. As in a
   conversation, they last until Humbug closes; **Apply to all** also makes them the mindspace's default.
 

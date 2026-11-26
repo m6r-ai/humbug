@@ -18,7 +18,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QApplication, QBoxLayout, QCheckBox, QFrame, QHBoxLayout, QLabel, QLayout, QLayoutItem, QLineEdit, QPlainTextEdit,
-    QPushButton,
+    QGraphicsDropShadowEffect, QPushButton,
     QScrollArea, QScroller, QSizePolicy, QToolButton, QVBoxLayout, QWidget, QWidgetItem
 )
 
@@ -53,6 +53,9 @@ _SIDE_COLUMN_WIDTH = 360
 _STACKED_WIDTH = 640
 # The narrowest the guide to Mission Control can be with its steps still side by side.
 _GUIDE_SIDE_BY_SIDE_WIDTH = 560
+
+# The clear room round the options panel's card, for its shadow.
+_OPTIONS_SHADOW = 16
 
 _DETAIL_MAX_LINES = 10
 _DETAIL_MAX_CHARS = 900
@@ -263,6 +266,25 @@ def _send_icon(color: QColor, size: int, right_to_left: bool = False) -> QIcon:
         pixmap = pixmap.transformed(QTransform().scale(-1, 1))
         pixmap.setDevicePixelRatio(ratio)
 
+    return QIcon(pixmap)
+
+
+def _chevron_icon(color: QColor, size: int, pointing_back: bool) -> QIcon:
+    """Return a rounded chevron pointing left when pointing_back is True, and right otherwise."""
+    ratio = 2
+    pixmap = QPixmap(size * ratio, size * ratio)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    pixmap.setDevicePixelRatio(ratio)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    unit = size / 24
+    pen = QPen(color, 2.4 * unit)
+    pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+    pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+    painter.setPen(pen)
+    tip, tail = (9 * unit, 15 * unit) if pointing_back else (15 * unit, 9 * unit)
+    painter.drawPolyline([QPointF(tail, 6 * unit), QPointF(tip, 12 * unit), QPointF(tail, 18 * unit)])
+    painter.end()
     return QIcon(pixmap)
 
 
@@ -1228,6 +1250,7 @@ class MissionWidget(QWidget):
         self._glance_shown = False
         self._view: MissionView | None = None
         self._new_mission_selected = True
+        self._has_missions = False
         self._new_chip: QPushButton | None = None
         self._awaiting_reply = False
         self._plan_ready = False
@@ -1309,7 +1332,7 @@ class MissionWidget(QWidget):
         self._new_chip_layout = QHBoxLayout()
         self._new_chip_layout.setContentsMargins(0, 0, 0, 0)
         row_layout.addLayout(self._new_chip_layout)
-        self._chip_left = self._chip_arrow("‹", -1)
+        self._chip_left = self._chip_arrow(-1)
         row_layout.addWidget(self._chip_left)
         self._chip_strip = _ChipStrip()
         self._chip_strip.moved.connect(self._update_chip_arrows)
@@ -1319,7 +1342,7 @@ class MissionWidget(QWidget):
         self._chip_layout.setSpacing(8)
         self._chip_strip.setWidget(strip_content)
         row_layout.addWidget(self._chip_strip, 1)
-        self._chip_right = self._chip_arrow("›", 1)
+        self._chip_right = self._chip_arrow(1)
         row_layout.addWidget(self._chip_right)
         # Finding a mission among many, and the ones put away.
         self._mission_search = QLineEdit()
@@ -1367,6 +1390,7 @@ class MissionWidget(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(16)
         self._hero = self._build_hero()
+        self._options_panel = self._build_options_panel()
         main_layout.addWidget(self._hero)
         self._lead_card = self._build_lead_card()
         self._classic_card = self._build_classic_card()
@@ -1413,11 +1437,13 @@ class MissionWidget(QWidget):
         self.set_mission(None)
         self.set_decisions([])
 
-    def _chip_arrow(self, glyph: str, direction: int) -> QPushButton:
-        """Create an arrow that scrolls the mission chips one way, labelled in retranslate."""
-        button = QPushButton(glyph)
+    def _chip_arrow(self, direction: int) -> QPushButton:
+        """Create an arrow that scrolls the mission chips one way, drawn in apply_style and labelled in retranslate."""
+        button = QPushButton()
         button.setObjectName("MissionChipArrow")
         button.setCursor(Qt.CursorShape.PointingHandCursor)
+        # Reached by Tab, but a click leaves no focus ring behind.
+        button.setFocusPolicy(Qt.FocusPolicy.TabFocus)
         button.clicked.connect(lambda _checked=False: self._chip_strip.scroll_page(direction))
         button.hide()
         return button
@@ -1581,27 +1607,31 @@ class MissionWidget(QWidget):
         ) = self._auto_approve_controls(self.new_mission_auto_approve_selected.emit, centred=True)
         layout.addWidget(self._hero_auto_approve_row)
         layout.addWidget(self._hero_auto_approve_note)
+        # The options that are on, each a chip that turns it off, so a choice made in the options
+        # panel stays in view.
+        self._option_chips = QWidget()
+        option_chips_layout = _FlowLayout(8, True)
+        self._option_chips.setLayout(option_chips_layout)
+        self._review_chip = self._option_chip(lambda: self._review_plan_check.setChecked(False))
+        option_chips_layout.addWidget(self._review_chip)
+        self._level_chip = self._option_chip(self._forget_level)
+        option_chips_layout.addWidget(self._level_chip)
+        layout.addWidget(self._option_chips)
         self._remember_level_check = QCheckBox()
-        self._remember_level_check.setObjectName("MissionReviewPlan")
+        self._remember_level_check.setObjectName("MissionOptionRow")
         self._remember_level_check.setCursor(Qt.CursorShape.PointingHandCursor)
         self._remember_level_check.clicked.connect(self.new_mission_level_remembered)
-        # The mission's options share a row, wrapping only when the window is too narrow for them.
-        options = QWidget()
-        options_layout = _FlowLayout(20, True)
-        options.setLayout(options_layout)
-        options_layout.addWidget(self._remember_level_check)
-        layout.addWidget(options)
+        self._remember_level_check.toggled.connect(self._update_option_chips)
         self._review_plan_check = QCheckBox()
-        self._review_plan_check.setObjectName("MissionReviewPlan")
+        self._review_plan_check.setObjectName("MissionOptionRow")
         self._review_plan_check.setCursor(Qt.CursorShape.PointingHandCursor)
         self._review_plan_check.toggled.connect(self.new_mission_review_plan_toggled)
-        options_layout.addWidget(self._review_plan_check)
+        self._review_plan_check.toggled.connect(self._update_option_chips)
         # Done checks are optional, so their box only appears once asked for.
         self._checks_option = QCheckBox()
-        self._checks_option.setObjectName("MissionReviewPlan")
+        self._checks_option.setObjectName("MissionOptionRow")
         self._checks_option.setCursor(Qt.CursorShape.PointingHandCursor)
         self._checks_option.toggled.connect(self._show_checks_editor)
-        options_layout.addWidget(self._checks_option)
         self._checks_editor = QWidget()
         checks_layout = QVBoxLayout(self._checks_editor)
         checks_layout.setContentsMargins(0, 0, 0, 0)
@@ -1617,17 +1647,22 @@ class MissionWidget(QWidget):
         self._checks_editor.hide()
         layout.addWidget(self._checks_editor)
 
-        layout.addSpacing(8)
+        # Examples help someone who has not run a mission yet, and are only in the way after that.
+        self._examples = QWidget()
+        examples_box = QVBoxLayout(self._examples)
+        examples_box.setContentsMargins(0, 8, 0, 0)
+        examples_box.setSpacing(12)
+        layout.addWidget(self._examples)
         self._examples_label = QLabel()
         self._examples_label.setObjectName("MissionExamplesLabel")
         self._examples_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self._examples_label)
+        examples_box.addWidget(self._examples_label)
 
         self._example_buttons: list[QPushButton] = []
         examples = QWidget()
         examples_layout = _FlowLayout(8, True)
         examples.setLayout(examples_layout)
-        layout.addWidget(examples)
+        examples_box.addWidget(examples)
         for _ in range(3):
             button = QPushButton()
             button.setObjectName("MissionExampleChip")
@@ -1636,29 +1671,123 @@ class MissionWidget(QWidget):
             examples_layout.addWidget(button)
             self._example_buttons.append(button)
 
-        # The user's own saved requests, to start the missions they run again and again.
-        layout.addSpacing(8)
-        self._templates_label = QLabel()
-        self._templates_label.setObjectName("MissionExamplesLabel")
-        self._templates_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self._templates_label)
-        self._templates_layout = QVBoxLayout()
-        self._templates_layout.setSpacing(8)
-        layout.addLayout(self._templates_layout)
-        self._save_template_button = QPushButton()
-        self._save_template_button.setObjectName("MissionLinkButton")
-        self._save_template_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._save_template_button.clicked.connect(
-            lambda: self.template_save_requested.emit(self._input.toPlainText().strip())
-        )
-        layout.addWidget(self._save_template_button, 0, Qt.AlignmentFlag.AlignHCenter)
-        self._templates_label.hide()
         return hero
+
+    def _option_chip(self, turn_off: Callable[[], None]) -> QPushButton:
+        """Create a chip showing that an option is on, which turns the option off when clicked."""
+        chip = QPushButton()
+        chip.setObjectName("MissionOptionChip")
+        chip.setCursor(Qt.CursorShape.PointingHandCursor)
+        chip.clicked.connect(turn_off)
+        chip.hide()
+        return chip
+
+    def _forget_level(self) -> None:
+        """Stop starting every new mission at the chosen level, as unticking its option does."""
+        if self._remember_level_check.isChecked():
+            self._remember_level_check.click()
+
+    def _update_option_chips(self) -> None:
+        """Show a chip for each option that is on."""
+        self._review_chip.setVisible(self._review_plan_check.isChecked())
+        self._level_chip.setVisible(self._remember_level_check.isChecked())
+        self._option_chips.setVisible(self._review_chip.isVisibleTo(self) or self._level_chip.isVisibleTo(self))
+
+    def _build_options_panel(self) -> QWidget:
+        """
+        Create the panel of options for the next mission, opened from the settings button.
+
+        It holds the choices made once and rarely changed, so the new-mission screen keeps to
+        what is needed to start: what to do, and how much to supervise.  The window itself is
+        clear, with room round the card for its shadow, so the only edge seen is the card's own.
+        """
+        panel = QWidget(
+            self, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint
+        )
+        panel.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        outer = QVBoxLayout(panel)
+        outer.setContentsMargins(_OPTIONS_SHADOW, _OPTIONS_SHADOW, _OPTIONS_SHADOW, _OPTIONS_SHADOW)
+        card = QFrame()
+        card.setObjectName("MissionOptionsCard")
+        shadow = QGraphicsDropShadowEffect(card)
+        shadow.setBlurRadius(28)
+        shadow.setOffset(0, 6)
+        shadow.setColor(QColor(15, 23, 42, 60))
+        card.setGraphicsEffect(shadow)
+        outer.addWidget(card)
+
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(8, 12, 8, 8)
+        layout.setSpacing(2)
+        self._options_title = QLabel()
+        self._options_title.setObjectName("MissionOptionsTitle")
+        self._options_title.setContentsMargins(10, 0, 10, 6)
+        layout.addWidget(self._options_title)
+        layout.addWidget(self._remember_level_check)
+        layout.addWidget(self._review_plan_check)
+        layout.addWidget(self._checks_option)
+        layout.addSpacing(4)
+        rule = QFrame()
+        rule.setObjectName("MissionOptionsRule")
+        rule.setFixedHeight(1)
+        layout.addWidget(rule)
+        layout.addSpacing(4)
+        self._save_template_button = self._options_action(self._save_template)
+        layout.addWidget(self._save_template_button)
+        self._ai_settings_button = self._options_action(self._open_ai_settings)
+        layout.addWidget(self._ai_settings_button)
+        return panel
+
+    @staticmethod
+    def _options_action(on_clicked: Callable[[], None]) -> QPushButton:
+        """Create one of the actions at the foot of the options panel, a row the width of the panel."""
+        button = QPushButton()
+        button.setObjectName("MissionOptionsAction")
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.clicked.connect(on_clicked)
+        return button
+
+    def _save_template(self) -> None:
+        """Save what was typed as a template, and put the options away."""
+        self._options_panel.hide()
+        self.template_save_requested.emit(self._input.toPlainText().strip())
+
+    def _open_ai_settings(self) -> None:
+        """Put the options away and ask for the AI's settings."""
+        self._options_panel.hide()
+        self.settings_requested.emit()
+
+    def _on_settings_clicked(self) -> None:
+        """Open the next mission's options on the new-mission screen, and the AI's settings anywhere else."""
+        if not self._hero.isVisibleTo(self):
+            self.settings_requested.emit()
+            return
+
+        panel = self._options_panel
+        panel.adjustSize()
+        button = self._settings_button
+        corner = button.mapToGlobal(button.rect().topRight() if self.isLeftToRight() else button.rect().topLeft())
+        # The card, inside the room left for its shadow, lines up with the button's outer edge, just above it.
+        x = corner.x() - panel.width() + _OPTIONS_SHADOW if self.isLeftToRight() else corner.x() - _OPTIONS_SHADOW
+        panel.move(x, corner.y() - panel.height() + _OPTIONS_SHADOW - 8)
+        panel.show()
+
+    def _update_new_mission_extras(self) -> None:
+        """Show what belongs only to the new-mission screen: saved templates above the input, and examples."""
+        new_mission = self._hero.isVisibleTo(self)
+        self._templates_bar.setVisible(new_mission and bool(self._templates))
+        self._examples.setVisible(not self._has_missions)
+        strings = self._language_manager.strings()
+        self._settings_button.setToolTip(strings.mission_options_tip if new_mission else strings.tooltip_settings_message)
+        if not new_mission:
+            self._options_panel.hide()
 
     def _show_checks_editor(self, shown: bool) -> None:
         """Show the box for done checks when the user asks to add some, and hide it again when they do not."""
         self._checks_editor.setVisible(shown)
         if shown:
+            # The box to write them in is on the screen, not in the options, so the options make way for it.
+            self._options_panel.hide()
             self._checks_input.setFocus()
 
     def done_checks(self) -> list[str]:
@@ -1702,13 +1831,20 @@ class MissionWidget(QWidget):
             return
 
         self._templates = templates
-        _clear_layout(self._templates_layout)
+        while self._templates_layout.count() > 1:
+            item = self._templates_layout.takeAt(1)
+            widget = item.widget() if item is not None else None
+            if widget is not None:
+                widget.hide()
+                widget.deleteLater()
+
         self._templates_label.setVisible(bool(templates))
         strings = self._language_manager.strings()
         for name, request in templates:
-            row = QHBoxLayout()
-            row.setSpacing(4)
-            row.addStretch(1)
+            pair = QWidget()
+            row = QHBoxLayout(pair)
+            row.setContentsMargins(0, 0, 0, 0)
+            row.setSpacing(2)
             chip = QPushButton("☆  " + name)
             chip.setObjectName("MissionExampleChip")
             chip.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1723,8 +1859,9 @@ class MissionWidget(QWidget):
             remove.setAccessibleName(strings.mission_template_delete.format(name))
             remove.clicked.connect(lambda _checked=False, n=name: self.template_delete_requested.emit(n))
             row.addWidget(remove)
-            row.addStretch(1)
-            self._templates_layout.addLayout(row)
+            self._templates_layout.addWidget(pair)
+
+        self._update_new_mission_extras()
 
     def _card(self, name: str = "MissionCard") -> tuple[QFrame, QVBoxLayout]:
         """Create an empty card."""
@@ -2847,6 +2984,17 @@ class MissionWidget(QWidget):
         self._attachments_bar.setContentsMargins(14, 8, 14, 0)
         composer_layout.addWidget(self._attachments_bar)
 
+        # The user's own saved requests, beside where a request is typed, to start the missions they run again and again.
+        self._templates_bar = QWidget()
+        self._templates_layout = _FlowLayout(6)
+        self._templates_bar.setLayout(self._templates_layout)
+        self._templates_layout.setContentsMargins(14, 8, 14, 0)
+        self._templates_label = QLabel()
+        self._templates_label.setObjectName("MissionExamplesLabel")
+        self._templates_layout.addWidget(self._templates_label)
+        self._templates_bar.hide()
+        composer_layout.addWidget(self._templates_bar)
+
         row = QWidget()
         layout = QHBoxLayout(row)
         layout.setContentsMargins(10, 6, 6, 6)
@@ -2872,7 +3020,7 @@ class MissionWidget(QWidget):
         self._settings_button = QToolButton()
         self._settings_button.setObjectName("MissionComposerTool")
         self._settings_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._settings_button.clicked.connect(self.settings_requested)
+        self._settings_button.clicked.connect(self._on_settings_clicked)
         layout.addWidget(self._settings_button, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self._send_button = QPushButton()
@@ -2913,7 +3061,15 @@ class MissionWidget(QWidget):
         self._guide_link.setText(strings.mission_guide_link)
 
         self._templates_label.setText(strings.mission_templates_label)
-        self._save_template_button.setText("☆  " + strings.mission_template_save)
+        self._save_template_button.setText("  " + strings.mission_template_save)
+        self._options_title.setText(strings.mission_options_title)
+        self._ai_settings_button.setText("  " + strings.mission_options_ai_settings)
+        self._intro.set_replay_text(strings.mission_intro_replay)
+        self._review_chip.setText(strings.mission_option_chip_review + "   ✕")
+        self._level_chip.setText(strings.mission_option_chip_level + "   ✕")
+        for chip in (self._review_chip, self._level_chip):
+            chip.setToolTip(strings.mission_option_chip_off)
+
         self._save_template_button.setToolTip(strings.mission_template_save_tip)
         templates = self._templates
         self._templates = None
@@ -2925,7 +3081,7 @@ class MissionWidget(QWidget):
             button.setText(text)
 
         self._attach_button.setToolTip(strings.tooltip_attach_file)
-        self._settings_button.setToolTip(strings.tooltip_settings_message)
+        self._update_new_mission_extras()
         self._journey.set_labels([
             strings.mission_stage_asked, strings.mission_stage_planning, strings.mission_stage_working,
             strings.mission_stage_done
@@ -2949,10 +3105,6 @@ class MissionWidget(QWidget):
         self._lead_pill.set_pill(strings.mission_lead_waiting, MissionTone.WARNING)
         self._reply_button.setText(strings.mission_reply)
         self._elsewhere_button.setText(strings.mission_go_to_waiting)
-        for button, text in ((self._chip_left, strings.mission_scroll_left), (self._chip_right, strings.mission_scroll_right)):
-            button.setToolTip(text)
-            button.setAccessibleName(text)
-
         for arrow, arrow_text in (
             (self._chip_left, strings.mission_chips_back), (self._chip_right, strings.mission_chips_more)
         ):
@@ -2976,6 +3128,14 @@ class MissionWidget(QWidget):
         self._mark_auto_approve(
             self._hero_auto_approve_buttons, self._hero_auto_approve_note, self._new_mission_auto_approve
         )
+        # On the welcome, what each level means is a hover away rather than a line of its own.
+        for level, note_text in (
+            ("off", strings.mission_auto_approve_off_note),
+            ("safe", strings.mission_auto_approve_safe_note),
+            ("all", strings.mission_auto_approve_all_note),
+        ):
+            self._hero_auto_approve_buttons[level].setToolTip(note_text)
+
         self._everything_text.setText(strings.mission_everything_banner.format(self._everything_title))
         self._everything_off_button.setText(strings.mission_everything_turn_off)
         self._plan_title.setText(strings.mission_plan_title)
@@ -3059,6 +3219,8 @@ class MissionWidget(QWidget):
             new_mission_selected: True when the user is starting a new mission
         """
         self._new_mission_selected = new_mission_selected
+        self._has_missions = bool(chips)
+        self._update_new_mission_extras()
         archived = sum(1 for chip in chips if chip.archived)
         self._archived_toggle.setVisible(bool(archived))
         self._archived_toggle.setText(self._language_manager.strings().mission_archived_count.format(archived))
@@ -3206,6 +3368,7 @@ class MissionWidget(QWidget):
         # The view is shown again whenever a fold is opened or closed, and a celebration happens only once.
         self._view = dataclasses.replace(view, celebrate=False) if view is not None and view.celebrate else view
         self._hero.setVisible(view is None)
+        self._update_new_mission_extras()
         self._dashboard.setVisible(view is not None)
         self._activity_card.setVisible(view is not None)
         if view is None:
@@ -4446,6 +4609,8 @@ class MissionWidget(QWidget):
         """
         self._new_mission_auto_approve = level
         self._mark_auto_approve(self._hero_auto_approve_buttons, self._hero_auto_approve_note, level)
+        # Off is what the user expects; a level that approves on their behalf says so in plain view.
+        self._hero_auto_approve_note.setVisible(level != "off")
         self._remember_level_check.setEnabled(level != "all")
         self._remember_level_check.setChecked(remembered and level != "all")
 
@@ -4649,7 +4814,27 @@ class MissionWidget(QWidget):
             self._style_manager.get_color(ColorRole.TEXT_RECOMMENDED), icon_size, not self._language_manager.left_to_right()
         ))
         self._send_button.setIconSize(QSize(icon_size, icon_size))
+        # Each arrow points to the edge it sits at: back is at the start of the line, which is the right in Arabic.
+        arrow_size = round(18 * self._style_manager.zoom_factor())
+        _page, card = surface_colors()
+        arrow_color = readable(self._style_manager.get_color(ColorRole.TEXT_PRIMARY), card)
+        faded = QColor(arrow_color)
+        faded.setAlphaF(0.3)
+        left_to_right = self._language_manager.left_to_right()
+        for arrow, back in ((self._chip_left, True), (self._chip_right, False)):
+            pointing_left = back == left_to_right
+            arrow_icon = _chevron_icon(arrow_color, arrow_size, pointing_left)
+            arrow_icon.addPixmap(
+                _chevron_icon(faded, arrow_size, pointing_left).pixmap(arrow_size, arrow_size), QIcon.Mode.Disabled
+            )
+            arrow.setIcon(arrow_icon)
+            arrow.setIconSize(QSize(arrow_size, arrow_size))
+
         tool_size = round(16 * self._style_manager.zoom_factor())
+        for action, action_icon in ((self._save_template_button, "save"), (self._ai_settings_button, "cog")):
+            action.setIcon(QIcon(self._style_manager.scale_icon(action_icon, 16)))
+            action.setIconSize(QSize(tool_size, tool_size))
+
         for button, icon in ((self._attach_button, "paperclip"), (self._settings_button, "cog")):
             button.setIcon(QIcon(self._style_manager.scale_icon(icon, 16)))
             button.setIconSize(QSize(tool_size, tool_size))
@@ -4755,7 +4940,7 @@ class MissionWidget(QWidget):
                 color: {muted};
                 font-size: {fs * 0.88:.1f}pt;
             }}
-            QCheckBox#MissionAutoResume, QCheckBox#MissionReduceMotion, QCheckBox#MissionReviewPlan {{
+            QCheckBox#MissionAutoResume, QCheckBox#MissionReduceMotion, QCheckBox#MissionOptionRow {{
                 color: {muted};
                 font-size: {fs * 0.88:.1f}pt;
                 spacing: {round(8 * zoom)}px;
@@ -4765,7 +4950,7 @@ class MissionWidget(QWidget):
                 color: {text};
             }}
             QCheckBox#MissionAutoResume::indicator, QCheckBox#MissionReduceMotion::indicator,
-            QCheckBox#MissionReviewPlan::indicator {{
+            QCheckBox#MissionOptionRow::indicator {{
                 width: {round(16 * zoom)}px;
                 height: {round(16 * zoom)}px;
                 border: 1px solid {input_border};
@@ -4774,11 +4959,11 @@ class MissionWidget(QWidget):
             }}
             QCheckBox#MissionAutoResume::indicator:hover, QCheckBox#MissionReduceMotion::indicator:hover,
             QCheckBox#MissionAutoResume::indicator:focus, QCheckBox#MissionReduceMotion::indicator:focus,
-            QCheckBox#MissionReviewPlan::indicator:hover, QCheckBox#MissionReviewPlan::indicator:focus {{
+            QCheckBox#MissionOptionRow::indicator:hover, QCheckBox#MissionOptionRow::indicator:focus {{
                 border-color: {focus};
             }}
             QCheckBox#MissionAutoResume::indicator:checked, QCheckBox#MissionReduceMotion::indicator:checked,
-            QCheckBox#MissionReviewPlan::indicator:checked {{
+            QCheckBox#MissionOptionRow::indicator:checked {{
                 background-color: {primary};
                 border-color: {primary};
                 image: url({sm.get_icon_path("check")});
@@ -4958,30 +5143,92 @@ class MissionWidget(QWidget):
                 background: transparent;
             }}
             QPushButton#MissionChipArrow {{
-                min-width: {round(28 * zoom)}px;
-                max-width: {round(28 * zoom)}px;
-                min-height: {round(28 * zoom)}px;
-                max-height: {round(28 * zoom)}px;
+                min-width: {round(34 * zoom)}px;
+                max-width: {round(34 * zoom)}px;
+                min-height: {round(34 * zoom)}px;
+                max-height: {round(34 * zoom)}px;
                 padding: 0px;
-                border-radius: {round(14 * zoom)}px;
-                background-color: {secondary};
-                border: 1px solid transparent;
-                color: {text};
-                font-size: {fs * 1.25:.1f}pt;
-                font-weight: bold;
+                border-radius: {round(17 * zoom)}px;
+                background-color: {card};
+                border: 1px solid {line};
             }}
             QPushButton#MissionChipArrow:hover {{
-                background-color: {secondary_hover};
+                background-color: {accent_soft};
+                border: 1px solid {accent_line};
             }}
             QPushButton#MissionChipArrow:pressed {{
-                background-color: {secondary_pressed};
+                background-color: {tone_rgba(MissionTone.ACCENT, 0.16)};
             }}
             QPushButton#MissionChipArrow:focus {{
                 border: 2px solid {focus};
             }}
             QPushButton#MissionChipArrow:disabled {{
+                background-color: transparent;
+                border: 1px solid transparent;
+            }}
+            #MissionOptionsCard {{
+                background-color: {card};
+                border: 1px solid {line};
+                border-radius: {round(12 * zoom)}px;
+            }}
+            #MissionOptionsCard QLabel#MissionOptionsTitle {{
+                background: transparent;
+                color: {heading};
+                font-size: {fs:.1f}pt;
+                font-weight: bold;
+            }}
+            #MissionOptionsRule {{
+                background-color: {line};
+                border: none;
+                margin: 0px {round(10 * zoom)}px;
+            }}
+            #MissionOptionsCard QCheckBox#MissionOptionRow {{
+                color: {text};
+                font-size: {fs * 0.95:.1f}pt;
+                padding: {round(7 * zoom)}px {round(10 * zoom)}px;
+                border-radius: {round(8 * zoom)}px;
+                spacing: {round(10 * zoom)}px;
+            }}
+            #MissionOptionsCard QCheckBox#MissionOptionRow:hover {{
+                background-color: {tone_rgba(MissionTone.ACCENT, 0.08)};
+            }}
+            #MissionOptionsCard QCheckBox#MissionOptionRow:disabled {{
                 color: {disabled_text};
-                background-color: {disabled_fill};
+            }}
+            #MissionOptionsCard QPushButton#MissionOptionsAction {{
+                background: transparent;
+                border: none;
+                border-radius: {round(8 * zoom)}px;
+                color: {text};
+                font-size: {fs * 0.95:.1f}pt;
+                padding: {round(7 * zoom)}px {round(10 * zoom)}px;
+                text-align: left;
+            }}
+            #MissionOptionsCard QPushButton#MissionOptionsAction:hover {{
+                background-color: {tone_rgba(MissionTone.ACCENT, 0.08)};
+                color: {accent_text.name()};
+            }}
+            #MissionOptionsCard QPushButton#MissionOptionsAction:disabled {{
+                color: {disabled_text};
+            }}
+            #MissionWidget QPushButton#MissionOptionChip {{
+                background-color: {accent_soft};
+                border: 1px solid {accent_line};
+                border-radius: {round(9 * zoom)}px;
+                color: {accent_text.name()};
+                font-size: {fs * 0.88:.1f}pt;
+                padding: {round(3 * zoom)}px {round(10 * zoom)}px;
+            }}
+            #MissionWidget QPushButton#MissionOptionChip:hover {{
+                background-color: {tone_rgba(MissionTone.ACCENT, 0.16)};
+            }}
+            QToolButton#MissionIntroReplay {{
+                background-color: rgba(15, 23, 42, 0.32);
+                border: 1px solid rgba(255, 255, 255, 0.35);
+                border-radius: {round(15 * zoom)}px;
+            }}
+            QToolButton#MissionIntroReplay:hover {{
+                background-color: rgba(15, 23, 42, 0.5);
             }}
             QPushButton#MissionChipMenu {{
                 border-top-right-radius: {round(13 * zoom)}px;

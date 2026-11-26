@@ -682,10 +682,7 @@ def get_english_strings() -> LanguageStrings:
         mission_control="Mission Control",
         mission_subtitle="Plan, delegate and approve in one place",
         mission_hero_title="What should your AI team do for you?",
-        mission_hero_subtitle=(
-            "Describe the job and hand it over. Your AI lead plans it, brings in helpers, works in the "
-            "background and comes back with a final report. You only step in when it needs your say."
-        ),
+        mission_hero_subtitle="Describe the job in the box below — your AI team plans it, does it and reports back.",
         mission_examples_label="Try one of these",
         mission_example_1="Review this project and write a short architecture overview",
         mission_example_2="Find the failing tests and fix them",
@@ -997,6 +994,13 @@ def get_english_strings() -> LanguageStrings:
         mission_guide_title="Mission Control",
         mission_guide_dismiss="Got it",
         mission_guide_link="How does Mission Control work?",
+        mission_intro_replay="Play the animation again",
+        mission_options_title="New mission options",
+        mission_options_ai_settings="AI settings…",
+        mission_options_tip="Options and AI settings",
+        mission_option_chip_review="Plan review",
+        mission_option_chip_level="Always this level",
+        mission_option_chip_off="Turn off",
         mission_guide_subtitle="From your idea to execution — with you in control.",
         mission_guide_footer="Human oversight · Live collaboration · Reversible changes",
         mission_guide_1_title="Define your mission",
@@ -1163,8 +1167,6 @@ def get_english_strings() -> LanguageStrings:
             "The team works end to end without stopping; "
             "nothing waits for your approval."
         ),
-        mission_scroll_left="Scroll missions left",
-        mission_scroll_right="Scroll missions right",
         mission_waiting_elsewhere="“{0}” is waiting for your decision",
         mission_waiting_elsewhere_many="{0} other missions are waiting for your decisions",
         mission_go_to_waiting="Go there"

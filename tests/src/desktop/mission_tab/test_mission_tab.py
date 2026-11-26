@@ -678,6 +678,42 @@ def arabic(qapp):
 class TestRightToLeft:
     """In Arabic Mission Control reads from right to left: arrows, icons, rows and spacing follow."""
 
+    @staticmethod
+    def _arrow_image(widget: MissionWidget, back: bool) -> QImage:
+        """Return the picture on one of the arrows that scroll the missions."""
+        arrow = widget._chip_left if back else widget._chip_right  # pylint: disable=protected-access
+        return arrow.icon().pixmap(arrow.iconSize()).toImage()
+
+    def test_chip_arrows_point_to_their_own_edge(self, qapp) -> None:  # pylint: disable=unused-argument
+        """In English the back arrow points left and the other right, each the mirror of the other."""
+        widget = MissionWidget()
+        widget.apply_style()
+        back = self._arrow_image(widget, True)
+        more = self._arrow_image(widget, False)
+        assert back == more.mirrored(True, False) and back != more
+        widget.deleteLater()
+
+    def test_chip_arrows_swap_in_arabic(self, qapp) -> None:
+        """In Arabic, back is at the right, so the back arrow points right, as English's other arrow does."""
+        english = MissionWidget()
+        english.apply_style()
+        english_more = self._arrow_image(english, False)
+        manager = LanguageManager()
+        original = manager.current_language()
+        manager.set_language(LanguageCode.AR)
+        qapp.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        try:
+            widget = MissionWidget()
+            widget.apply_style()
+            assert self._arrow_image(widget, True) == english_more
+
+        finally:
+            manager.set_language(original)
+            qapp.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+
+        english.deleteLater()
+        widget.deleteLater()
+
     def test_send_icon_points_the_way_the_text_reads(self, qapp) -> None:  # pylint: disable=unused-argument
         """The paper plane flies right in English and left in Arabic."""
         left_to_right = mission_widget_module._send_icon(QColor("black"), 24).pixmap(24, 24).toImage()  # pylint: disable=protected-access
@@ -3455,8 +3491,9 @@ class TestComposerTools:
         widget.deleteLater()
 
     def test_attach_and_settings_buttons_ask_the_owner(self, qapp) -> None:  # pylint: disable=unused-argument
-        """The paperclip asks for a file and the cog for settings, carrying the conversation input's icons and tips."""
+        """In a mission, the paperclip asks for a file and the cog for settings, carrying the conversation input's icons and tips."""
         widget = MissionWidget()
+        widget.set_mission(_view(completed=False, stage=2))
         widget.apply_style()
         asked: list[str] = []
         widget.attach_requested.connect(lambda: asked.append("attach"))
@@ -4146,6 +4183,33 @@ class TestIntro:
         assert not intro.is_playing()
         intro.deleteLater()
 
+    def test_story_can_be_played_again(self, qapp, monkeypatch, moving) -> None:  # pylint: disable=unused-argument
+        """Once the story has settled a button plays it again; the button is put away while it plays."""
+        clock = [100.0]
+        monkeypatch.setattr(mission_intro_module.time, "monotonic", lambda: clock[0])
+        intro = MissionIntro()
+        intro.play_once()
+        replay = intro._replay  # pylint: disable=protected-access
+        assert replay.isHidden()
+
+        clock[0] += mission_intro_module._DURATION + 0.1  # pylint: disable=protected-access
+        intro._tick()  # pylint: disable=protected-access
+        assert not replay.isHidden() and not intro.is_playing()
+
+        replay.click()
+        assert intro.is_playing() and replay.isHidden()
+        intro.deleteLater()
+
+    def test_replay_plays_even_with_motion_reduced(self, qapp, still) -> None:  # pylint: disable=unused-argument
+        """Asking to see the story again plays it, though motion is otherwise reduced."""
+        intro = MissionIntro()
+        intro.play_once()
+        assert not intro.is_playing()
+
+        intro.replay()
+        assert intro.is_playing()
+        intro.deleteLater()
+
     def test_reduced_motion_shows_how_the_story_ends(self, qapp, still) -> None:  # pylint: disable=unused-argument
         """With motion reduced, nothing moves: the picture is drawn as it ends."""
         intro = MissionIntro()
@@ -4187,7 +4251,8 @@ class TestIntro:
         # Once it has settled, the picture no longer changes with time.
         intro._tick()  # pylint: disable=protected-access
         assert not intro.is_playing()
-        assert painted(mission_intro_module._DURATION + 5.0) == resting  # pylint: disable=protected-access
+        settled = painted(mission_intro_module._DURATION)  # pylint: disable=protected-access
+        assert painted(mission_intro_module._DURATION + 5.0) == settled  # pylint: disable=protected-access
         intro.deleteLater()
 
     def test_logo_is_drawn_at_rest(self, qapp, still) -> None:  # pylint: disable=unused-argument
@@ -4379,6 +4444,75 @@ class TestFinishedMissionPage:
         widget.deleteLater()
 
 
+class TestNewMissionScreenKeepsToTheEssentials:
+    """The new-mission screen shows what starting needs; options are a click away and shown while on."""
+
+    def test_cog_opens_the_options_on_the_new_mission_screen(self, qapp) -> None:  # pylint: disable=unused-argument
+        """On the new-mission screen the cog opens the options, whose AI settings button asks for settings."""
+        widget = MissionWidget()
+        widget.set_mission(None)
+        widget.show()
+        asked: list[str] = []
+        widget.settings_requested.connect(lambda: asked.append("settings"))
+
+        widget._settings_button.click()  # pylint: disable=protected-access
+        panel = widget._options_panel  # pylint: disable=protected-access
+        assert panel.isVisible() and not asked
+        assert panel.isAncestorOf(widget._review_plan_check)  # pylint: disable=protected-access
+
+        widget._ai_settings_button.click()  # pylint: disable=protected-access
+        assert asked == ["settings"] and not panel.isVisible()
+        widget.deleteLater()
+
+    def test_an_option_that_is_on_shows_a_chip_that_turns_it_off(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Reviewing the plan, once chosen, shows as a chip on the screen; clicking the chip turns it off."""
+        widget = MissionWidget()
+        widget.set_mission(None)
+        chip = widget._review_chip  # pylint: disable=protected-access
+        assert chip.isHidden()
+
+        widget._review_plan_check.setChecked(True)  # pylint: disable=protected-access
+        assert not chip.isHidden()
+
+        chip.click()
+        assert not widget._review_plan_check.isChecked() and chip.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_remembered_level_chip_forgets_the_level(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The chip for starting every mission at a level, when clicked, reports that the level is no longer remembered."""
+        widget = MissionWidget()
+        widget.set_mission(None)
+        widget.set_new_mission_auto_approve("safe", remembered=True)
+        reported: list[bool] = []
+        widget.new_mission_level_remembered.connect(reported.append)
+        assert not widget._level_chip.isHidden()  # pylint: disable=protected-access
+
+        widget._level_chip.click()  # pylint: disable=protected-access
+        assert reported == [False] and widget._level_chip.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    def test_examples_are_offered_only_before_the_first_mission(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Examples help with a first mission and are put away once there are missions."""
+        widget = MissionWidget()
+        widget.set_mission(None)
+        widget.set_missions([], True)
+        assert not widget._examples.isHidden()  # pylint: disable=protected-access
+
+        widget.set_missions(_many_chips(1, -1), True)
+        assert widget._examples.isHidden()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+    @pytest.mark.parametrize("level, shown", [("off", False), ("safe", True), ("all", True)])
+    def test_level_is_explained_in_view_only_when_it_approves_for_the_user(self, qapp, level: str, shown: bool) -> None:  # pylint: disable=unused-argument
+        """Off needs no explaining; a level that approves on the user's behalf says what it does in plain view."""
+        widget = MissionWidget()
+        widget.set_mission(None)
+        widget.set_new_mission_auto_approve(level)
+        assert widget._hero_auto_approve_note.isHidden() != shown  # pylint: disable=protected-access
+        assert widget._hero_auto_approve_buttons[level].toolTip()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+
 class TestTemplatesOnTheNewMissionScreen:
     """Saved requests are offered on the new-mission screen, to start from again."""
 
@@ -4391,12 +4525,23 @@ class TestTemplatesOnTheNewMissionScreen:
         widget.template_delete_requested.connect(deleted.append)
 
         assert not widget._templates_label.isHidden()  # pylint: disable=protected-access
-        chips = [b for b in widget._hero.findChildren(QPushButton) if b.text().endswith("Review a PR")]  # pylint: disable=protected-access
+        chips = [b for b in widget._templates_bar.findChildren(QPushButton) if b.text().endswith("Review a PR")]  # pylint: disable=protected-access
         chips[0].click()
         assert widget._input.toPlainText() == "Review the open pull request"  # pylint: disable=protected-access
 
-        widget._hero.findChildren(QToolButton, "MissionTemplateRemove")[0].click()  # pylint: disable=protected-access
+        widget._templates_bar.findChildren(QToolButton, "MissionTemplateRemove")[0].click()  # pylint: disable=protected-access
         assert deleted == ["Review a PR"]
+        widget.deleteLater()
+
+    def test_templates_sit_by_the_box_only_on_the_new_mission_screen(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Templates start a new mission, so they are offered beside the box only while one is being started."""
+        widget = MissionWidget()
+        widget.set_templates([("Review a PR", "Review the open pull request")])
+        widget.set_mission(None)
+        assert not widget._templates_bar.isHidden()  # pylint: disable=protected-access
+
+        widget.set_mission(_view(completed=False, stage=2))
+        assert widget._templates_bar.isHidden()  # pylint: disable=protected-access
         widget.deleteLater()
 
     def test_no_templates_no_heading(self, qapp) -> None:  # pylint: disable=unused-argument

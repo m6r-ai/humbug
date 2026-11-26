@@ -6,9 +6,9 @@ import time
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import (
     QBrush, QColor, QHideEvent, QImage, QLinearGradient, QPainter, QPainterPath, QPaintEvent, QPen,
-    QRadialGradient, QResizeEvent, QTransform
+    QIcon, QPixmap, QRadialGradient, QResizeEvent, QTransform
 )
-from PySide6.QtWidgets import QSizePolicy, QWidget
+from PySide6.QtWidgets import QSizePolicy, QToolButton, QWidget
 
 from desktop.mission_tab.mission_motion import MissionMotion
 from desktop.mission_tab.mission_painted import surface_colors
@@ -67,6 +67,26 @@ def _white(alpha: float) -> QColor:
     return QColor(255, 255, 255, round(255 * max(0.0, min(1.0, alpha))))
 
 
+def _replay_icon(size: int) -> QIcon:
+    """Return a white circular arrow, the usual sign for playing something again."""
+    ratio = 2
+    pixmap = QPixmap(size * ratio, size * ratio)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    pixmap.setDevicePixelRatio(ratio)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    unit = size / 24
+    pen = QPen(QColor("#ffffff"), 2.2 * unit)
+    pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+    pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+    painter.setPen(pen)
+    painter.drawArc(QRectF(5 * unit, 5 * unit, 14 * unit, 14 * unit), 100 * 16, 290 * 16)
+    # The arrowhead, at the top of the circle, pointing on round it.
+    painter.drawPolyline([QPointF(8.4 * unit, 2.6 * unit), QPointF(11.4 * unit, 5.2 * unit), QPointF(8.4 * unit, 8 * unit)])
+    painter.end()
+    return QIcon(pixmap)
+
+
 def _faded(color: QColor, alpha: float) -> QColor:
     """Return a colour at an opacity between 0 and 1."""
     faded = QColor(color)
@@ -98,6 +118,17 @@ class MissionIntro(QWidget):
         self._timer.setInterval(_FRAME_MS)
         self._timer.timeout.connect(self._tick)
 
+        # The story can be watched again whenever it is not already playing.
+        self._replay = QToolButton(self)
+        self._replay.setObjectName("MissionIntroReplay")
+        self._replay.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._replay.clicked.connect(self.replay)
+
+    def set_replay_text(self, text: str) -> None:
+        """Set what the button that plays the story again says to a tooltip and to assistive technology."""
+        self._replay.setToolTip(text)
+        self._replay.setAccessibleName(text)
+
     def play_once(self) -> None:
         """Play the story, unless it has been played already; with motion reduced, show how it ends."""
         if self._played:
@@ -108,8 +139,22 @@ class MissionIntro(QWidget):
             self.update()
             return
 
+        self._play()
+
+    def replay(self) -> None:
+        """
+        Play the story again, from the start.
+
+        The user asked to see it, so it plays even with motion reduced.
+        """
+        self._played = True
+        self._play()
+
+    def _play(self) -> None:
+        """Start the story from the beginning."""
         self._started = time.monotonic()
         self._timer.start()
+        self._replay.hide()
         self.update()
 
     def is_playing(self) -> bool:
@@ -123,9 +168,17 @@ class MissionIntro(QWidget):
         return QSize(round(240 * StyleManager().zoom_factor()), self.sizeHint().height())
 
     def resizeEvent(self, event: QResizeEvent) -> None:
-        """Forget the logo drawn for the old size."""
+        """Forget the logo drawn for the old size, and keep the replay button in the corner where lines end."""
         super().resizeEvent(event)
         self._logo = QImage()
+        zoom = StyleManager().zoom_factor()
+        side = round(30 * zoom)
+        inset = round(12 * zoom)
+        self._replay.setIcon(_replay_icon(round(16 * zoom)))
+        self._replay.setIconSize(QSize(round(16 * zoom), round(16 * zoom)))
+        self._replay.setFixedSize(side, side)
+        x = inset if self.isRightToLeft() else self.width() - side - inset
+        self._replay.move(x, inset)
 
     def hideEvent(self, event: QHideEvent) -> None:
         """Finish at once if hidden while playing, so it is never found half way."""
@@ -133,12 +186,14 @@ class MissionIntro(QWidget):
         if self._timer.isActive():
             self._timer.stop()
             self._started = None
+            self._replay.show()
 
     def _tick(self) -> None:
         """Advance the animation, stopping once it has settled."""
         if self._elapsed() >= _DURATION:
             self._timer.stop()
             self._started = None
+            self._replay.show()
 
         self.update()
 

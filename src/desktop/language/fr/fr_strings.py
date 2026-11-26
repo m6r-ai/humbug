@@ -710,9 +710,7 @@ def get_french_strings() -> LanguageStrings:
         mission_subtitle="Planifiez, déléguez et approuvez au même endroit",
         mission_hero_title="Que doit faire votre équipe IA pour vous ?",
         mission_hero_subtitle=(
-            "Décrivez le travail et confiez-le. Votre IA principale le planifie, fait appel à des aides, "
-            "travaille en arrière-plan et revient avec un rapport final. Vous n'intervenez que lorsqu'elle "
-            "a besoin de votre avis."
+            "Décrivez le travail dans la zone ci-dessous : votre équipe IA le planifie, le réalise et vous rend compte."
         ),
         mission_examples_label="Essayez par exemple",
         mission_example_1="Analyser ce projet et rédiger une brève présentation de son architecture",
@@ -1050,6 +1048,13 @@ def get_french_strings() -> LanguageStrings:
         mission_guide_title="Mission Control",
         mission_guide_dismiss="Compris",
         mission_guide_link="Comment fonctionne Mission Control ?",
+        mission_intro_replay="Rejouer l'animation",
+        mission_options_title="Options de la nouvelle mission",
+        mission_options_ai_settings="Paramètres de l'IA…",
+        mission_options_tip="Options et paramètres de l'IA",
+        mission_option_chip_review="Revue du plan",
+        mission_option_chip_level="Toujours ce niveau",
+        mission_option_chip_off="Désactiver",
         mission_guide_subtitle="De votre idée à son exécution, en gardant la main.",
         mission_guide_footer="Supervision humaine · Collaboration en direct · Modifications réversibles",
         mission_guide_1_title="Définissez votre mission",
@@ -1230,8 +1235,6 @@ def get_french_strings() -> LanguageStrings:
             "L'équipe travaille de bout en bout sans s'arrêter ; "
             "rien n'attend votre approbation."
         ),
-        mission_scroll_left="Faire défiler les missions vers la gauche",
-        mission_scroll_right="Faire défiler les missions vers la droite",
         mission_waiting_elsewhere="« {0} » attend votre décision",
         mission_waiting_elsewhere_many="{0} autres missions attendent vos décisions",
         mission_go_to_waiting="Y aller"

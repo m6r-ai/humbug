@@ -683,10 +683,7 @@ def get_arabic_strings() -> LanguageStrings:
         mission_control="مركز المهام",
         mission_subtitle="خطّط وفوّض ووافق في مكان واحد",
         mission_hero_title="ما الذي تريد أن يفعله فريق الذكاء الاصطناعي من أجلك؟",
-        mission_hero_subtitle=(
-            "صِف العمل وسلّمه. يخطّط له قائد المهمة ويستعين بمساعدين ويعمل في الخلفية "
-            "ثم يعود إليك بتقرير نهائي. لا تتدخّل إلا عندما يحتاج إلى رأيك."
-        ),
+        mission_hero_subtitle="صِف المهمة في المربع أدناه، وسيخطط لها فريقك الذكي وينفذها ويعود إليك بتقرير.",
         mission_examples_label="جرّب أحد هذه الأمثلة",
         mission_example_1="راجع هذا المشروع واكتب نظرة عامة موجزة على بنيته",
         mission_example_2="اعثر على الاختبارات الفاشلة وأصلحها",
@@ -988,6 +985,13 @@ def get_arabic_strings() -> LanguageStrings:
         mission_guide_title="مركز المهام",
         mission_guide_dismiss="فهمت",
         mission_guide_link="كيف يعمل مركز المهام؟",
+        mission_intro_replay="إعادة تشغيل الرسوم المتحركة",
+        mission_options_title="خيارات المهمة الجديدة",
+        mission_options_ai_settings="إعدادات الذكاء الاصطناعي…",
+        mission_options_tip="الخيارات وإعدادات الذكاء الاصطناعي",
+        mission_option_chip_review="مراجعة الخطة",
+        mission_option_chip_level="دائمًا هذا المستوى",
+        mission_option_chip_off="إيقاف",
         mission_guide_subtitle="من فكرتك إلى التنفيذ، وأنت صاحب القرار.",
         mission_guide_footer="إشراف بشري · تعاون مباشر · تغييرات قابلة للتراجع",
         mission_guide_1_title="حدِّد مهمتك",
@@ -1141,8 +1145,6 @@ def get_arabic_strings() -> LanguageStrings:
             "يعمل الفريق من البداية إلى النهاية دون توقف؛ "
             "ولا ينتظر شيء موافقتك."
         ),
-        mission_scroll_left="مرّر المهام إلى اليسار",
-        mission_scroll_right="مرّر المهام إلى اليمين",
         mission_waiting_elsewhere="المهمة «{0}» بانتظار قرارك",
         mission_waiting_elsewhere_many="{0} مهام أخرى بانتظار قراراتك",
         mission_go_to_waiting="انتقل إليها"
