@@ -68,4 +68,4 @@ Resetting usage does not affect conversations or any other data.
 
 ---
 
-*[Index](index.md) · Previous: [Delegating Tasks Between AIs](delegation.md) · Next: [User Settings](user-settings.md)*
+*[Index](index.md) · Previous: [Delegating Tasks Between AIs](delegation.md) · Next: [Mission Control](mission-control.md)*

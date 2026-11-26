@@ -10,7 +10,7 @@ import time
 from typing import Any, cast
 
 from PySide6.QtWidgets import (
-    QWidget, QApplication, QVBoxLayout, QScrollArea, QSizePolicy, QFileDialog, QToolButton
+    QWidget, QApplication, QVBoxLayout, QScrollArea, QSizePolicy, QToolButton
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QEvent, QSize, QUrl, QVariantAnimation
 from PySide6.QtGui import QCursor, QDesktopServices, QFont, QGuiApplication, QIcon, QResizeEvent
@@ -21,10 +21,8 @@ from ai import (
 )
 from ai_tool import AIToolApprovalKind, AIToolCall
 from ai_transcript_conversation import AITranscriptConversation
-from docx import DocxError, DocxUnsupportedError, extract_text as extract_docx_text
-from pdf import PDFUnsupportedError, PDFError, extract_text, parse as parse_pdf
-from syntax.programming_language_utils import ProgrammingLanguageUtils
 
+from desktop.attachment_reader import choose_attachment, read_attachment
 from desktop.color_role import ColorRole
 from desktop.conversation_tab.conversation_error import ConversationError
 from desktop.conversation_tab.conversation_input import ConversationInput
@@ -38,10 +36,9 @@ from desktop.mindspace.mindspace_manager import MindspaceManager
 from desktop.style_manager import StyleManager
 from desktop.widgets import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 from desktop.markdown import MarkdownTextEdit
+from mindspace.mindspace_conversation_log import completed_message_entry, summarize_for_log, tool_call_label
 from mindspace.mindspace_log_level import MindspaceLogLevel
 
-
-LOG_PREVIEW_CHARS = 120
 
 
 # How long a reveal slice may run before yielding to the event loop, in seconds.
@@ -68,29 +65,6 @@ _VISIBLE_RANGE_SCAN_STEPS = 256
 # shown while a response is arriving, so it is given a widget when it is streamed, but
 # history is full of them and none of those are ever shown.
 _STREAMING_ONLY_SOURCES = frozenset({AIMessageSource.AI_CONNECTED})
-
-
-def _summarize_for_log(text: str) -> str:
-    """
-    Return a single-line excerpt of text, for the interaction log.
-
-    Args:
-        text: Text to summarise.
-
-    Returns:
-        The text flattened onto one line, with a trailing ellipsis when shortened.
-    """
-    flat = " ".join(text.split())
-    if len(flat) <= LOG_PREVIEW_CHARS:
-        return flat
-
-    return f"{flat[:LOG_PREVIEW_CHARS]}..."
-
-
-def _tool_call_label(tool_call: AIToolCall) -> str:
-    """Return a human-readable label for a tool call, naming its operation if it has one."""
-    operation = tool_call.arguments.get("operation", "")
-    return f"{tool_call.name}.{operation}" if operation else tool_call.name
 
 
 class ConversationWidget(QWidget):
@@ -1277,7 +1251,7 @@ class ConversationWidget(QWidget):
             self.status_updated.emit()
 
             self._log_conversation_interaction(
-                f"AI response failed: {_summarize_for_log(message.content)}",
+                f"AI response failed: {summarize_for_log(message.content)}",
                 MindspaceLogLevel.ERROR
             )
 
@@ -1426,7 +1400,7 @@ class ConversationWidget(QWidget):
             info = self._pending_tool_call_approval.get_tool_approval_info()
             if info and info.get("tool_call"):
                 self._log_conversation_interaction(
-                    f"Human approved tool call: {_tool_call_label(info['tool_call'])}"
+                    f"Human approved tool call: {tool_call_label(info['tool_call'])}"
                 )
 
         self._pending_tool_call_approval = None
@@ -1444,7 +1418,7 @@ class ConversationWidget(QWidget):
             if info and info.get("tool_call"):
                 self._log_conversation_interaction(
                     f"Human indicated uncertainty about tool call: "
-                    f"{_tool_call_label(info['tool_call'])}"
+                    f"{tool_call_label(info['tool_call'])}"
                 )
 
             self._pending_tool_call_approval.remove_tool_approval_ui()
@@ -1469,7 +1443,7 @@ class ConversationWidget(QWidget):
             info = self._pending_tool_call_approval.get_tool_approval_info()
             if info and info.get("tool_call"):
                 self._log_conversation_interaction(
-                    f"Human denied tool call: {_tool_call_label(info['tool_call'])}\n"
+                    f"Human denied tool call: {tool_call_label(info['tool_call'])}\n"
                     f"reason: {reason}"
                 )
 
@@ -1880,6 +1854,14 @@ class ConversationWidget(QWidget):
         """
         self._current_unfinished_message = None
 
+        # A tool call message completes once its approval is resolved.  If that happened
+        # somewhere other than this tab, such as the Mission Control decision inbox, the
+        # approval buttons here no longer refer to a pending request and must go.
+        pending_approval = self._pending_tool_call_approval
+        if pending_approval is not None and pending_approval.message_id() == message.id:
+            pending_approval.remove_tool_approval_ui()
+            self._pending_tool_call_approval = None
+
         self._log_completed_message(message)
 
         # Update with the completed message immediately
@@ -1903,36 +1885,9 @@ class ConversationWidget(QWidget):
         Args:
             message: The message that was completed
         """
-        content = _summarize_for_log(message.content)
-
-        if message.source == AIMessageSource.REASONING:
-            if content:
-                self._log_conversation_interaction(f"AI reasoning: '{content}'")
-
-        elif message.source == AIMessageSource.AI:
-            if content:
-                self._log_conversation_interaction(f"AI response: '{content}'")
-
-            elif message.tool_calls:
-                tools = ", ".join(_tool_call_label(tc) for tc in message.tool_calls)
-                self._log_conversation_interaction(f"AI requested tool calls: {tools}")
-
-        elif message.source == AIMessageSource.USER and not message.tool_results:
-            if message.user_name:
-                self._log_conversation_interaction(
-                    f"AI '{message.user_name}' submitted prompt: '{content}'"
-                )
-
-            else:
-                attachment_note = (
-                    f"\nattachments: {len(message.attachments)}" if message.attachments else ""
-                )
-                self._log_conversation_interaction(
-                    f"Human submitted prompt: '{content}'{attachment_note}"
-                )
-
-        elif message.source == AIMessageSource.USER_QUEUED:
-            self._log_conversation_interaction(f"Human queued prompt: '{content}'")
+        entry = completed_message_entry(message)
+        if entry:
+            self._log_conversation_interaction(entry)
 
     def _log_conversation_interaction(
         self,
@@ -3685,11 +3640,7 @@ class ConversationWidget(QWidget):
 
     def _on_attach_requested(self) -> None:
         """Handle attach file request: open file dialog and attach selected file."""
-        strings = self._language_manager.strings()
-        extensions = ProgrammingLanguageUtils.get_supported_file_extensions()
-        ext_pattern = " ".join(f"*{ext}" for ext in sorted(extensions))
-        file_filter = f"Text and code files ({ext_pattern} *.docx *.pdf);;All files (*)"
-        path, _ = QFileDialog.getOpenFileName(self, strings.file_dialog_attach_file, "", file_filter)
+        path = choose_attachment(self)
         if not path:
             return
 
@@ -3701,145 +3652,12 @@ class ConversationWidget(QWidget):
 
     def _attach_file(self, path: str) -> None:
         """Read a file and attach it to the message being composed."""
-        strings = self._language_manager.strings()
-        filename = os.path.basename(path)
+        content = read_attachment(self, path)
+        if content is None:
+            return
 
-        if path.lower().endswith(".pdf"):
-            content = self._extract_pdf_text(path)
-            if content is None:
-                return
-
-            size_kb = len(content) // 1024
-            if len(content) > 100 * 1024:
-                result = MessageBox.show_message(
-                    self,
-                    MessageBoxType.WARNING,
-                    strings.file_error_title,
-                    strings.warning_file_too_large.format(filename=filename, size_kb=size_kb),
-                    [MessageBoxButton.YES, MessageBoxButton.NO]
-                )
-
-                if result != MessageBoxButton.YES:
-                    return
-
-        elif path.lower().endswith(".docx"):
-            content = self._extract_docx_text(path)
-            if content is None:
-                return
-
-            size_kb = len(content) // 1024
-            if len(content) > 100 * 1024:
-                result = MessageBox.show_message(
-                    self,
-                    MessageBoxType.WARNING,
-                    strings.file_error_title,
-                    strings.warning_file_too_large.format(filename=filename, size_kb=size_kb),
-                    [MessageBoxButton.YES, MessageBoxButton.NO]
-                )
-                if result != MessageBoxButton.YES:
-                    return
-
-        else:
-            file_size = os.path.getsize(path)
-            size_kb = file_size // 1024
-            if file_size > 100 * 1024:
-                result = MessageBox.show_message(
-                    self,
-                    MessageBoxType.WARNING,
-                    strings.file_error_title,
-                    strings.warning_file_too_large.format(filename=filename, size_kb=size_kb),
-                    [MessageBoxButton.YES, MessageBoxButton.NO]
-                )
-                if result != MessageBoxButton.YES:
-                    return
-
-            try:
-                with open(path, encoding='utf-8', errors='replace') as f:
-                    content = f.read()
-
-            except Exception as e:
-                self._logger.warning("Failed to read attachment %s: %s", path, str(e))
-                return
-
-        self._input.add_attachment(filename, content)
+        self._input.add_attachment(os.path.basename(path), content)
         self._log_conversation_interaction(f"Human attached file to conversation: '{path}'")
-
-    def _extract_pdf_text(self, path: str) -> str | None:
-        """
-        Extract text from a PDF file, showing an error dialog on failure.
-
-        Returns the extracted text, or None if extraction failed or was unsupported.
-        """
-        strings = self._language_manager.strings()
-        filename = os.path.basename(path)
-        try:
-            with open(path, "rb") as f:
-                data = f.read()
-
-            doc = parse_pdf(data)
-            return extract_text(doc)
-
-        except PDFUnsupportedError as e:
-            MessageBox.show_message(
-                self, MessageBoxType.WARNING, strings.file_error_title,
-                strings.error_pdf_unsupported.format(filename=filename, reason=str(e))
-            )
-            self._logger.warning("PDF not supported %s: %s", path, str(e))
-            return None
-
-        except PDFError as e:
-            MessageBox.show_message(
-                self, MessageBoxType.WARNING, strings.file_error_title,
-                strings.error_pdf_extraction_failed.format(filename=filename, reason=str(e))
-            )
-            self._logger.warning("PDF extraction failed %s: %s", path, str(e))
-            return None
-
-        except Exception as e:
-            MessageBox.show_message(
-                self, MessageBoxType.WARNING, strings.file_error_title,
-                strings.error_pdf_extraction_failed.format(filename=filename, reason=str(e))
-            )
-            self._logger.warning("Failed to read PDF %s: %s", path, str(e))
-            return None
-
-    def _extract_docx_text(self, path: str) -> str | None:
-        """
-        Extract text from a DOCX file, showing an error dialog on failure.
-
-        Returns the extracted text, or None if extraction failed or was unsupported.
-        """
-        strings = self._language_manager.strings()
-        filename = os.path.basename(path)
-        try:
-            with open(path, "rb") as f:
-                data = f.read()
-
-            return extract_docx_text(data)
-
-        except DocxUnsupportedError as e:
-            MessageBox.show_message(
-                self, MessageBoxType.WARNING, strings.file_error_title,
-                strings.error_docx_unsupported.format(filename=filename, reason=str(e))
-            )
-            self._logger.warning("DOCX not supported %s: %s", path, str(e))
-            return None
-
-        except DocxError as e:
-            MessageBox.show_message(
-                self, MessageBoxType.WARNING, strings.file_error_title,
-                strings.error_docx_extraction_failed.format(filename=filename, reason=str(e))
-            )
-            self._logger.warning("DOCX extraction failed %s: %s", path, str(e))
-            return None
-
-        except Exception as e:
-            MessageBox.show_message(
-                self, MessageBoxType.WARNING, strings.file_error_title,
-                strings.error_docx_extraction_failed.format(filename=filename, reason=str(e))
-            )
-            self._logger.warning("Failed to read DOCX %s: %s", path, str(e))
-            return None
 
     def get_conversation_history(self) -> AIConversationHistory:
         """Get the conversation history object."""

@@ -59,6 +59,7 @@ SECTION_EDITOR = "editor"
 SECTION_DIFF = "diff"
 SECTION_TERMINAL = "terminal"
 SECTION_CONVERSATION = "conversation"
+SECTION_MISSIONS = "missions"
 SECTION_JOURNAL = "journal"
 
 _ALL_MINDSPACES_SECTIONS = [SECTION_DISPLAY, SECTION_FILE_ACCESS, SECTION_NETWORK_ACCESS, SECTION_AI_BACKENDS]
@@ -69,6 +70,7 @@ _THIS_MINDSPACE_SECTIONS = [
     SECTION_DIFF,
     SECTION_TERMINAL,
     SECTION_CONVERSATION,
+    SECTION_MISSIONS,
     SECTION_JOURNAL,
 ]
 
@@ -195,6 +197,11 @@ class SettingsDialog(QDialog):
         self._prompt_markers_check: SettingsSwitch
         self._conversation_container: SettingsContainer
 
+        self._missions_heading: SettingsPageHeading
+        self._mission_auto_resume_check: SettingsSwitch
+        self._mission_reduce_motion_check: SettingsSwitch
+        self._missions_container: SettingsContainer
+
         self._journal_heading: SettingsPageHeading
         self._journal_checkpoint_interval_spin: SettingsDoubleSpinBox
         self._journal_watched_section: SettingsSection
@@ -294,6 +301,7 @@ class SettingsDialog(QDialog):
         self._build_diff_page()
         self._build_terminal_page()
         self._build_conversation_page()
+        self._build_missions_page()
         self._build_journal_page()
 
     def _add_nav_group(self, label: str, string_key: str) -> None:
@@ -759,6 +767,29 @@ class SettingsDialog(QDialog):
         self._section_pages[SECTION_CONVERSATION] = page
         self._add_nav_section(SECTION_CONVERSATION, strings.settings_conversation)
 
+    def _build_missions_page(self) -> None:
+        """Build the Mission Control settings page."""
+        strings = self._language_manager.strings()
+        container = SettingsContainer()
+
+        self._missions_heading = SettingsFactory.create_page_heading(strings.mission_control)
+        container.add_setting(self._missions_heading)
+
+        self._mission_auto_resume_check = SettingsFactory.create_switch(strings.mission_auto_resume)
+        container.add_setting(self._mission_auto_resume_check)
+
+        self._mission_reduce_motion_check = SettingsFactory.create_switch(strings.mission_reduce_motion)
+        container.add_setting(self._mission_reduce_motion_check)
+
+        container.add_stretch()
+        container.value_changed.connect(self._on_value_changed)
+
+        self._missions_container = container
+        page = self._make_scroll_page(container)
+        self._stack.addWidget(page)
+        self._section_pages[SECTION_MISSIONS] = page
+        self._add_nav_section(SECTION_MISSIONS, strings.mission_control)
+
     def _build_journal_page(self) -> None:
         """Build the Journal settings page."""
         strings = self._language_manager.strings()
@@ -901,6 +932,8 @@ class SettingsDialog(QDialog):
             reasoning=self._reasoning_combo.get_value(),
             reasoning_effort=self._effort_combo.get_value() if reasoning_options else None,
             prompt_markers_visible=self._prompt_markers_check.get_value(),
+            mission_resume_automatically=self._mission_auto_resume_check.get_value(),
+            mission_reduce_motion=self._mission_reduce_motion_check.get_value(),
             journal_checkpoint_interval=self._journal_checkpoint_interval_spin.get_value(),
             journal_pruned_paths=self._journal_pruned_paths_area.get_value(),
             enabled_tools=enabled_tools,
@@ -1025,6 +1058,10 @@ class SettingsDialog(QDialog):
         # Conversation
         self._prompt_markers_check.set_value(settings.prompt_markers_visible)
 
+        # Mission Control
+        self._mission_auto_resume_check.set_value(settings.mission_resume_automatically)
+        self._mission_reduce_motion_check.set_value(settings.mission_reduce_motion)
+
         # Changes
         self._journal_checkpoint_interval_spin.set_value(settings.journal_checkpoint_interval)
         self._journal_pruned_paths_area.set_value(settings.journal_pruned_paths)
@@ -1083,6 +1120,7 @@ class SettingsDialog(QDialog):
                 self._diff_container,
                 self._terminal_container,
                 self._conversation_container,
+                self._missions_container,
                 self._journal_container,
             ]
         )
@@ -1530,6 +1568,7 @@ class SettingsDialog(QDialog):
             SECTION_DIFF: strings.settings_diff,
             SECTION_TERMINAL: strings.settings_terminal,
             SECTION_CONVERSATION: strings.settings_conversation,
+            SECTION_MISSIONS: strings.mission_control,
             SECTION_JOURNAL: strings.settings_journal,
         }
         for section_id, item in self._section_items.items():
@@ -1546,6 +1585,7 @@ class SettingsDialog(QDialog):
         self._diff_heading.set_label(strings.diff_settings)
         self._terminal_heading.set_label(strings.terminal_settings)
         self._conversation_heading.set_label(strings.settings_conversation)
+        self._missions_heading.set_label(strings.mission_control)
         self._journal_heading.set_label(strings.journal_settings)
 
         # Update Display page controls
@@ -1652,6 +1692,10 @@ class SettingsDialog(QDialog):
         # Update Conversation page controls
         self._prompt_markers_check.set_label(strings.prompt_markers)
 
+        # Update Mission Control page controls
+        self._mission_auto_resume_check.set_label(strings.mission_auto_resume)
+        self._mission_reduce_motion_check.set_label(strings.mission_reduce_motion)
+
         # Update Changes page controls
         self._journal_checkpoint_interval_spin.set_label(strings.journal_checkpoint_interval)
         self._journal_watched_section.set_label(strings.journal_watched_section)
@@ -1737,6 +1781,7 @@ class SettingsDialog(QDialog):
             self._diff_container,
             self._terminal_container,
             self._conversation_container,
+            self._missions_container,
             self._journal_container,
         ]:
             container.reset_modified_state()
@@ -1788,6 +1833,8 @@ class SettingsDialog(QDialog):
             reasoning=settings.reasoning,
             reasoning_effort=settings.reasoning_effort,
             prompt_markers_visible=settings.prompt_markers_visible,
+            mission_resume_automatically=settings.mission_resume_automatically,
+            mission_reduce_motion=settings.mission_reduce_motion,
             journal_checkpoint_interval=settings.journal_checkpoint_interval,
             journal_pruned_paths=list(settings.journal_pruned_paths),
             enabled_tools=settings.enabled_tools.copy(),

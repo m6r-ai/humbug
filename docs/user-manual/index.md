@@ -34,15 +34,16 @@ to get started and to make the most of working with Humbug day to day.
 19. [Forking & Managing Conversations](forking-conversations.md)
 20. [Delegating Tasks Between AIs](delegation.md)
 21. [Token Usage](token-usage.md)
+22. [Mission Control](mission-control.md)
 
 ## Part 4 — Settings & Configuration
 
-22. [User Settings](user-settings.md)
-23. [Mindspace Settings](mindspace-settings.md)
-24. [Conversation Settings](conversation-settings.md)
-25. [Keyboard Shortcuts](keyboard-shortcuts.md)
+23. [User Settings](user-settings.md)
+24. [Mindspace Settings](mindspace-settings.md)
+25. [Conversation Settings](conversation-settings.md)
+26. [Keyboard Shortcuts](keyboard-shortcuts.md)
 
 ## Part 5 — Reference
 
-26. [The Humbug Shell](humbug-shell.md)
-27. [Mindspace Log](mindspace-log.md)
+27. [The Humbug Shell](humbug-shell.md)
+28. [Mindspace Log](mindspace-log.md)

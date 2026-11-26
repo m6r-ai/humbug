@@ -1,0 +1,511 @@
+"""Persisted mission records."""
+
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any
+
+
+class MissionTaskStatus(Enum):
+    """Progress of one task in a mission plan."""
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    BLOCKED = "blocked"
+    STOPPED = "stopped"
+
+    @classmethod
+    def from_text(cls, text: Any) -> "MissionTaskStatus":
+        """
+        Interpret a status written by the mission lead.
+
+        Unknown or missing values are treated as pending, so a loosely written
+        plan still displays rather than being rejected.
+
+        Args:
+            text: Status value from the plan
+
+        Returns:
+            The matching status
+        """
+        if not isinstance(text, str):
+            return cls.PENDING
+
+        normalized = text.strip().lower().replace("-", "_").replace(" ", "_")
+        aliases = {
+            "done": cls.COMPLETED,
+            "complete": cls.COMPLETED,
+            "completed": cls.COMPLETED,
+            "in_progress": cls.IN_PROGRESS,
+            "running": cls.IN_PROGRESS,
+            "active": cls.IN_PROGRESS,
+            "blocked": cls.BLOCKED,
+            "failed": cls.BLOCKED,
+            "stopped": cls.STOPPED,
+            "cancelled": cls.STOPPED,
+            "canceled": cls.STOPPED,
+            "skipped": cls.STOPPED,
+        }
+        return aliases.get(normalized, cls.PENDING)
+
+
+class MissionMode(Enum):
+    """
+    Where a mission is followed.
+
+    An autonomous mission is driven from Mission Control and its lead
+    conversation has no tab; a classic mission is an ordinary conversation tab
+    the user drives, and Mission Control only lists it.  A mission is always in
+    exactly one of the two.
+    """
+    AUTONOMOUS = "autonomous"
+    CLASSIC = "classic"
+
+
+def _texts(value: object) -> list[str]:
+    """Return a stored list of texts, leaving out anything stored in it that is not text."""
+    return [item for item in value if isinstance(item, str)] if isinstance(value, list) else []
+
+
+def _count(value: object) -> int:
+    """Return a stored count, or 0 if what was stored is not a count."""
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 0
+
+
+class AutoApproveLevel(Enum):
+    """
+    Which approval requests an AI reviewer may approve for a mission without the user.
+
+    Whatever the level, a request the reviewer is unsure about is left for the user.
+    """
+    OFF = "off"
+    SAFE = "safe"
+    ALL = "all"
+
+
+@dataclass
+class MissionTask:
+    """
+    One step of a mission plan, as recorded by the mission lead.
+
+    Attributes:
+        task_id: Identifier the lead gave the step
+        title: What the step is
+        detail: What done looks like
+        status: How far the step has got
+        progress: The lead's latest note on the step
+        evidence: What shows the step is done
+        agent: Session of the delegated conversation working on the step, if any
+    """
+    task_id: str
+    title: str
+    detail: str = ""
+    status: MissionTaskStatus = MissionTaskStatus.PENDING
+    progress: str = ""
+    evidence: str = ""
+    agent: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return the task as a JSON-safe dictionary."""
+        return {
+            "id": self.task_id,
+            "title": self.title,
+            "detail": self.detail,
+            "status": self.status.value,
+            "progress": self.progress,
+            "evidence": self.evidence,
+            "agent": self.agent,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "MissionTask":
+        """
+        Build a task from a dictionary.
+
+        Args:
+            data: Dictionary produced by to_dict, or a task from a plan block
+
+        Returns:
+            The task
+        """
+        return cls(
+            task_id=str(data.get("id", "")),
+            title=str(data.get("title", "")),
+            detail=str(data.get("detail", "")),
+            status=MissionTaskStatus.from_text(data.get("status")),
+            progress=str(data.get("progress", "") or ""),
+            evidence=str(data.get("evidence", "") or ""),
+            agent=str(data.get("agent", "") or ""),
+        )
+
+
+@dataclass
+class MissionCheckResult:
+    """
+    What the lead found when it ran one of the user's done checks.
+
+    Attributes:
+        check: The check, as the user wrote it
+        passed: Whether the lead found it passed
+        evidence: What the lead saw, such as a command's result, in a sentence or two
+    """
+    check: str
+    passed: bool
+    evidence: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return the result as a dictionary for storage."""
+        return {"check": self.check, "passed": self.passed, "evidence": self.evidence}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "MissionCheckResult":
+        """
+        Build a result from a dictionary, as stored or as the lead reported it.
+
+        Only a `passed` of exactly true counts as passed, so a result written loosely is a failure
+        rather than a pass.
+
+        Args:
+            data: The result
+        """
+        check = data.get("check")
+        evidence = data.get("evidence")
+        return cls(
+            check=check.strip() if isinstance(check, str) else "",
+            passed=data.get("passed") is True,
+            evidence=evidence.strip() if isinstance(evidence, str) else "",
+        )
+
+
+@dataclass
+class MissionPhase:
+    """
+    A finished plan, kept in a mission's history when new work starts in the same mission.
+
+    Attributes:
+        title: The mission's title while the plan ran
+        summary: Its summary while the plan ran
+        tasks: The plan's tasks as they finished
+        finished_at: When the plan was moved to history, as an ISO timestamp
+        request: What the user asked for that started the plan, or "" if it is not known
+        report: The lead's final report on the plan, or "" if there was none
+    """
+    title: str
+    summary: str
+    tasks: list[MissionTask]
+    finished_at: str
+    request: str = ""
+    report: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return the phase as a JSON-safe dictionary."""
+        return {
+            "title": self.title,
+            "summary": self.summary,
+            "tasks": [task.to_dict() for task in self.tasks],
+            "finishedAt": self.finished_at,
+            "request": self.request,
+            "report": self.report,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "MissionPhase":
+        """
+        Build a phase from a dictionary.
+
+        Args:
+            data: Dictionary produced by to_dict
+
+        Returns:
+            The phase
+        """
+        return cls(
+            title=str(data.get("title", "")),
+            summary=str(data.get("summary", "")),
+            tasks=[MissionTask.from_dict(t) for t in data.get("tasks", []) if isinstance(t, dict)],
+            finished_at=str(data.get("finishedAt", "")),
+            request=str(data.get("request", "")),
+            report=str(data.get("report", "")),
+        )
+
+
+@dataclass
+class Mission:
+    """
+    A mission: an objective pursued by a lead conversation and its delegates.
+
+    The record holds what the user asked for and the plan the lead last
+    reported.  What actually happened lives in the conversation transcripts.
+    `active` is set while the mission is working and cleared once it is
+    waiting for the user, so a record still marked active when Humbug starts
+    belongs to a mission that was interrupted.  `request` is what the user asked
+    for that started the current plan: the objective, then each follow-up.
+    Once the plan is finished, `follow_up` is the user's latest message and
+    `report` the lead's report on the finished plan: the lead decides whether
+    the message asks for new work, and only a new plan moves the finished one
+    to `history`, taking them with it.  `everything_confirmed_at` is when the
+    user confirmed the Everything auto-approve level, the approval in advance that
+    level rests on; it is empty unless the level is Everything.  `paused` is set
+    while the user has paused the mission: nothing is approved for it
+    automatically and its lead is not asked to continue.  `celebrated` is set
+    once the user has been shown the mission's completion, which is celebrated
+    only that once.  `goal_met` is whether the lead's latest plan reports the
+    user's goal achieved; a mission whose lead was asked to report that
+    (`reports_goal`) is complete only once it has, not merely when its plan's
+    tasks are done.  `lead_settings` holds the AI settings chosen for the lead,
+    as the lead's conversation settings serialise them, so its lead keeps them
+    when it is loaded again; it is empty for a record from before they were kept.
+    `review_plan` is set when the user asked to approve the lead's first plan
+    before any of it is carried out, and `plan_approved` once they have; until
+    then the lead is not asked to continue.  `input_tokens` and `output_tokens`
+    count the tokens the mission's conversations have used, as far as Mission
+    Control has seen them; a record from before they were counted starts at none.
+    `conversation_ids` identifies every conversation that has taken part, lead
+    and helpers, which is how the change journal's records of the mission's file
+    changes are found; `journal_from` is the journal's first record that can be
+    the mission's, or 0 for a record from before it was kept; and `undone_paths`
+    are the files whose changes the user undid from Mission Control.  `archived`
+    is set when the user has put the mission away, out of the mission switcher.
+    `done_checks` are the checks the user asked to be passed before the mission
+    counts as done, one each, or none when they set none; `check_results` are the
+    results the lead last reported for them, and `check_rounds` counts the times the
+    lead reported the goal met while a check had not passed.  While a plan waits
+    for the user's approval, or the mission is paused, they may rearrange the steps
+    not yet started: `skipped_tasks` are the steps they chose to leave out, which
+    stay skipped whatever the lead reports later.  `reviewed_order` and
+    `reviewed_skipped` are the plan as the lead last knew it, kept from the user's
+    first change until the lead is told, so that what changed can be told and the
+    lead's unchanged plan is not taken as a new one; both are empty when the lead
+    knows the plan as it is.
+    """
+    mission_id: str
+    objective: str
+    title: str
+    lead_path: str
+    created_at: str
+    summary: str = ""
+    tasks: list[MissionTask] = field(default_factory=list)
+    stopped: bool = False
+    active: bool = False
+    mode: MissionMode = MissionMode.AUTONOMOUS
+    stopped_tasks: list[str] = field(default_factory=list)
+    auto_approve: AutoApproveLevel = AutoApproveLevel.OFF
+    title_locked: bool = False
+    history: list[MissionPhase] = field(default_factory=list)
+    request: str = ""
+    follow_up: str = ""
+    report: str = ""
+    everything_confirmed_at: str = ""
+    paused: bool = False
+    celebrated: bool = False
+    reports_goal: bool = False
+    goal_met: bool = False
+    lead_settings: dict[str, Any] = field(default_factory=dict)
+    review_plan: bool = False
+    plan_approved: bool = False
+    input_tokens: int = 0
+    output_tokens: int = 0
+    conversation_ids: list[str] = field(default_factory=list)
+    journal_from: int = 0
+    undone_paths: list[str] = field(default_factory=list)
+    archived: bool = False
+    done_checks: list[str] = field(default_factory=list)
+    check_results: list[MissionCheckResult] = field(default_factory=list)
+    check_rounds: int = 0
+    skipped_tasks: list[str] = field(default_factory=list)
+    reviewed_order: list[str] = field(default_factory=list)
+    reviewed_skipped: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return the mission as a JSON-safe dictionary."""
+        return {
+            "version": 1,
+            "id": self.mission_id,
+            "objective": self.objective,
+            "title": self.title,
+            "leadPath": self.lead_path,
+            "createdAt": self.created_at,
+            "summary": self.summary,
+            "tasks": [task.to_dict() for task in self.tasks],
+            "stopped": self.stopped,
+            "active": self.active,
+            "mode": self.mode.value,
+            "stoppedTasks": list(self.stopped_tasks),
+            "autoApprove": self.auto_approve.value,
+            "titleLocked": self.title_locked,
+            "history": [phase.to_dict() for phase in self.history],
+            "request": self.request,
+            "followUp": self.follow_up,
+            "report": self.report,
+            "everythingConfirmedAt": self.everything_confirmed_at,
+            "paused": self.paused,
+            "celebrated": self.celebrated,
+            "reportsGoal": self.reports_goal,
+            "goalMet": self.goal_met,
+            "leadSettings": dict(self.lead_settings),
+            "reviewPlan": self.review_plan,
+            "planApproved": self.plan_approved,
+            "inputTokens": self.input_tokens,
+            "outputTokens": self.output_tokens,
+            "conversationIds": list(self.conversation_ids),
+            "journalFrom": self.journal_from,
+            "undonePaths": list(self.undone_paths),
+            "archived": self.archived,
+            "doneChecks": list(self.done_checks),
+            "checkResults": [result.to_dict() for result in self.check_results],
+            "checkRounds": self.check_rounds,
+            "skippedTasks": list(self.skipped_tasks),
+            "reviewedOrder": list(self.reviewed_order),
+            "reviewedSkipped": list(self.reviewed_skipped),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Mission":
+        """
+        Build a mission from a dictionary.
+
+        Args:
+            data: Dictionary produced by to_dict
+
+        Returns:
+            The mission
+
+        Raises:
+            ValueError: If required fields are missing
+        """
+        mission_id = data.get("id")
+        lead_path = data.get("leadPath")
+        if not isinstance(mission_id, str) or not mission_id or not isinstance(lead_path, str) or not lead_path:
+            raise ValueError("Mission record is missing its id or lead conversation")
+
+        tasks = data.get("tasks", [])
+        lead_settings = data.get("leadSettings")
+        mission = cls(
+            mission_id=mission_id,
+            objective=str(data.get("objective", "")),
+            title=str(data.get("title", "")),
+            lead_path=lead_path,
+            created_at=str(data.get("createdAt", "")),
+            summary=str(data.get("summary", "")),
+            tasks=[MissionTask.from_dict(t) for t in tasks if isinstance(t, dict)],
+            stopped=bool(data.get("stopped", False)),
+            active=bool(data.get("active", False)),
+            # Records written before missions had a mode were always followed through a tab.
+            mode=MissionMode.AUTONOMOUS if data.get("mode") == "autonomous" else MissionMode.CLASSIC,
+            stopped_tasks=[str(t) for t in data.get("stoppedTasks", []) if isinstance(t, (str, int))],
+            auto_approve=next(
+                (level for level in AutoApproveLevel if level.value == data.get("autoApprove")), AutoApproveLevel.OFF
+            ),
+            title_locked=bool(data.get("titleLocked", False)),
+            history=[MissionPhase.from_dict(p) for p in data.get("history", []) if isinstance(p, dict)],
+            request=str(data.get("request", "")),
+            follow_up=str(data.get("followUp", "")),
+            report=str(data.get("report", "")),
+            everything_confirmed_at=str(data.get("everythingConfirmedAt", "")),
+            paused=bool(data.get("paused", False)),
+            celebrated=bool(data.get("celebrated", False)),
+            reports_goal=bool(data.get("reportsGoal", False)),
+            goal_met=bool(data.get("goalMet", False)),
+            lead_settings=dict(lead_settings) if isinstance(lead_settings, dict) else {},
+            review_plan=bool(data.get("reviewPlan", False)),
+            plan_approved=bool(data.get("planApproved", False)),
+            input_tokens=_count(data.get("inputTokens")),
+            output_tokens=_count(data.get("outputTokens")),
+            conversation_ids=_texts(data.get("conversationIds")),
+            journal_from=_count(data.get("journalFrom")),
+            undone_paths=_texts(data.get("undonePaths")),
+            archived=bool(data.get("archived", False)),
+            done_checks=_texts(data.get("doneChecks")),
+            check_results=[
+                MissionCheckResult.from_dict(r) for r in data.get("checkResults", []) if isinstance(r, dict)
+            ],
+            check_rounds=_count(data.get("checkRounds")),
+            skipped_tasks=_texts(data.get("skippedTasks")),
+            reviewed_order=_texts(data.get("reviewedOrder")),
+            reviewed_skipped=_texts(data.get("reviewedSkipped")),
+        )
+        if "celebrated" not in data:
+            # A record from before completions were remembered: one already finished has been seen finished.
+            mission.celebrated = mission.is_complete()
+
+        return mission
+
+    def completed_count(self) -> int:
+        """Return how many tasks are completed."""
+        return sum(1 for task in self.tasks if task.status == MissionTaskStatus.COMPLETED)
+
+    def plan_finished(self) -> bool:
+        """Return True when there is a plan and every task in it is completed or stopped."""
+        return bool(self.tasks) and all(
+            task.status in (MissionTaskStatus.COMPLETED, MissionTaskStatus.STOPPED) for task in self.tasks
+        )
+
+    def is_complete(self) -> bool:
+        """
+        Return True when the mission is done: its plan is finished, where the lead reports it the goal
+        is met, and every done check the user set has passed.
+
+        A lead may finish one plan and still have more to do for the user's goal, so a finished plan
+        alone completes only a mission whose lead was never asked to report the goal, or one the user
+        cut short by stopping a task: asking the lead for more would undo that choice.
+        """
+        if not self.plan_finished():
+            return False
+
+        # Stopping a task cuts the mission short, which the user chose over its goal and its checks.
+        if self.stopped_tasks:
+            return True
+
+        return (self.goal_met or not self.reports_goal) and self.checks_passed()
+
+    def plan_edited(self) -> bool:
+        """Return True when the user has changed the plan since the lead last knew it: moved a step, or skipped one."""
+        if not self.reviewed_order:
+            return False
+
+        return (
+            [task.task_id for task in self.tasks] != self.reviewed_order
+            or sorted(self.skipped_tasks) != sorted(self.reviewed_skipped)
+        )
+
+    def step_movable(self, task: MissionTask) -> bool:
+        """Return True if the user may move or skip a step: it has not started, or it is one they skipped."""
+        return task.status == MissionTaskStatus.PENDING or task.task_id in self.skipped_tasks
+
+    def checks_passed(self) -> bool:
+        """
+        Return True when every one of the user's done checks has been reported passed, or there are none.
+
+        The lead reports the results in the order the checks were given, one for each.
+        """
+        if not self.done_checks:
+            return True
+
+        return len(self.check_results) >= len(self.done_checks) and all(
+            result.passed for result in self.check_results[:len(self.done_checks)]
+        )
+
+    def progress(self) -> float:
+        """
+        Return progress through the plan between 0.0 and 1.0.
+
+        A task in progress counts as half done so that progress moves while
+        work is under way, not only when tasks finish.  A step the user chose to
+        skip is not part of the work, so it counts neither way.
+        """
+        planned = [task for task in self.tasks if task.task_id not in self.skipped_tasks]
+        if not planned:
+            return 0.0
+
+        score = 0.0
+        for task in planned:
+            if task.status in (MissionTaskStatus.COMPLETED, MissionTaskStatus.STOPPED):
+                score += 1.0
+
+            elif task.status == MissionTaskStatus.IN_PROGRESS:
+                score += 0.5
+
+        return score / len(planned)
+
+    def planned_count(self) -> int:
+        """Return how many steps the plan holds, leaving out those the user chose to skip."""
+        return sum(1 for task in self.tasks if task.task_id not in self.skipped_tasks)

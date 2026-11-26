@@ -86,3 +86,66 @@ def test_a_save_writes_the_journal_section(tmp_path):
         saved = json.load(f)
 
     assert "journal" in saved
+
+
+def test_mission_control_settings_round_trip_through_a_save(tmp_path):
+    path = _settings_file(tmp_path, {})
+    settings = MindspaceSettings(["filesystem"])
+    assert not settings.mission_resume_automatically and not settings.mission_reduce_motion
+
+    settings.mission_resume_automatically = True
+    settings.mission_reduce_motion = True
+    settings.save(path)
+
+    reloaded = MindspaceSettings.load(path)
+    assert reloaded.mission_resume_automatically and reloaded.mission_reduce_motion
+
+
+def test_mission_control_settings_of_the_wrong_type_fall_back_to_off(tmp_path):
+    settings = MindspaceSettings.load(
+        _settings_file(tmp_path, {"missions": {"resumeAutomatically": "yes", "reduceMotion": 1}})
+    )
+
+    assert not settings.mission_resume_automatically and not settings.mission_reduce_motion
+
+
+def test_mission_templates_are_saved_and_loaded_in_order(tmp_path):
+    """Saved templates come back as they were saved, in the same order."""
+    path = str(tmp_path / "settings.json")
+    settings = MindspaceSettings.load(_settings_file(tmp_path, {}))
+    settings.mission_templates = [("Review a PR", "Review the open pull request"), ("Notes", "Write release notes")]
+    settings.save(path)
+
+    assert MindspaceSettings.load(path).mission_templates == [
+        ("Review a PR", "Review the open pull request"), ("Notes", "Write release notes")
+    ]
+
+
+def test_a_mindspace_with_no_templates_has_none(tmp_path):
+    """Settings saved before templates existed load with an empty list."""
+    assert MindspaceSettings.load(_settings_file(tmp_path, {"missions": {}})).mission_templates == []
+
+
+def test_malformed_templates_are_dropped(tmp_path):
+    """A templates value that is not a list, and entries without a name or a request, are ignored."""
+    assert MindspaceSettings.load(_settings_file(tmp_path, {"missions": {"templates": "x"}})).mission_templates == []
+    entries = [
+        {"name": "Good", "request": "Do it"}, {"name": "", "request": "x"}, {"name": "No request"}, "text", 3,
+        {"name": 5, "request": "x"},
+    ]
+    loaded = MindspaceSettings.load(_settings_file(tmp_path, {"missions": {"templates": entries}}))
+    assert loaded.mission_templates == [("Good", "Do it")]
+
+
+def test_default_auto_approve_level_is_saved(tmp_path):
+    """The level new missions start at is kept, and anything but off or safe falls back to off."""
+    path = str(tmp_path / "settings.json")
+    settings = MindspaceSettings.load(_settings_file(tmp_path, {}))
+    assert settings.mission_default_auto_approve == "off"
+    settings.mission_default_auto_approve = "safe"
+    settings.save(path)
+    assert MindspaceSettings.load(path).mission_default_auto_approve == "safe"
+
+    for stored in ("all", "everything", 3):
+        loaded = MindspaceSettings.load(_settings_file(tmp_path, {"missions": {"defaultAutoApprove": stored}}))
+        assert loaded.mission_default_auto_approve == "off"

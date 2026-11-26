@@ -129,6 +129,10 @@ class AIConversationHistory:
         """
         self._on_usage_changed = callback
 
+    def on_usage_changed(self) -> Callable[[], None] | None:
+        """Return the callback invoked when usage enters the cumulative totals, if one is set."""
+        return self._on_usage_changed
+
     def begin_load(self) -> None:
         """Suppress usage-change notifications while replaying historical messages."""
         self._loading = True

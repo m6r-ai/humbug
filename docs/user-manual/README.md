@@ -39,6 +39,7 @@ three, in reverse.
 | `forking-conversations.md` | `src/desktop/conversation_sidebar/` (folders, pinning, undo/redo), `src/conversation_dag/`, ADR-0019 |
 | `delegation.md` | `src/delegate_ai_tool/`, `src/conversation_dag/`, ADR-0011 |
 | `token-usage.md` | `src/desktop/usage_tab/`, `src/mindspace/mindspace_usage.py` |
+| `mission-control.md` | `src/desktop/mission_tab/`, `src/mission/`, ADR-0026 (autonomous mode) |
 | `user-settings.md` | `src/desktop/user/`, `src/desktop/settings_dialog.py` (`_build_display_page`, `_build_file_access_page`, `_build_network_access_page`, `_build_ai_backends_page`), `src/filesystem_ai_tool/filesystem_access_settings.py`, `src/http_ai_tool/http_access_settings.py` |
 | `mindspace-settings.md` | `src/mindspace/mindspace_settings.py`, `src/desktop/settings_dialog.py` (the `This Mindspace` pages) |
 | `conversation-settings.md` | `src/desktop/conversation_tab/conversation_settings_dialog.py`, `src/ai/ai_conversation_settings.py` |

@@ -79,6 +79,10 @@ from desktop.shell_tab.shell_tab import ShellTab
 from desktop.sidebar.sidebar_base import SidebarBase
 from desktop.sidebar_manager import SidebarManager
 from desktop.usage_tab.usage_tab import UsageTab
+from desktop.mission_tab.mission_mode_menus import MissionModeMenus
+from desktop.mission_tab.mission_notifier import MissionNotifier
+from desktop.mission_tab.mission_service_holder import MissionServiceHolder
+from desktop.mission_tab.mission_tab import MissionTab
 from desktop.style_manager import StyleManager
 from desktop.tab.tab_base import TabBase
 from desktop.color_theme import ColorTheme
@@ -204,6 +208,13 @@ def _create_usage_tab(
 ) -> UsageTab:
     """Context factory for UsageTab."""
     return UsageTab(info.context_id, parent)
+
+
+def _create_mission_tab(
+    info: ContextInfo, _registry: ContextRegistry, parent: QWidget
+) -> MissionTab:
+    """Context factory for MissionTab."""
+    return MissionTab(info.context_id, parent)
 
 
 def _wire_conversation_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
@@ -518,6 +529,10 @@ class MainWindow(QMainWindow):
         self._open_token_usage_action.setShortcut(QKeySequence("Ctrl+Shift+U"))
         self._open_token_usage_action.triggered.connect(self._on_open_token_usage)
 
+        self._open_mission_control_action = QAction(strings.mission_control, self)
+        self._open_mission_control_action.setShortcut(QKeySequence("Ctrl+Shift+M"))
+        self._open_mission_control_action.triggered.connect(self._on_mission_control_requested)
+
         self._show_tab_overview_action = QAction(strings.show_tab_overview, self)
         self._show_tab_overview_action.setShortcut(QKeySequence("Ctrl+Shift+E"))
         self._show_tab_overview_action.triggered.connect(self._on_show_tab_overview)
@@ -610,6 +625,7 @@ class MainWindow(QMainWindow):
         self._mindspace_menu.addAction(self._open_mindspace_log_action)
         self._mindspace_menu.addAction(self._open_humbug_shell_action)
         self._mindspace_menu.addAction(self._open_token_usage_action)
+        self._mindspace_menu.addAction(self._open_mission_control_action)
 
         # File menu
         self._file_menu = self._menu_bar.addMenu(strings.file_menu)
@@ -760,6 +776,18 @@ class MainWindow(QMainWindow):
         tab_manager.register_context_factory("log", _create_log_tab)
         tab_manager.register_context_factory("shell", _create_shell_tab)
         tab_manager.register_context_factory("usage", _create_usage_tab)
+        tab_manager.register_context_factory("mission", self._create_mission_tab)
+
+        # Mission conversations offer to switch between classic and autonomous mode.
+        self._mission_mode_menus = MissionModeMenus(self, self._show_mission)
+        # Missions that need the user, or have finished, say so wherever the user is looking.
+        self._mission_notifier = MissionNotifier(self, self._show_mission, self._mark_mission_control_updated)
+        tab_manager.add_tab_menu_provider(self._mission_mode_menus.tab_entries)
+        # Conversations working for an autonomous mission open without taking focus.
+        tab_manager.add_background_open_provider(self._mission_mode_menus.opens_in_background)
+        conversation_sidebar = self._sidebar_manager.get_panel("conversations")
+        if isinstance(conversation_sidebar, ConversationSidebar):
+            conversation_sidebar.add_file_menu_provider(self._mission_mode_menus.file_entries)
 
         # Set initial sidebar width
         sidebar_width = self._sidebar_manager.expanded_sidebar_width()
@@ -1051,6 +1079,7 @@ class MainWindow(QMainWindow):
         self._open_mindspace_log_action.setEnabled(has_mindspace)
         self._open_humbug_shell_action.setEnabled(has_mindspace)
         self._open_token_usage_action.setEnabled(has_mindspace)
+        self._open_mission_control_action.setEnabled(has_mindspace)
         self._rebuild_recent_mindspaces_menu()
         self._rebuild_open_in_new_window_menu()
 
@@ -1136,6 +1165,7 @@ class MainWindow(QMainWindow):
         self._open_mindspace_log_action.setText(strings.open_mindspace_log)
         self._open_humbug_shell_action.setText(strings.open_humbug_shell)
         self._open_token_usage_action.setText(strings.open_token_usage)
+        self._open_mission_control_action.setText(strings.mission_control)
 
         # Recreate the theme menu with updated language strings
         self._rebuild_theme_menu()
@@ -1444,10 +1474,29 @@ class MainWindow(QMainWindow):
         except UserError as e:
             self._logger.error("Failed to persist theme change: %s", str(e))
 
+    def _create_mission_tab(self, info: ContextInfo, registry: ContextRegistry, parent: QWidget) -> MissionTab:
+        """Create Mission Control, following the mission it shows in the sidebar."""
+        tab = _create_mission_tab(info, registry, parent)
+        tab.lead_conversation_changed.connect(lambda path: self._on_mission_lead_conversation_changed(tab, path))
+        return tab
+
+    def _on_mission_lead_conversation_changed(self, tab: MissionTab, path: str) -> None:
+        """Highlight the selected mission's lead conversation, while Mission Control is the current tab."""
+        if path and self._tab_manager.get_current_tab() is tab:
+            self._sidebar_manager.reveal_and_select_file("conversations", path)
+
     def _on_tab_manager_tab_changed(self) -> None:
         """Handle tab change events."""
         current_tab = self._tab_manager.get_current_tab()
         if current_tab is None:
+            return
+
+        if isinstance(current_tab, MissionTab):
+            # Mission Control has no file of its own; the mission it shows is led by a conversation.
+            lead_path = current_tab.lead_conversation_path()
+            if lead_path:
+                self._sidebar_manager.reveal_and_select_file("conversations", lead_path)
+
             return
 
         path = current_tab.path()
@@ -1791,6 +1840,8 @@ class MainWindow(QMainWindow):
             if not self._close_all_tabs():
                 return
 
+            self._mission_notifier.follow(None)
+            MissionServiceHolder().release()
             self._mindspace_manager.close_mindspace()
 
         # Only now commit the new mindspace to disk.  Creating it before the switch-out
@@ -1850,6 +1901,8 @@ class MainWindow(QMainWindow):
         MindspaceChangePoller().stop()
         self._sidebar_manager.set_mindspace("")
 
+        self._mission_notifier.follow(None)
+        MissionServiceHolder().release()
         self._mindspace_manager.close_mindspace()
         self._update_instance_registry()
 
@@ -1891,6 +1944,16 @@ class MainWindow(QMainWindow):
             )
 
     def _restore_mindspace_state(self) -> None:
+        """Restore previously open tabs from mindspace state, then start following its missions."""
+        try:
+            self._restore_open_tabs()
+
+        finally:
+            # Missions are followed once the tabs are back, so a mission interrupted when Humbug
+            # closed finds its restored lead conversation rather than opening a second one.
+            self._start_mission_service()
+
+    def _restore_open_tabs(self) -> None:
         """Restore previously open tabs from mindspace state."""
         saved_state = self._mindspace_manager.load_mindspace_state()
         if not saved_state:
@@ -1911,8 +1974,34 @@ class MainWindow(QMainWindow):
             )
 
     def _close_all_tabs(self) -> bool:
-        """Close all open tabs, returning True if all were closed."""
+        """
+        Close all open tabs, returning True if all were closed.
+
+        Mission leads followed in Mission Control have no tab to ask the user
+        before they are cut off, so the user is asked about them first.
+        """
+        if not self._confirm_stopping_missions():
+            return False
+
         return self._tab_manager.close_all_tabs()
+
+    def _confirm_stopping_missions(self) -> bool:
+        """Ask before stopping autonomous missions that are working, returning True if they may be stopped."""
+        service = MissionServiceHolder().current_service()
+        working = service.working_missions() if service is not None else []
+        if not working:
+            return True
+
+        strings = self._language_manager.strings()
+        result = MessageBox.show_message(
+            self,
+            MessageBoxType.QUESTION,
+            strings.mission_working_close_title,
+            strings.mission_working_close.format(", ".join(f"'{mission.title}'" for mission in working)),
+            [MessageBoxButton.YES, MessageBoxButton.NO],
+            destructive=True
+        )
+        return result == MessageBoxButton.YES
 
     def _focused_conversation_sidebar(self) -> ConversationSidebar | None:
         """Return the conversation sidebar panel if it currently has keyboard focus, else None."""
@@ -2147,6 +2236,7 @@ class MainWindow(QMainWindow):
             "mindspace-log": (self._open_mindspace_log_action, "log"),
             "humbug-shell": (self._open_humbug_shell_action, "shell"),
             "token-usage": (self._open_token_usage_action, "usage"),
+            "mission-control": (self._open_mission_control_action, "mission"),
             "tab-overview": (self._show_tab_overview_action, "tab-overview"),
             "tab-carousel": (self._show_tab_carousel_action, "tab-carousel"),
             "show-all-columns": (self._show_all_columns_action, "tab-overview"),
@@ -2666,6 +2756,67 @@ class MainWindow(QMainWindow):
 
         strings = self._language_manager.strings()
         contexts.open(context_type="usage", title=strings.open_token_usage)
+
+    def _start_mission_service(self) -> None:
+        """
+        Start following the mindspace's missions as soon as it is open.
+
+        This is what lets a mission that was interrupted when Humbug closed be found,
+        and resumed if the user chose that, without Mission Control being open.
+        """
+        if self._mindspace_manager.has_mindspace():
+            self._mission_notifier.follow(MissionServiceHolder().service_for(self._mindspace_manager.mindspace()))
+
+    def _on_mission_control_requested(self) -> None:
+        """Open Mission Control on the new-mission screen, as asked for from the menu."""
+        self._on_open_mission_control()
+        info = self._mission_control_context()
+        tab = self._tab_manager.get_tab_by_id(info.context_id) if info is not None else None
+        if isinstance(tab, MissionTab):
+            tab.show_new_mission()
+
+    def _show_mission(self, mission_id: str) -> None:
+        """Open Mission Control showing a particular mission."""
+        self._on_open_mission_control()
+        info = self._mission_control_context()
+        tab = self._tab_manager.get_tab_by_id(info.context_id) if info is not None else None
+        if isinstance(tab, MissionTab):
+            tab.show_mission(mission_id)
+
+    def _mark_mission_control_updated(self) -> None:
+        """Highlight Mission Control's tab, if it is open, as having something new."""
+        info = self._mission_control_context()
+        tab = self._tab_manager.get_tab_by_id(info.context_id) if info is not None else None
+        if tab is not None:
+            tab.set_updated(True)
+
+    def _mission_control_context(self) -> ContextInfo | None:
+        """Return the context of the open Mission Control tab, if there is one."""
+        if not self._mindspace_manager.has_mindspace():
+            return None
+
+        contexts = self._mindspace_manager.mindspace().contexts()
+        return next((i for i in contexts.list_all() if i.context_type == "mission"), None)
+
+    def _on_open_mission_control(self) -> None:
+        """Open (or focus) Mission Control."""
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        contexts = self._mindspace_manager.mindspace().contexts()
+        existing = self._mission_control_context()
+        if existing:
+            # If the tab is already tracked by the tab manager, just focus it.
+            # If the context is stale (e.g. the tab failed to create on a
+            # previous attempt), close it so we can open a fresh one below.
+            if self._tab_manager.get_tab_by_id(existing.context_id):
+                contexts.focus(existing.context_id)
+                return
+
+            contexts.close(existing.context_id)
+
+        strings = self._language_manager.strings()
+        contexts.open(context_type="mission", title=strings.mission_control)
 
     def _on_open_humbug_shell(self) -> None:
         """Open the shell tab."""
@@ -3443,5 +3594,7 @@ class MainWindow(QMainWindow):
             event.ignore()
             return
 
+        self._mission_notifier.follow(None)
+        MissionServiceHolder().release()
         self._instance_registry.unregister()
         event.accept()

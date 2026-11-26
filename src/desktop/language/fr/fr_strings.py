@@ -139,7 +139,10 @@ def get_french_strings() -> LanguageStrings:
         processing_message="Discuter avec {model} (Échap pour annuler, {key} pour envoyer)",
         input_prompt="Discuter avec {model} ({key} pour envoyer)",
         command_prompt="Commande (Entrée ou {key} pour envoyer)",
-        editing_message="Modification du message — l'envoi supprimera ce message et tous les suivants ({key} pour envoyer)",
+        editing_message=(
+            "Modification du message — l'envoi supprimera ce message et tous les suivants ({key} pour "
+            "envoyer)"
+        ),
 
         # AI thinking message
         ai_thinking="L'IA réfléchit...",
@@ -306,7 +309,9 @@ def get_french_strings() -> LanguageStrings:
         settings_effort_high="Élevé",
         settings_effort_xhigh="Très élevé",
         settings_effort_max="Maximum",
-        settings_apply_to_all_conversations="Définir par défaut pour cette conversation et toutes les conversations ouvertes",
+        settings_apply_to_all_conversations=(
+            "Définir par défaut pour cette conversation et toutes les conversations ouvertes"
+        ),
         settings_apply_to_open_conversations="Appliquer à toutes les conversations ouvertes",
         settings_applied_to_all_conversations="Appliqué",
         settings_apply_to_all_confirm_title="Appliquer à toutes les conversations ?",
@@ -482,7 +487,9 @@ def get_french_strings() -> LanguageStrings:
             "Cette version ne peut pas \u00eatre affich\u00e9e : son contenu n'est plus "
             "conserv\u00e9, ou il ne s'agit pas de texte et le fichier a chang\u00e9 depuis."
         ),
-        changes_this_version_unavailable="Cette modification a supprim\u00e9 le fichier : elle n'a donc pas de version propre.",
+        changes_this_version_unavailable=(
+            "Cette modification a supprimé le fichier : elle n'a donc pas de version propre."
+        ),
         changes_revert_title="Annuler des modifications",
         changes_revert_confirm=(
             "Annuler {0} modification(s) ? Chaque fichier concern\u00e9 revient \u00e0 l'\u00e9tat "
@@ -587,7 +594,9 @@ def get_french_strings() -> LanguageStrings:
         approve_tool_call="Approuver",
         i_am_unsure_about_tool_call="Je ne suis pas sûr à propos",
         reject_tool_call="Rejeter",
-        auto_approve_file_changes="Approuver automatiquement les modifications de fichiers jusqu'à votre prochain message",
+        auto_approve_file_changes=(
+            "Approuver automatiquement les modifications de fichiers jusqu'à votre prochain message"
+        ),
         interruptible_wait_message="Attente de {duration} secondes \u2014 {remaining} restantes...",
         finish_waiting_now="Terminer l'attente maintenant",
         retry_error="Réessayer",
@@ -681,7 +690,9 @@ def get_french_strings() -> LanguageStrings:
         fetched_models_remove="Supprimer",
 
         fetch_error_invalid_key="Clé API invalide — veuillez vérifier votre clé et réessayer.",
-        fetch_error_access_denied="Accès refusé ({0}) — votre clé n'a peut-être pas la permission de lister les modèles.",
+        fetch_error_access_denied=(
+            "Accès refusé ({0}) — votre clé n'a peut-être pas la permission de lister les modèles."
+        ),
         fetch_error_not_found="Point de terminaison des modèles introuvable ({0}) — vérifiez l'URL de l'API.",
         fetch_error_rate_limited="Limite de requêtes atteinte ({0}) — patientez un moment puis réessayez.",
         fetch_error_server_error="Erreur serveur du fournisseur ({0}) — réessayez plus tard.",
@@ -693,5 +704,535 @@ def get_french_strings() -> LanguageStrings:
             "Aucun service IA n'est configuré pour le fournisseur de ce modèle — "
             "vérifiez vos paramètres de services IA."
         ),
-        stream_error_access_denied="Accès refusé ({0}) — votre compte n'a peut-être pas accès à ce modèle."
+        stream_error_access_denied="Accès refusé ({0}) — votre compte n'a peut-être pas accès à ce modèle.",
+
+        mission_control="Centre de missions",
+        mission_subtitle="Planifiez, déléguez et approuvez au même endroit",
+        mission_hero_title="Que doit faire votre équipe IA pour vous ?",
+        mission_hero_subtitle=(
+            "Décrivez le travail et confiez-le. Votre IA principale le planifie, fait appel à des aides, "
+            "travaille en arrière-plan et revient avec un rapport final. Vous n'intervenez que lorsqu'elle "
+            "a besoin de votre avis."
+        ),
+        mission_examples_label="Essayez par exemple",
+        mission_example_1="Analyser ce projet et rédiger une brève présentation de son architecture",
+        mission_example_2="Trouver les tests en échec et les corriger",
+        mission_example_3="Ajouter une validation des saisies au formulaire de paramètres, avec des tests",
+        mission_new="Nouvelle mission",
+        mission_status_planning="Planification",
+        mission_status_running="En cours",
+        mission_status_needs_you="Votre avis est requis",
+        mission_status_idle="En attente de vous",
+        mission_status_completed="Terminée",
+        mission_status_stopped="Arrêtée",
+        mission_progress="{0} % terminé",
+        mission_stop="Arrêter",
+        mission_stat_completed="Terminées",
+        mission_stat_in_progress="En cours",
+        mission_plan_title="Plan de mission",
+        mission_plan_empty="Le plan s'affichera ici dès que l'IA principale l'aura rédigé.",
+        mission_task_pending="En attente",
+        mission_task_in_progress="En cours",
+        mission_task_completed="Terminée",
+        mission_task_blocked="Bloquée",
+        mission_agents_title="Agents",
+        mission_lead_look="Apparence du responsable",
+        mission_look_classic="Classique",
+        mission_look_rounded="Arrondie",
+        mission_lead_look_tip="Choisissez l’apparence du robot qui mène chaque mission. Les assistants ont les deux apparences.",
+        mission_agents_active="{0} actif(s)",
+        mission_agents_empty=(
+            "Aucune conversation n'est ouverte pour cette mission. Ouvrez la conversation principale "
+            "pour continuer."
+        ),
+        mission_agent_lead="Responsable de mission",
+        mission_agent_delegate="Agent délégué",
+        mission_agent_thinking="Réflexion…",
+        mission_agent_working="Utilise {0}",
+        mission_agent_waiting="Attend votre approbation",
+        mission_agent_idle="Inactif",
+        mission_agent_error="Arrêté sur une erreur",
+        mission_inbox_title="Décisions en attente",
+        mission_approve="Approuver",
+        mission_unsure="Pas sûr",
+        mission_reject="Refuser",
+        mission_destructive="Destructif",
+        mission_decision_from="De {0}",
+        mission_activity_title="Activité récente",
+        mission_activity_empty="L'activité de cette mission s'affichera ici.",
+        mission_activity_started="Mission démarrée",
+        mission_activity_plan_updated="Plan mis à jour",
+        mission_activity_agent_joined="{0} a rejoint la mission",
+        mission_activity_turn_started="{0} a commencé à travailler",
+        mission_activity_turn_finished="{0} a terminé",
+        mission_activity_tool_used="{0} a utilisé {1}",
+        mission_activity_approval_requested="{0} demande à utiliser {1}",
+        mission_activity_approved="Vous avez approuvé {0}",
+        mission_activity_rejected="Vous avez refusé {0}",
+        mission_activity_guidance="Vous avez envoyé des instructions",
+        mission_activity_stopped="Mission arrêtée",
+        mission_activity_error="{0} s'est arrêté sur une erreur",
+        mission_composer_new="Dites à Humbug ce que vous voulez accomplir… ({key} pour envoyer)",
+        mission_composer_guidance="Envoyez des instructions au responsable de mission… ({key} pour envoyer)",
+        mission_send="Envoyer",
+        mission_error_start="Impossible de démarrer la mission : {0}",
+        mission_error_send="Impossible d'envoyer à la mission : {0}",
+        mission_working_close_title="Arrêter les missions en cours ?",
+        mission_working_close=(
+            "Ces missions sont encore en cours : {0}. Fermer maintenant arrête leur réponse en cours. "
+            "Vous pourrez les reprendre à la prochaine ouverture de cet espace mental."
+        ),
+        mission_decision_stale="Cette demande a déjà reçu une réponse.",
+        mission_lead_message_title="Dernier message du responsable de mission",
+        mission_lead_waiting="Attend votre réponse",
+        mission_reply="Répondre",
+        mission_composer_reply="Répondez au responsable de mission… ({key} pour envoyer)",
+        mission_task_progress="Avancement",
+        mission_task_evidence="Preuves",
+        mission_task_worked_by="Pris en charge par {0}",
+        mission_task_no_update="Le responsable n'a pas encore signalé d'avancement pour cette étape.",
+        mission_task_open_agent="Ouvrir la conversation",
+        mission_plan_hint="Cliquez sur une étape pour voir son avancement.",
+        mission_plan_filter_empty="Aucune étape ne correspond à ce filtre.",
+        mission_activity_auto_continued="Le responsable a été relancé",
+        mission_activity_auto_paused="En pause : aucune étape terminée après {0} relances automatiques",
+        mission_status_interrupted="Interrompue",
+        mission_status_replied="Répondu",
+        mission_status_failed="Échouée",
+        mission_resume="Reprendre",
+        mission_interrupted_notice=(
+            "Humbug a été fermé pendant que cette mission était en cours. Reprenez-la pour continuer "
+            "là où elle s'est arrêtée."
+        ),
+        mission_auto_resume="Reprise auto après redémarrage",
+        mission_milestone_step="Étape {0} sur {1} terminée : {2}",
+        mission_milestone_round="Terminé : {0}",
+        mission_milestone_next="Ensuite : {0}",
+        mission_milestone_planning="Ensuite : planifier ce qui reste de l'objectif",
+        mission_milestone_checks="Suite : faire réussir les vérifications de fin",
+        mission_milestone_follow_up="Ensuite : planifier votre nouvelle demande",
+        mission_glance_now="Maintenant",
+        mission_chips_back="Afficher les missions précédentes",
+        mission_chips_more="Afficher plus de missions",
+        mission_glance_progress="Avancement",
+        mission_glance_blocked_step="Étape bloquée : {0}",
+        mission_details_show="Afficher les détails",
+        mission_details_hide="Masquer les détails",
+        mission_working_on_message="Je traite votre message : « {0} »",
+        mission_reduce_motion="Réduire les animations",
+        mission_reduce_motion_tip=(
+            "Afficher Mission Control sans mouvement : rien ne glisse, n'apparaît en fondu, ne pulse, "
+            "ne tourne ni ne s'écrit lettre à lettre, et aucune mission terminée n'est fêtée par des confettis"
+        ),
+        mission_activity_resumed="Reprise après la fermeture de Humbug",
+        mission_error_resume="Impossible de reprendre la mission : {0}",
+        mission_decision_target="Porte sur : {0}",
+        mission_decision_undoable=(
+            "Réversible : le journal des modifications de fichiers de Humbug enregistre ce changement."
+        ),
+        mission_decision_not_undoable="Humbug ne pourra pas l'annuler une fois approuvé.",
+        mission_review_request="Examiner",
+        mission_status_paused="En pause",
+        mission_say_paused="En pause. Je me suis arrêté là où j'en étais et je vous attends.",
+        mission_pause="Pause",
+        mission_pause_tip=(
+            "Arrêter ce qui est en cours et attendre : rien n'est approuvé automatiquement et le "
+            "responsable ne reprend pas tant que vous ne continuez pas"
+        ),
+        mission_unpause="Continuer",
+        mission_paused_notice=(
+            "Cette mission est en pause. Rien n'est approuvé automatiquement et le responsable "
+            "ne continuera pas seul tant que vous n'appuyez pas sur Continuer."
+        ),
+        mission_activity_paused="Mise en pause",
+        mission_activity_unpaused="Reprise après une pause",
+        mission_everything_banner=(
+            "L'approbation automatique Tout est active pour « {0} » : chaque demande d'outil, y compris la "
+            "suppression de fichiers et l'exécution de commandes, est approuvée sans vous demander."
+        ),
+        mission_everything_turn_off="Désactiver",
+        mission_retry="Réessayer",
+        mission_activity_retried="Requête échouée relancée",
+        mission_error_retry="Impossible de relancer la mission : {0}",
+        mission_switch_to_autonomous="Passer en mode autonome",
+        mission_switch_to_classic="Passer en mode classique",
+        mission_mode_autonomous="Autonome",
+        mission_mode_classic="Classique",
+        mission_classic_title="Cette mission est en mode classique",
+        mission_classic_body=(
+            "Vous la pilotez depuis son onglet de conversation, donc le centre de missions ne la "
+            "poursuit pas. Passez en mode autonome pour la lui confier à nouveau."
+        ),
+        mission_task_stop="Arrêter la tâche",
+        mission_task_stopped="Arrêtée",
+        mission_activity_task_stopped="Vous avez arrêté « {0} »",
+        mission_activity_mode_classic="Passée en mode classique",
+        mission_activity_mode_autonomous="Passée en mode autonome",
+        mission_error_switch="Impossible de changer le mode de la mission : {0}",
+        mission_error_stop_task="Impossible d'arrêter la tâche : {0}",
+        mission_auto_approve="Approbation auto",
+        mission_auto_approve_off="Désactivée",
+        mission_auto_approve_safe="Actions sûres",
+        mission_auto_approve_all="Tout",
+        mission_auto_approve_tip=(
+            "Avec Actions sûres, les modifications de fichiers que le journal enregistre sont approuvées "
+            "aussitôt, et les autres demandes sûres passent par un relecteur IA, qui ne les approuve que si "
+            "elles correspondent clairement à l'objectif ; tout ce dont il n'est pas sûr vous est soumis. Les "
+            "actions sûres n'incluent jamais la suppression, le déplacement, l'écrasement, les commandes de "
+            "terminal ni les envois réseau. Avec Tout, chaque demande est approuvée sans vous consulter."
+        ),
+        mission_auto_approve_all_title="Tout approuver automatiquement ?",
+        mission_auto_approve_all_confirm=(
+            "Pour cette mission uniquement, chaque demande sera approuvée sans vous consulter ni passer par "
+            "un relecteur, y compris la suppression, le déplacement et l'écrasement de fichiers, les commandes "
+            "de terminal (qui ne peuvent pas être limitées à certains fichiers), la délégation à des assistants "
+            "et l'envoi de données sur le réseau. Cela dure tant que la mission s'exécute en mode autonome : "
+            "choisir un autre niveau, passer en mode classique ou arrêter la mission le désactive. Votre "
+            "confirmation et chaque approbation sont journalisées. N'activez cette option que pour un travail "
+            "que vous acceptez de ne pas superviser."
+        ),
+        mission_decision_reviewing="Relecture IA…",
+        mission_decision_review_note="Relecteur IA : {0}",
+        mission_activity_auto_approved="Le relecteur IA a approuvé {0}",
+        mission_activity_review_deferred="Le relecteur IA vous a laissé {0}",
+        mission_auto_approve_note_classic=(
+            "L'approbation automatique est désactivée tant que cette mission est en mode classique."
+        ),
+        mission_auto_approve_note_destructive=(
+            "Cette demande est destructive et l'approbation automatique est réglée sur Actions sûres."
+        ),
+        mission_auto_approve_note_everything_paused=(
+            "Cette mission approuve tout : cette demande sera approuvée quand vous poursuivrez la mission."
+        ),
+        mission_options="Options de la mission",
+        mission_rename="Renommer",
+        mission_rename_title="Renommer la mission",
+        mission_rename_label="Nom de la mission :",
+        mission_delete="Supprimer",
+        mission_delete_title="Supprimer la mission",
+        mission_delete_confirm="Supprimer « {0} » du centre de missions ? Ses conversations sont conservées.",
+        mission_error_rename="Impossible de renommer la mission : {0}",
+        mission_plan_history="Historique ({0})",
+        mission_plan_history_tip="Plans que cette mission a terminés avant le travail en cours",
+        mission_plan_history_title="Plans précédents",
+        mission_plan_empty_next=(
+            "L'IA principale rédige le plan du nouveau travail. Les plans précédents sont dans l'historique."
+        ),
+        mission_phase_count="{0} étapes terminées sur {1}",
+        mission_activity_plan_archived="Plan terminé déplacé dans l'historique",
+        mission_say_reading="Je lis {0} pour vous…",
+        mission_say_writing="J'écris {0} pour vous…",
+        mission_say_editing="Je modifie {0} pour vous…",
+        mission_say_deleting="Je supprime {0}…",
+        mission_say_files="Je range des fichiers pour vous…",
+        mission_say_delegating="Je fais appel à un agent assistant pour ceci…",
+        mission_say_terminal="J'exécute une commande pour vous : {0}",
+        mission_say_web="Je cherche quelque chose sur le web pour vous…",
+        mission_say_tool="J'utilise {0} pour vous…",
+        mission_say_task="Je travaille maintenant sur « {0} » pour vous…",
+        mission_say_thinking="Je réfléchis à la prochaine étape…",
+        mission_say_planning="Bonjour, je suis {0} ! Je prépare un plan pour vous…",
+        mission_say_hello="Bonjour, je suis {0} ! Je commence ma part…",
+        mission_say_approval="J'ai besoin de votre accord : {0}",
+        mission_say_reviewing="Le relecteur IA vérifie ma demande : {0}",
+        mission_say_done="Tout est fait ! Puis-je faire autre chose pour vous ?",
+        mission_say_reply="Je vous ai laissé un message. Répondez ci-dessous quand vous êtes prêt.",
+        mission_say_stopped="Je me suis arrêté. Envoyez-moi un message pour continuer.",
+        mission_say_interrupted=(
+            "Humbug s'est fermé pendant que je travaillais. Appuyez sur Reprendre et je continuerai là où je m'étais arrêté."
+        ),
+        mission_say_helper_waiting="Un de mes assistants a besoin de votre accord.",
+        mission_say_replied=(
+            "Je vous ai répondu ci-dessous. Posez-moi d'autres questions ou confiez-moi une tâche."
+        ),
+        mission_say_ready="Prêt quand vous l'êtes.",
+        mission_say_error="Un problème est survenu. Appuyez sur Réessayer, ou envoyez-moi un message.",
+        mission_failed_notice=(
+            "Ma dernière réponse s'est terminée par une erreur. Réessayez pour renvoyer la même requête, "
+            "ouvrez ma conversation pour voir pourquoi, ou envoyez-moi un message."
+        ),
+        mission_show_lead_conversation="Ouvrir la conversation du responsable",
+        mission_say_sleeping="Je fais une pause prévue de {0}. Je reprendrai ensuite…",
+        mission_chat_title="Conversation",
+        mission_chat_hint="Vos messages et les réponses du responsable, comme dans un onglet de conversation",
+        mission_chat_show_earlier="Afficher les messages précédents ({0} de plus)",
+        mission_chat_you="Vous",
+        mission_chat_lead="Responsable de mission",
+        mission_results_title="Résultats précédents",
+        mission_results_hint=(
+            "Chaque étape terminée avant une question de suivi est conservée ici, la plus récente en premier. "
+            "Cliquez pour lire son rapport complet."
+        ),
+        mission_result_number="Étape {0}",
+        mission_result_asked="Vous avez demandé : {0}",
+        mission_result_no_report="Le responsable n'a pas donné de rapport final pour cette étape.",
+        mission_say_after_reading="J'ai lu {0}, je réfléchis à la suite…",
+        mission_say_after_writing="J'ai écrit {0}, je vérifie et je continue…",
+        mission_say_after_editing="J'ai modifié {0}, je vérifie et je continue…",
+        mission_say_after_deleting="J'ai supprimé {0}, je continue…",
+        mission_say_after_files="J'ai terminé avec les fichiers, je réfléchis à la suite…",
+        mission_say_after_delegating="Mon assistant a rendu compte, je lis ce qu'il a trouvé…",
+        mission_say_after_terminal="J'ai exécuté {0}, je lis le résultat…",
+        mission_say_after_web="J'ai obtenu une réponse du web, je la lis…",
+        mission_say_after_tool="J'ai terminé avec {0}, je réfléchis à la suite…",
+        mission_say_progress="{0} ({1} actions jusqu'ici)",
+        mission_say_progress_one="{0} (1 action jusqu'ici)",
+        mission_finish_waiting="Terminer l'attente",
+        mission_wait_left="Encore {0}",
+        mission_activity_started_prompt="Mission démarrée : « {0} »",
+        mission_activity_guidance_prompt="Vous : « {0} »",
+        mission_composer_hint_enter="Entrée pour une nouvelle ligne",
+        mission_stage_asked="Votre demande",
+        mission_stage_planning="L'IA planifie",
+        mission_stage_working="L'équipe IA travaille",
+        mission_stage_done="Travail terminé",
+        mission_report_title="Mission accomplie",
+        mission_report_caption="Rapport final de votre IA principale",
+        mission_report_back_to_top="Revenir en haut",
+        mission_status_recovering="Reconnexion",
+        mission_status_stuck="Semble bloquée",
+        mission_activity_recovery_scheduled="Service d'IA injoignable ; nouvel essai dans {0} s",
+        mission_activity_auto_retried="Requête échouée relancée automatiquement (essai {0})",
+        mission_activity_recovery_gave_up="Nouveaux essais arrêtés après {0} tentatives automatiques",
+        mission_activity_loop_detected="{0} encore et encore avec le même résultat ; mission en pause",
+        mission_say_reconnecting="J'ai perdu le contact avec le service d'IA. Je réessaierai moi-même sous peu…",
+        mission_say_stuck="Je semble tourner en rond. Dites-moi quoi faire, ou laissez-moi continuer.",
+        mission_retry_now="Réessayer maintenant",
+        mission_carry_on="Continuer",
+        mission_stuck_no_progress=(
+            "Mission Control a cessé de demander au responsable de continuer : {0} relances d'affilée n'ont "
+            "terminé aucune étape. Envoyez des instructions, ou appuyez sur Continuer pour le laisser réessayer."
+        ),
+        mission_stuck_repeating=(
+            "Mission Control a mis cette mission en pause : {0} {1} fois d'affilée, avec le même résultat "
+            "à chaque fois. Envoyez des instructions, ou appuyez sur Continuer pour le laisser réessayer."
+        ),
+        mission_notify_decision="Votre approbation est requise",
+        mission_notify_completed="Mission accomplie",
+        mission_notify_replied="Le responsable a répondu",
+        mission_notify_failed="Mission échouée",
+        mission_notify_stuck="La mission semble bloquée",
+        mission_steps_count="{0} étape(s) sur {1} terminée(s)",
+        mission_failed_key=(
+            "Le service d'IA a refusé la requête : sa clé d'API est absente, erronée ou n'a pas accès à "
+            "ce modèle. Vérifiez la clé dans Paramètres › Backends IA, puis appuyez sur Réessayer."
+        ),
+        mission_failed_model=(
+            "Le modèle d'IA est introuvable : il a peut-être été renommé ou retiré. Choisissez un autre "
+            "modèle avec la roue dentée près de la zone de message, puis écrivez-moi."
+        ),
+        mission_failed_request=(
+            "Le service d'IA n'a pas pu accepter la requête, souvent parce que la conversation est "
+            "devenue trop longue pour le modèle. Choisissez un modèle avec un plus grand contexte, ou "
+            "démarrez une nouvelle mission."
+        ),
+        mission_failed_rate=(
+            "Le service d'IA limite la fréquence des requêtes. Attendez quelques minutes, puis appuyez "
+            "sur Réessayer."
+        ),
+        mission_failed_network=(
+            "Humbug n'a pas pu joindre le service d'IA. Vérifiez votre connexion Internet, puis appuyez "
+            "sur Réessayer."
+        ),
+        mission_failed_server=(
+            "Le service d'IA a rencontré un problème de son côté. Appuyez sur Réessayer dans quelques "
+            "minutes."
+        ),
+        mission_failed_backend=(
+            "Aucun service d'IA n'est configuré pour le fournisseur de ce modèle. Configurez-en un dans "
+            "Paramètres › Backends IA, ou choisissez un autre modèle avec la roue dentée près de la "
+            "zone de message."
+        ),
+        mission_failed_cut_short=(
+            "Le service d'IA s'est arrêté avant d'avoir fini sa réponse. Appuyez sur Réessayer pour la "
+            "redemander."
+        ),
+        mission_guide_title="Mission Control",
+        mission_guide_dismiss="Compris",
+        mission_guide_link="Comment fonctionne Mission Control ?",
+        mission_guide_subtitle="De votre idée à son exécution, en gardant la main.",
+        mission_guide_footer="Supervision humaine · Collaboration en direct · Modifications réversibles",
+        mission_guide_1_title="Définissez votre mission",
+        mission_guide_1="Décrivez votre objectif. Votre responsable IA établit un plan et réunit les bons agents.",
+        mission_guide_2_title="Suivez son déroulement",
+        mission_guide_2="Suivez l'avancement en direct, surveillez les agents et échangez avec votre responsable IA.",
+        mission_guide_3_title="Gardez le contrôle",
+        mission_guide_3="Approuvez les actions sensibles et annulez les modifications de fichiers quand il le faut.",
+        mission_run_again="Relancer",
+        mission_archive="Archiver",
+        mission_unarchive="Sortir de l'archive",
+        mission_archived_count="Archivées ({0})",
+        mission_search="Rechercher des missions",
+        mission_search_none="Aucune mission ne correspond",
+        mission_report_save_word="Enregistrer comme document Word…",
+        mission_report_copy_image="Copier comme image",
+        mission_report_files="Dans ce rapport :",
+        mission_report_open_file="Ouvrir {0}",
+        mission_report_save_word_title="Enregistrer le rapport comme document Word",
+        mission_report_word_filter="Documents Word (*.docx)",
+        mission_report_save_failed="Le rapport n'a pas pu être enregistré : {0}",
+        mission_files_title="Fichiers modifiés",
+        mission_files_hint=(
+            "Modifications faites par les outils de Humbug, telles que le journal des modifications les "
+            "a enregistrées. Une commande lancée dans un terminal peut modifier des fichiers sans "
+            "qu'ils soient listés."
+        ),
+        mission_files_undo_all="Tout annuler",
+        mission_files_created="{0} créé(s)",
+        mission_files_changed="{0} modifié(s)",
+        mission_files_deleted="{0} supprimé(s)",
+        mission_files_lines="+{0} −{1} lignes",
+        mission_file_lines="{0} lignes ajoutées, {1} supprimées",
+        mission_file_review="Voir les modifications",
+        mission_file_review_tip="Comparer {0} avant cette mission avec sa version actuelle",
+        mission_file_diff_show="Afficher les modifications ligne par ligne",
+        mission_file_diff_gap="{0} lignes inchangées",
+        mission_file_diff_more=(
+            "{0} lignes supplémentaires ne sont pas affichées ici. Voir les modifications ouvre la "
+            "comparaison complète."
+        ),
+        mission_file_diff_unavailable=(
+            "Cette modification ne peut plus être affichée ligne par ligne : une version antérieure du "
+            "fichier n’est plus conservée."
+        ),
+        mission_file_diff_empty="Aucune ligne modifiée.",
+        mission_checks_option="Ajouter des vérifications de fin (facultatif)",
+        mission_checks_placeholder=(
+            "Une vérification par ligne, par exemple :\nnpm test réussit\nPOC/about.html est lié depuis "
+            "le tableau de bord"
+        ),
+        mission_checks_explain=(
+            "La mission n’est accomplie que lorsque le responsable indique que chaque vérification a "
+            "réussi. Si l’une échoue, il est renvoyé la corriger, jusqu’à 3 fois."
+        ),
+        mission_checks_title="Vérifications de fin",
+        mission_checks_hint=(
+            "Le responsable exécute chaque vérification et rapporte ce qu’il a constaté. Les commandes "
+            "qu’il lance demandent toujours votre approbation."
+        ),
+        mission_checks_count="{0}/{1} réussies",
+        mission_check_passed="Réussie",
+        mission_check_failed="Échouée",
+        mission_check_pending="Pas encore exécutée",
+        mission_stuck_checks=(
+            "Les vérifications de fin échouaient encore après {0} essais : Mission Control a cessé de "
+            "renvoyer le responsable. Consultez les résultats, puis envoyez des instructions ou appuyez "
+            "sur Continuer pour lui accorder {0} essais de plus."
+        ),
+        mission_activity_checks_passed="Les {0} vérifications de fin ont réussi",
+        mission_activity_checks_failed="Vérifications de fin non réussies : {0}",
+        mission_activity_files_undone="Vous avez annulé les modifications de {0} fichiers",
+        mission_file_open="Ouvrir",
+        mission_file_undo="Annuler",
+        mission_file_open_tip="Ouvrir {0} dans un onglet d’éditeur",
+        mission_file_undo_tip="Remettre {0} comme avant cette mission",
+        mission_file_created="Créé",
+        mission_file_modified="Modifié",
+        mission_file_deleted="Supprimé",
+        mission_file_times="{0} {1} fois",
+        mission_file_undone="Annulé",
+        mission_file_changed_since="Modifié depuis",
+        mission_files_undo_title="Annuler des modifications",
+        mission_files_undo_confirm="Remettre {0} comme il était avant que cette mission le modifie ?",
+        mission_files_undo_all_confirm="Remettre chaque fichier modifié par cette mission comme il était avant ?",
+        mission_files_undo_failed="Certaines modifications n'ont pas pu être annulées :\n{0}",
+        mission_tokens="{0} jetons",
+        mission_tokens_detail="Entrée {0} · Sortie {1}. Comptés pendant que Humbug suivait la mission",
+        mission_working_for="Au travail depuis {0}",
+        mission_working_just_now="Vient de commencer",
+        mission_started_at="Commencée {0}",
+        mission_inbox_keys=(
+            "Touches : A approuver · R rejeter · U pas sûr · N / P suivante et précédente · Maj+A "
+            "approuve une demande destructrice"
+        ),
+        mission_remember_level="Démarrer chaque nouvelle mission à ce niveau",
+        mission_remember_level_tip=(
+            "Gardé pour ce projet. « Tout » n'est jamais gardé : il est choisi, et confirmé, pour "
+            "chaque mission"
+        ),
+        mission_status_plan_ready="Plan prêt",
+        mission_say_plan_ready="Voici mon plan. Je commence ?",
+        mission_say_plan_edited="Vous avez modifié le plan. Dois-je continuer avec le plan modifié ?",
+        mission_say_paused_edited="Vous avez modifié le plan. Je suivrai le plan modifié quand vous reprendrez.",
+        mission_step_skipped="Ignorée",
+        mission_step_skip="Ignorer",
+        mission_step_unskip="Inclure",
+        mission_step_move_tip="Faites glisser pour déplacer cette étape, ou appuyez sur Alt+Haut ou Alt+Bas",
+        mission_plan_arrange_hint=(
+            "Faites glisser les étapes qui n’ont pas commencé pour changer leur ordre, ou ignorez "
+            "celles dont vous ne voulez pas. Le responsable suit le plan modifié quand le travail "
+            "commence ou reprend."
+        ),
+        mission_plan_yes="Oui, commencer",
+        mission_plan_no="Non",
+        mission_composer_plan_change="Dites au responsable ce qu’il faut changer dans le plan… ({key} pour envoyer)",
+        mission_activity_plan_approved_edited="Vous avez approuvé le plan avec vos modifications",
+        mission_activity_plan_approved="Vous avez approuvé le plan",
+        mission_start_work="Lancer le travail",
+        mission_plan_ready_notice=(
+            "Votre responsable a rédigé un plan et vous attend. Parcourez-le ci-dessous, puis lancez le "
+            "travail, ou dites au responsable ce qu'il faut changer dans la zone en bas."
+        ),
+        mission_review_plan_option="Me laisser revoir le plan avant le début du travail",
+        mission_review_plan_tip=(
+            "Le responsable rédige son plan, puis attend que vous le lanciez, afin que rien ne soit fait "
+            "avant que vous ayez vu ce qui le sera"
+        ),
+        mission_notify_plan_ready="Plan prêt à être revu",
+        mission_templates_label="Vos modèles",
+        mission_template_save="Enregistrer ce que vous avez saisi comme modèle",
+        mission_template_save_tip="Garder cette demande, pour en relancer des missions",
+        mission_template_delete="Supprimer le modèle « {0} »",
+        mission_template_name_title="Enregistrer comme modèle",
+        mission_template_name_prompt="Nommez ce modèle :",
+        mission_report_copy="Copier le rapport",
+        mission_report_copied="Copié",
+        mission_report_show_steps="Afficher les étapes",
+        mission_report_hide_steps="Masquer les étapes",
+        mission_report_show_activity="Afficher ce qui s'est passé",
+        mission_report_hide_activity="Masquer ce qui s'est passé",
+        mission_plan_filter_all="Toutes",
+        mission_inbox_clear="Rien en attente",
+        mission_activity_tool_read="{0} a lu {1}",
+        mission_activity_tool_wrote="{0} a écrit {1}",
+        mission_activity_tool_deleted="{0} a supprimé {1}",
+        mission_activity_tool_files="{0} a travaillé sur des fichiers",
+        mission_activity_tool_edited="{0} a modifié {1}",
+        mission_activity_tool_delegated="{0} a confié du travail à un assistant",
+        mission_activity_tool_ran="{0} a exécuté {1}",
+        mission_activity_tool_web="{0} a fait une recherche sur le web",
+        mission_recovery_notice=(
+            "Le service d'IA est injoignable. Mission Control renverra la requête de lui-même à {0} "
+            "(essai {1} sur {2}), ou appuyez sur Réessayer maintenant."
+        ),
+        mission_report_stats="Étapes terminées : {0} sur {1}  ·  Agents dans l'équipe : {2}",
+        mission_follow_up="Poser une question de suivi",
+        mission_activity_reversible_approved="{0} approuvé — enregistré dans le journal",
+        mission_activity_everything_approved="{0} approuvé — l'approbation automatique est réglée sur Tout",
+        mission_activity_user_message="Vous, à {0} : « {1} »",
+        mission_say_waiting_helpers="J'attends que {0} termine et me fasse son rapport…",
+        mission_read_more="En savoir plus",
+        mission_activity_open_tip="Cliquez pour voir ce qui s'est passé",
+        mission_attention="{0} demande(s) attendent votre décision",
+        mission_review_now="Examiner",
+        mission_more_actions="Plus d'actions",
+        mission_agents_show_list="Afficher en liste",
+        mission_agents_hide_list="Masquer la liste",
+        mission_auto_approve_off_note=(
+            "Toute action qui modifie des fichiers, exécute des "
+            "commandes ou envoie des données vous attend."
+        ),
+        mission_auto_approve_safe_note=(
+            "Les modifications journalisées et les demandes sûres passent "
+            "; tout ce qui est destructif vous attend."
+        ),
+        mission_auto_approve_all_note=(
+            "L'équipe travaille de bout en bout sans s'arrêter ; "
+            "rien n'attend votre approbation."
+        ),
+        mission_scroll_left="Faire défiler les missions vers la gauche",
+        mission_scroll_right="Faire défiler les missions vers la droite",
+        mission_waiting_elsewhere="« {0} » attend votre décision",
+        mission_waiting_elsewhere_many="{0} autres missions attendent vos décisions",
+        mission_go_to_waiting="Y aller"
     )

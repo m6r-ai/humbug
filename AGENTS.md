@@ -235,6 +235,7 @@ modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 - `language/` - Localization support
 - `log_tab/` - Log tab implementation
 - `markdown/` - Markdown and code rendering stack
+- `mission_tab/` - Mission Control tab, drawing the `src/mission/` backend
 - `mindspace/` - Qt-facing mindspace singleton (`MindspaceManager`), directory tracking, VCS polling, and mindspace folder management
 - `preview_sidebar/` - Preview panel implementation
 - `preview_tab/` - Preview tab implementation
@@ -342,7 +343,9 @@ structured context, keyed `conversation` and holding the conversation's mindspac
 transcript path.  Anything writing an entry while acting for a conversation must attribute it
 with `Mindspace.add_interaction(..., context=Mindspace.conversation_log_context(requester))`,
 where `requester` is the conversation the entry belongs to, rather than embedding the identifier
-in the content text.
+in the content text.  What a conversation's turns are recorded as is decided once, in
+`mindspace_conversation_log.py`, which the conversation tab and Mission Control both use, so a
+turn is recorded the same way whichever of them is recording it.
 
 `Mindspace.resolve_tool_path()` is the single mechanism every AI tool must use to
 resolve a path argument.  It enforces the mindspace boundary and rejects paths inside
@@ -418,6 +421,17 @@ tool, which offers outside-boundary paths to the user for external approval but 
 reject `.humbug/` paths outright.  As defence in depth, `_get_filesystem_access_settings`
 also appends the current mindspace's `.humbug/**` to the effective denylist, so such a
 path is denied by the same always-deny mechanism as `~/.ssh/**`.
+
+### `src/mission/`
+Front-end-agnostic Mission Control backend (Autonomous Mode): mission records under
+`.humbug/missions/`, the lead conversation each mission drives, the decision inbox and
+auto-approval, and the snapshots the desktop draws from.  No Qt or GUI dependencies; its
+settings are mindspace settings.  See ADR-0026.
+
+Every approval decision Mission Control makes or relays lives in `mission_approvals.py`
+(`MissionApprovals`): the decision inbox, the auto-approve levels, the reviewer, and Everything.
+`MissionService` owns it and passes it the state it shares through `MissionApprovalsHost`.  Any
+change that takes a mission out of autonomous mode must call `MissionApprovals.revoke_everything()`.
 
 ### `src/path_matching/`
 Matching of a path against a list of glob entries, shared by the filesystem tool's file

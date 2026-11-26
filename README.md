@@ -126,6 +126,7 @@ Humbug is identical on all three platforms, other than minor OS-specific require
 ### Rich user interactions
 
 Humbug's UI supports simultaneous conversations, file editing with syntax highlights, markdown preview pages, terminal emulators, a system shell, and a system log.
+Mission Control follows longer pieces of work as missions, with one place to answer every approval they need.
 It also features git version control integration with a sidebar and side-by-side diff tabs, a per-mindspace token usage dashboard, and the Changes and Trash panels that make recent work reversible.
 UI orchestration means your AI can drive these tools the same way you do, enabling a fully agentic experience.
 
@@ -183,7 +184,7 @@ a headless one — can project the same state.
 ### The "desktop" GUI
 
 The desktop GUI supports sidebar panels and desktop tabs. Most of the real work happens in the
-tabs: conversations, editors, previews, terminals, diffs, the mindspace log, and token usage.
+tabs: conversations, editors, previews, terminals, diffs, the mindspace log, token usage, and Mission Control.
 
 The sidebar panels are the mindspace seen from different angles — Conversations, Files, Preview,
 Search, Changed Files, Changes (the recent mutation record, and how to reverse it), and Trash.

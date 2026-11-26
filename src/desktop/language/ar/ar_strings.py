@@ -197,7 +197,10 @@ def get_arabic_strings() -> LanguageStrings:
         settings_network_access="الوصول إلى الشبكة",
         external_http_access="الوصول إلى الشبكة",
         allow_external_http_access="السماح للذكاء الاصطناعي بجلب عناوين URL المسموح بها دون سؤال",
-        external_http_allowlist="عناوين URL المعتمدة تلقائياً (واحد لكل سطر، مثل api.example.com أو https://api.example.com:8443):",
+        external_http_allowlist=(
+            "عناوين URL المعتمدة تلقائياً (واحد لكل سطر، مثل api.example.com أو "
+            "https://api.example.com:8443):"
+        ),
         external_http_denylist="عناوين URL المرفوضة دائماً (واحد لكل سطر، مثل localhost أو 10.0.0.0/8):",
 
         # Mindspace tree
@@ -450,7 +453,9 @@ def get_arabic_strings() -> LanguageStrings:
         trash_confirm_delete_forever_title="حذف نهائي",
         trash_confirm_delete_forever_message="هل أنت متأكد من الحذف النهائي لـ {0}؟ لا يمكن التراجع عن هذا الإجراء.",
         trash_confirm_empty_title="إفراغ سلة المهملات",
-        trash_confirm_empty_message="هل أنت متأكد من الحذف النهائي لكل ما في سلة المهملات؟ لا يمكن التراجع عن هذا الإجراء.",
+        trash_confirm_empty_message=(
+            "هل أنت متأكد من الحذف النهائي لكل ما في سلة المهملات؟ لا يمكن التراجع عن هذا الإجراء."
+        ),
         trash_restore_failed_title="فشلت الاستعادة",
         trash_restore_failed_message="فشلت استعادة {0}: {1}",
         trash_time_just_now="الآن",
@@ -540,7 +545,10 @@ def get_arabic_strings() -> LanguageStrings:
         ),
 
         delete_from_here_title="حذف الرسائل",
-        delete_from_here_message="هل أنت متأكد من أنك تريد حذف هذه الرسالة وجميع الرسائل اللاحقة؟ لا يمكن التراجع عن هذا الإجراء.",
+        delete_from_here_message=(
+            "هل أنت متأكد من أنك تريد حذف هذه الرسالة وجميع الرسائل اللاحقة؟ لا يمكن التراجع عن هذا "
+            "الإجراء."
+        ),
 
         # Move operation strings
         move_file_title="نقل الملف",
@@ -641,13 +649,17 @@ def get_arabic_strings() -> LanguageStrings:
             "افتح محادثاتك هنا — استخدم + لبدء محادثة جديدة، أو أيقونة المجلد لتنظيمها."
         ),
         tour_workspace_title="مساحة عملك",
-        tour_workspace_description="تُفتح المحادثات وعلامات التبويب الأخرى هنا. هذا هو المكان الذي ستقوم فيه بمعظم عملك.",
+        tour_workspace_description=(
+            "تُفتح المحادثات وعلامات التبويب الأخرى هنا. هذا هو المكان الذي ستقوم فيه بمعظم عملك."
+        ),
         tour_key_action_title="إرسال رسالة",
         tour_key_action_description="اكتب رسالة واضغط على إرسال (أو {0}) للتحدث مع الذكاء الاصطناعي.",
         tour_output_title="سجل المحادثة",
         tour_output_description="تظهر ردود الذكاء الاصطناعي وسجل محادثتك هنا أثناء الدردشة.",
         tour_navigation_title="التنقل",
-        tour_navigation_description="بدّل بين المحادثات والملفات والبحث والمعاينة والمزيد باستخدام هذا الشريط الجانبي.",
+        tour_navigation_description=(
+            "بدّل بين المحادثات والملفات والبحث والمعاينة والمزيد باستخدام هذا الشريط الجانبي."
+        ),
         tour_help_title="الإعدادات والمساعدة",
         tour_help_description="افتح الإعدادات هنا في أي وقت. يمكنك إعادة تشغيل هذه الجولة من Humbug ← أخذ جولة.",
 
@@ -662,6 +674,476 @@ def get_arabic_strings() -> LanguageStrings:
         fetch_error_timeout="انتهت مهلة الطلب — استغرق المزود وقتاً طويلاً للاستجابة.",
         fetch_error_generic="فشل: {0}",
         stream_error_interrupted="انقطع الاتصال قبل اكتمال الاستجابة. يرجى إعادة المحاولة.",
-        stream_error_no_backend="لا يوجد خدمة ذكاء اصطناعي مهيأة لمزود هذا النموذج — تحقق من إعدادات خدمات الذكاء الاصطناعي.",
-        stream_error_access_denied="تم رفض الوصول ({0}) — قد لا يملك حسابك صلاحية الوصول إلى هذا النموذج."
+        stream_error_no_backend=(
+            "لا يوجد خدمة ذكاء اصطناعي مهيأة لمزود هذا النموذج — تحقق من إعدادات خدمات الذكاء "
+            "الاصطناعي."
+        ),
+        stream_error_access_denied="تم رفض الوصول ({0}) — قد لا يملك حسابك صلاحية الوصول إلى هذا النموذج.",
+
+        mission_control="مركز المهام",
+        mission_subtitle="خطّط وفوّض ووافق في مكان واحد",
+        mission_hero_title="ما الذي تريد أن يفعله فريق الذكاء الاصطناعي من أجلك؟",
+        mission_hero_subtitle=(
+            "صِف العمل وسلّمه. يخطّط له قائد المهمة ويستعين بمساعدين ويعمل في الخلفية "
+            "ثم يعود إليك بتقرير نهائي. لا تتدخّل إلا عندما يحتاج إلى رأيك."
+        ),
+        mission_examples_label="جرّب أحد هذه الأمثلة",
+        mission_example_1="راجع هذا المشروع واكتب نظرة عامة موجزة على بنيته",
+        mission_example_2="اعثر على الاختبارات الفاشلة وأصلحها",
+        mission_example_3="أضف التحقق من المدخلات إلى نموذج الإعدادات مع الاختبارات",
+        mission_new="مهمة جديدة",
+        mission_status_planning="قيد التخطيط",
+        mission_status_running="قيد التنفيذ",
+        mission_status_needs_you="بانتظارك",
+        mission_status_idle="بانتظار ردّك",
+        mission_status_completed="مكتملة",
+        mission_status_stopped="متوقفة",
+        mission_progress="اكتمل {0}%",
+        mission_stop="إيقاف",
+        mission_stat_completed="مكتملة",
+        mission_stat_in_progress="قيد التنفيذ",
+        mission_plan_title="خطة المهمة",
+        mission_plan_empty="ستظهر الخطة هنا بمجرد أن يصيغها الذكاء الاصطناعي الرئيسي.",
+        mission_task_pending="معلّقة",
+        mission_task_in_progress="قيد التنفيذ",
+        mission_task_completed="مكتملة",
+        mission_task_blocked="متعثّرة",
+        mission_agents_title="الوكلاء",
+        mission_lead_look="مظهر القائد",
+        mission_look_classic="كلاسيكي",
+        mission_look_rounded="دائري",
+        mission_lead_look_tip="اختر مظهر الروبوت الذي يقود كل مهمة. يأتي المساعدون بالمظهرين.",
+        mission_agents_active="{0} نشط",
+        mission_agents_empty="لا توجد محادثة مفتوحة لهذه المهمة. افتح المحادثة الرئيسية للمتابعة.",
+        mission_agent_lead="قائد المهمة",
+        mission_agent_delegate="وكيل مفوَّض",
+        mission_agent_thinking="يفكّر…",
+        mission_agent_working="يستخدم {0}",
+        mission_agent_waiting="بانتظار موافقتك",
+        mission_agent_idle="خامل",
+        mission_agent_error="توقّف بسبب خطأ",
+        mission_inbox_title="صندوق القرارات",
+        mission_approve="موافقة",
+        mission_unsure="غير متأكد",
+        mission_reject="رفض",
+        mission_destructive="إجراء هدّام",
+        mission_decision_from="من {0}",
+        mission_activity_title="النشاط الأخير",
+        mission_activity_empty="سيظهر نشاط هذه المهمة هنا.",
+        mission_activity_started="بدأت المهمة",
+        mission_activity_plan_updated="تم تحديث الخطة",
+        mission_activity_agent_joined="انضمّ {0} إلى المهمة",
+        mission_activity_turn_started="بدأ {0} العمل",
+        mission_activity_turn_finished="أنهى {0} عمله",
+        mission_activity_tool_used="استخدم {0} الأداة {1}",
+        mission_activity_approval_requested="طلب {0} استخدام {1}",
+        mission_activity_approved="وافقت على {0}",
+        mission_activity_rejected="رفضت {0}",
+        mission_activity_guidance="أرسلت توجيهات",
+        mission_activity_stopped="توقفت المهمة",
+        mission_activity_error="توقّف {0} بسبب خطأ",
+        mission_composer_new="أخبر Humbug بما تريد تحقيقه… ({key} للإرسال)",
+        mission_composer_guidance="أرسل توجيهات إلى قائد المهمة… ({key} للإرسال)",
+        mission_send="إرسال",
+        mission_error_start="تعذّر بدء المهمة: {0}",
+        mission_error_send="تعذّر الإرسال إلى المهمة: {0}",
+        mission_working_close_title="إيقاف المهام الجارية؟",
+        mission_working_close=(
+            "لا تزال هذه المهام قيد العمل: {0}. الإغلاق الآن يوقف ردّها الحالي. "
+            "يمكنك استئنافها عند فتح هذه المساحة الذهنية في المرة القادمة."
+        ),
+        mission_decision_stale="تمت الإجابة عن هذا الطلب مسبقًا.",
+        mission_lead_message_title="آخر رسالة من قائد المهمة",
+        mission_lead_waiting="بانتظار ردّك",
+        mission_reply="ردّ",
+        mission_composer_reply="اكتب ردّك لقائد المهمة… ({key} للإرسال)",
+        mission_task_progress="التقدّم",
+        mission_task_evidence="الدليل",
+        mission_task_worked_by="يعمل عليها {0}",
+        mission_task_no_update="لم يُبلغ القائد عن أي تقدّم في هذه الخطوة بعد.",
+        mission_task_open_agent="فتح المحادثة",
+        mission_plan_hint="انقر على خطوة لعرض تقدّمها.",
+        mission_plan_filter_empty="لا توجد خطوات مطابقة لهذا الفلتر.",
+        mission_activity_auto_continued="طُلب من القائد المتابعة",
+        mission_activity_auto_paused="توقّف مؤقتًا: لم تكتمل أي خطوة بعد {0} محاولات متابعة تلقائية",
+        mission_status_interrupted="متوقفة بشكل مفاجئ",
+        mission_status_replied="تمت الإجابة",
+        mission_status_failed="فشلت",
+        mission_resume="استئناف",
+        mission_interrupted_notice="أُغلق Humbug أثناء تنفيذ هذه المهمة. استأنفها للمتابعة من حيث توقفت.",
+        mission_auto_resume="استئناف تلقائي بعد إعادة التشغيل",
+        mission_milestone_step="اكتملت الخطوة {0} من {1}: {2}",
+        mission_milestone_round="اكتمل: {0}",
+        mission_milestone_next="التالي: {0}",
+        mission_milestone_planning="التالي: التخطيط لما تبقى من الهدف",
+        mission_milestone_checks="التالي: إنجاح فحوص الإنجاز",
+        mission_milestone_follow_up="التالي: التخطيط لطلبك الجديد",
+        mission_glance_now="الآن",
+        mission_chips_back="عرض المهام السابقة",
+        mission_chips_more="عرض المزيد من المهام",
+        mission_glance_progress="التقدّم",
+        mission_glance_blocked_step="خطوة متوقفة: {0}",
+        mission_details_show="عرض التفاصيل",
+        mission_details_hide="إخفاء التفاصيل",
+        mission_working_on_message="أعمل على رسالتك: “{0}”",
+        mission_reduce_motion="تقليل الحركة",
+        mission_reduce_motion_tip=(
+            "اعرض Mission Control ثابتًا: لا شيء ينزلق أو يتلاشى أو ينبض أو يدور أو يُكتب حرفًا حرفًا، "
+            "ولا يُحتفل بالمهام المنتهية بقصاصات الورق"
+        ),
+        mission_activity_resumed="استُؤنفت بعد إغلاق Humbug",
+        mission_error_resume="تعذّر استئناف المهمة: {0}",
+        mission_decision_target="يعمل على: {0}",
+        mission_decision_undoable="يمكن التراجع عنه: يسجّل سجل تغييرات الملفات في Humbug هذا التغيير.",
+        mission_decision_not_undoable="لا يمكن لـ Humbug التراجع عنه بعد الموافقة.",
+        mission_review_request="مراجعة",
+        mission_status_paused="متوقفة مؤقتًا",
+        mission_say_paused="متوقف مؤقتًا. توقفتُ حيث كنت، وسأنتظرك.",
+        mission_pause="إيقاف مؤقت",
+        mission_pause_tip="أوقف ما يعمل الآن وانتظر: لا يُوافَق على أي شيء تلقائيًا ولا يتابع القائد حتى تتابع أنت",
+        mission_unpause="متابعة",
+        mission_paused_notice=(
+            "هذه المهمة متوقفة مؤقتًا. لا يُوافَق على أي شيء تلقائيًا "
+            "ولن يتابع القائد من تلقاء نفسه حتى تضغط متابعة."
+        ),
+        mission_activity_paused="أُوقفت مؤقتًا",
+        mission_activity_unpaused="تابعت بعد توقف مؤقت",
+        mission_everything_banner=(
+            "الموافقة التلقائية على كل شيء مفعّلة للمهمة \"{0}\": كل طلب أداة، بما في ذلك حذف الملفات وتشغيل "
+            "الأوامر، يُوافَق عليه دون سؤالك."
+        ),
+        mission_everything_turn_off="إيقاف",
+        mission_retry="إعادة المحاولة",
+        mission_activity_retried="أُعيدت محاولة الطلب الفاشل",
+        mission_error_retry="تعذّرت إعادة محاولة المهمة: {0}",
+        mission_switch_to_autonomous="التبديل إلى الوضع المستقل",
+        mission_switch_to_classic="التبديل إلى الوضع الكلاسيكي",
+        mission_mode_autonomous="مستقل",
+        mission_mode_classic="كلاسيكي",
+        mission_classic_title="هذه المهمة في الوضع الكلاسيكي",
+        mission_classic_body=(
+            "أنت تتابعها من تبويب محادثتها، لذا لا يتابعها مركز المهام. بدّل إلى الوضع المستقل لإعادتها "
+            "إليه."
+        ),
+        mission_task_stop="إيقاف الخطوة",
+        mission_task_stopped="متوقفة",
+        mission_activity_task_stopped="أوقفت \"{0}\"",
+        mission_activity_mode_classic="تم التبديل إلى الوضع الكلاسيكي",
+        mission_activity_mode_autonomous="تم التبديل إلى الوضع المستقل",
+        mission_error_switch="تعذّر تبديل وضع المهمة: {0}",
+        mission_error_stop_task="تعذّر إيقاف الخطوة: {0}",
+        mission_auto_approve="موافقة تلقائية",
+        mission_auto_approve_off="متوقفة",
+        mission_auto_approve_safe="الإجراءات الآمنة",
+        mission_auto_approve_all="كل شيء",
+        mission_auto_approve_tip=(
+            "مع «الإجراءات الآمنة» تتم الموافقة فورًا على تغييرات الملفات التي يسجّلها السجل، أما الطلبات "
+            "الآمنة الأخرى فيراجعها مراجع ذكاء اصطناعي لا يوافق إلا عندما تتوافق بوضوح مع الهدف، وما لا "
+            "يتأكد منه يُعرض عليك. لا تشمل الإجراءات الآمنة أبدًا الحذف أو النقل أو الاستبدال أو أوامر "
+            "الطرفية أو الإرسال عبر الشبكة. ومع «كل شيء» تتم الموافقة على كل طلب دون الرجوع إليك."
+        ),
+        mission_auto_approve_all_title="الموافقة على كل شيء تلقائيًا؟",
+        mission_auto_approve_all_confirm=(
+            "لهذه المهمة فقط، ستتم الموافقة على كل طلب دون الرجوع إليك أو إلى أي مراجع، بما في ذلك حذف "
+            "الملفات ونقلها واستبدالها، وتنفيذ أوامر الطرفية (التي لا يمكن قصرها على ملفات معينة)، والتفويض "
+            "إلى المساعدين، وإرسال البيانات عبر الشبكة. يستمر ذلك ما دامت المهمة تعمل في الوضع المستقل: "
+            "اختيار مستوى آخر أو التبديل إلى الوضع الكلاسيكي أو إيقاف المهمة يوقفه. يُسجَّل تأكيدك وكل "
+            "موافقة. فعّل هذا فقط لعمل لا تمانع عدم الإشراف عليه."
+        ),
+        mission_decision_reviewing="مراجعة الذكاء الاصطناعي…",
+        mission_decision_review_note="مراجع الذكاء الاصطناعي: {0}",
+        mission_activity_auto_approved="وافق مراجع الذكاء الاصطناعي على {0}",
+        mission_activity_review_deferred="ترك مراجع الذكاء الاصطناعي {0} لك",
+        mission_auto_approve_note_classic="الموافقة التلقائية متوقفة ما دامت هذه المهمة في الوضع الكلاسيكي.",
+        mission_auto_approve_note_destructive="هذا الطلب هدّام، والموافقة التلقائية مضبوطة على الإجراءات الآمنة.",
+        mission_auto_approve_note_everything_paused=(
+            "هذه المهمة توافق على كل شيء، لذا ستتم الموافقة على هذا الطلب عند متابعة المهمة."
+        ),
+        mission_options="خيارات المهمة",
+        mission_rename="إعادة تسمية",
+        mission_rename_title="إعادة تسمية المهمة",
+        mission_rename_label="اسم المهمة:",
+        mission_delete="حذف",
+        mission_delete_title="حذف المهمة",
+        mission_delete_confirm="هل تريد حذف \"{0}\" من مركز المهام؟ سيتم الاحتفاظ بمحادثاتها.",
+        mission_error_rename="تعذّرت إعادة تسمية المهمة: {0}",
+        mission_plan_history="السجل ({0})",
+        mission_plan_history_tip="الخطط التي أنهتها هذه المهمة قبل العمل الحالي",
+        mission_plan_history_title="الخطط السابقة",
+        mission_plan_empty_next="يصيغ الذكاء الاصطناعي الرئيسي خطة العمل الجديد. الخطط السابقة موجودة في السجل.",
+        mission_phase_count="اكتملت {0} من {1} خطوات",
+        mission_activity_plan_archived="نُقلت الخطة المكتملة إلى السجل",
+        mission_say_reading="أقرأ {0} من أجلك…",
+        mission_say_writing="أكتب {0} من أجلك…",
+        mission_say_editing="أعدّل {0} من أجلك…",
+        mission_say_deleting="أحذف {0}…",
+        mission_say_files="أرتّب الملفات من أجلك…",
+        mission_say_delegating="أستدعي وكيلًا مساعدًا لهذه المهمة…",
+        mission_say_terminal="أشغّل أمرًا من أجلك: {0}",
+        mission_say_web="أبحث عن شيء على الويب من أجلك…",
+        mission_say_tool="أستخدم {0} من أجلك…",
+        mission_say_task="أعمل الآن على «{0}» من أجلك…",
+        mission_say_thinking="أفكر في الخطوة التالية…",
+        mission_say_planning="مرحبًا، أنا {0}! أُعدّ خطة من أجلك…",
+        mission_say_hello="مرحبًا، أنا {0}! أبدأ بالجزء الخاص بي…",
+        mission_say_approval="أحتاج إلى موافقتك: {0}",
+        mission_say_reviewing="يتحقق مراجع الذكاء الاصطناعي من طلبي: {0}",
+        mission_say_done="انتهيت! هل هناك شيء آخر يمكنني فعله من أجلك؟",
+        mission_say_reply="تركت لك رسالة. ردّ في الأسفل عندما تكون جاهزًا.",
+        mission_say_stopped="توقفت. أرسل لي رسالة لأتابع.",
+        mission_say_interrupted="أُغلق Humbug أثناء عملي. اضغط على استئناف وسأتابع من حيث توقفت.",
+        mission_say_helper_waiting="أحد مساعديّ يحتاج إلى موافقتك.",
+        mission_say_replied="رددتُ عليك أدناه. اسألني المزيد، أو كلّفني بمهمة.",
+        mission_say_ready="جاهز متى شئت.",
+        mission_say_error="حدث خطأ ما. اضغط إعادة المحاولة، أو أرسل لي رسالة.",
+        mission_failed_notice=(
+            "انتهى ردي الأخير بخطأ. أعد المحاولة لإرسال الطلب نفسه مرة أخرى، أو افتح محادثتي لمعرفة السبب، "
+            "أو أرسل لي رسالة."
+        ),
+        mission_show_lead_conversation="افتح محادثة القائد",
+        mission_say_sleeping="آخذ استراحة مخطط لها مدتها {0}. سأتابع بعد انتهائها…",
+        mission_chat_title="المحادثة",
+        mission_chat_hint="رسائلك وردود قائد المهمة، كما في علامة تبويب المحادثة",
+        mission_chat_show_earlier="عرض الرسائل السابقة ({0} أخرى)",
+        mission_chat_you="أنت",
+        mission_chat_lead="قائد المهمة",
+        mission_results_title="النتائج السابقة",
+        mission_results_hint=(
+            "تُحفظ هنا كل جولة انتهت قبل سؤال متابعة، الأحدث أولًا. انقر على جولة لقراءة تقريرها "
+            "الكامل."
+        ),
+        mission_result_number="الجولة {0}",
+        mission_result_asked="طلبت: {0}",
+        mission_result_no_report="لم يقدّم قائد المهمة تقريرًا نهائيًا لهذه الجولة.",
+        mission_say_after_reading="قرأت {0}، وأفكّر الآن في الخطوة التالية…",
+        mission_say_after_writing="كتبت {0}، وأتحقق منه ثم أتابع…",
+        mission_say_after_editing="عدّلت {0}، وأتحقق منه ثم أتابع…",
+        mission_say_after_deleting="حذفت {0}، وأتابع الآن…",
+        mission_say_after_files="انتهيت من الملفات، وأفكّر الآن في الخطوة التالية…",
+        mission_say_after_delegating="أبلغني مساعدي بالنتيجة، وأقرأ ما وجده…",
+        mission_say_after_terminal="شغّلت {0}، وأقرأ النتيجة الآن…",
+        mission_say_after_web="وصلني رد من الويب، وأقرأه الآن…",
+        mission_say_after_tool="انتهيت من {0}، وأفكّر الآن في الخطوة التالية…",
+        mission_say_progress="{0} ({1} إجراءات حتى الآن)",
+        mission_say_progress_one="{0} (إجراء واحد حتى الآن)",
+        mission_finish_waiting="إنهاء الانتظار",
+        mission_wait_left="متبقٍ {0}",
+        mission_activity_started_prompt="بدأت المهمة: «{0}»",
+        mission_activity_guidance_prompt="أنت: «{0}»",
+        mission_composer_hint_enter="Enter لسطر جديد",
+        mission_stage_asked="طلبك",
+        mission_stage_planning="الذكاء الاصطناعي يخطط",
+        mission_stage_working="فريق الذكاء الاصطناعي يعمل",
+        mission_stage_done="اكتملت المهمة",
+        mission_report_title="تم إنجاز المهمة",
+        mission_report_caption="التقرير النهائي من قائد المهمة",
+        mission_report_back_to_top="العودة إلى الأعلى",
+        mission_status_recovering="إعادة الاتصال",
+        mission_status_stuck="تبدو متعثرة",
+        mission_activity_recovery_scheduled="تعذر الوصول إلى خدمة الذكاء الاصطناعي؛ إعادة المحاولة بعد {0} ثانية",
+        mission_activity_auto_retried="أعيدت محاولة الطلب الفاشل تلقائيًا (المحاولة {0})",
+        mission_activity_recovery_gave_up="توقفت إعادة المحاولة بعد {0} محاولات تلقائية",
+        mission_activity_loop_detected="{0} مرارًا بالنتيجة نفسها؛ أوقفت المهمة مؤقتًا",
+        mission_say_reconnecting="فقدت الاتصال بخدمة الذكاء الاصطناعي. سأعيد المحاولة بنفسي قريبًا…",
+        mission_say_stuck="يبدو أنني أدور في حلقة. أخبرني بما أفعل، أو دعني أتابع.",
+        mission_retry_now="أعد المحاولة الآن",
+        mission_carry_on="تابع",
+        mission_stuck_no_progress=(
+            "توقف Mission Control عن مطالبة القائد بالمتابعة: {0} مطالبات متتالية لم تُنهِ أي خطوة. أرسل توجيهًا، "
+            "أو اضغط تابع ليحاول مجددًا."
+        ),
+        mission_stuck_repeating=(
+            "أوقف Mission Control هذه المهمة مؤقتًا: {0} {1} مرات متتالية بالنتيجة نفسها في كل مرة. "
+            "أرسل توجيهًا، أو اضغط تابع ليحاول مجددًا."
+        ),
+        mission_notify_decision="بحاجة إلى موافقتك",
+        mission_notify_completed="أنجزت المهمة",
+        mission_notify_replied="رد القائد",
+        mission_notify_failed="فشلت المهمة",
+        mission_notify_stuck="تبدو المهمة متعثرة",
+        mission_steps_count="اكتملت {0} من {1} خطوات",
+        mission_failed_key=(
+            "رفضت خدمة الذكاء الاصطناعي الطلب: مفتاح API مفقود أو خاطئ أو غير مسموح له باستخدام هذا "
+            "النموذج. تحقق من المفتاح في الإعدادات › خلفيات الذكاء الاصطناعي، ثم اضغط إعادة المحاولة."
+        ),
+        mission_failed_model=(
+            "لم يُعثر على نموذج الذكاء الاصطناعي: ربما أُعيدت تسميته أو سُحب. اختر نموذجًا آخر من الترس "
+            "بجانب مربع الرسالة، ثم أرسل لي رسالة."
+        ),
+        mission_failed_request=(
+            "لم تستطع خدمة الذكاء الاصطناعي قبول الطلب، غالبًا لأن المحادثة أصبحت أطول مما يتسع له "
+            "النموذج. اختر نموذجًا بسياق أكبر، أو ابدأ مهمة جديدة."
+        ),
+        mission_failed_rate="تحدّ خدمة الذكاء الاصطناعي من عدد الطلبات. انتظر بضع دقائق ثم اضغط إعادة المحاولة.",
+        mission_failed_network=(
+            "تعذّر على Humbug الوصول إلى خدمة الذكاء الاصطناعي. تحقق من اتصالك بالإنترنت ثم اضغط إعادة "
+            "المحاولة."
+        ),
+        mission_failed_server="واجهت خدمة الذكاء الاصطناعي مشكلة من جهتها. اضغط إعادة المحاولة بعد بضع دقائق.",
+        mission_failed_backend=(
+            "لا توجد خدمة ذكاء اصطناعي مُعدّة لمزوّد هذا النموذج. أعدّ واحدة في الإعدادات › خلفيات "
+            "الذكاء الاصطناعي، أو اختر نموذجًا آخر من الترس بجانب مربع الرسالة."
+        ),
+        mission_failed_cut_short="توقفت خدمة الذكاء الاصطناعي قبل إكمال ردها. اضغط إعادة المحاولة لتطلبه من جديد.",
+        mission_guide_title="مركز المهام",
+        mission_guide_dismiss="فهمت",
+        mission_guide_link="كيف يعمل مركز المهام؟",
+        mission_guide_subtitle="من فكرتك إلى التنفيذ، وأنت صاحب القرار.",
+        mission_guide_footer="إشراف بشري · تعاون مباشر · تغييرات قابلة للتراجع",
+        mission_guide_1_title="حدِّد مهمتك",
+        mission_guide_1="صِف هدفك. يضع قائدك الذكي خطة ويجمع الوكلاء المناسبين.",
+        mission_guide_2_title="تابع سير العمل",
+        mission_guide_2="تابع التقدم مباشرةً، وراقب الوكلاء، وتعاون مع قائدك الذكي.",
+        mission_guide_3_title="ابقَ صاحب القرار",
+        mission_guide_3="وافق على الإجراءات الحساسة وتراجع عن تغييرات الملفات متى احتجت.",
+        mission_run_again="تشغيل مرة أخرى",
+        mission_archive="أرشفة",
+        mission_unarchive="إخراج من الأرشيف",
+        mission_archived_count="المؤرشفة ({0})",
+        mission_search="البحث في المهام",
+        mission_search_none="لا توجد مهام مطابقة",
+        mission_report_save_word="حفظ كمستند Word…",
+        mission_report_copy_image="نسخ كصورة",
+        mission_report_files="في هذا التقرير:",
+        mission_report_open_file="فتح {0}",
+        mission_report_save_word_title="حفظ التقرير كمستند Word",
+        mission_report_word_filter="مستندات Word (*.docx)",
+        mission_report_save_failed="تعذّر حفظ التقرير: {0}",
+        mission_files_title="الملفات المعدَّلة",
+        mission_files_hint=(
+            "التعديلات التي أُجريت بأدوات Humbug كما سجلها سجل التعديلات. قد يغيّر أمر شُغِّل في "
+            "الطرفية ملفات دون أن تُدرج هنا."
+        ),
+        mission_files_undo_all="تراجع عن الكل",
+        mission_files_created="أُنشئ {0}",
+        mission_files_changed="عُدّل {0}",
+        mission_files_deleted="حُذف {0}",
+        mission_files_lines="أُضيف {0} وحُذف {1} سطرًا",
+        mission_file_lines="أُضيف {0} سطر وحُذف {1}",
+        mission_file_review="عرض التغييرات",
+        mission_file_review_tip="قارن {0} كما كان قبل هذه المهمة بما هو عليه الآن",
+        mission_file_diff_show="عرض التغييرات سطرًا بسطر",
+        mission_file_diff_gap="{0} أسطر لم تتغير",
+        mission_file_diff_more="لا تظهر هنا {0} أسطر أخرى. يفتح «عرض التغييرات» المقارنة كاملة.",
+        mission_file_diff_unavailable="لم يعد بالإمكان عرض هذا التغيير سطرًا بسطر: لم تعد نسخة سابقة من الملف محفوظة.",
+        mission_file_diff_empty="لم يتغير أي سطر.",
+        mission_checks_option="إضافة فحوص الإنجاز (اختياري)",
+        mission_checks_placeholder="فحص واحد في كل سطر، مثل:\nينجح npm test\nالملف POC/about.html مرتبط من لوحة المعلومات",
+        mission_checks_explain=(
+            "لا تُعدّ المهمة منجزة إلا عندما يفيد القائد بنجاح كل فحص. إذا فشل أحدها يُعاد القائد "
+            "لإصلاحه، حتى 3 مرات."
+        ),
+        mission_checks_title="فحوص الإنجاز",
+        mission_checks_hint="يشغّل القائد كل فحص ويفيد بما رآه. الأوامر التي يشغّلها ما زالت تحتاج إلى موافقتك.",
+        mission_checks_count="نجح {0} من {1}",
+        mission_check_passed="نجح",
+        mission_check_failed="فشل",
+        mission_check_pending="لم يُشغَّل بعد",
+        mission_stuck_checks=(
+            "ظلت فحوص الإنجاز تفشل بعد {0} محاولات، فتوقف مركز المهام عن إعادة القائد. اطّلع على "
+            "النتائج، ثم أرسل توجيهًا أو اضغط «تابع» لمنحه {0} محاولات أخرى."
+        ),
+        mission_activity_checks_passed="نجحت جميع فحوص الإنجاز ({0})",
+        mission_activity_checks_failed="فحوص الإنجاز غير الناجحة: {0}",
+        mission_activity_files_undone="تراجعت عن التغييرات في {0} ملفات",
+        mission_file_open="فتح",
+        mission_file_undo="تراجع",
+        mission_file_open_tip="فتح {0} في تبويب المحرر",
+        mission_file_undo_tip="إعادة {0} كما كان قبل هذه المهمة",
+        mission_file_created="أُنشئ",
+        mission_file_modified="عُدِّل",
+        mission_file_deleted="حُذف",
+        mission_file_times="{0} {1} مرات",
+        mission_file_undone="تم التراجع",
+        mission_file_changed_since="تغيّر منذ ذلك",
+        mission_files_undo_title="التراجع عن التعديلات",
+        mission_files_undo_confirm="هل تريد إعادة {0} كما كان قبل أن تعدّله هذه المهمة؟",
+        mission_files_undo_all_confirm="هل تريد إعادة كل ملف عدّلته هذه المهمة كما كان من قبل؟",
+        mission_files_undo_failed="تعذّر التراجع عن بعض التعديلات:\n{0}",
+        mission_tokens="{0} رمز",
+        mission_tokens_detail="الإدخال {0} · الإخراج {1}. تُحسب أثناء متابعة Humbug للمهمة",
+        mission_working_for="تعمل منذ {0}",
+        mission_working_just_now="بدأت للتو",
+        mission_started_at="بدأت {0}",
+        mission_inbox_keys=(
+            "المفاتيح: A موافقة · R رفض · U غير متأكد · N / P التالي والسابق · Shift+A يوافق على طلب "
+            "مدمِّر"
+        ),
+        mission_remember_level="ابدأ كل مهمة جديدة بهذا المستوى",
+        mission_remember_level_tip="يُحفظ لهذا المشروع. لا يُحفظ «كل شيء» أبدًا: يُختار ويُؤكَّد لكل مهمة",
+        mission_status_plan_ready="الخطة جاهزة",
+        mission_say_plan_ready="هذه خطتي. هل أبدأ؟",
+        mission_say_plan_edited="لقد غيّرت الخطة. هل أتابع بالخطة المعدّلة؟",
+        mission_say_paused_edited="لقد غيّرت الخطة. سأتّبع الخطة المعدّلة عندما تستأنف.",
+        mission_step_skipped="متخطاة",
+        mission_step_skip="تخطَّ",
+        mission_step_unskip="أدرِج",
+        mission_step_move_tip="اسحب لنقل هذه الخطوة، أو اضغط Alt+أعلى أو Alt+أسفل",
+        mission_plan_arrange_hint=(
+            "اسحب الخطوات التي لم تبدأ لتغيير ترتيبها، أو تخطَّ ما لا تريده. يتّبع القائد الخطة "
+            "المعدّلة عند بدء العمل أو استئنافه."
+        ),
+        mission_plan_yes="نعم، ابدأ",
+        mission_plan_no="لا",
+        mission_composer_plan_change="أخبر القائد بما يجب تغييره في الخطة… ({key} للإرسال)",
+        mission_activity_plan_approved_edited="وافقت على الخطة مع تعديلاتك",
+        mission_activity_plan_approved="وافقت على الخطة",
+        mission_start_work="ابدأ العمل",
+        mission_plan_ready_notice=(
+            "أعد القائد خطة وهو بانتظارك. راجعها أدناه ثم ابدأ العمل، أو أخبر القائد بما يجب تغييره في المربع "
+            "في الأسفل."
+        ),
+        mission_review_plan_option="دعني أراجع الخطة قبل بدء العمل",
+        mission_review_plan_tip="يعد القائد خطته ثم ينتظر أن تبدأها، فلا يُنفَّذ شيء قبل أن ترى ما سيُنفَّذ",
+        mission_notify_plan_ready="الخطة جاهزة لمراجعتك",
+        mission_templates_label="قوالبك",
+        mission_template_save="حفظ ما كتبته كقالب",
+        mission_template_save_tip="احتفظ بهذا الطلب لتبدأ منه مهام لاحقًا",
+        mission_template_delete="حذف القالب “{0}”",
+        mission_template_name_title="حفظ كقالب",
+        mission_template_name_prompt="اسم هذا القالب:",
+        mission_report_copy="نسخ التقرير",
+        mission_report_copied="تم النسخ",
+        mission_report_show_steps="إظهار الخطوات",
+        mission_report_hide_steps="إخفاء الخطوات",
+        mission_report_show_activity="إظهار ما حدث",
+        mission_report_hide_activity="إخفاء ما حدث",
+        mission_plan_filter_all="الكل",
+        mission_inbox_clear="لا شيء بانتظارك",
+        mission_activity_tool_read="قرأ {0} {1}",
+        mission_activity_tool_wrote="كتب {0} {1}",
+        mission_activity_tool_deleted="حذف {0} {1}",
+        mission_activity_tool_files="عمل {0} على الملفات",
+        mission_activity_tool_edited="عدّل {0} {1}",
+        mission_activity_tool_delegated="أسند {0} عملًا إلى مساعد",
+        mission_activity_tool_ran="شغّل {0} {1}",
+        mission_activity_tool_web="بحث {0} عن شيء على الويب",
+        mission_recovery_notice=(
+            "تعذر الوصول إلى خدمة الذكاء الاصطناعي. سيعيد Mission Control إرسال الطلب بنفسه عند {0} "
+            "(المحاولة {1} من {2})، أو اضغط أعد المحاولة الآن."
+        ),
+        mission_report_stats="الخطوات المكتملة: {0} من {1}  ·  الوكلاء في الفريق: {2}",
+        mission_follow_up="اطرح سؤال متابعة",
+        mission_activity_reversible_approved="تمت الموافقة على {0} — مُسجَّل في السجل",
+        mission_activity_everything_approved="تمت الموافقة على {0} — الموافقة التلقائية مضبوطة على كل شيء",
+        mission_activity_user_message="أنت، إلى {0}: «{1}»",
+        mission_say_waiting_helpers="بانتظار أن يُنهي {0} العمل ويرفع تقريره…",
+        mission_read_more="اقرأ المزيد",
+        mission_activity_open_tip="انقر لمعرفة ما حدث",
+        mission_attention="{0} طلب/طلبات تحتاج إلى قرارك",
+        mission_review_now="راجِع الآن",
+        mission_more_actions="إجراءات أخرى",
+        mission_agents_show_list="اعرض كقائمة",
+        mission_agents_hide_list="أخفِ القائمة",
+        mission_auto_approve_off_note="كل إجراء يغيّر الملفات أو ينفّذ أوامر أو يرسل بيانات ينتظرك.",
+        mission_auto_approve_safe_note="تمضي تغييرات الملفات المسجّلة والطلبات الآمنة؛ وأي إجراء مُتلف ينتظرك.",
+        mission_auto_approve_all_note=(
+            "يعمل الفريق من البداية إلى النهاية دون توقف؛ "
+            "ولا ينتظر شيء موافقتك."
+        ),
+        mission_scroll_left="مرّر المهام إلى اليسار",
+        mission_scroll_right="مرّر المهام إلى اليمين",
+        mission_waiting_elsewhere="المهمة «{0}» بانتظار قرارك",
+        mission_waiting_elsewhere_many="{0} مهام أخرى بانتظار قراراتك",
+        mission_go_to_waiting="انتقل إليها"
     )

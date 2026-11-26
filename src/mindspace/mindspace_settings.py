@@ -39,6 +39,12 @@ class MindspaceSettings:
         default_factory=lambda: sorted(DEFAULT_SCAN_PRUNED_PATHS)
     )  # Directories and paths the change scanner does not descend
     pinned_paths: list[str] = field(default_factory=list)
+    mission_resume_automatically: bool = False  # Resume interrupted missions when the mindspace opens
+    mission_reduce_motion: bool = False  # Draw Mission Control without animation
+    # The auto-approve level new missions start at: "off" or "safe", never the level that approves everything.
+    mission_default_auto_approve: str = "off"
+    # Requests the user saved to start missions from, as (name, request) pairs, in the order saved.
+    mission_templates: list[tuple[str, str]] = field(default_factory=list)
 
     @classmethod
     def _safe_load_json(cls, path: str) -> dict:
@@ -135,6 +141,7 @@ class MindspaceSettings:
         # settings under "changes".  The file is not rewritten on open, so both are
         # read; the new key wins once anything is saved again.
         journal = cls._safe_get_dict(data, "journal") or cls._safe_get_dict(data, "changes")
+        missions = cls._safe_get_dict(data, "missions")
 
         # Get defaults
         default_model, default_provider = AIConversationSettings.get_default_model({})
@@ -402,6 +409,45 @@ class MindspaceSettings:
 
         pinned_paths = [p for p in pinned_paths_raw if isinstance(p, str)]
 
+        mission_resume_automatically = missions.get("resumeAutomatically", False)
+        if not isinstance(mission_resume_automatically, bool):
+            cls._logger.warning(
+                "Invalid resumeAutomatically type in %s: expected bool, got %s. Using default.",
+                path, type(mission_resume_automatically).__name__
+            )
+            mission_resume_automatically = False
+
+        mission_reduce_motion = missions.get("reduceMotion", False)
+        if not isinstance(mission_reduce_motion, bool):
+            cls._logger.warning(
+                "Invalid reduceMotion type in %s: expected bool, got %s. Using default.",
+                path, type(mission_reduce_motion).__name__
+            )
+            mission_reduce_motion = False
+
+        mission_default_auto_approve = missions.get("defaultAutoApprove", "off")
+        if mission_default_auto_approve not in ("off", "safe"):
+            cls._logger.warning(
+                "Invalid defaultAutoApprove in %s: expected off or safe, got %r. Using off.",
+                path, mission_default_auto_approve
+            )
+            mission_default_auto_approve = "off"
+
+        mission_templates: list[tuple[str, str]] = []
+        templates_raw = missions.get("templates", [])
+        if not isinstance(templates_raw, list):
+            cls._logger.warning(
+                "Invalid templates type in %s: expected list, got %s. Using default.",
+                path, type(templates_raw).__name__
+            )
+            templates_raw = []
+
+        for entry in templates_raw:
+            name = entry.get("name") if isinstance(entry, dict) else None
+            request = entry.get("request") if isinstance(entry, dict) else None
+            if isinstance(name, str) and isinstance(request, str) and name.strip() and request.strip():
+                mission_templates.append((name, request))
+
         return cls(
             model=model,
             provider=provider,
@@ -422,7 +468,11 @@ class MindspaceSettings:
             journal_checkpoint_interval=journal_checkpoint_interval,
             journal_pruned_paths=journal_pruned_paths,
             enabled_tools=enabled_tools,
-            pinned_paths=pinned_paths
+            pinned_paths=pinned_paths,
+            mission_resume_automatically=mission_resume_automatically,
+            mission_reduce_motion=mission_reduce_motion,
+            mission_default_auto_approve=mission_default_auto_approve,
+            mission_templates=mission_templates,
         )
 
     def save(self, path: str) -> None:
@@ -457,6 +507,12 @@ class MindspaceSettings:
             "journal": {
                 "checkpointIntervalSeconds": self.journal_checkpoint_interval,
                 "prunedPaths": self.journal_pruned_paths,
+            },
+            "missions": {
+                "resumeAutomatically": self.mission_resume_automatically,
+                "reduceMotion": self.mission_reduce_motion,
+                "defaultAutoApprove": self.mission_default_auto_approve,
+                "templates": [{"name": name, "request": request} for name, request in self.mission_templates],
             },
         }
         with open(path, 'w', encoding='utf-8') as f:

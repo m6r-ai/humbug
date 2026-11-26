@@ -5,7 +5,8 @@ import os
 from ai import AIMessage, AIMessageSource
 from ai_tool import AIToolCall, AIToolResult
 from ai_transcript_conversation import AITranscriptConversation
-from desktop.conversation_tab.conversation_widget import LOG_PREVIEW_CHARS, ConversationWidget
+from desktop.conversation_tab.conversation_widget import ConversationWidget
+from mindspace.mindspace_conversation_log import LOG_PREVIEW_CHARS
 from mindspace.mindspace_message import MindspaceMessage
 
 
