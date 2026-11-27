@@ -32,7 +32,6 @@ New features:
 - Panel tooltips now give a path as it sits in the mindspace instead of in full.
 - Editor auto backup now keeps its copies under `.humbug/backups`, rather than saving one as `file.txt.backup`
   beside the file itself.
-<<<<<<< HEAD
 - Mission Control stays responsive while the mission lead writes a long reply: updating a busy mission now takes
   a few milliseconds instead of more than 40, because the conversation's messages are no longer measured again on
   every update. The stage journey also redraws only the parts that move while the AI works.
@@ -88,8 +87,27 @@ New features:
   new plan arrives.
 - A mission interrupted before its lead had reported a plan is now resumed by carrying on with the request
   rather than with a next unfinished task, of which there were none.
-- While Mission Control is the current tab, the conversations sidebar now highlights the selected mission's lead
-  conversation, as a conversation tab highlights its own.
+- A new **Missions** panel, the rocket icon below Conversations on the sidebar rail, lists every mission with its
+  status, and unfolds each one to its lead and helper conversations, which no longer crowd the Conversations
+  panel. Right-click a mission to open, rename, run again, archive or delete it, or to switch its mode; a search
+  box appears once there are more than a few missions, and **Archived (n)** shows the ones put away. A mission
+  waiting for your decision shows a count, and the rocket icon carries the total.
+- Each mission now opens in a tab of its own, named after it, so two missions can be watched side by side. A
+  click in the Missions panel opens a temporary tab and a double click one that stays, as for conversations;
+  **+**, **Ctrl+Shift+M** and **Mindspace → Mission Control** open a new-mission tab.
+- A mission can be given a token limit when it is started, in the new-mission options. When it is used up the
+  mission stops, shows **Token limit reached** and tells you, and you can add more tokens or remove the limit to
+  carry on.
+- A file an unfinished mission has changed is now locked to it. Another mission's request to change the file
+  waits in the Decision Inbox, saying which mission holds it, and cannot be approved until that mission
+  finishes, stops or fails; you are then told the file is free and decide whether the request goes ahead.
+  Terminal commands, and helpers within the same mission, are not covered.
+- **Files Changed** in Mission Control lists only files a mission actually changed: one it rewrote unchanged,
+  or changed and changed back, is left out.
+- The change journal now ignores editor swap files (`*.swp`) by default, so they no longer appear in the
+  change list.
+- Added GPT 6.2 models.
+- Added Claude Fable 5.2.
 
 Behaviour changes:
 
@@ -99,12 +117,11 @@ Behaviour changes:
 - The mission lead now plans any big task, even one that changes nothing, such as reviewing a pull request, a
   branch or several files, investigating a problem or researching a topic in depth. Only a simple question, or a
   quick explanation or opinion that needs at most a brief look at a file or two, is answered without a plan.
-=======
-- The change journal now ignores editor swap files (`*.swp`) by default, so they no longer appear in the
-  change list.
-- Added GPT 6.2 models.
-- Added Claude Fable 5.2.
->>>>>>> 598a20f85d87f6c192b47c00d5cd77ea765db448
+- The row of mission chips at the top of Mission Control is gone; the Missions panel does what it did. A Mission
+  Control tab no longer switches to the newest mission by itself: it shows the new-mission screen until you start
+  one, or the mission it was opened on.
+- While another mission is in progress, a mission at **Everything** no longer gets a standing approval for file
+  changes, so each change is checked against the file locks.
 
 Bug fixes:
 

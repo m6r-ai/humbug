@@ -72,6 +72,8 @@ class MissionActivityKind(Enum):
     CHECKS_FAILED = auto()
     TOKEN_LIMIT_REACHED = auto()
     TOKEN_LIMIT_CHANGED = auto()
+    FILE_LOCKED = auto()
+    FILE_UNLOCKED = auto()
 
 
 @dataclass(frozen=True)
@@ -253,6 +255,9 @@ class MissionDecision:
         review_note: Why the AI reviewer left it for the user, if it did
         reversible: Whether the change is one the file change journal records, so can be undone
         target: What the request acts on, such as a file, a command or a URL, or "" if it names none
+        locked_by: The unfinished mission a file the request would change is locked to, or ""
+        locked_path: That file, relative to the mindspace, or ""
+        unlocked_path: The file the request was held for, once it is free again, or ""
     """
     decision_id: str
     context_id: str
@@ -267,6 +272,9 @@ class MissionDecision:
     review_note: str = ""
     reversible: bool = False
     target: str = ""
+    locked_by: str = ""
+    locked_path: str = ""
+    unlocked_path: str = ""
 
 
 @dataclass(frozen=True)

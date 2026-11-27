@@ -1,5 +1,6 @@
 """Tests for finding what in Mission Control the user should be told about."""
 
+from dataclasses import replace
 from datetime import datetime, timezone
 
 from mission.mission import Mission
@@ -151,3 +152,19 @@ def test_mission_reaching_its_token_limit_is_announced():
     assert watcher.changes(service) == [  # type: ignore[arg-type]
         MissionAlert(MissionAlertKind.OUT_OF_TOKENS, "a", "Mission a")
     ]
+
+
+def test_a_file_becoming_free_is_announced_once():
+    """When a request held for a locked file can go ahead, the user is told which file is free."""
+    service = _Service()
+    service.add("a", MissionStatus.NEEDS_YOU)
+    held = replace(_decision("d1", "a"), locked_by="Mission b", locked_path="docs/a.md")
+    service.decision_list = [held]
+    watcher = MissionAlertWatcher()
+    watcher.changes(service)  # type: ignore[arg-type]
+
+    service.decision_list = [replace(held, locked_by="", locked_path="", unlocked_path="docs/a.md")]
+    assert watcher.changes(service) == [  # type: ignore[arg-type]
+        MissionAlert(MissionAlertKind.FILE_UNLOCKED, "a", "Mission a", "docs/a.md")
+    ]
+    assert watcher.changes(service) == []  # type: ignore[arg-type]

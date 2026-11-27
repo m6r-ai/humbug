@@ -1883,21 +1883,21 @@ class TestAutoApprove:
 
         asyncio.run(run())
 
-    def test_lowering_the_level_from_everything_withdraws_the_standing_approval(self, mindspace, submitted):  # pylint: disable=unused-argument
+    @pytest.mark.parametrize("level", [AutoApproveLevel.SAFE, AutoApproveLevel.OFF])
+    def test_lowering_the_level_from_everything_withdraws_the_standing_approval(self, mindspace, submitted, level):  # pylint: disable=unused-argument
         """Leaving Everything withdraws a standing approval the mission granted."""
         async def run() -> None:
-            for level in (AutoApproveLevel.SAFE, AutoApproveLevel.OFF):
-                service, mission, request = await _mission_waiting_on_approval(
-                    mindspace, _FakeReviewer(approve=True), AutoApproveLevel.ALL, destructive=False,
-                    kind=AIToolApprovalKind.MINDSPACE_FILE_CHANGE
-                )
-                assert await asyncio.wait_for(request, timeout=1) is True
-                conversation = _lead(service, mission).inner_conversation()
-                assert conversation.auto_approve_file_changes()
+            service, mission, request = await _mission_waiting_on_approval(
+                mindspace, _FakeReviewer(approve=True), AutoApproveLevel.ALL, destructive=False,
+                kind=AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+            )
+            assert await asyncio.wait_for(request, timeout=1) is True
+            conversation = _lead(service, mission).inner_conversation()
+            assert conversation.auto_approve_file_changes()
 
-                service.set_auto_approve(mission.mission_id, level)
-                assert not conversation.auto_approve_file_changes()
-                service.stop()
+            service.set_auto_approve(mission.mission_id, level)
+            assert not conversation.auto_approve_file_changes()
+            service.stop()
 
         asyncio.run(run())
 
@@ -4285,6 +4285,127 @@ class TestFailureDetails:
             snapshot = service.snapshot(mission.mission_id)
             assert snapshot is not None
             assert (snapshot.failure_code, snapshot.failure_message) == ("401", "")
+            service.stop()
+
+        asyncio.run(run())
+
+
+class TestFileLocks:
+    """A file an unfinished mission has changed is locked to it until the mission finishes."""
+
+    @staticmethod
+    def _write(mindspace, conversation_id: str, name: str, text: str) -> None:
+        """Write a file the way Humbug's tools do: recorded in the journal first, as the conversation's."""
+        absolute = os.path.join(mindspace.mindspace_path(), name)
+        os.makedirs(os.path.dirname(absolute), exist_ok=True)
+        content = text.encode("utf-8")
+        mindspace.file_journal().record_write(absolute, name, content, JournalActor.AI, conversation_id)
+        with open(absolute, "wb") as handle:
+            handle.write(content)
+
+    @staticmethod
+    async def _ask_to_write(service, mission, path: str):
+        """Have a mission's lead ask to write a file, returning the pending request."""
+        conversation = _lead(service, mission).inner_conversation()
+        request = asyncio.create_task(conversation._request_tool_authorization(  # pylint: disable=protected-access
+            "filesystem", {"operation": "write_file", "path": path}, f"Write {path}", "+ hello", False,
+            AIToolApprovalKind.MINDSPACE_FILE_CHANGE
+        ))
+        for _ in range(5):
+            await asyncio.sleep(0)
+
+        return request
+
+    async def _two_missions(self, mindspace, level: AutoApproveLevel = AutoApproveLevel.ALL):
+        """Start a mission that has changed docs/a.md, and a second one at a given level."""
+        service = MissionService(mindspace, reviewer=_FakeReviewer(approve=True))  # type: ignore[arg-type]
+        service.start()
+        holder = await service.create_mission("Write the guide")
+        self._write(mindspace, _lead(service, holder).inner_conversation().conversation_id(), "docs/a.md", "guide")
+        other = await service.create_mission("Fix the links")
+        service.set_auto_approve(other.mission_id, level)
+        return service, holder, other
+
+    def test_another_missions_change_to_a_locked_file_is_held(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A request to change a file another unfinished mission changed is neither approved nor approvable."""
+        async def run() -> None:
+            service, holder, other = await self._two_missions(mindspace)
+            request = await self._ask_to_write(service, other, "docs/a.md")
+
+            decision = next(d for d in service.decisions() if d.mission_id == other.mission_id)
+            assert (decision.locked_by, decision.locked_path) == (holder.title, "docs/a.md")
+            assert not request.done()
+            assert await service.approve(decision.decision_id) is False
+            assert not request.done()
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_a_different_file_is_not_held(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A change to a file no other mission holds goes ahead as the mission's level allows."""
+        async def run() -> None:
+            service, _holder, other = await self._two_missions(mindspace)
+            request = await self._ask_to_write(service, other, "docs/b.md")
+            assert await asyncio.wait_for(request, timeout=1) is True
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_a_mission_is_not_held_by_its_own_changes(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A mission changing a file it changed before is not held."""
+        async def run() -> None:
+            service, holder, _other = await self._two_missions(mindspace)
+            service.set_auto_approve(holder.mission_id, AutoApproveLevel.SAFE)
+            request = await self._ask_to_write(service, holder, "docs/a.md")
+            assert await asyncio.wait_for(request, timeout=1) is True
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_the_file_is_freed_when_the_holder_stops_and_the_user_decides(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Once the mission holding the file stops, the request says the file is free and waits for the user."""
+        async def run() -> None:
+            service, holder, other = await self._two_missions(mindspace)
+            request = await self._ask_to_write(service, other, "docs/a.md")
+
+            service.stop_mission(holder.mission_id)
+            for _ in range(5):
+                await asyncio.sleep(0)
+
+            decision = next(d for d in service.decisions() if d.mission_id == other.mission_id)
+            assert decision.locked_by == "" and decision.unlocked_path == "docs/a.md"
+            assert not request.done()
+
+            assert await service.approve(decision.decision_id) is True
+            assert await asyncio.wait_for(request, timeout=1) is True
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_holding_and_freeing_are_in_the_feed(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """The waiting mission's feed says when its request was held and when the file became free."""
+        async def run() -> None:
+            service, holder, other = await self._two_missions(mindspace)
+            await self._ask_to_write(service, other, "docs/a.md")
+            service.stop_mission(holder.mission_id)
+            for _ in range(5):
+                await asyncio.sleep(0)
+
+            snapshot = service.snapshot(other.mission_id)
+            assert snapshot is not None
+            kinds = [entry.kind for entry in snapshot.activity]
+            assert MissionActivityKind.FILE_LOCKED in kinds and MissionActivityKind.FILE_UNLOCKED in kinds
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_no_standing_approval_while_another_mission_is_in_progress(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A change approved under Everything grants no standing approval while another mission is unfinished."""
+        async def run() -> None:
+            service, _holder, other = await self._two_missions(mindspace)
+            request = await self._ask_to_write(service, other, "docs/b.md")
+            assert await asyncio.wait_for(request, timeout=1) is True
+            assert not _lead(service, other).inner_conversation().auto_approve_file_changes()
             service.stop()
 
         asyncio.run(run())

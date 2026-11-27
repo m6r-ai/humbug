@@ -50,6 +50,10 @@ class _PendingDecision:
     message_id: str | None
     reviewing: bool = False
     review_note: str = ""
+    paths: tuple[str, ...] = ()
+    locked_by: str = ""
+    locked_path: str = ""
+    unlocked_path: str = ""
 
 
 @dataclass(frozen=True)
@@ -71,6 +75,9 @@ class MissionApprovalsHost:
     lead_for: Callable[[Mission], "_TrackedConversation | None"]
     latest_lead_message: Callable[[Mission], tuple[str, datetime | None]]
     expect_message: Callable[[str, str], None]
+    change_paths: Callable[[AIToolCall], tuple[str, ...]]
+    file_holder: Callable[[str, tuple[str, ...]], tuple[Mission, str] | None]
+    others_in_progress: Callable[[str], bool]
 
 
 class MissionApprovals:
@@ -84,6 +91,12 @@ class MissionApprovals:
     the journal records under Safe actions or Everything, anything under
     Everything, and otherwise what the reviewer approves.  The reviewer fails
     closed, leaving the request for the user.  See ADR-0026.
+
+    A file one unfinished mission has changed is locked to it: another mission's request
+    to change it is never approved, by the user or automatically, until the mission
+    holding it finishes, stops or fails.  The request then stays for the user to decide,
+    so a mission never carries on with a file the user has not seen is free.  Only
+    changes the journal records name their files, so a terminal command is not held.
     """
 
     def __init__(self, mindspace: Mindspace, reviewer: MissionApprovalReviewer, host: MissionApprovalsHost) -> None:
@@ -116,7 +129,11 @@ class MissionApprovals:
 
             request = tracked.conversation.pending_tool_authorization()
             if request is not None and request.tool_call.id == pending.tool_call_id:
-                live.append(replace(pending.decision, reviewing=pending.reviewing, review_note=pending.review_note))
+                live.append(replace(
+                    pending.decision, reviewing=pending.reviewing, review_note=pending.review_note,
+                    locked_by=pending.locked_by, locked_path=pending.locked_path,
+                    unlocked_path=pending.unlocked_path,
+                ))
 
         return sorted(live, key=lambda d: d.requested_at)
 
@@ -156,6 +173,10 @@ class MissionApprovals:
         Returns:
             True if the request was approved, False if it was no longer pending
         """
+        if any(p.decision.decision_id == decision_id and p.locked_by for p in self._decisions.values()):
+            # The file is locked to another mission until it finishes, whoever asks.
+            return False
+
         found = self._take_decision(decision_id)
         if found is None:
             return False
@@ -385,10 +406,66 @@ class MissionApprovals:
         ]
         return messages[-_REVIEW_INSTRUCTION_COUNT:]
 
+    def recheck_locks(self) -> None:
+        """
+        Hold requests for files another mission has locked, and free those whose lock has gone.
+
+        Also turns off standing approvals while another mission is in progress, since a
+        standing approval answers a change without asking and so could not be held.
+        """
+        for context_id, pending in list(self._decisions.items()):
+            self._update_lock(context_id, pending)
+
+        for mission in self._host.missions.values():
+            if mission.auto_approve == AutoApproveLevel.ALL and self._host.others_in_progress(mission.mission_id):
+                self.withdraw_standing_approvals(mission.mission_id)
+
+    def _update_lock(self, context_id: str, pending: _PendingDecision) -> bool:
+        """
+        Note whether a request's files are locked to another mission, saying so when that changes.
+
+        Returns:
+            True if the request is held by a lock
+        """
+        mission_id = pending.decision.mission_id
+        if mission_id is None or not pending.paths:
+            return False
+
+        held = self._host.file_holder(mission_id, pending.paths)
+        tracked = self._host.tracked.get(context_id)
+        subject = self._host.title_for(context_id)
+        if held is not None:
+            holder, path = held
+            if pending.locked_by != holder.title or pending.locked_path != path:
+                pending.locked_by = holder.title
+                pending.locked_path = path
+                pending.unlocked_path = ""
+                self._host.record(MissionActivityKind.FILE_LOCKED, subject, path, mission_id, holder.title)
+                if tracked is not None:
+                    self._log_decision(
+                        tracked, f"Tool call held: {path} is locked to mission '{holder.title}' until it finishes"
+                    )
+
+            return True
+
+        if pending.locked_by:
+            # A freed file is not changed without the user, who may want to look at it first.
+            pending.unlocked_path = pending.locked_path
+            pending.locked_by = ""
+            pending.locked_path = ""
+            self._host.record(MissionActivityKind.FILE_UNLOCKED, subject, pending.unlocked_path, mission_id, "")
+            if tracked is not None:
+                self._log_decision(tracked, f"Tool call no longer held: {pending.unlocked_path} is free again")
+
+        return False
+
     def _consider_review(self, context_id: str) -> None:
         """Send a pending decision to the AI reviewer if its mission's auto-approve level covers it."""
         pending = self._decisions.get(context_id)
-        if pending is None or pending.reviewing or pending.review_note:
+        if pending is None or pending.reviewing or pending.review_note or pending.unlocked_path:
+            return
+
+        if self._update_lock(context_id, pending):
             return
 
         mission = self._host.missions.get(pending.decision.mission_id or "")
@@ -442,8 +519,11 @@ class MissionApprovals:
         tracked, _ = found
 
         # The standing approval covers every change the journal records, destructive ones
-        # included, so it is only granted where the level allows those too.
-        standing = mission.auto_approve == AutoApproveLevel.ALL
+        # included, so it is only granted where the level allows those too.  While another
+        # mission is in progress each change is asked for instead, so a locked file is held.
+        standing = (
+            mission.auto_approve == AutoApproveLevel.ALL and not self._host.others_in_progress(mission.mission_id)
+        )
         if standing:
             tracked.transcript.set_auto_approve_file_changes(True)
 
@@ -583,4 +663,6 @@ class MissionApprovals:
             decision=decision,
             tool_call_id=tool_call.id,
             message_id=message.id if message is not None else None,
+            paths=self._host.change_paths(tool_call) if kind == AIToolApprovalKind.MINDSPACE_FILE_CHANGE else (),
         )
+        self._update_lock(tracked.context_id, self._decisions[tracked.context_id])

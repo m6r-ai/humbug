@@ -303,6 +303,8 @@ class MissionDecisionView:
     destructive request can be undone once approved; either is "" when not shown.
     `answerable` is False for a request the user is not asked to answer, because its
     mission approves everything, so the card shows no buttons to answer it with.
+    `lock_text` says a file the request would change is locked to another mission, or
+    has become free again, and `locked` is True while it cannot be approved.
     """
     decision_id: str
     context_id: str
@@ -318,6 +320,8 @@ class MissionDecisionView:
     target_text: str = ""
     undo_text: str = ""
     answerable: bool = True
+    lock_text: str = ""
+    locked: bool = False
 
 
 @dataclass(frozen=True)

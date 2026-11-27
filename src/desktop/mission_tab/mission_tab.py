@@ -109,6 +109,8 @@ _ACTIVITY_STYLES = {
     MissionActivityKind.CHECKS_FAILED: ("✗", MissionTone.DANGER),
     MissionActivityKind.TOKEN_LIMIT_REACHED: ("◔", MissionTone.WARNING),
     MissionActivityKind.TOKEN_LIMIT_CHANGED: ("◔", MissionTone.INFO),
+    MissionActivityKind.FILE_LOCKED: ("⊘", MissionTone.WARNING),
+    MissionActivityKind.FILE_UNLOCKED: ("✓", MissionTone.SUCCESS),
 }
 
 # Colour of the current stage of the journey, where it differs from the status colour.
@@ -738,6 +740,8 @@ class MissionTab(TabBase):
                 strings.mission_activity_token_limit_raised.format(limit) if limit
                 else strings.mission_activity_token_limit_removed
             ),
+            MissionActivityKind.FILE_LOCKED: strings.mission_activity_file_locked.format(entry.detail, entry.more),
+            MissionActivityKind.FILE_UNLOCKED: strings.mission_activity_file_unlocked.format(entry.detail),
         }
         glyph, tone = _ACTIVITY_STYLES[entry.kind]
         if glyph == "›" and not self._language_manager.left_to_right():
@@ -779,7 +783,18 @@ class MissionTab(TabBase):
             ),
             # A mission at Everything has handed its approvals over, so Mission Control never asks
             # the user to answer one of its requests.  A conversation tab still offers its own buttons.
-            answerable=mission is None or mission.auto_approve != AutoApproveLevel.ALL,
+            # A request held for a locked file is the exception: the user decides once it is free.
+            answerable=(
+                mission is None or mission.auto_approve != AutoApproveLevel.ALL
+                or bool(decision.locked_by or decision.unlocked_path)
+            ),
+            lock_text=(
+                strings.mission_decision_locked.format(decision.locked_path, decision.locked_by)
+                if decision.locked_by
+                else strings.mission_decision_unlocked.format(decision.unlocked_path) if decision.unlocked_path
+                else ""
+            ),
+            locked=bool(decision.locked_by),
         )
 
     def _decision_mission(self, decision: MissionDecision) -> Mission | None:
@@ -1574,9 +1589,15 @@ class MissionTab(TabBase):
         self._run(finish())
 
     def show_new_mission(self) -> None:
-        """Show the new-mission welcome, ready for a request to be typed."""
+        """
+        Show the new-mission welcome, ready for a request to be typed.
+
+        This is what opening the new-mission screen does, from + or the menu, so the logo plays its
+        arrival each time; switching back to a tab that already shows it does not come here.
+        """
         self._selected_mission_id = None
         self._refresh()
+        self._widget.play_intro()
         self._widget.focus_composer()
 
     def mission_id(self) -> str:

@@ -662,6 +662,11 @@ def get_arabic_strings() -> LanguageStrings:
         tour_key_action_description="اكتب رسالة واضغط على إرسال (أو {0}) للتحدث مع الذكاء الاصطناعي.",
         tour_output_title="سجل المحادثة",
         tour_output_description="تظهر ردود الذكاء الاصطناعي وسجل محادثتك هنا أثناء الدردشة.",
+        tour_missions_title="المهام",
+        tour_missions_description=(
+            "للأعمال الأكبر، ابدأ مهمة: يخطط ذكاء اصطناعي رئيسي للعمل، ويسلّم أجزاء منه إلى مساعدين، "
+            "ويسألك قبل أي إجراء محفوف بالمخاطر. تظهر مهامك هنا، ولكل منها علامة تبويب خاصة بها."
+        ),
         tour_navigation_title="التنقل",
         tour_navigation_description=(
             "بدّل بين المحادثات والملفات والبحث والمعاينة والمزيد باستخدام هذا الشريط الجانبي."
@@ -991,6 +996,18 @@ def get_arabic_strings() -> LanguageStrings:
         mission_status_out_of_tokens="تم بلوغ حد الرموز",
         mission_say_out_of_tokens="استخدمت الرموز التي سمحت لي بها. أخبرني كيف أتابع.",
         mission_notify_out_of_tokens="بلغت المهمة حد الرموز",
+        mission_notify_file_unlocked="أصبح ملف متاحًا من جديد",
+        mission_activity_file_locked="في الانتظار: {0} محجوز للمهمة «{1}»",
+        mission_activity_file_unlocked="أصبح {0} متاحًا من جديد",
+        mission_decision_locked=(
+            "تعدّل المهمة «{1}» الملف {0}. ينتظر هذا الطلب حتى تنتهي تلك المهمة "
+            "أو تتوقف أو تفشل."
+        ),
+        mission_decision_unlocked=(
+            "أصبح {0} متاحًا من جديد: انتهت المهمة التي كانت تعدّله. "
+            "وافق للمتابعة."
+        ),
+        mission_decision_locked_tip="محجوز حتى تنتهي المهمة الأخرى",
         mission_token_limit_notice=(
             "استخدمت هذه المهمة حد الرموز: {0} من {1}. عملها متوقف مؤقتًا، ولن يُنفق شيء آخر حتى تختار كيف تتابع."
         ),

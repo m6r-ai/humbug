@@ -16,6 +16,7 @@ class MissionAlertKind(Enum):
     STUCK = auto()
     PLAN_READY = auto()
     OUT_OF_TOKENS = auto()
+    FILE_UNLOCKED = auto()
 
 
 @dataclass(frozen=True)
@@ -27,7 +28,7 @@ class MissionAlert:
         kind: What happened
         mission_id: The mission it happened in
         mission_title: The mission's name
-        detail: What a decision asks for, or ""
+        detail: What a decision asks for, the file that is free again, or ""
     """
     kind: MissionAlertKind
     mission_id: str
@@ -54,15 +55,17 @@ class MissionAlertWatcher:
     """
     Finds what has newly happened in a service's missions that needs the user or that they waited for.
 
-    That is a decision only the user can make, and a mission that finished, answered, failed for
-    good or got stuck.  What was already so when watching began is not news, so the first look
-    only takes note.  Requests from conversations outside any mission are left to their own tabs.
+    That is a decision only the user can make, a file a request was held for becoming free, and a
+    mission that finished, answered, failed for good or got stuck.  What was already so when
+    watching began is not news, so the first look only takes note.  Requests from conversations
+    outside any mission are left to their own tabs.
     """
 
     def __init__(self) -> None:
         """Start without having looked."""
         self._statuses: dict[str, MissionStatus] | None = None
         self._decisions: set[str] = set()
+        self._unlocked: set[str] = set()
 
     def changes(self, service: MissionService) -> list[MissionAlert]:
         """
@@ -80,8 +83,10 @@ class MissionAlertWatcher:
         decisions = [d for d in service.decisions() if not d.reviewing and d.mission_id in missions]
         previous = self._statuses
         seen = self._decisions
+        seen_unlocked = self._unlocked
         self._statuses = statuses
         self._decisions = {d.decision_id for d in decisions}
+        self._unlocked = {d.decision_id for d in decisions if d.unlocked_path}
         if previous is None:
             return []
 
@@ -91,6 +96,12 @@ class MissionAlertWatcher:
                 alerts.append(MissionAlert(
                     MissionAlertKind.DECISION, decision.mission_id, missions[decision.mission_id].title,
                     _first_line(decision.reason or decision.tool_name)
+                ))
+
+            elif decision.unlocked_path and decision.decision_id not in seen_unlocked and decision.mission_id is not None:
+                alerts.append(MissionAlert(
+                    MissionAlertKind.FILE_UNLOCKED, decision.mission_id, missions[decision.mission_id].title,
+                    decision.unlocked_path
                 ))
 
         for mission_id, status in statuses.items():

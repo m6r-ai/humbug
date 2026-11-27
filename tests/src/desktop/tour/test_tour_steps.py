@@ -4,7 +4,7 @@
 import tempfile
 
 from desktop.conversation_sidebar.conversation_sidebar import ConversationSidebar
-from desktop.tour.tour_steps import _resolve_open_conversation
+from desktop.tour.tour_steps import _resolve_missions, _resolve_open_conversation
 
 
 class _FakeSidebarManager:
@@ -62,3 +62,12 @@ class TestResolveOpenConversation:
         target = _resolve_open_conversation(main_window)
 
         assert target == "RAIL_BUTTON_FALLBACK"
+
+
+class TestResolveMissions:
+    def test_spotlights_the_missions_rail_button(self):
+        sidebar_manager = _FakeSidebarManager(None)
+        main_window = _FakeMainWindow(sidebar_manager)
+
+        assert _resolve_missions(main_window) == "RAIL_BUTTON_FALLBACK"
+        assert sidebar_manager.rail_button_requests == ["missions"]

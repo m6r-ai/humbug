@@ -683,6 +683,12 @@ def get_french_strings() -> LanguageStrings:
         tour_output_description=(
             "Les réponses de l'IA et l'historique de votre conversation apparaissent ici au fil de la discussion."
         ),
+        tour_missions_title="Missions",
+        tour_missions_description=(
+            "Pour les travaux plus importants, lancez une mission : une IA principale planifie le travail, en "
+            "confie des parties à des assistants et vous demande avant toute action risquée. Vos missions sont "
+            "listées ici, chacune dans son propre onglet."
+        ),
         tour_navigation_title="Navigation",
         tour_navigation_description=(
             "Passez d'un panneau à l'autre (Conversations, Fichiers, Recherche, Aperçu, etc.) "
@@ -1056,6 +1062,18 @@ def get_french_strings() -> LanguageStrings:
         mission_status_out_of_tokens="Limite de jetons atteinte",
         mission_say_out_of_tokens="J'ai utilisé les jetons que vous m'avez accordés. Dites-moi comment continuer.",
         mission_notify_out_of_tokens="Mission arrivée à sa limite de jetons",
+        mission_notify_file_unlocked="Un fichier est de nouveau libre",
+        mission_activity_file_locked="En attente : {0} est réservé à « {1} »",
+        mission_activity_file_unlocked="{0} est de nouveau libre",
+        mission_decision_locked=(
+            "{0} est en cours de modification par la mission « {1} ». Cette demande attend que "
+            "cette mission se termine, soit arrêtée ou échoue."
+        ),
+        mission_decision_unlocked=(
+            "{0} est de nouveau libre : la mission qui le modifiait est terminée. "
+            "Approuvez pour continuer."
+        ),
+        mission_decision_locked_tip="Réservé jusqu'à la fin de l'autre mission",
         mission_token_limit_notice=(
             "Cette mission a atteint sa limite de jetons : {0} sur {1}. Son travail est en pause, et rien de "
             "plus n'est dépensé tant que vous n'avez pas choisi comment continuer."

@@ -182,8 +182,11 @@ only what a conversation cannot do for itself.
   reversible way to stop automatic progress while the user inspects the work;
   Stop cancels it.
 - **Humbug's backend adds** the following:
-  - **Limits**, enforced in the delegate path: depth, children per task, total
-    tasks, concurrent turns, and a token budget.
+  - **Limits.** Each mission may have a token budget, which the user sets when
+    starting it and may raise or remove when it is reached; the mission stops
+    when it is used up. Continues without progress and automatic retries are
+    bounded. Limits on delegation depth, children per task, total tasks and
+    concurrent turns are not part of this decision; see "Open questions".
   - **An approval hub** that answers existing approvals from a central inbox.
     Each request names what it acts on, and a destructive one says whether it
     can be undone (only changes the file change journal records can be) before it
@@ -192,7 +195,8 @@ only what a conversation cannot do for itself.
   - **Stopping and closing children.** Cancelling cascades to children, and
     children's contexts are always closed.
   - **Detection of interrupted missions** after a restart.
-  - **Write-scope leases** between parallel tasks.
+  - **File locks between missions.** A file an unfinished mission has changed is
+    locked to it until it finishes, stops or fails.
   - **A projection of mission state** for the interface.
 
 **No component plans, chooses or dispatches tasks on its own.** Humbug enforces
@@ -272,14 +276,21 @@ keep behaviour the same, and Classic benefits from them too:
    the interaction log, whether or not a tab is open.
 7. **One mindspace.** Missions stay inside one mindspace, and tools stay inside
    `resolve_tool_path`.
-8. **Parallel writes are scoped.** Each running task holds a write-scope lease that
-   does not overlap another's, and a write fails if the file changed after the task
-   read it. Terminal commands cannot be scoped: they need a per-action approval
-   at Assist and Supervised, and are explicitly identified as unscoped in the
+8. **Missions do not write over each other.** A file an unfinished mission has
+   changed is locked to that mission. Another mission's request to change it is
+   held: it is never approved, automatically or by the user, until the holder
+   finishes, stops or fails, and it is then left for the user to approve rather
+   than approved automatically. A standing approval is not granted while another
+   mission is in progress, because it would answer a change without the lock
+   being checked. The lock is between missions, not between the conversations of
+   one mission, and it covers only changes the file change journal records:
+   terminal commands cannot be scoped, so they need a per-action approval at
+   Assist and Supervised and are explicitly identified as unscoped in the
    Everything confirmation and audit record.
-9. **Everything is bounded.** Retries, concurrent turns and token spend each have a
-   limit. When a limit is reached, the mission stops and tells the user; it never
-   fails silently.
+9. **Everything that is bounded says so.** Continues without progress, automatic
+   retries and, when the user sets one, token spend each have a limit. When a
+   limit is reached, the mission stops and tells the user; it never fails
+   silently.
 10. **Mission records hold no secrets.**
 
 ### Data ownership and persistence
@@ -335,7 +346,7 @@ the lead is resumed. Any action with side effects goes through approval again.
   1. The moves out of the desktop, plus the mode setting.
   2. The approval hub and inbox.
   3. The mission model and persistence.
-  4. Limits, leases and controls.
+  4. Limits, file locks and controls.
   5. Recovery and verification.
   6. Hardening.
 - **Visibility:** Autonomous Mode stays off by default until phase 5.
@@ -355,10 +366,10 @@ the lead is resumed. Any action with side effects goes through approval again.
   its usage is counted.
 - **Cancel cascades:** cancelling a mission or a parent conversation stops every
   child.
-- **Limits are enforced and reported:** depth, children, concurrency and budget
-  limits are enforced, and the user is told when one is hit.
-- **Write leases hold:** a write outside its lease, or overlapping another task's
-  lease, is refused.
+- **Limits are enforced and reported:** a mission that reaches its token budget
+  stops, and the user is told and can raise or remove it.
+- **File locks hold:** another mission's change to a locked file is not approved
+  until the holder finishes, and the user is told when the file is free.
 - **Interrupted missions recover:** if the process is killed mid-mission, the
   mission is paused after restart, its findings are shown, and no tool call runs
   twice.
@@ -370,7 +381,9 @@ the lead is resumed. Any action with side effects goes through approval again.
 
 ### Open questions
 
-1. What should the default limits be?
+1. Should delegation depth, children per task, total tasks and concurrent turns
+   be limited, and with what defaults? None of them is limited today, so a
+   mission can start as many helpers as its lead asks for.
 2. Should mission children get a narrower tool set by default (for example, no
    terminal)?
 3. Should rejection reasons reach the AI? Today they are only logged.
@@ -453,7 +466,9 @@ Implementation does not start until the maintainer:
   the user accepts unsupervised destructive, terminal and network actions inside
   that mission. The confirmation, limits, audit trail and immediate revocation
   reduce risk, but do not make those actions safe.
-- **Write leases reduce parallelism,** and terminal commands cannot be scoped.
+- **File locks reduce parallelism between missions,** and do nothing for helpers
+  of the same mission writing the same file, or for terminal commands, which
+  cannot be scoped.
 - **New state.** Mission records are a new kind of mindspace state, and file
   operations on conversations must decide how to treat them.
 

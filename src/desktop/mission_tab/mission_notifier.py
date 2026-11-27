@@ -118,6 +118,7 @@ class MissionNotifier(QObject):
             MissionAlertKind.STUCK: strings.mission_notify_stuck,
             MissionAlertKind.PLAN_READY: strings.mission_notify_plan_ready,
             MissionAlertKind.OUT_OF_TOKENS: strings.mission_notify_out_of_tokens,
+            MissionAlertKind.FILE_UNLOCKED: strings.mission_notify_file_unlocked,
         }[alert.kind]
         message = f"{alert.mission_title}: {alert.detail}" if alert.detail else alert.mission_title
         return title, message

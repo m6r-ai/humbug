@@ -3191,9 +3191,10 @@ class MissionWidget(QWidget):
 
         self._checks = checks
         _clear_layout(self._checks_layout)
-        for check in checks:
+        for index, check in enumerate(checks):
             row = QFrame()
             row.setObjectName("MissionFileRow")
+            row.setProperty("last", index == len(checks) - 1)
             layout = QHBoxLayout(row)
             layout.setContentsMargins(6, 6, 6, 6)
             layout.setSpacing(10)
@@ -3236,9 +3237,10 @@ class MissionWidget(QWidget):
         self._file_rows = {}
         self._file_diffs = {}
         strings = self._language_manager.strings()
-        for file in files:
+        for index, file in enumerate(files):
             row = _ClickableFrame()
             row.setObjectName("MissionFileRow")
+            row.setProperty("last", index == len(files) - 1)
             outer = QVBoxLayout(row)
             outer.setContentsMargins(6, 4, 6, 4)
             outer.setSpacing(6)
@@ -3970,6 +3972,11 @@ class MissionWidget(QWidget):
                 note.setObjectName("MissionReviewNote")
                 layout.addWidget(note)
 
+            if decision.lock_text:
+                lock = _WrapLabel(_breakable(decision.lock_text))
+                lock.setObjectName("MissionDecisionLocked" if decision.locked else "MissionDecisionUnlocked")
+                layout.addWidget(lock)
+
             summary, more = _split_reason(decision.reason)
             if summary:
                 reason = _WrapLabel(_breakable(summary))
@@ -4012,6 +4019,10 @@ class MissionWidget(QWidget):
             approve.setObjectName("MissionApproveDestructive" if decision.destructive else "MissionApprove")
             approve.setCursor(Qt.CursorShape.PointingHandCursor)
             approve.clicked.connect(lambda _checked=False, d=decision.decision_id: self.decision_approved.emit(d))
+            if decision.locked:
+                approve.setEnabled(False)
+                approve.setToolTip(strings.mission_decision_locked_tip)
+
             buttons.addWidget(approve, 1)
             unsure = QPushButton(strings.mission_unsure)
             unsure.setObjectName("MissionSecondaryButton")
@@ -4065,7 +4076,10 @@ class MissionWidget(QWidget):
                 self.glide_to(card)
 
         elif key == Qt.Key.Key_A:
-            if current.destructive and not event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+            if current.locked:
+                self.show_decision(current.decision_id)
+
+            elif current.destructive and not event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
                 self.show_decision(current.decision_id)
 
             else:
@@ -4439,6 +4453,10 @@ class MissionWidget(QWidget):
     def submit_composer(self) -> None:
         """Send what is in the composer, as Ctrl+Enter or the Send button does."""
         self._submit()
+
+    def play_intro(self) -> None:
+        """Play the logo's arrival again, because the user has just opened the new-mission screen."""
+        self._intro.play()
 
     def focus_composer(self) -> None:
         """Move keyboard focus to the composer."""
@@ -4961,6 +4979,9 @@ class MissionWidget(QWidget):
                 background: transparent;
                 border-bottom: 1px solid {line};
             }}
+            #MissionFileRow[last="true"] {{
+                border-bottom: none;
+            }}
             #MissionWidget QLabel#MissionFilePath {{
                 color: {text};
                 font-family: "{mono}";
@@ -5349,6 +5370,20 @@ class MissionWidget(QWidget):
                 color: {muted_on_page};
                 font-size: {fs * 0.86:.1f}pt;
                 font-style: italic;
+            }}
+            #MissionWidget QLabel#MissionDecisionLocked, #MissionWidget QLabel#MissionDecisionUnlocked {{
+                color: {text};
+                font-size: {fs * 0.86:.1f}pt;
+                border-radius: {round(6 * zoom)}px;
+                padding: {round(6 * zoom)}px {round(8 * zoom)}px;
+            }}
+            #MissionWidget QLabel#MissionDecisionLocked {{
+                background-color: {warning_soft};
+                border: 1px solid {tone_rgba(MissionTone.WARNING, 0.55)};
+            }}
+            #MissionWidget QLabel#MissionDecisionUnlocked {{
+                background-color: {tone_rgba(MissionTone.SUCCESS, 0.12)};
+                border: 1px solid {tone_rgba(MissionTone.SUCCESS, 0.55)};
             }}
             #MissionWidget QLabel#MissionDecisionDetail {{
                 background-color: {input_bg};

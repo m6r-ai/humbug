@@ -107,8 +107,8 @@ API keys.
 
 On your first launch, Humbug offers a short guided tour. It dims the window and spotlights one part
 of the interface at a time, explaining what it is for: where to create or open a mindspace, where
-conversations live, where your work appears, how to send a message, how to move between the sidebar
-views, and where settings are.
+conversations live, where your work appears, how to send a message, where your missions are, how
+to move between the sidebar views, and where settings are.
 
 Use **Next** and **Back** to move through it, **Skip Tour** to end it early, and **Start Using
 Humbug** on the last step to finish. Taking the tour once is enough; it will not appear again.

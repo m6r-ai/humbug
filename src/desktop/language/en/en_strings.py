@@ -662,6 +662,11 @@ def get_english_strings() -> LanguageStrings:
         tour_key_action_description="Type a message and press Send (or {0}) to talk with the AI.",
         tour_output_title="Conversation History",
         tour_output_description="AI responses and your conversation history appear here as you chat.",
+        tour_missions_title="Missions",
+        tour_missions_description=(
+            "For bigger jobs, start a mission: an AI lead plans the work, hands parts to helpers and asks "
+            "you before anything risky. Your missions are listed here, each with its own tab."
+        ),
         tour_navigation_title="Navigation",
         tour_navigation_description=(
             "Switch between Conversations, Files, Search, Preview, and more using this sidebar."
@@ -1000,6 +1005,18 @@ def get_english_strings() -> LanguageStrings:
         mission_status_out_of_tokens="Token limit reached",
         mission_say_out_of_tokens="I've used the tokens you allowed me. Tell me how to carry on.",
         mission_notify_out_of_tokens="Mission reached its token limit",
+        mission_notify_file_unlocked="A file is free again",
+        mission_activity_file_locked="Waiting: {0} is locked to “{1}”",
+        mission_activity_file_unlocked="{0} is free again",
+        mission_decision_locked=(
+            "{0} is being changed by the mission “{1}”. This request waits until that mission "
+            "finishes, stops or fails."
+        ),
+        mission_decision_unlocked=(
+            "{0} is free again: the mission that was changing it has finished. "
+            "Approve to continue."
+        ),
+        mission_decision_locked_tip="Locked until the other mission finishes",
         mission_token_limit_notice=(
             "This mission has used its token limit: {0} of {1} tokens. Its work is paused, and nothing more is "
             "spent until you choose how to carry on."

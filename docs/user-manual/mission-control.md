@@ -64,8 +64,9 @@ back. Putting it away is remembered for you, in every mindspace.
 The new-mission screen opens with a short animation of Humbug's logo arriving. Two streams of
 light fly in and meet, the logo turns into view out of the flash with rings of light circling it,
 a sheen crosses it, and it comes to rest over a pedestal of light with its reflection on the
-floor. It plays once, the first time you open the screen in a Mission Control tab; after that,
-the picture rests on the logo. The round button in its top corner plays it again whenever you
+floor. It plays each time you open the new-mission screen with **+**, **Ctrl+Shift+M** or the
+menu; switching back to a tab that already shows the screen leaves the picture resting on the
+logo, and with **Reduce motion** on it never moves by itself. The round button in its top corner plays it again whenever you
 like, even with **Reduce motion** on, since you asked to see it. The Decision Inbox is not shown
 here while nothing is waiting, so the welcome has the whole width; if a conversation outside any
 mission asks for an approval, the inbox appears beside it.
@@ -325,7 +326,9 @@ Mission Control tells you when:
 - a mission is waiting for a decision only you can make (one an AI reviewer is still considering
   is not announced until it is left to you),
 - a mission is accomplished, or the lead has answered your question,
-- a mission has failed for good, looks stuck, or has reached its token limit.
+- a mission has failed for good, looks stuck, or has reached its token limit,
+- a file a mission's request was waiting for is free again (see
+  [Two missions and the same file](#two-missions-and-the-same-file)).
 
 While you are working in Humbug, the mission's tab, if it is open, is highlighted as having
 something new, and the count on the Missions view's rocket icon shows how many requests are waiting.
@@ -809,8 +812,9 @@ The Decision Inbox lists the tool approvals waiting for the mission you are look
 with those from conversations that are not part of any mission. Requests from other missions are
 not mixed in: they show in their own mission's tab, and the count in the Missions view and the
 banner described above tell you they are waiting. Requests from conversations that are not part of
-any mission show in every open Mission Control tab; answering one in any tab answers it everywhere. Each request shows the tool, the reason it gave, any
-detail such as a diff, which conversation asked, and whether the operation is destructive.
+any mission show in every open Mission Control tab; answering one in any tab answers it everywhere.
+Each request shows the tool, the reason it gave, any detail such as a diff, which conversation
+asked, and whether the operation is destructive.
 Where the request names what it acts on (a file, a move from one path to another, a command or a
 URL), that is shown as **Acts on**. A destructive request also says, before you approve it,
 whether it can be undone: a file change that Humbug's file change journal records can be, and
@@ -839,6 +843,39 @@ These are the same decisions as the buttons in the conversation tab, and they ar
 [Mindspace Log](mindspace-log.md) in the same way. Whichever you answer first wins: the request
 disappears from the other place. A request that has already been answered elsewhere cannot be
 answered again.
+
+### Two missions and the same file
+
+Several missions can run at once, so two of them may want the same file. To stop one writing over
+the other's work, a file a mission has changed is **locked** to that mission until it finishes
+(**Mission accomplished** or **Answered**), is stopped, or fails for good. While it is locked:
+
+- Another mission's request to change the file is never approved automatically, whatever its
+  auto-approve level, and waits in the Decision Inbox with an amber note naming the file and the
+  mission holding it. **Approve** is turned off; **Reject** and **Unsure** still work. The
+  waiting mission's Recent Activity says the request is waiting.
+- When the mission holding the file finishes, the note turns green and says the file is free
+  again, and you are told the way you are told a mission needs you. The request is not approved
+  by itself even then: you decide whether it should go ahead, after looking at what the first
+  mission did if you want to.
+- A mission at **Everything** auto-approve normally stops asking about file changes for the rest
+  of a turn once one is approved. While another mission is in progress it asks for each change
+  instead, so every change is checked against the locks.
+
+The lock has limits:
+
+- **It only covers changes the file change journal records**, such as the AI writing, editing,
+  moving or deleting a file. A terminal command can change any file without naming it, so it is
+  never held by a lock.
+- **It is between missions, not within one.** Two helpers of the same mission can still change the
+  same file.
+- **A paused, stuck or waiting mission keeps its files locked**, because it has not finished. If two
+  missions each wait for a file the other holds, neither can go on until you stop one of them, or
+  reject one of the requests.
+- **A file is locked only while it is as the mission left it.** Once you or another mission changes
+  it again, the earlier mission no longer holds it.
+- **It applies to requests answered in Mission Control.** A request you answer in a conversation's
+  own tab, such as a mission in Classic mode, is not held.
 
 ---
 

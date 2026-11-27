@@ -62,6 +62,11 @@ def _resolve_output(main_window: "MainWindow") -> QWidget | None:
     return main_window.tab_manager()
 
 
+def _resolve_missions(main_window: "MainWindow") -> QWidget | None:
+    """Spotlight the Missions panel's rail button."""
+    return main_window.sidebar_manager().panel_button("missions")
+
+
 def _resolve_navigation(main_window: "MainWindow") -> QWidget | None:
     """Spotlight the sidebar icon rail used to switch between panels."""
     return main_window.sidebar_manager().rail_widget()
@@ -104,6 +109,11 @@ def build_tour_steps() -> list[TourStep]:
             title=lambda strings: strings.tour_output_title,
             description=lambda strings: strings.tour_output_description,
             resolve_target=_resolve_output,
+        ),
+        TourStep(
+            title=lambda strings: strings.tour_missions_title,
+            description=lambda strings: strings.tour_missions_description,
+            resolve_target=_resolve_missions,
         ),
         TourStep(
             title=lambda strings: strings.tour_navigation_title,

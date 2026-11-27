@@ -592,6 +592,8 @@ class LanguageStrings:
     tour_key_action_description: str  # Format: "... ({0}) ..." — {0} is the platform submit shortcut
     tour_output_title: str
     tour_output_description: str
+    tour_missions_title: str
+    tour_missions_description: str
     tour_navigation_title: str
     tour_navigation_description: str
     tour_help_title: str
@@ -849,6 +851,12 @@ class LanguageStrings:
     mission_status_out_of_tokens: str
     mission_say_out_of_tokens: str
     mission_notify_out_of_tokens: str
+    mission_notify_file_unlocked: str
+    mission_activity_file_locked: str
+    mission_activity_file_unlocked: str
+    mission_decision_locked: str
+    mission_decision_unlocked: str
+    mission_decision_locked_tip: str
     mission_token_limit_notice: str
     mission_token_limit_remove: str
     mission_token_limit_add: str

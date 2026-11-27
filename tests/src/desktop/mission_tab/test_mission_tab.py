@@ -3975,6 +3975,42 @@ class TestIntro:
         assert intro.is_playing() and replay.isHidden()
         intro.deleteLater()
 
+    def test_opening_the_new_mission_screen_plays_it_again(self, qapp, monkeypatch, moving) -> None:  # pylint: disable=unused-argument
+        """Opening the new-mission screen on purpose plays the story from the start, even after it has played."""
+        clock = [100.0]
+        monkeypatch.setattr(mission_intro_module.time, "monotonic", lambda: clock[0])
+        tab = MissionTab("mission-tab")
+        intro = tab._widget._intro  # pylint: disable=protected-access
+        intro.play_once()
+        clock[0] += mission_intro_module._DURATION + 0.1  # pylint: disable=protected-access
+        intro._tick()  # pylint: disable=protected-access
+        assert not intro.is_playing()
+
+        tab.show_new_mission()
+        assert intro.is_playing()
+        tab.deleteLater()
+
+    def test_switching_back_to_the_tab_does_not_play_it(self, qapp, monkeypatch, moving) -> None:  # pylint: disable=unused-argument
+        """Coming back to a tab that already shows the new-mission screen leaves the story at rest."""
+        clock = [100.0]
+        monkeypatch.setattr(mission_intro_module.time, "monotonic", lambda: clock[0])
+        tab = MissionTab("mission-tab")
+        intro = tab._widget._intro  # pylint: disable=protected-access
+        intro.play_once()
+        clock[0] += mission_intro_module._DURATION + 0.1  # pylint: disable=protected-access
+        intro._tick()  # pylint: disable=protected-access
+
+        tab.activate()
+        assert not intro.is_playing()
+        tab.deleteLater()
+
+    def test_opening_the_screen_with_motion_reduced_keeps_it_still(self, qapp, still) -> None:  # pylint: disable=unused-argument
+        """With motion reduced, opening the new-mission screen shows how the story ends rather than playing it."""
+        intro = MissionIntro()
+        intro.play()
+        assert not intro.is_playing()
+        intro.deleteLater()
+
     def test_replay_plays_even_with_motion_reduced(self, qapp, still) -> None:  # pylint: disable=unused-argument
         """Asking to see the story again plays it, though motion is otherwise reduced."""
         intro = MissionIntro()
@@ -4900,6 +4936,15 @@ class TestFilesChanged:
         assert reviewed == [("old.md", 7)]
         widget.deleteLater()
 
+    def test_only_the_last_file_row_has_no_dividing_line(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The rows are divided by lines, but the last row ends the list without one beneath it."""
+        widget = MissionWidget()
+        files = [self._file("a.md", lines=(1, 1)), self._file("b.md", lines=(2, 0)), self._file("c.md", lines=(0, 3))]
+        widget.set_mission(dataclasses.replace(_view(completed=False, stage=2), files=files))
+        rows = widget._files_card.findChildren(QFrame, "MissionFileRow")  # pylint: disable=protected-access
+        assert [row.property("last") for row in rows] == [False, False, True]
+        widget.deleteLater()
+
     def test_text_file_unfolds_into_its_diff(self, qapp) -> None:  # pylint: disable=unused-argument
         """Clicking a text file's row asks for its diff once, shows it under the row, and folds it away again."""
         widget = MissionWidget()
@@ -5351,3 +5396,67 @@ class TestOneMissionPerTab:
             MissionServiceHolder().release()
 
         asyncio.run(run())
+
+
+class TestLockedDecisions:
+    """A request held for a file another mission is changing says so, and cannot be approved until it is free."""
+
+    def test_a_locked_request_cannot_be_approved(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The card names the file and the mission holding it, and Approve is off, by click or by key."""
+        widget = MissionWidget()
+        locked = dataclasses.replace(_decision(), lock_text="docs/a.md is being changed", locked=True)
+        widget.set_decisions([locked])
+        approved: list[str] = []
+        widget.decision_approved.connect(approved.append)
+
+        notes = widget._inbox_card.findChildren(QLabel, "MissionDecisionLocked")  # pylint: disable=protected-access
+        assert [note.text().replace("\u200b", "") for note in notes] == ["docs/a.md is being changed"]
+        approve = next(
+            b for b in widget._inbox_card.findChildren(QPushButton)  # pylint: disable=protected-access
+            if b.text() == widget._language_manager.strings().mission_approve  # pylint: disable=protected-access
+        )
+        assert not approve.isEnabled()
+
+        QTest.keyClick(widget, Qt.Key.Key_A)
+        assert not approved
+        widget.deleteLater()
+
+    def test_a_freed_request_can_be_approved(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Once the file is free the card says so and Approve works again."""
+        widget = MissionWidget()
+        freed = dataclasses.replace(_decision(), lock_text="docs/a.md is free again")
+        widget.set_decisions([freed])
+
+        notes = widget._inbox_card.findChildren(QLabel, "MissionDecisionUnlocked")  # pylint: disable=protected-access
+        assert [note.text().replace("\u200b", "") for note in notes] == ["docs/a.md is free again"]
+        approve = next(
+            b for b in widget._inbox_card.findChildren(QPushButton)  # pylint: disable=protected-access
+            if b.text() == widget._language_manager.strings().mission_approve  # pylint: disable=protected-access
+        )
+        assert approve.isEnabled()
+        widget.deleteLater()
+
+    def test_view_of_a_held_request(self, mindspace_sandbox, qapp) -> None:  # pylint: disable=unused-argument
+        """A held request names the file and its mission and cannot be approved; a freed one can, even at Everything."""
+        tab = MissionTab("mission")
+        decision = MissionDecision(
+            decision_id="d", context_id="c", conversation_title="Lead", mission_id=None,
+            tool_name="filesystem.write_file", reason="Write docs/a.md", detail=None, destructive=False,
+            requested_at=datetime.now(timezone.utc), reversible=True, target="docs/a.md",
+        )
+        strings = tab._strings()  # pylint: disable=protected-access
+        held = tab._decision_view(dataclasses.replace(  # pylint: disable=protected-access
+            decision, locked_by="Write the guide", locked_path="docs/a.md"
+        ))
+        freed = tab._decision_view(dataclasses.replace(decision, unlocked_path="docs/a.md"))  # pylint: disable=protected-access
+
+        assert held.locked and held.lock_text == strings.mission_decision_locked.format("docs/a.md", "Write the guide")
+        assert not freed.locked and freed.lock_text == strings.mission_decision_unlocked.format("docs/a.md")
+        assert not tab._decision_view(decision).lock_text  # pylint: disable=protected-access
+
+        mission = types.SimpleNamespace(auto_approve=AutoApproveLevel.ALL, mode=MissionMode.AUTONOMOUS)
+        tab._decision_mission = lambda _decision: mission  # type: ignore[method-assign]  # pylint: disable=protected-access
+        tab._auto_approve_note = lambda _decision, _mission: ""  # type: ignore[method-assign]  # pylint: disable=protected-access
+        assert not tab._decision_view(decision).answerable  # pylint: disable=protected-access
+        assert tab._decision_view(dataclasses.replace(decision, unlocked_path="docs/a.md")).answerable  # pylint: disable=protected-access
+        tab.deleteLater()

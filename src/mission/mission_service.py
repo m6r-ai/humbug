@@ -74,6 +74,12 @@ _MAX_COUNTED_BYTES = 1024 * 1024
 
 # How many unchanged lines are shown either side of a change in a file's diff, and the most lines a diff shows.
 _DIFF_CONTEXT_LINES = 3
+
+# A mission in any other state is unfinished, and keeps the files it changed locked to it.
+_FINISHED_STATUSES = (MissionStatus.COMPLETED, MissionStatus.REPLIED, MissionStatus.STOPPED, MissionStatus.FAILED)
+
+# Arguments naming a file a change the journal records would write.
+_CHANGE_PATH_ARGUMENTS = ("path", "file_path", "output_path", "destination")
 _MAX_DIFF_LINES = 400
 
 # Runs of unchanged lines between changes no longer than this are shown rather than folded away.
@@ -436,6 +442,9 @@ class MissionService:
                 lead_for=self._lead_for,
                 latest_lead_message=self._latest_lead_message,
                 expect_message=self._expect_message,
+                change_paths=self._change_paths,
+                file_holder=self._file_holder,
+                others_in_progress=self._others_in_progress,
             ),
         )
 
@@ -530,7 +539,8 @@ class MissionService:
             self._listeners.remove(listener)
 
     def _notify(self) -> None:
-        """Tell listeners that state changed."""
+        """Tell listeners that state changed, once requests for locked files are held or freed."""
+        self._approvals.recheck_locks()
         for listener in list(self._listeners):
             try:
                 listener()
@@ -2092,6 +2102,55 @@ class MissionService:
         if conversation_id and conversation_id not in mission.conversation_ids:
             mission.conversation_ids.append(conversation_id)
             self._save(mission)
+
+    def _change_paths(self, tool_call: AIToolCall) -> tuple[str, ...]:
+        """Return the files, relative to the mindspace, a tool call would change."""
+        paths = []
+        for name in _CHANGE_PATH_ARGUMENTS:
+            value = tool_call.arguments.get(name)
+            if not isinstance(value, str) or not value.strip():
+                continue
+
+            try:
+                absolute = self._mindspace.get_absolute_path(value.strip())
+                paths.append(os.path.normpath(self._mindspace.resolve_tool_path(absolute)[1]))
+
+            except MindspaceError:
+                continue
+
+        return tuple(paths)
+
+    def _file_holder(self, mission_id: str, paths: tuple[str, ...]) -> tuple[Mission, str] | None:
+        """
+        Return another unfinished mission one of these files is locked to, and the file.
+
+        A mission holds a file it changed while the file is still as the mission left it,
+        until the mission finishes, stops or fails.
+
+        Args:
+            mission_id: The mission asking to change the files
+            paths: The files, relative to the mindspace
+        """
+        wanted = {os.path.normpath(path) for path in paths}
+        for other in self._missions.values():
+            if other.mission_id == mission_id or not other.conversation_ids:
+                continue
+
+            if self._status_for(other) in _FINISHED_STATUSES:
+                continue
+
+            for change in self._read_file_changes(other)[0]:
+                if change.state == MissionFileChangeState.CURRENT and os.path.normpath(change.path) in wanted:
+                    return other, change.path
+
+        return None
+
+    def _others_in_progress(self, mission_id: str) -> bool:
+        """Return whether a mission other than this one is unfinished and has not been put away."""
+        return any(
+            other.mission_id != mission_id and not other.archived and self._status_for(other) not in _FINISHED_STATUSES
+            for other in self._missions.values()
+        )
 
     def file_changes(self, mission_id: str) -> list[MissionFileChange]:
         """

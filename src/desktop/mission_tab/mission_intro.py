@@ -100,9 +100,9 @@ class MissionIntro(QWidget):
 
     Rings of light circle the logo, passing behind it and in front of it, a sheen crosses it, and
     it comes to rest over a pedestal of light with its reflection on the floor.  The story plays
-    once, the first time the picture is played; after that, and whenever motion is reduced, the
-    picture rests on the logo.  It only animates while it is playing, so it costs nothing once
-    it has settled.
+    the first time the picture is shown, and again each time the new-mission screen is opened on
+    purpose; otherwise, and whenever motion is reduced, the picture rests on the logo.  It only
+    animates while it is playing, so it costs nothing once it has settled.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -134,6 +134,15 @@ class MissionIntro(QWidget):
         if self._played:
             return
 
+        self._played = True
+        if MissionMotion().reduced():
+            self.update()
+            return
+
+        self._play()
+
+    def play(self) -> None:
+        """Play the story from the start, as when the new-mission screen is opened; with motion reduced, show its end."""
         self._played = True
         if MissionMotion().reduced():
             self.update()
