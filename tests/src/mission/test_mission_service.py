@@ -3672,6 +3672,113 @@ class TestTokenCount:
         asyncio.run(run())
 
 
+class TestTokenLimit:
+    """A mission may be given a token limit, at which it pauses until the user raises or removes it."""
+
+    @staticmethod
+    def _reply(prompt: int, completion: int) -> AIMessage:
+        return AIMessage.create(
+            source=AIMessageSource.AI, content="Working on it.", completed=True,
+            usage=AIUsage(prompt_tokens=prompt, completion_tokens=completion, total_tokens=prompt + completion),
+        )
+
+    async def _over_limit(self, mindspace, monkeypatch, limit: int = 1000):
+        """Start a mission with a token limit, and give it a reply that uses more than the limit."""
+        cancelled: list[AIConversation] = []
+        monkeypatch.setattr(AIConversation, "cancel_current_tasks", lambda self, notify=True: cancelled.append(self))
+        service, mission, conversation = await _start_mission_with_plan(mindspace, ["in_progress", "pending"])
+        mission.token_budget = limit
+        await conversation._trigger_event(  # pylint: disable=protected-access
+            AIConversationEvent.MESSAGE_COMPLETED, self._reply(1100, 100)
+        )
+        return service, mission, conversation, cancelled
+
+    def test_a_mission_without_a_limit_never_pauses_for_tokens(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Without a limit, however many tokens a mission uses, it carries on."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["in_progress"])
+            await conversation._trigger_event(  # pylint: disable=protected-access
+                AIConversationEvent.MESSAGE_COMPLETED, self._reply(5_000_000, 1_000_000)
+            )
+            assert not mission.paused
+            assert service.status(mission.mission_id) != MissionStatus.OUT_OF_TOKENS
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_reaching_the_limit_pauses_the_mission_and_stops_its_work(self, mindspace, submitted, monkeypatch):  # pylint: disable=unused-argument
+        """Once its tokens are used up, the mission's work is stopped and it waits for the user, saying why."""
+        async def run() -> None:
+            service, mission, conversation, cancelled = await self._over_limit(mindspace, monkeypatch)
+            assert mission.paused and conversation in cancelled
+            assert service.status(mission.mission_id) == MissionStatus.OUT_OF_TOKENS
+            assert _store(mindspace).load_all()[0].paused
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_continuing_is_refused_while_the_limit_is_used_up(self, mindspace, submitted, monkeypatch):  # pylint: disable=unused-argument
+        """A mission out of tokens is not simply continued: its limit has to be raised or removed."""
+        async def run() -> None:
+            service, mission, _conversation, _cancelled = await self._over_limit(mindspace, monkeypatch)
+            with pytest.raises(MissionError):
+                service.unpause_mission(mission.mission_id)
+
+            assert service.status(mission.mission_id) == MissionStatus.OUT_OF_TOKENS
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_removing_the_limit_carries_the_mission_on(self, mindspace, submitted, monkeypatch):  # pylint: disable=unused-argument
+        """Taking the limit away lifts the pause, and the mission is no longer limited."""
+        async def run() -> None:
+            service, mission, _conversation, _cancelled = await self._over_limit(mindspace, monkeypatch)
+            service.remove_token_budget(mission.mission_id)
+            assert mission.token_budget == 0 and not mission.paused
+            assert service.status(mission.mission_id) not in (MissionStatus.OUT_OF_TOKENS, MissionStatus.PAUSED)
+            assert _store(mindspace).load_all()[0].token_budget == 0
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_adding_tokens_counts_from_what_was_used_and_carries_on(self, mindspace, submitted, monkeypatch):  # pylint: disable=unused-argument
+        """Tokens added to a mission past its limit are counted from what it has used, and it carries on."""
+        async def run() -> None:
+            service, mission, _conversation, _cancelled = await self._over_limit(mindspace, monkeypatch)
+            service.extend_token_budget(mission.mission_id, 500)
+            assert mission.token_budget == 1200 + 500
+            assert not mission.paused and not mission.over_budget()
+            assert service.status(mission.mission_id) != MissionStatus.OUT_OF_TOKENS
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_adding_nothing_is_refused(self, mindspace, submitted, monkeypatch):  # pylint: disable=unused-argument
+        """Adding no tokens, or fewer than none, is refused and the mission stays waiting."""
+        async def run() -> None:
+            service, mission, _conversation, _cancelled = await self._over_limit(mindspace, monkeypatch)
+            for extra in (0, -10):
+                with pytest.raises(MissionError):
+                    service.extend_token_budget(mission.mission_id, extra)
+
+            assert service.status(mission.mission_id) == MissionStatus.OUT_OF_TOKENS
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_the_limit_is_set_when_the_mission_starts(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A limit chosen for a new mission is kept with it from the start."""
+        async def run() -> None:
+            service = MissionService(mindspace)
+            service.start()
+            mission = await service.create_mission("Write the docs", token_budget=50000)
+            assert mission.token_budget == 50000
+            assert _store(mindspace).load_all()[0].token_budget == 50000
+            service.stop()
+
+        asyncio.run(run())
+
+
 class TestFileChanges:
     """A mission lists the files its conversations changed, and can put them back."""
 
@@ -3725,6 +3832,51 @@ class TestFileChanges:
             assert changes["notes.md"].before_sequence is not None
             assert (changes["guide.md"].lines_added, changes["guide.md"].lines_removed) == (2, 0)
             assert changes["guide.md"].before_sequence is None
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_files_left_as_they_were_are_not_listed(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A file the mission rewrote with the same content, or changed and changed back, is not listed."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            lead = conversation.conversation_id()
+            for name in ("same.md", "back.md", "changed.md"):
+                with open(os.path.join(mindspace.mindspace_path(), name), "w", encoding="utf-8") as handle:
+                    handle.write("a\nb\n")
+
+            self._write(mindspace, lead, "same.md", "a\nb\n")
+            self._write(mindspace, lead, "back.md", "a\nB\n")
+            self._write(mindspace, lead, "back.md", "a\nb\n")
+            self._write(mindspace, lead, "changed.md", "a\nB\n")
+
+            assert [change.path for change in service.file_changes(mission.mission_id)] == ["changed.md"]
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_files_differing_only_in_line_endings_are_not_listed(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """A file whose lines are all the same as before is not listed, even when its line endings changed."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            with open(os.path.join(mindspace.mindspace_path(), "notes.md"), "wb") as handle:
+                handle.write(b"a\r\nb\r\n")
+
+            self._write(mindspace, conversation.conversation_id(), "notes.md", "a\nb\n")
+
+            assert not service.file_changes(mission.mission_id)
+            service.stop()
+
+        asyncio.run(run())
+
+    def test_an_empty_file_the_mission_created_is_listed(self, mindspace, submitted):  # pylint: disable=unused-argument
+        """Creating a file is a change even when the file is empty."""
+        async def run() -> None:
+            service, mission, conversation = await _start_mission_with_plan(mindspace, ["pending"])
+            self._write(mindspace, conversation.conversation_id(), "empty.md", "")
+
+            changes = service.file_changes(mission.mission_id)
+            assert [(change.path, change.kind) for change in changes] == [("empty.md", MissionFileChangeKind.CREATED)]
             service.stop()
 
         asyncio.run(run())

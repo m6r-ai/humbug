@@ -212,6 +212,12 @@ def get_french_strings() -> LanguageStrings:
         mindspace_vcs_no_repo="Aucun dépôt trouvé",
         mindspace_vcs_root="Racine de l'espace mental",
         mindspace_conversations="Conversations",
+        mindspace_missions="Missions",
+        mindspace_missions_empty=(
+            "Aucune mission pour l'instant. Lancez-en une avec + "
+            "pour confier un objectif à une équipe d'IA."
+        ),
+        mindspace_mission_open="Ouvrir dans le Centre de missions",
         pinned_section="Épinglés",
         mindspace_preview="Aperçu",
         mindspace_expand_sidebar="Développer la barre latérale",
@@ -559,7 +565,8 @@ def get_french_strings() -> LanguageStrings:
 
         delete_from_here_title="Supprimer les messages",
         delete_from_here_message=(
-            "Êtes-vous sûr de vouloir supprimer ce message et tous les messages suivants ? Cette action ne peut pas être annulée."
+            "Êtes-vous sûr de vouloir supprimer ce message et tous les messages suivants ? Cette action ne peut "
+            "pas être annulée."
         ),
 
         # Move operation strings
@@ -810,8 +817,6 @@ def get_french_strings() -> LanguageStrings:
         mission_milestone_checks="Suite : faire réussir les vérifications de fin",
         mission_milestone_follow_up="Ensuite : planifier votre nouvelle demande",
         mission_glance_now="Maintenant",
-        mission_chips_back="Afficher les missions précédentes",
-        mission_chips_more="Afficher plus de missions",
         mission_glance_progress="Avancement",
         mission_glance_blocked_step="Étape bloquée : {0}",
         mission_details_show="Afficher les détails",
@@ -902,7 +907,6 @@ def get_french_strings() -> LanguageStrings:
         mission_auto_approve_note_everything_paused=(
             "Cette mission approuve tout : cette demande sera approuvée quand vous poursuivrez la mission."
         ),
-        mission_options="Options de la mission",
         mission_rename="Renommer",
         mission_rename_title="Renommer la mission",
         mission_rename_label="Nom de la mission :",
@@ -937,7 +941,8 @@ def get_french_strings() -> LanguageStrings:
         mission_say_reply="Je vous ai laissé un message. Répondez ci-dessous quand vous êtes prêt.",
         mission_say_stopped="Je me suis arrêté. Envoyez-moi un message pour continuer.",
         mission_say_interrupted=(
-            "Humbug s'est fermé pendant que je travaillais. Appuyez sur Reprendre et je continuerai là où je m'étais arrêté."
+            "Humbug s'est fermé pendant que je travaillais. Appuyez sur Reprendre et je continuerai là où je "
+            "m'étais arrêté."
         ),
         mission_say_helper_waiting="Un de mes assistants a besoin de votre accord.",
         mission_say_replied=(
@@ -1048,6 +1053,23 @@ def get_french_strings() -> LanguageStrings:
         mission_guide_title="Mission Control",
         mission_guide_dismiss="Compris",
         mission_guide_link="Comment fonctionne Mission Control ?",
+        mission_status_out_of_tokens="Limite de jetons atteinte",
+        mission_say_out_of_tokens="J'ai utilisé les jetons que vous m'avez accordés. Dites-moi comment continuer.",
+        mission_notify_out_of_tokens="Mission arrivée à sa limite de jetons",
+        mission_token_limit_notice=(
+            "Cette mission a atteint sa limite de jetons : {0} sur {1}. Son travail est en pause, et rien de "
+            "plus n'est dépensé tant que vous n'avez pas choisi comment continuer."
+        ),
+        mission_token_limit_remove="Retirer la limite et continuer",
+        mission_token_limit_add="Ajouter des jetons et continuer",
+        mission_token_limit_amount="ex. 100k",
+        mission_token_limit_amount_tip="Combien de jetons de plus la mission peut utiliser, par exemple 50000, 100k ou 1.5m",
+        mission_tokens_of="{0} sur {1} jetons",
+        mission_activity_token_limit_reached="Limite de {0} jetons atteinte ; mission en pause",
+        mission_activity_token_limit_raised="Limite de jetons portée à {0}",
+        mission_activity_token_limit_removed="Limite de jetons retirée",
+        mission_token_limit_option="Limiter les jetons de cette mission",
+        mission_option_chip_tokens="Limite {0} jetons",
         mission_intro_replay="Rejouer l'animation",
         mission_options_title="Options de la nouvelle mission",
         mission_options_ai_settings="Paramètres de l'IA…",

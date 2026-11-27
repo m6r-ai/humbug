@@ -21,11 +21,22 @@ A new mission starts in Autonomous mode. See
 
 ## Opening Mission Control
 
-Open it from **Mindspace → Mission Control**, with **Ctrl+Shift+M** (macOS: **Cmd+Shift+M**), or
-from the Quick Switcher. Each of these opens it on the new-mission screen, ready for a request,
-and brings it to the front if it is already open; your missions stay in the row of chips above.
-A notification, or the mission button on a conversation, opens the mission it is about instead.
-Like any other tab, it is restored when you reopen the mindspace.
+Each mission has a tab of its own, named after the mission, so you can watch two missions side
+by side by putting their tabs in different columns. Missions keep working whether or not their tab
+is open, and however many are running at once.
+
+To start a mission, open a new-mission tab from **Mindspace → Mission Control**, with
+**Ctrl+Shift+M** (macOS: **Cmd+Shift+M**), from the Quick Switcher, or with **+** in the
+**Missions** view of the left panel (the rocket icon on the rail). If a new-mission tab is already
+open it is brought to the front rather than a second one opened. Once you send a request there,
+that tab becomes the new mission's tab.
+
+To open a mission, click it in the Missions view. As in the Conversations view, a single click
+opens a temporary tab that the next one you open in that column replaces, and a double click opens
+a tab that stays; double-click a temporary tab's label to keep it. A mission that already has a tab
+is brought to the front instead. A notification, or the mission button on a conversation, opens the
+mission it is about the same way. Like any other tab, a mission's tab is restored when you reopen
+the mindspace.
 
 When Humbug is set to Arabic, Mission Control reads from right to left: the send button, the
 arrows on folded sections, the journey bar and the order of buttons all follow, and labels are
@@ -70,8 +81,8 @@ a level to read what it means. **Off** needs no explaining, so only **Safe actio
 
 The options you choose once and rarely change are behind the cog at the right of the box: on the
 new-mission screen it opens **New mission options**, with **Start every new mission at this level**,
-**Let me review the plan before work starts**, **Add done checks (optional)**, **Save what you
-typed as a template**, and **AI settings…**. An option that is on shows as a small chip under the
+**Let me review the plan before work starts**, **Add done checks (optional)**, **Limit the tokens
+this mission can use**, **Save what you typed as a template**, and **AI settings…**. An option that is on shows as a small chip under the
 **Auto-approve** choice, such as **Plan review ✕**; click the chip to turn the option off.
 
 ### Starting every mission at the same auto-approve level
@@ -170,6 +181,34 @@ What these checks can and cannot do:
 
 **Run again** starts the new mission with the same checks.
 
+### Limiting the tokens a mission uses
+
+A mission has no token limit unless you give it one. To set one, tick **Limit the tokens this
+mission can use** in the cog's **New mission options** and type how many, such as `200000`,
+`200k` or `1.5m`. The limit shows as a chip on the new-mission screen, such as **Limit 200k
+tokens ✕**; click the chip to start without one. It applies to the next mission you start, and
+stays chosen for the ones after it until you clear it or close Humbug. A mission keeps the limit it
+was started with, across restarts. While a limited mission runs, its card
+shows how much of the limit it has used, such as **12.4k of 200k tokens**.
+
+When the mission has used its limit, Mission Control stops its work where it is, as pausing
+does, and the mission shows **Token limit reached**. Nothing more is spent until you choose one
+of two ways on:
+
+- **Add tokens and continue**: type how many more tokens it may use, and it carries on. They are
+  counted from what it has already used, so a mission that went a little past its limit gets the
+  full amount you added.
+- **Remove the limit and continue**: the mission carries on with no limit.
+
+**Continue** is not offered on its own, since the mission would only stop again straight away.
+You can also stop the mission instead.
+
+The limit is a safeguard, not an exact ceiling. Tokens are counted when a reply finishes, so the
+reply that crosses the limit is finished and counted, and the mission can end up a little over
+it; replies from helpers working at the same time can add a little more before they are stopped.
+Tokens are counted only while Humbug is following the mission. A message you send to a mission
+waiting at its limit still goes to the lead and is answered, since you chose to send it.
+
 ### Templates
 
 A request you make again and again can be kept as a template. Type it in the box, click **Save
@@ -197,9 +236,10 @@ Humbug then:
 
 1. Records the mission.
 2. Starts a new conversation, the **mission lead**, in Autonomous mode, so it has no tab. Its
-   transcript is in the conversations sidebar with a name that starts with `Mission-`. While
-   Mission Control is the current tab and the conversations sidebar is showing, the selected
-   mission's lead conversation is highlighted there, just as a conversation tab highlights its own.
+   transcript is named with `Mission-` and listed under the mission in the **Missions** view of
+   the left panel, not among your other conversations. While the mission's tab is the current tab
+   and the Missions view is showing, the mission is highlighted there, just as a conversation tab
+   highlights its own.
 3. Sends the lead your request, together with instructions to work out first what you actually
    want. A simple question, or a request for a quick explanation or opinion that needs at most a
    brief look at a file or two, is simply answered: no plan is made and no agents are started, and
@@ -285,9 +325,10 @@ Mission Control tells you when:
 - a mission is waiting for a decision only you can make (one an AI reviewer is still considering
   is not announced until it is left to you),
 - a mission is accomplished, or the lead has answered your question,
-- a mission has failed for good, or looks stuck.
+- a mission has failed for good, looks stuck, or has reached its token limit.
 
-While you are working in Humbug, the Mission Control tab is highlighted as having something new.
+While you are working in Humbug, the mission's tab, if it is open, is highlighted as having
+something new, and the count on the Missions view's rocket icon shows how many requests are waiting.
 While Humbug is in the background, it also asks for your attention the way your system does
 (bouncing the Dock icon on macOS, flashing the taskbar button on Windows and Linux) and shows a
 notification naming the mission; clicking the notification opens the mission. Whether the
@@ -335,7 +376,7 @@ To have interrupted missions pick up without clicking **Resume**, turn on **Auto
 restart** at the top of Mission Control. This is saved for the mindspace, as a
 [mindspace setting](mindspace-settings.md#mission-control) you can also change in **Settings**, and
 is off until you turn it on. Interrupted missions are then resumed as soon as the mindspace opens, whether or not the
-Mission Control tab is open.
+mission's tab is open.
 
 A mission that was waiting for you when Humbug closed (asking a question, paused, or finished) is
 not interrupted and is shown as it was. Anything the lead was in the middle of when Humbug closed,
@@ -361,7 +402,8 @@ When a mission is selected, Mission Control shows, from the top:
   it last set to work and kept up to date while you watch; a mission that is not working says when
   it was started. Mission Control does not estimate how long is left: the lead cannot know how
   long its next steps will take, so any figure would be a guess. Next to that is how many tokens the
-  mission has used so far, such as **12.4k tokens**, counting its lead and every helper; hover over
+  mission has used so far, such as **12.4k tokens** (or **12.4k of 200k tokens** for a mission with a
+  [token limit](#limiting-the-tokens-a-mission-uses)), counting its lead and every helper; hover over
   it to see input and output separately. The same figure is in the final report. Tokens are counted
   only while Humbug is following the mission, so missions from before this count was kept start at
   none, and Humbug has no price list, so it shows tokens rather than money. Once there is a plan, a ring
@@ -489,7 +531,10 @@ When a mission is selected, Mission Control shows, from the top:
   mission added (green) and removed (red), with a row of five blocks showing the share of each, so
   a one-line fix and a rewrite look different at a glance. The counts compare the file before the
   mission with the file as the mission left it, so your own later edits are not included; files
-  that are not text, or are larger than 1 MB, have no counts.
+  that are not text, or are larger than 1 MB, have no counts. A file the mission wrote but left
+  with the same lines it started with (rewritten unchanged, or changed and then changed back) is
+  not listed, because there is nothing in it to review; a change only to its line endings counts
+  as no change here.
   Click a text file's row (or press Space or Return on it) to unfold what changed, the way a code
   review shows it: removed lines in red and added lines in green, with each line's number before
   and after, and three unchanged lines around each change. Longer runs of unchanged lines are
@@ -532,33 +577,41 @@ When a mission is selected, Mission Control shows, from the top:
   beyond that it scrolls inside the card, with the newest message in view unless you have scrolled up
   to read an earlier one.
 
-Use the chips above the dashboard to switch between missions, or **+ New mission** to start
-another. Once there are more than a few missions, a **Search missions** box beside the chips
-shows only those whose name or request contains every word you type. **Run again**, in a mission's **⋯**
-menu or its report's, starts a new mission with the same request, lead AI settings, choice to
-review the plan and [done checks](#done-checks), and with the same auto-approve level, except **Everything**, which has to be
-chosen and confirmed afresh, so the new mission starts at your default level instead. **Archive**, in a mission's
-**⋯** menu, puts a mission away out of the chips without deleting anything; **Archived (n)** beside
-the chips shows the archived ones, and **Bring back from the archive** returns one. A mission that
-is working or waiting for you cannot be archived, so nothing that needs you goes out of sight, and
-the mission on screen is always among the chips. **+ New mission** always stays in view. When there are more missions than fit, the chips
-scroll sideways: use the **‹** and **›** arrows, swipe sideways on a trackpad or touch screen, or
-scroll sideways with a mouse that can. The faded end shows which way more missions lie, and the
-selected mission is always scrolled into view.
-
-A mission waiting for your decision shows a pulsing amber count on its chip. When another mission
-than the one you are looking at is waiting, a banner under the chips names it (or says how many
-are waiting), and **Go there** opens it.
-
 Whenever Mission Control moves the page for you, such as **Review now**, **Read more**,
 opening a plan step or the plan history, or opening an activity entry, it glides there
-rather than jumping, so you can see where you have been taken. Each chip has a **⋯** button (you can also right-click the chip) with:
+rather than jumping, so you can see where you have been taken.
 
+### Finding and managing missions
+
+Your missions are listed in the **Missions** view of the left panel, the rocket icon on the rail
+just below Conversations. Click a mission there to open its tab, or **+** to start another. Each mission shows a coloured dot and its status, and a mission waiting for your decision
+shows an amber count of the requests waiting. The rocket icon itself carries the total, so you can
+see that something needs you whichever view the panel is showing. While the panel is collapsed, the
+count still shows on the rail.
+
+Once there are more than a few missions, a **Search missions** box at the top of the view shows only
+those whose name or request contains every word you type. Right-click a mission for:
+
+- **Open in Mission Control**, in a tab that stays.
 - **Rename**, to give the mission a name of your own. The name stays, even when the lead later
   reports a plan with a different title.
+- **Run again**, which starts a new mission with the same request, lead AI settings, choice to
+  review the plan and [done checks](#done-checks), and with the same auto-approve level, except
+  **Everything**, which has to be chosen and confirmed afresh, so the new mission starts at your
+  default level instead. The new mission opens in a tab of its own. The report's **⋯** menu offers
+  it too.
+- **Archive**, which puts a mission away without deleting anything. Archived missions are left out
+  of the list; **Archived (n)** at the bottom of the view shows them, and **Bring back from the
+  archive** returns one. A mission that is working or waiting for you cannot be archived, so
+  nothing that needs you goes out of sight.
 - **Delete**, which removes the mission from Mission Control after you confirm. Its conversations
   are kept, but a lead followed in Mission Control is stopped first, and any standing approval the
   mission gave its conversations is withdrawn.
+- **Switch to Classic mode** or **Switch to Autonomous mode**, whichever it is not in.
+
+When a mission other than the one you are looking at is waiting for you, a banner at the top of
+the tab names it (or says how many are waiting), and **Go there** opens its tab. **New mission** on
+a finished mission's report opens a new-mission tab too, so the report stays where it is.
 
 ### Mission status
 
@@ -572,6 +625,7 @@ rather than jumping, so you can see where you have been taken. Each chip has a *
 | **Reconnecting** | The AI service could not be reached; Mission Control will send the lead's request again by itself, and the mission card says when. See [When the AI service cannot be reached](#when-the-ai-service-cannot-be-reached) |
 | **Plan ready** | You asked to review the plan first, and the lead has drafted it. See [Reviewing the plan first](#reviewing-the-plan-first) |
 | **Looks stuck** | Mission Control stopped driving the mission because it was getting nowhere. The mission card says why, with **Carry on**. See [When a mission gets stuck](#when-a-mission-gets-stuck) |
+| **Token limit reached** | The mission used the tokens you allowed it, and its work is paused. The mission card offers **Add tokens and continue** and **Remove the limit and continue**. See [Limiting the tokens a mission uses](#limiting-the-tokens-a-mission-uses) |
 | **Failed** | The lead's latest reply ended in an error it could not recover from, or every automatic retry failed. Where the kind of error is known, the mission card says what went wrong and what to do: a rejected API key, a model that was not found, a request too long for the model, a rate limit, no connection, trouble at the AI service, or no AI backend for the model's provider; hover over it to read what the AI service said. The mission card says so, with **Retry** to send the same request to the lead again (the error and any partial reply are removed first), and **Open the lead's conversation** to see why. Sending a message also tries again. **Resume** is offered only to an **Interrupted** mission |
 | **Completed** | The lead reports that everything you asked for is done, every task in its plan is completed, and every [done check](#done-checks), if you set any, has passed |
 | **Paused** | You paused the mission: nothing is approved automatically and the lead does not carry on by itself until you click **Continue** |
@@ -639,7 +693,8 @@ There are three ways to switch:
 
 - In Mission Control, **Switch to Classic mode** in the **⋯** menu of the mission card, or
   **Switch to Autonomous mode** on a Classic mission.
-- Right-click the mission's conversation in the conversations sidebar and choose
+- Right-click the mission, or its conversation, in the **Missions** view of the left panel and
+  choose
   **Switch to Classic mode** or **Switch to Autonomous mode**, whichever it is not in.
 - Right-click the tab of a Classic mission's conversation and choose
   **Switch to Autonomous mode**.
@@ -654,7 +709,7 @@ Control, which carries on with any unfinished steps. Because closing the tab wou
 in progress, a conversation that is busy (replying, or waiting for an approval) is not switched:
 wait for it to finish, or stop it, then switch.
 
-Opening an Autonomous mission's conversation from the conversations sidebar in the usual way also
+Opening an Autonomous mission's conversation from the Missions view also
 moves the mission to Classic mode, so the two are never followed in parallel. If the lead was in
 the middle of a reply when you opened it, that reply is stopped and the tab shows the
 conversation as it was last saved.
@@ -752,8 +807,9 @@ are comfortable not supervising.
 
 The Decision Inbox lists the tool approvals waiting for the mission you are looking at, together
 with those from conversations that are not part of any mission. Requests from other missions are
-not mixed in: they show on their own mission's page, and the chip and banner described above tell
-you they are waiting. Each request shows the tool, the reason it gave, any
+not mixed in: they show in their own mission's tab, and the count in the Missions view and the
+banner described above tell you they are waiting. Requests from conversations that are not part of
+any mission show in every open Mission Control tab; answering one in any tab answers it everywhere. Each request shows the tool, the reason it gave, any
 detail such as a diff, which conversation asked, and whether the operation is destructive.
 Where the request names what it acts on (a file, a move from one path to another, a command or a
 URL), that is shown as **Acts on**. A destructive request also says, before you approve it,

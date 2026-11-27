@@ -54,6 +54,7 @@ ACTIVE_INACTIVE_THEME_ICONS: Final[tuple[str, ...]] = (
     "diff",
     "usage",
     "mission",
+    "missions",
     "tab-overview",
     "tab-carousel",
     "trash",
@@ -226,6 +227,17 @@ THEME_ICON_PACK: Final[dict[str, str]] = {
             <circle cx="11" cy="13" r="4" stroke="{color}" stroke-width="2"/>
             <circle cx="11" cy="13" r="1" fill="{color}"/>
             <path d="M11 13L19 5M16 4.5H19.5V8" stroke="{color}" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round"/>
+        </svg>
+    ''',
+    "missions": '''
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2.5C14.9 4.9 16.5 8.4 16.5 12.4V16.5H7.5V12.4C7.5 8.4 9.1 4.9 12 2.5Z"
+                stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
+            <circle cx="12" cy="10" r="1.75" stroke="{color}" stroke-width="1.5"/>
+            <path d="M7.5 12.5L4.5 15.5V19L7.5 17.5M16.5 12.5L19.5 15.5V19L16.5 17.5"
+                stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M10.5 19.5L12 21.5L13.5 19.5" stroke="{color}" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round"/>
         </svg>
     ''',

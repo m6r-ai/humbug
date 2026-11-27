@@ -212,6 +212,12 @@ def get_arabic_strings() -> LanguageStrings:
         mindspace_vcs_no_repo="لم يتم العثور على مستودع",
         mindspace_vcs_root="جذر المساحة الذهنية",
         mindspace_conversations="محادثات",
+        mindspace_missions="المهام",
+        mindspace_missions_empty=(
+            "لا توجد مهام بعد. ابدأ مهمة باستخدام "
+            "+ لتسليم هدف إلى فريق من الذكاء الاصطناعي."
+        ),
+        mindspace_mission_open="فتح في مركز المهام",
         pinned_section="مثبت",
         mindspace_preview="معاينة",
         mindspace_expand_sidebar="توسيع الشريط الجانبي",
@@ -776,8 +782,6 @@ def get_arabic_strings() -> LanguageStrings:
         mission_milestone_checks="التالي: إنجاح فحوص الإنجاز",
         mission_milestone_follow_up="التالي: التخطيط لطلبك الجديد",
         mission_glance_now="الآن",
-        mission_chips_back="عرض المهام السابقة",
-        mission_chips_more="عرض المزيد من المهام",
         mission_glance_progress="التقدّم",
         mission_glance_blocked_step="خطوة متوقفة: {0}",
         mission_details_show="عرض التفاصيل",
@@ -856,7 +860,6 @@ def get_arabic_strings() -> LanguageStrings:
         mission_auto_approve_note_everything_paused=(
             "هذه المهمة توافق على كل شيء، لذا ستتم الموافقة على هذا الطلب عند متابعة المهمة."
         ),
-        mission_options="خيارات المهمة",
         mission_rename="إعادة تسمية",
         mission_rename_title="إعادة تسمية المهمة",
         mission_rename_label="اسم المهمة:",
@@ -985,6 +988,22 @@ def get_arabic_strings() -> LanguageStrings:
         mission_guide_title="مركز المهام",
         mission_guide_dismiss="فهمت",
         mission_guide_link="كيف يعمل مركز المهام؟",
+        mission_status_out_of_tokens="تم بلوغ حد الرموز",
+        mission_say_out_of_tokens="استخدمت الرموز التي سمحت لي بها. أخبرني كيف أتابع.",
+        mission_notify_out_of_tokens="بلغت المهمة حد الرموز",
+        mission_token_limit_notice=(
+            "استخدمت هذه المهمة حد الرموز: {0} من {1}. عملها متوقف مؤقتًا، ولن يُنفق شيء آخر حتى تختار كيف تتابع."
+        ),
+        mission_token_limit_remove="إزالة الحد والمتابعة",
+        mission_token_limit_add="إضافة رموز والمتابعة",
+        mission_token_limit_amount="مثلًا 100k",
+        mission_token_limit_amount_tip="عدد الرموز الإضافية التي يمكن للمهمة استخدامها، مثل 50000 أو 100k أو 1.5m",
+        mission_tokens_of="{0} من {1} رمز",
+        mission_activity_token_limit_reached="تم بلوغ حد {0} رمز؛ أُوقفت المهمة مؤقتًا",
+        mission_activity_token_limit_raised="رُفع حد الرموز إلى {0}",
+        mission_activity_token_limit_removed="أُزيل حد الرموز",
+        mission_token_limit_option="تحديد الرموز التي يمكن لهذه المهمة استخدامها",
+        mission_option_chip_tokens="حد {0} رمز",
         mission_intro_replay="إعادة تشغيل الرسوم المتحركة",
         mission_options_title="خيارات المهمة الجديدة",
         mission_options_ai_settings="إعدادات الذكاء الاصطناعي…",

@@ -210,6 +210,12 @@ def get_english_strings() -> LanguageStrings:
         mindspace_vcs_no_repo="No repository found",
         mindspace_vcs_root="Mindspace root",
         mindspace_conversations="Conversations",
+        mindspace_missions="Missions",
+        mindspace_missions_empty=(
+            "No missions yet. Start one with + "
+            "to hand a goal to an AI team."
+        ),
+        mindspace_mission_open="Open in Mission Control",
         pinned_section="Pinned",
         mindspace_preview="Preview",
         mindspace_expand_sidebar="Expand sidebar",
@@ -778,8 +784,6 @@ def get_english_strings() -> LanguageStrings:
         mission_milestone_checks="Next: getting the done checks to pass",
         mission_milestone_follow_up="Next: planning your new request",
         mission_glance_now="Now",
-        mission_chips_back="Show earlier missions",
-        mission_chips_more="Show more missions",
         mission_glance_progress="Progress",
         mission_glance_blocked_step="Blocked step: {0}",
         mission_details_show="Show details",
@@ -863,7 +867,6 @@ def get_english_strings() -> LanguageStrings:
         mission_auto_approve_note_everything_paused=(
             "This mission approves everything, so this request is approved when you continue the mission."
         ),
-        mission_options="Mission options",
         mission_rename="Rename",
         mission_rename_title="Rename mission",
         mission_rename_label="Mission name:",
@@ -994,6 +997,23 @@ def get_english_strings() -> LanguageStrings:
         mission_guide_title="Mission Control",
         mission_guide_dismiss="Got it",
         mission_guide_link="How does Mission Control work?",
+        mission_status_out_of_tokens="Token limit reached",
+        mission_say_out_of_tokens="I've used the tokens you allowed me. Tell me how to carry on.",
+        mission_notify_out_of_tokens="Mission reached its token limit",
+        mission_token_limit_notice=(
+            "This mission has used its token limit: {0} of {1} tokens. Its work is paused, and nothing more is "
+            "spent until you choose how to carry on."
+        ),
+        mission_token_limit_remove="Remove the limit and continue",
+        mission_token_limit_add="Add tokens and continue",
+        mission_token_limit_amount="e.g. 100k",
+        mission_token_limit_amount_tip="How many more tokens the mission may use, such as 50000, 100k or 1.5m",
+        mission_tokens_of="{0} of {1} tokens",
+        mission_activity_token_limit_reached="Token limit of {0} reached; mission paused",
+        mission_activity_token_limit_raised="Token limit raised to {0}",
+        mission_activity_token_limit_removed="Token limit removed",
+        mission_token_limit_option="Limit the tokens this mission can use",
+        mission_option_chip_tokens="Limit {0} tokens",
         mission_intro_replay="Play the animation again",
         mission_options_title="New mission options",
         mission_options_ai_settings="AI settings…",

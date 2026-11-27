@@ -186,7 +186,7 @@ a headless one — can project the same state.
 The desktop GUI supports sidebar panels and desktop tabs. Most of the real work happens in the
 tabs: conversations, editors, previews, terminals, diffs, the mindspace log, token usage, and Mission Control.
 
-The sidebar panels are the mindspace seen from different angles — Conversations, Files, Preview,
+The sidebar panels are the mindspace seen from different angles — Conversations, Missions, Files, Preview,
 Search, Changed Files, Changes (the recent mutation record, and how to reverse it), and Trash.
 
 Both use a plugin registry/manager approach making it easy to design new visualizations of your project mindspace.

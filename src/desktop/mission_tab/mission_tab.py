@@ -21,11 +21,12 @@ from desktop.language.language_manager import LanguageManager
 from desktop.language.language_strings import LanguageStrings
 from desktop.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from desktop.mindspace.mindspace_manager import MindspaceManager
+from desktop.mission_tab.mission_actions import delete_mission, run_mission_again
 from desktop.mission_tab.mission_display import (
-    MissionActivityView, MissionAgentView, MissionChatView, MissionCheckView, MissionChipView, MissionDecisionView,
+    MissionActivityView, MissionAgentView, MissionChatView, MissionCheckView, MissionDecisionView,
     MissionDiffLineKind, MissionDiffLineView, MissionDiffView, MissionFileView, MissionGlanceView, MissionHeaderView,
     MissionPhaseView, MissionResultView, MissionRobotLook, MissionStatTarget, MissionStatView, MissionStepState,
-    MissionStepView, MissionTone, MissionView
+    MissionStepView, MissionTone, MissionView, token_count
 )
 from desktop.mission_tab.mission_report import report_as_word, report_files, save_report
 from desktop.mission_tab.mission_service_holder import MissionServiceHolder
@@ -60,6 +61,7 @@ _STATUS_TONES = {
     MissionStatus.RECOVERING: MissionTone.WARNING,
     MissionStatus.STUCK: MissionTone.WARNING,
     MissionStatus.PLAN_READY: MissionTone.WARNING,
+    MissionStatus.OUT_OF_TOKENS: MissionTone.WARNING,
 }
 
 _TASK_STATES = {
@@ -105,6 +107,8 @@ _ACTIVITY_STYLES = {
     MissionActivityKind.FILES_UNDONE: ("↺", MissionTone.INFO),
     MissionActivityKind.CHECKS_PASSED: ("✓", MissionTone.SUCCESS),
     MissionActivityKind.CHECKS_FAILED: ("✗", MissionTone.DANGER),
+    MissionActivityKind.TOKEN_LIMIT_REACHED: ("◔", MissionTone.WARNING),
+    MissionActivityKind.TOKEN_LIMIT_CHANGED: ("◔", MissionTone.INFO),
 }
 
 # Colour of the current stage of the journey, where it differs from the status colour.
@@ -121,7 +125,34 @@ _STAGE_TONES = {
     MissionStatus.RECOVERING: MissionTone.WARNING,
     MissionStatus.STUCK: MissionTone.WARNING,
     MissionStatus.PLAN_READY: MissionTone.WARNING,
+    MissionStatus.OUT_OF_TOKENS: MissionTone.WARNING,
 }
+
+
+def mission_status_text(status: MissionStatus) -> str:
+    """Return the label for a mission status, in the user's language."""
+    strings = LanguageManager().strings()
+    return {
+        MissionStatus.PLANNING: strings.mission_status_planning,
+        MissionStatus.RUNNING: strings.mission_status_running,
+        MissionStatus.NEEDS_YOU: strings.mission_status_needs_you,
+        MissionStatus.IDLE: strings.mission_status_idle,
+        MissionStatus.COMPLETED: strings.mission_status_completed,
+        MissionStatus.STOPPED: strings.mission_status_stopped,
+        MissionStatus.INTERRUPTED: strings.mission_status_interrupted,
+        MissionStatus.PAUSED: strings.mission_status_paused,
+        MissionStatus.REPLIED: strings.mission_status_replied,
+        MissionStatus.FAILED: strings.mission_status_failed,
+        MissionStatus.RECOVERING: strings.mission_status_recovering,
+        MissionStatus.STUCK: strings.mission_status_stuck,
+        MissionStatus.PLAN_READY: strings.mission_status_plan_ready,
+        MissionStatus.OUT_OF_TOKENS: strings.mission_status_out_of_tokens,
+    }[status]
+
+
+def mission_status_tone(status: MissionStatus) -> MissionTone:
+    """Return the colour family a mission status is shown in."""
+    return _STATUS_TONES[status]
 
 
 def _stage(status: MissionStatus, has_plan: bool) -> int:
@@ -256,17 +287,6 @@ def _duration_text(seconds: float) -> str:
     return f"{secs}s"
 
 
-def _token_count(count: int) -> str:
-    """Format a token count compactly, such as "950", "12.4k" or "1.2M"."""
-    if count >= 1_000_000:
-        return f"{count / 1_000_000:.1f}M"
-
-    if count >= 1000:
-        return f"{count / 1000:.1f}k"
-
-    return str(count)
-
-
 def _local_time(moment: datetime, with_seconds: bool) -> str:
     """Format a timestamp in local time."""
     return moment.astimezone().strftime("%H:%M:%S" if with_seconds else "%H:%M")
@@ -285,6 +305,9 @@ class MissionTab(TabBase):
     # Emitted with the absolute path of the selected mission's lead conversation, or "" when
     # no mission is selected, so the conversation can be highlighted in the sidebar.
     lead_conversation_changed = Signal(str)
+    # Each mission has a tab of its own, so another mission is opened rather than shown here.
+    mission_open_requested = Signal(str)
+    new_mission_tab_requested = Signal()
 
     def __init__(self, tab_id: str, parent: QWidget | None = None, selected_mission_id: str = "") -> None:
         super().__init__(tab_id, parent)
@@ -294,7 +317,7 @@ class MissionTab(TabBase):
         self._mindspace_manager = MindspaceManager()
         self._service: MissionService | None = None
         self._selected_mission_id: str | None = selected_mission_id or None
-        self._starting_new = False
+        self._title = ""
         self._tasks: set[asyncio.Task] = set()
         self._agent_display_names: dict[str, str] = {}
         self._lead_conversation_path = ""
@@ -321,8 +344,8 @@ class MissionTab(TabBase):
         self._clock_timer.setInterval(_CLOCK_MS)
         self._clock_timer.timeout.connect(self._refresh)
 
-        self._widget.mission_selected.connect(self._on_mission_selected)
-        self._widget.new_mission_requested.connect(self.show_new_mission)
+        self._widget.mission_selected.connect(self.mission_open_requested)
+        self._widget.new_mission_requested.connect(self.new_mission_tab_requested)
         self._widget.submit_requested.connect(self._on_submit_requested)
         self._widget.attach_requested.connect(self._on_attach_requested)
         self._widget.settings_requested.connect(self._on_settings_requested)
@@ -348,13 +371,12 @@ class MissionTab(TabBase):
         self._widget.stop_requested.connect(self._on_stop_requested)
         self._widget.pause_requested.connect(self._on_pause_requested)
         self._widget.unpause_requested.connect(self._on_unpause_requested)
+        self._widget.token_limit_removed.connect(self._on_token_limit_removed)
+        self._widget.token_limit_extended.connect(self._on_token_limit_extended)
         self._widget.carry_on_requested.connect(self._on_carry_on_requested)
         self._widget.remove_requested.connect(self._on_remove_requested)
-        self._widget.mission_rename_requested.connect(self._rename_mission)
         self._widget.template_save_requested.connect(self._save_template)
         self._widget.template_delete_requested.connect(self._delete_template)
-        self._widget.mission_delete_requested.connect(self._delete_mission)
-        self._widget.mission_archive_requested.connect(self._archive_mission)
         self._widget.mission_rerun_requested.connect(self._on_rerun_requested)
         self._widget.guide_dismissed.connect(self._on_guide_dismissed)
         self._widget.set_guide_visible(not UserManager().settings().mission_guide_dismissed)
@@ -410,22 +432,7 @@ class MissionTab(TabBase):
 
     def _status_text(self, status: MissionStatus) -> str:
         """Return the label for a mission status."""
-        strings = self._strings()
-        return {
-            MissionStatus.PLANNING: strings.mission_status_planning,
-            MissionStatus.RUNNING: strings.mission_status_running,
-            MissionStatus.NEEDS_YOU: strings.mission_status_needs_you,
-            MissionStatus.IDLE: strings.mission_status_idle,
-            MissionStatus.COMPLETED: strings.mission_status_completed,
-            MissionStatus.STOPPED: strings.mission_status_stopped,
-            MissionStatus.INTERRUPTED: strings.mission_status_interrupted,
-            MissionStatus.PAUSED: strings.mission_status_paused,
-            MissionStatus.REPLIED: strings.mission_status_replied,
-            MissionStatus.FAILED: strings.mission_status_failed,
-            MissionStatus.RECOVERING: strings.mission_status_recovering,
-            MissionStatus.STUCK: strings.mission_status_stuck,
-            MissionStatus.PLAN_READY: strings.mission_status_plan_ready,
-        }[status]
+        return mission_status_text(status)
 
     def _task_text(self, status: MissionTaskStatus) -> str:
         """Return the label for a task status."""
@@ -633,6 +640,7 @@ class MissionTab(TabBase):
             MissionStatus.FAILED: strings.mission_say_error,
             MissionStatus.RECOVERING: strings.mission_say_reconnecting,
             MissionStatus.STUCK: strings.mission_say_stuck,
+            MissionStatus.OUT_OF_TOKENS: strings.mission_say_out_of_tokens,
             MissionStatus.PLAN_READY: (
                 strings.mission_say_plan_edited if mission.plan_edited() else strings.mission_say_plan_ready
             ),
@@ -672,6 +680,8 @@ class MissionTab(TabBase):
         """Turn an activity entry into its display record, calling agents by their names."""
         strings = self._strings()
         subject = self._agent_display_names.get(entry.subject, entry.subject)
+        # A token limit's entry carries the limit; "0" means it was taken away.
+        limit = token_count(int(entry.detail)) if entry.detail.isdigit() and entry.detail != "0" else ""
         texts = {
             MissionActivityKind.MISSION_STARTED: (
                 strings.mission_activity_started_prompt.format(entry.detail) if entry.detail
@@ -722,6 +732,11 @@ class MissionTab(TabBase):
             MissionActivityKind.CHECKS_FAILED: strings.mission_activity_checks_failed.format(entry.detail),
             MissionActivityKind.LOOP_DETECTED: strings.mission_activity_loop_detected.format(
                 self._tool_action(subject, entry.detail, entry.more)
+            ),
+            MissionActivityKind.TOKEN_LIMIT_REACHED: strings.mission_activity_token_limit_reached.format(limit),
+            MissionActivityKind.TOKEN_LIMIT_CHANGED: (
+                strings.mission_activity_token_limit_raised.format(limit) if limit
+                else strings.mission_activity_token_limit_removed
             ),
         }
         glyph, tone = _ACTIVITY_STYLES[entry.kind]
@@ -810,7 +825,8 @@ class MissionTab(TabBase):
             progress_text=strings.mission_progress.format(percent),
             can_stop=snapshot.status in (
                 MissionStatus.PLANNING, MissionStatus.RUNNING, MissionStatus.NEEDS_YOU, MissionStatus.INTERRUPTED,
-                MissionStatus.PAUSED, MissionStatus.RECOVERING, MissionStatus.STUCK, MissionStatus.PLAN_READY
+                MissionStatus.PAUSED, MissionStatus.RECOVERING, MissionStatus.STUCK, MissionStatus.PLAN_READY,
+                MissionStatus.OUT_OF_TOKENS
             ),
             can_resume=snapshot.status == MissionStatus.INTERRUPTED and not classic,
             is_classic=classic,
@@ -826,14 +842,20 @@ class MissionTab(TabBase):
                 MissionStatus.PLANNING, MissionStatus.RUNNING, MissionStatus.NEEDS_YOU, MissionStatus.IDLE,
                 MissionStatus.RECOVERING
             ),
-            # A mission paused because it looked stuck says so, and is carried on rather than unpaused.
-            paused=not classic and mission.paused and not mission.stopped and snapshot.status != MissionStatus.STUCK,
+            # A mission paused because it looked stuck, or used its tokens, says so, and is carried on
+            # in its own way rather than unpaused.
+            paused=not classic and mission.paused and not mission.stopped and snapshot.status not in (
+                MissionStatus.STUCK, MissionStatus.OUT_OF_TOKENS
+            ),
             recovery_text="" if classic else self._recovery_text(snapshot),
             recovery_error=snapshot.recovery.error if snapshot.recovery is not None and not classic else "",
             plan_ready=not classic and snapshot.status == MissionStatus.PLAN_READY,
             failure_text=self._failure_text(snapshot.failure_code) if snapshot.status == MissionStatus.FAILED else "",
             failure_detail=snapshot.failure_message,
             stuck_text="" if classic else self._stuck_text(snapshot),
+            token_limit_text=strings.mission_token_limit_notice.format(
+                token_count(mission.tokens_used()), token_count(mission.token_budget)
+            ) if snapshot.status == MissionStatus.OUT_OF_TOKENS else "",
             steps_text=(
                 strings.mission_steps_count.format(mission.completed_count(), mission.planned_count())
                 if mission.tasks and not classic else ""
@@ -842,7 +864,7 @@ class MissionTab(TabBase):
             timing_text=self._timing_text(snapshot),
             tokens_text=self._tokens_text(mission),
             tokens_detail=strings.mission_tokens_detail.format(
-                _token_count(mission.input_tokens), _token_count(mission.output_tokens)
+                token_count(mission.input_tokens), token_count(mission.output_tokens)
             ) if mission.input_tokens or mission.output_tokens else "",
         )
         stats = [
@@ -1153,8 +1175,11 @@ class MissionTab(TabBase):
 
     def _tokens_text(self, mission: Mission) -> str:
         """Say how many tokens a mission has used, or return "" if none have been counted."""
-        total = mission.input_tokens + mission.output_tokens
-        return self._strings().mission_tokens.format(_token_count(total)) if total else ""
+        total = mission.tokens_used()
+        if mission.token_budget:
+            return self._strings().mission_tokens_of.format(token_count(total), token_count(mission.token_budget))
+
+        return self._strings().mission_tokens.format(token_count(total)) if total else ""
 
     def _timing_text(self, snapshot: MissionSnapshot) -> str:
         """Say how long a working mission has been at it, or, when it is not working, when it was started."""
@@ -1288,7 +1313,7 @@ class MissionTab(TabBase):
         # and the lead would only repeat it.
         noticed = snapshot.status in (
             MissionStatus.INTERRUPTED, MissionStatus.PAUSED, MissionStatus.FAILED, MissionStatus.RECOVERING,
-            MissionStatus.STUCK
+            MissionStatus.STUCK, MissionStatus.OUT_OF_TOKENS
         )
         now_text = f"{lead.name}: {lead.speech}" if lead is not None and lead.speech and not noticed else ""
         mission = snapshot.mission
@@ -1440,7 +1465,8 @@ class MissionTab(TabBase):
         service = self._service
         if service is None:
             self._set_lead_conversation_path("")
-            self._widget.set_missions([], True)
+            self._update_title(self._strings().mission_new)
+            self._widget.set_has_missions(False)
             self._widget.set_mission(None)
             self._widget.set_decisions([])
             self._widget.set_waiting_elsewhere("", "")
@@ -1451,12 +1477,11 @@ class MissionTab(TabBase):
         if self._selected_mission_id not in known:
             self._selected_mission_id = None
 
-        if self._selected_mission_id is None and not self._starting_new and missions:
-            self._selected_mission_id = missions[0].mission_id
-
         self._set_lead_conversation_path(
             service.lead_conversation_path(self._selected_mission_id) if self._selected_mission_id else ""
         )
+        shown = next((m for m in missions if m.mission_id == self._selected_mission_id), None)
+        self._update_title(shown.title if shown is not None else self._strings().mission_new)
 
         decisions = service.decisions()
         waiting: dict[str, int] = {}
@@ -1464,24 +1489,7 @@ class MissionTab(TabBase):
             if decision.mission_id is not None:
                 waiting[decision.mission_id] = waiting.get(decision.mission_id, 0) + 1
 
-        chips = []
-        for mission in missions:
-            status = service.status(mission.mission_id) or MissionStatus.IDLE
-            chips.append(MissionChipView(
-                mission_id=mission.mission_id,
-                title=(
-                    f"{mission.title}  ·  {self._strings().mission_mode_classic}"
-                    if mission.mode == MissionMode.CLASSIC else mission.title
-                ),
-                status_text=self._status_text(status),
-                tone=_STATUS_TONES[status],
-                selected=mission.mission_id == self._selected_mission_id,
-                waiting_text=str(waiting[mission.mission_id]) if mission.mission_id in waiting else "",
-                archived=mission.archived,
-                search_text=f"{mission.title}\n{mission.objective}",
-            ))
-
-        self._widget.set_missions(chips, self._selected_mission_id is None)
+        self._widget.set_has_missions(bool(missions))
         self._widget.set_auto_resume(service.resume_automatically())
         self._widget.set_templates(service.templates())
         self._widget.set_reduce_motion(service.reduce_motion())
@@ -1565,18 +1573,15 @@ class MissionTab(TabBase):
 
         self._run(finish())
 
-    def _on_mission_selected(self, mission_id: str) -> None:
-        """Show a mission."""
-        self._selected_mission_id = mission_id
-        self._starting_new = False
-        self._refresh()
-
     def show_new_mission(self) -> None:
         """Show the new-mission welcome, ready for a request to be typed."""
         self._selected_mission_id = None
-        self._starting_new = True
         self._refresh()
         self._widget.focus_composer()
+
+    def mission_id(self) -> str:
+        """Return the mission this tab shows, or "" while it is the new-mission screen."""
+        return self._selected_mission_id or ""
 
     def _on_submit_requested(self, text: str) -> None:
         """Start a mission, or guide the selected one."""
@@ -1660,7 +1665,8 @@ class MissionTab(TabBase):
         try:
             mission = await service.create_mission(
                 objective, self._new_mission_auto_approve, attachments, self._new_mission_settings,
-                review_plan=self._new_mission_review_plan, done_checks=self._widget.done_checks()
+                review_plan=self._new_mission_review_plan, done_checks=self._widget.done_checks(),
+                token_budget=self._widget.token_budget()
             )
 
         except MissionError as e:
@@ -1669,7 +1675,6 @@ class MissionTab(TabBase):
             return
 
         self._selected_mission_id = mission.mission_id
-        self._starting_new = False
         self._widget.clear_done_checks()
         # Each new mission starts from the level the user chose for every mission, Off unless they chose
         # one, as auto-approval is opt-in.
@@ -1852,7 +1857,6 @@ class MissionTab(TabBase):
             mission_id: Mission to show
         """
         self._selected_mission_id = mission_id
-        self._starting_new = False
         self._refresh()
 
     def _on_resume_requested(self) -> None:
@@ -1937,10 +1941,28 @@ class MissionTab(TabBase):
             except MissionError as e:
                 self._show_error(str(e))
 
+    def _on_token_limit_removed(self) -> None:
+        """Take away the selected mission's token limit, letting it carry on."""
+        if self._service is not None and self._selected_mission_id is not None:
+            try:
+                self._service.remove_token_budget(self._selected_mission_id)
+
+            except MissionError as e:
+                self._show_error(str(e))
+
+    def _on_token_limit_extended(self, extra: int) -> None:
+        """Let the selected mission use more tokens, letting it carry on."""
+        if self._service is not None and self._selected_mission_id is not None:
+            try:
+                self._service.extend_token_budget(self._selected_mission_id, extra)
+
+            except MissionError as e:
+                self._show_error(str(e))
+
     def _on_remove_requested(self) -> None:
         """Delete the selected mission after confirmation."""
-        if self._selected_mission_id is not None:
-            self._delete_mission(self._selected_mission_id)
+        if self._service is not None and self._selected_mission_id is not None:
+            delete_mission(self, self._service, self._selected_mission_id)
 
     def _on_guide_dismissed(self, dismissed: bool) -> None:
         """Put the guide to how Mission Control works away for good, or bring it back."""
@@ -1953,84 +1975,17 @@ class MissionTab(TabBase):
         self._widget.set_guide_visible(not dismissed)
 
     def _on_rerun_requested(self, mission_id: str) -> None:
-        """Start a new mission from an earlier one, and show it."""
+        """Start a new mission from an earlier one, and open it in a tab of its own."""
         service = self._service
         if service is None:
             return
 
         async def rerun() -> None:
-            try:
-                mission = await service.run_again(mission_id or self._selected_mission_id or "")
-
-            except MissionError as e:
-                self._show_error(self._strings().mission_error_start.format(str(e)))
-                return
-
-            self._selected_mission_id = mission.mission_id
-            self._starting_new = False
-            self._on_service_changed()
+            new_mission_id = await run_mission_again(self, service, mission_id or self._selected_mission_id or "")
+            if new_mission_id:
+                self.mission_open_requested.emit(new_mission_id)
 
         self._run(rerun())
-
-    def _archive_mission(self, mission_id: str, archived: bool) -> None:
-        """Archive a mission, or bring it back."""
-        if self._service is None:
-            return
-
-        try:
-            self._service.set_archived(mission_id, archived)
-
-        except MissionError as e:
-            self._show_error(str(e))
-
-    def _delete_mission(self, mission_id: str) -> None:
-        """Delete a mission from Mission Control after confirmation; its conversations are kept."""
-        if self._service is None:
-            return
-
-        mission = next((m for m in self._service.missions() if m.mission_id == mission_id), None)
-        if mission is None:
-            return
-
-        strings = self._strings()
-        result = MessageBox.show_message(
-            self,
-            MessageBoxType.QUESTION,
-            strings.mission_delete_title,
-            strings.mission_delete_confirm.format(mission.title),
-            [MessageBoxButton.YES, MessageBoxButton.NO],
-            destructive=True
-        )
-        if result != MessageBoxButton.YES:
-            return
-
-        try:
-            self._service.remove_mission(mission_id)
-
-        except MissionError as e:
-            self._show_error(str(e))
-
-    def _rename_mission(self, mission_id: str) -> None:
-        """Ask for a new name for a mission and apply it."""
-        if self._service is None:
-            return
-
-        mission = next((m for m in self._service.missions() if m.mission_id == mission_id), None)
-        if mission is None:
-            return
-
-        strings = self._strings()
-        title, accepted = QInputDialog.getText(
-            self, strings.mission_rename_title, strings.mission_rename_label, text=mission.title
-        )
-        if not accepted or not title.strip():
-            return
-
-        try:
-            self._service.rename_mission(mission_id, title)
-
-        except MissionError as e:
-            self._show_error(self._strings().mission_error_rename.format(str(e)))
 
     def _save_template(self, request: str) -> None:
         """Ask for a name for what the user typed, and keep it as a template."""
@@ -2078,7 +2033,13 @@ class MissionTab(TabBase):
         self.lead_conversation_changed.emit(path)
 
     def tab_title_from_path(self) -> str:
-        return self._strings().mission_control
+        return self._title or self._strings().mission_new
+
+    def _update_title(self, title: str) -> None:
+        """Name the tab after the mission it shows, or as a new mission."""
+        if title != self._title:
+            self._title = title
+            self.tab_label_changed.emit(self._tab_id, title)
 
     def on_path_renamed(self, new_path: str) -> None:
         pass
@@ -2175,7 +2136,6 @@ class MissionTab(TabBase):
         mission_id = state.get("mission_id")
         if isinstance(mission_id, str) and mission_id:
             self._selected_mission_id = mission_id
-            self._starting_new = False
             self._refresh()
 
     def capture_migration_state(self) -> dict:

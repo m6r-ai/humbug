@@ -199,6 +199,9 @@ class LanguageStrings:
     mindspace_vcs_no_repo: str
     mindspace_vcs_root: str
     mindspace_conversations: str
+    mindspace_missions: str
+    mindspace_missions_empty: str
+    mindspace_mission_open: str
     pinned_section: str
     mindspace_preview: str
     mindspace_expand_sidebar: str
@@ -689,8 +692,6 @@ class LanguageStrings:
     mission_milestone_checks: str
     mission_milestone_follow_up: str
     mission_glance_now: str
-    mission_chips_back: str
-    mission_chips_more: str
     mission_glance_progress: str
     mission_glance_blocked_step: str
     mission_details_show: str
@@ -744,7 +745,6 @@ class LanguageStrings:
     mission_auto_approve_note_classic: str
     mission_auto_approve_note_destructive: str
     mission_auto_approve_note_everything_paused: str
-    mission_options: str
     mission_rename: str
     mission_rename_title: str
     mission_rename_label: str
@@ -846,6 +846,20 @@ class LanguageStrings:
     mission_guide_title: str
     mission_guide_dismiss: str
     mission_guide_link: str
+    mission_status_out_of_tokens: str
+    mission_say_out_of_tokens: str
+    mission_notify_out_of_tokens: str
+    mission_token_limit_notice: str
+    mission_token_limit_remove: str
+    mission_token_limit_add: str
+    mission_token_limit_amount: str
+    mission_token_limit_amount_tip: str
+    mission_tokens_of: str
+    mission_activity_token_limit_reached: str
+    mission_activity_token_limit_raised: str
+    mission_activity_token_limit_removed: str
+    mission_token_limit_option: str
+    mission_option_chip_tokens: str
     mission_intro_replay: str
     mission_options_title: str
     mission_options_ai_settings: str

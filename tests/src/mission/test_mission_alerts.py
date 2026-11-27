@@ -138,3 +138,16 @@ def test_plan_waiting_for_review_is_announced():
 
     service.statuses["a"] = MissionStatus.PLAN_READY
     assert [alert.kind for alert in watcher.changes(service)] == [MissionAlertKind.PLAN_READY]  # type: ignore[arg-type]
+
+
+def test_mission_reaching_its_token_limit_is_announced():
+    """A mission that pauses because it used its tokens is announced, as it waits for the user."""
+    service = _Service()
+    service.add("a", MissionStatus.RUNNING)
+    watcher = MissionAlertWatcher()
+    watcher.changes(service)  # type: ignore[arg-type]
+
+    service.statuses["a"] = MissionStatus.OUT_OF_TOKENS
+    assert watcher.changes(service) == [  # type: ignore[arg-type]
+        MissionAlert(MissionAlertKind.OUT_OF_TOKENS, "a", "Mission a")
+    ]

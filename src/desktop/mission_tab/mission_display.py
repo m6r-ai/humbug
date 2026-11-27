@@ -1,5 +1,6 @@
 """Display-only records consumed by the Mission Control widget."""
 
+import math
 from dataclasses import dataclass, field
 from enum import Enum, auto
 
@@ -36,17 +37,44 @@ class MissionStepState(Enum):
     STOPPED = auto()
 
 
-@dataclass(frozen=True)
-class MissionChipView:
-    """A mission in the mission switcher."""
-    mission_id: str
-    title: str
-    tone: MissionTone
-    selected: bool
-    status_text: str = ""
-    waiting_text: str = ""
-    archived: bool = False
-    search_text: str = ""
+def token_count(count: int) -> str:
+    """Format a token count compactly, such as "950", "12.4k", "200k" or "1.2M"."""
+    if count >= 1_000_000:
+        return f"{count / 1_000_000:.1f}".removesuffix(".0") + "M"
+
+    if count >= 1000:
+        return f"{count / 1000:.1f}".removesuffix(".0") + "k"
+
+    return str(count)
+
+
+def parse_token_count(text: str) -> int:
+    """
+    Read a number of tokens the user typed, such as "50000", "50,000", "50k" or "1.5m".
+
+    Returns:
+        The number of tokens, or 0 if the text is not a positive number of tokens
+    """
+    cleaned = text.strip().lower().replace(",", "").replace("_", "").replace(" ", "")
+    scale = 1
+    if cleaned.endswith("k"):
+        scale = 1000
+        cleaned = cleaned[:-1]
+
+    elif cleaned.endswith("m"):
+        scale = 1_000_000
+        cleaned = cleaned[:-1]
+
+    try:
+        value = float(cleaned)
+
+    except ValueError:
+        return 0
+
+    if not math.isfinite(value) or value <= 0 or value * scale > 1e12:
+        return 0
+
+    return round(value * scale)
 
 
 @dataclass(frozen=True)
@@ -80,6 +108,7 @@ class MissionHeaderView:
     failure_text: str = ""
     failure_detail: str = ""
     stuck_text: str = ""
+    token_limit_text: str = ""
 
 
 @dataclass(frozen=True)

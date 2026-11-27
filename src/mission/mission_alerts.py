@@ -15,6 +15,7 @@ class MissionAlertKind(Enum):
     FAILED = auto()
     STUCK = auto()
     PLAN_READY = auto()
+    OUT_OF_TOKENS = auto()
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,7 @@ _STATUS_ALERTS = {
     MissionStatus.FAILED: MissionAlertKind.FAILED,
     MissionStatus.STUCK: MissionAlertKind.STUCK,
     MissionStatus.PLAN_READY: MissionAlertKind.PLAN_READY,
+    MissionStatus.OUT_OF_TOKENS: MissionAlertKind.OUT_OF_TOKENS,
 }
 
 

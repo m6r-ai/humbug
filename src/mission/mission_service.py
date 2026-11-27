@@ -621,7 +621,7 @@ class MissionService:
         """
         if status not in (
             MissionStatus.PLANNING, MissionStatus.NEEDS_YOU, MissionStatus.PAUSED, MissionStatus.INTERRUPTED,
-            MissionStatus.STUCK
+            MissionStatus.STUCK, MissionStatus.OUT_OF_TOKENS
         ) or not mission.plan_finished() or (mission.is_complete() and not mission.follow_up):
             return mission
 
@@ -762,7 +762,8 @@ class MissionService:
         attachments: list[tuple[str, str]] | None = None,
         settings: AIConversationSettings | None = None,
         review_plan: bool = False,
-        done_checks: list[str] | None = None
+        done_checks: list[str] | None = None,
+        token_budget: int = 0
     ) -> Mission:
         """
         Start an autonomous mission: record it, start its lead conversation and brief the lead.
@@ -778,6 +779,7 @@ class MissionService:
             settings: AI settings for the lead, instead of the mindspace's
             review_plan: Whether the user approves the lead's first plan before any of it is carried out
             done_checks: Checks that must pass before the mission counts as done, one each; blank ones are dropped
+            token_budget: The most tokens the mission may use before it pauses for the user, or 0 for no limit
 
         Returns:
             The new mission
@@ -823,6 +825,7 @@ class MissionService:
             lead_settings=conversation_settings.to_dict(),
             review_plan=review_plan,
             done_checks=[check.strip() for check in done_checks or [] if check.strip()],
+            token_budget=max(0, token_budget),
         )
         mission.journal_from = self._mindspace.file_journal().newest_sequence() + 1
         self._store.save(mission)
@@ -837,7 +840,8 @@ class MissionService:
             MindspaceLogLevel.INFO,
             f"Human started mission '{mission.title}'\nobjective: '{objective[:200]}'\n"
             f"auto-approve: {auto_approve.value}"
-            + (f"\ndone checks: {len(mission.done_checks)}" if mission.done_checks else ""),
+            + (f"\ndone checks: {len(mission.done_checks)}" if mission.done_checks else "")
+            + (f"\ntoken limit: {mission.token_budget}" if mission.token_budget else ""),
             context=self._mindspace.conversation_log_context(conversation)
         )
         if auto_approve == AutoApproveLevel.ALL:
@@ -1544,6 +1548,9 @@ class MissionService:
         if not mission.paused:
             return
 
+        if mission.over_budget():
+            raise MissionError("The mission has used its token limit: raise the limit or remove it to carry on")
+
         mission.paused = False
         self._stuck.pop(mission_id, None)
         self._save(mission)
@@ -2091,7 +2098,8 @@ class MissionService:
         Return the files a mission's conversations changed, as the change journal recorded them, newest first.
 
         Only changes made through Humbug's own tools are recorded, so a change a command run
-        in the terminal made is not listed.
+        in the terminal made is not listed.  A file the mission wrote but left with the same
+        lines it started with is not listed either, because there is nothing in it to review.
 
         Args:
             mission_id: The mission
@@ -2152,7 +2160,13 @@ class MissionService:
             else:
                 state = MissionFileChangeState.CHANGED_SINCE
 
+            if kind == MissionFileChangeKind.MODIFIED and first.pre_image_hash == last.post_image_hash:
+                continue
+
             added, removed = self._line_counts(first, last, state == MissionFileChangeState.CURRENT)
+            if kind == MissionFileChangeKind.MODIFIED and added == 0 and removed == 0:
+                continue
+
             changes.append(MissionFileChange(
                 path, kind, len(path_entries), state, last.timestamp, added, removed,
                 first.sequence if first.pre_image_hash is not None else None,
@@ -2371,6 +2385,89 @@ class MissionService:
         mission.input_tokens += max(0, usage.prompt_tokens)
         mission.output_tokens += max(0, usage.completion_tokens)
         self._save(mission)
+        if (
+            mission.over_budget() and mission.mode == MissionMode.AUTONOMOUS and not mission.paused
+            and not mission.stopped
+        ):
+            self._pause_for_tokens(mission)
+
+    def _pause_for_tokens(self, mission: Mission) -> None:
+        """
+        Pause a mission that has used the tokens the user allowed it, stopping its work where it is.
+
+        It waits for the user to raise the limit or remove it; nothing more is spent until they do.
+        """
+        self._hold(mission)
+        self._set_active(mission, False)
+        for tracked in list(self._tracked.values()):
+            if self._members.get(tracked.context_id) == mission.mission_id:
+                tracked.transcript.cancel_current_tasks(notify=False)
+                tracked.state = MissionAgentState.IDLE
+                tracked.tool_name = ""
+                tracked.tool_target = ""
+
+        used = mission.tokens_used()
+        self._record(MissionActivityKind.TOKEN_LIMIT_REACHED, mission.title, str(mission.token_budget), mission.mission_id)
+        self._mindspace.add_interaction(
+            MindspaceLogLevel.WARN,
+            f"Mission Control paused mission '{mission.title}': it used {used} tokens of its "
+            f"{mission.token_budget} token limit"
+        )
+        self._notify()
+
+    def extend_token_budget(self, mission_id: str, extra: int) -> None:
+        """
+        Let a mission use more tokens, and carry it on if it was waiting for them.
+
+        The extra tokens are counted from what the mission has used, if that is already past its limit.
+
+        Args:
+            mission_id: Mission to give more tokens to
+            extra: How many more tokens it may use
+
+        Raises:
+            MissionError: If there is no such mission, or the extra is not a positive number of tokens
+        """
+        mission = self._missions.get(mission_id)
+        if mission is None:
+            raise MissionError("There is no such mission")
+
+        if extra <= 0:
+            raise MissionError("Enter how many more tokens the mission may use")
+
+        mission.token_budget = max(mission.token_budget, mission.tokens_used()) + extra
+        self._token_budget_changed(mission, f"Human raised the token limit of mission '{mission.title}' to "
+                                            f"{mission.token_budget}")
+
+    def remove_token_budget(self, mission_id: str) -> None:
+        """
+        Take away a mission's token limit, and carry it on if it was waiting because of it.
+
+        Args:
+            mission_id: Mission to remove the limit from
+
+        Raises:
+            MissionError: If there is no such mission
+        """
+        mission = self._missions.get(mission_id)
+        if mission is None:
+            raise MissionError("There is no such mission")
+
+        mission.token_budget = 0
+        self._token_budget_changed(mission, f"Human removed the token limit of mission '{mission.title}'")
+
+    def _token_budget_changed(self, mission: Mission, log_text: str) -> None:
+        """Record a change to a mission's token limit, and carry the mission on if the limit was all that held it."""
+        self._save(mission)
+        self._record(
+            MissionActivityKind.TOKEN_LIMIT_CHANGED, mission.title, str(mission.token_budget), mission.mission_id
+        )
+        self._mindspace.add_interaction(MindspaceLogLevel.INFO, log_text)
+        if mission.paused and not mission.stopped:
+            self.unpause_mission(mission.mission_id)
+            return
+
+        self._notify()
 
     def handle_approval_required(
         self,
@@ -3086,7 +3183,8 @@ class MissionService:
             return MissionStatus.STUCK
 
         if mission.paused and mission.mode == MissionMode.AUTONOMOUS:
-            return MissionStatus.PAUSED
+            # Paused because it used the tokens it was allowed, it waits for a larger limit or none.
+            return MissionStatus.OUT_OF_TOKENS if mission.over_budget() else MissionStatus.PAUSED
 
         # A request being reviewed or approved automatically leaves its conversation waiting for
         # approval, and a continue about to be sent leaves the lead idle for a moment: the mission is

@@ -297,3 +297,28 @@ def test_token_counts_survive_a_round_trip_and_bad_values_are_none():
     assert (loaded.input_tokens, loaded.output_tokens) == (0, 0)
     data.pop("inputTokens")
     assert Mission.from_dict(data).input_tokens == 0
+
+
+def test_token_limit_survives_a_round_trip_and_older_records_have_none():
+    """A mission's token limit is saved and loaded; a record from before limits has no limit."""
+    from mission.mission import Mission  # pylint: disable=import-outside-toplevel
+    mission = Mission(mission_id="m", objective="o", title="t", lead_path="l.conv", created_at="2026-01-01T00:00:00+00:00")
+    mission.token_budget = 200000
+    assert Mission.from_dict(mission.to_dict()).token_budget == 200000
+
+    data = mission.to_dict()
+    data.pop("tokenBudget")
+    assert Mission.from_dict(data).token_budget == 0
+
+
+def test_a_mission_is_over_its_limit_only_when_it_has_one_and_used_it():
+    """With no limit a mission is never over it; with one, it is over once it has used that many tokens."""
+    from mission.mission import Mission  # pylint: disable=import-outside-toplevel
+    mission = Mission(mission_id="m", objective="o", title="t", lead_path="l.conv", created_at="2026-01-01T00:00:00+00:00")
+    mission.input_tokens, mission.output_tokens = 900, 100
+    assert not mission.over_budget()
+
+    mission.token_budget = 1001
+    assert not mission.over_budget()
+    mission.token_budget = 1000
+    assert mission.over_budget()

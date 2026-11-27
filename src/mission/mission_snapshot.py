@@ -22,6 +22,7 @@ class MissionStatus(Enum):
     RECOVERING = auto()
     STUCK = auto()
     PLAN_READY = auto()
+    OUT_OF_TOKENS = auto()
 
 
 class MissionAgentState(Enum):
@@ -69,6 +70,8 @@ class MissionActivityKind(Enum):
     FILES_UNDONE = auto()
     CHECKS_PASSED = auto()
     CHECKS_FAILED = auto()
+    TOKEN_LIMIT_REACHED = auto()
+    TOKEN_LIMIT_CHANGED = auto()
 
 
 @dataclass(frozen=True)

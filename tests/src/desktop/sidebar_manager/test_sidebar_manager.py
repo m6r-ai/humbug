@@ -110,3 +110,22 @@ class TestRailButtonTooltips:
 
         finally:
             language_manager.set_language(original_language)
+
+
+class TestPanelBadge:
+    """A panel's rail button can carry a short count."""
+
+    def test_badge_shows_and_goes(self, sidebar):
+        """A badge shows its text on the panel's button, and setting no text puts it away."""
+        sidebar.register_panel("missions", "missions", _StubPanel, _wire_nothing)
+        button = sidebar.panel_button("missions")
+        sidebar.set_panel_badge("missions", "3")
+        badges = [child for child in button.children() if child.objectName() == "_panel_badge"]
+        assert len(badges) == 1 and badges[0].text() == "3" and not badges[0].isHidden()
+
+        sidebar.set_panel_badge("missions", "")
+        assert badges[0].isHidden()
+
+    def test_badge_for_an_unknown_panel_is_ignored(self, sidebar):
+        """Asking for a badge on a panel that is not registered does nothing."""
+        sidebar.set_panel_badge("nowhere", "1")

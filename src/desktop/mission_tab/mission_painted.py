@@ -24,9 +24,14 @@ _TONE_ROLES = {
 }
 
 
+def tone_role(tone: MissionTone) -> ColorRole:
+    """Return the theme colour role for a tone."""
+    return _TONE_ROLES[tone]
+
+
 def tone_color(tone: MissionTone) -> QColor:
     """Return the theme colour for a tone."""
-    return StyleManager().get_color(_TONE_ROLES[tone])
+    return StyleManager().get_color(tone_role(tone))
 
 
 def _luminance(color: QColor) -> float:

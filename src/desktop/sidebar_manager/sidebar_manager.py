@@ -6,6 +6,7 @@ from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import (
     QButtonGroup,
     QHBoxLayout,
+    QLabel,
     QMenu,
     QPushButton,
     QSizePolicy,
@@ -76,6 +77,7 @@ class SidebarManager(QWidget):
         # Keyed by panel_id
         self._panel_buttons: dict[str, QToolButton] = {}
         self._panel_widgets: dict[str, SidebarBase] = {}
+        self._panel_badges: dict[str, QLabel] = {}
         self._panel_insert_index: int = 1  # index in rail_layout after toggle button
 
         layout = QHBoxLayout(self)
@@ -295,6 +297,50 @@ class SidebarManager(QWidget):
             panel = self._panel_widgets.get(panel_id)
             if panel is not None:
                 on_activated(panel)
+
+    def set_panel_badge(self, panel_id: str, text: str) -> None:
+        """
+        Show a short count on a panel's rail button, such as how many things wait for the user.
+
+        Args:
+            panel_id: The panel whose button carries the badge
+            text: What the badge says, or "" to remove it
+        """
+        button = self._panel_buttons.get(panel_id)
+        if button is None:
+            return
+
+        badge = self._panel_badges.get(panel_id)
+        if not text:
+            if badge is not None:
+                badge.hide()
+
+            return
+
+        if badge is None:
+            badge = QLabel(button)
+            badge.setObjectName("_panel_badge")
+            badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            badge.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+            self._panel_badges[panel_id] = badge
+
+        badge.setText(text)
+        badge.show()
+        self._place_badge(button, badge)
+
+    def _place_badge(self, button: QToolButton, badge: QLabel) -> None:
+        """Put a badge over the trailing top corner of its button's icon."""
+        badge.adjustSize()
+        height = badge.sizeHint().height()
+        badge.resize(max(height, badge.sizeHint().width()), height)
+        icon = button.iconSize()
+        offset = icon.width() // 2 - badge.width() // 3
+        x = button.width() // 2 + offset
+        if self.layoutDirection() == Qt.LayoutDirection.RightToLeft:
+            x = button.width() - x - badge.width()
+
+        badge.move(x, max(0, button.height() // 2 - icon.height() // 2 - height // 2))
+        badge.raise_()
 
     def get_panel(self, panel_id: str) -> SidebarBase | None:
         """
@@ -666,6 +712,11 @@ class SidebarManager(QWidget):
             elif event.type() == QEvent.Type.Leave:
                 self._set_button_hover_icon(obj, hovered=False)
 
+            elif event.type() == QEvent.Type.Resize:
+                badge = self._panel_badges.get(str(obj.property("panel_id")))
+                if badge is not None and not badge.isHidden():
+                    self._place_badge(obj, badge)
+
         return super().eventFilter(obj, event)
 
     def apply_style(self) -> None:
@@ -740,6 +791,17 @@ class SidebarManager(QWidget):
                 background-color: {rail_background};
             }}
 
+            QLabel#_panel_badge {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_WARNING)};
+                color: {style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)};
+                border-radius: {round(8 * zoom_factor)}px;
+                padding: 0px {round(4 * zoom_factor)}px;
+                font-size: {round(base_font_size * zoom_factor * 0.75)}pt;
+                font-weight: bold;
+                min-height: {round(16 * zoom_factor)}px;
+                max-height: {round(16 * zoom_factor)}px;
+            }}
+
             QWidget#_content_widget {{
                 background-color: {panel_background};
             }}
@@ -801,6 +863,10 @@ class SidebarManager(QWidget):
                 padding: 2px 4px;
             }}
         """)
+
+        for panel_id, badge in self._panel_badges.items():
+            if not badge.isHidden():
+                self._place_badge(self._panel_buttons[panel_id], badge)
 
         for panel in self._panel_widgets.values():
             panel.apply_style()

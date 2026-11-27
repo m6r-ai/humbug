@@ -1535,6 +1535,15 @@ class ConversationSidebar(SidebarBase):
         # Schedule a repaint after the event loop processes the index scan and model reset
         self._viewport_refresh_timer.start(0)
 
+    def set_mission_conversations(self, lead_paths: set[str]) -> None:
+        """
+        Leave missions' conversations out of the list, because the Missions panel lists them.
+
+        Args:
+            lead_paths: Absolute paths of the missions' lead conversations; their helpers go with them
+        """
+        self._dag_model.set_hidden_paths(lead_paths)
+
     def new_conversation_button(self) -> QToolButton:
         """Return the header's new-conversation button, used as an onboarding tour target."""
         return self._new_conversation_button

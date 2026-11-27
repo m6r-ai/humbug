@@ -21,7 +21,7 @@ class MissionNotifier(QObject):
     """
     Raises Mission Control's alerts outside it.
 
-    Every alert marks Mission Control as updated.  While the window is in the background an
+    Every alert marks its mission's tab as updated.  While the window is in the background an
     alert also asks for the user's attention, by bouncing the dock icon or flashing the
     taskbar, and shows a system notification where the platform offers them; clicking it
     opens the mission.  The notification icon is only shown while an alert is unseen.
@@ -31,7 +31,7 @@ class MissionNotifier(QObject):
         self,
         window: QWidget,
         show_mission: Callable[[str], None],
-        mark_updated: Callable[[], None]
+        mark_updated: Callable[[str], None]
     ) -> None:
         """
         Initialise the notifier for a main window.
@@ -39,7 +39,7 @@ class MissionNotifier(QObject):
         Args:
             window: The main window, whose being in the background decides how loudly to alert
             show_mission: Opens Mission Control on a mission
-            mark_updated: Marks Mission Control as having something new
+            mark_updated: Marks a mission's tab as having something new
         """
         super().__init__(window)
         self._window = window
@@ -94,7 +94,9 @@ class MissionNotifier(QObject):
         if not alerts:
             return
 
-        self._mark_updated()
+        for alert in alerts:
+            self._mark_updated(alert.mission_id)
+
         if self._window.isActiveWindow():
             return
 
@@ -115,6 +117,7 @@ class MissionNotifier(QObject):
             MissionAlertKind.FAILED: strings.mission_notify_failed,
             MissionAlertKind.STUCK: strings.mission_notify_stuck,
             MissionAlertKind.PLAN_READY: strings.mission_notify_plan_ready,
+            MissionAlertKind.OUT_OF_TOKENS: strings.mission_notify_out_of_tokens,
         }[alert.kind]
         message = f"{alert.mission_title}: {alert.detail}" if alert.detail else alert.mission_title
         return title, message

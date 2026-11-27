@@ -34,12 +34,12 @@ from desktop.mission_tab import mission_widget as mission_widget_module
 from desktop.mission_tab import mission_scene as mission_scene_module
 from desktop.mission_tab import mission_network as mission_network_module
 from desktop.mission_tab.mission_display import (
-    MissionActivityView, MissionAgentView, MissionChatView, MissionCheckView, MissionChipView, MissionDecisionView,
+    MissionActivityView, MissionAgentView, MissionChatView, MissionCheckView, MissionDecisionView,
     MissionDiffLineKind,
     MissionDiffLineView, MissionDiffView, MissionFileView, MissionGlanceView, MissionRobotLook,
     MissionHeaderView, MissionPhaseView,
     MissionResultView, MissionStatTarget,
-    MissionStatView, MissionStepState, MissionStepView, MissionTone, MissionView
+    MissionStatView, MissionStepState, MissionStepView, MissionTone, MissionView, parse_token_count, token_count
 )
 from desktop.language.language_code import LanguageCode
 from desktop.language.language_manager import LanguageManager
@@ -103,7 +103,7 @@ class TestMissionWidget:
 
         widget.set_decisions([_decision()])
         widget.findChildren(QPushButton, "MissionApprove")[0].click()
-        unsure, reject = widget.findChildren(QPushButton, "MissionSecondaryButton")
+        unsure, reject = widget._inbox_card.findChildren(QPushButton, "MissionSecondaryButton")  # pylint: disable=protected-access
         unsure.click()
         reject.click()
 
@@ -579,15 +579,15 @@ class TestSidebarFollowsTheMission:
             newest, oldest = service.missions()
             mindspace = mindspace_sandbox.manager.mindspace()
 
-            tab._on_mission_selected(oldest.mission_id)  # pylint: disable=protected-access
+            tab.show_mission(oldest.mission_id)
             assert tab.lead_conversation_path() == mindspace.get_absolute_path(oldest.lead_path)
             assert announced[-1] == tab.lead_conversation_path()
 
-            tab._on_mission_selected(newest.mission_id)  # pylint: disable=protected-access
+            tab.show_mission(newest.mission_id)
             assert announced[-1] == mindspace.get_absolute_path(newest.lead_path)
 
             count = len(announced)
-            tab._on_mission_selected(newest.mission_id)  # pylint: disable=protected-access
+            tab.show_mission(newest.mission_id)
             assert len(announced) == count
 
             tab.show_new_mission()
@@ -605,54 +605,6 @@ class TestSidebarFollowsTheMission:
         service = MissionServiceHolder().service_for(mindspace_sandbox.manager.mindspace())
         assert service.lead_conversation_path("missing") == ""
         MissionServiceHolder().release()
-
-
-class TestMissionChipMenu:
-    """Each mission chip has an options button that renames or deletes the mission."""
-
-    def test_every_mission_chip_has_an_options_button(self, qapp) -> None:  # pylint: disable=unused-argument
-        """A chip is followed by its own options button, which is named for screen readers."""
-        widget = MissionWidget()
-        widget.set_missions([
-            MissionChipView("m1", "First", MissionTone.ACCENT, True),
-            MissionChipView("m2", "Second", MissionTone.NEUTRAL, False),
-        ], False)
-
-        buttons = widget.findChildren(QPushButton, "MissionChipMenu")
-        assert len(buttons) == 2
-        assert all(b.accessibleName() == "Mission options" for b in buttons)
-        widget.deleteLater()
-
-    def test_rename_and_delete_from_the_tab(self, mindspace_sandbox, submitted, monkeypatch) -> None:  # pylint: disable=unused-argument
-        """Renaming asks for a name and keeps it; deleting asks first and removes the mission."""
-        async def run() -> None:
-            tab = MissionTab("mission-tab")
-            tab.attach_service()
-            tab._widget.submit_requested.emit("Tidy the docs")  # pylint: disable=protected-access
-            for _ in range(5):
-                await asyncio.sleep(0)
-
-            service = MissionServiceHolder().current_service()
-            assert service is not None
-            mission = service.missions()[0]
-
-            monkeypatch.setattr(mission_tab_module.QInputDialog, "getText", lambda *_a, **_k: ("Docs cleanup", True))
-            tab._widget.mission_rename_requested.emit(mission.mission_id)  # pylint: disable=protected-access
-            assert mission.title == "Docs cleanup"
-
-            monkeypatch.setattr(mission_tab_module.MessageBox, "show_message", lambda *_a, **_k: MessageBoxButton.NO)
-            tab._widget.mission_delete_requested.emit(mission.mission_id)  # pylint: disable=protected-access
-            assert service.missions()
-
-            monkeypatch.setattr(mission_tab_module.MessageBox, "show_message", lambda *_a, **_k: MessageBoxButton.YES)
-            tab._widget.mission_delete_requested.emit(mission.mission_id)  # pylint: disable=protected-access
-            assert not service.missions()
-
-            tab.close_tab()
-            tab.deleteLater()
-            MissionServiceHolder().release()
-
-        asyncio.run(run())
 
 
 def _agent_view(context_id: str, is_lead: bool = False, parent_id: str = "", activity: str = "idle") -> MissionAgentView:
@@ -677,42 +629,6 @@ def arabic(qapp):
 
 class TestRightToLeft:
     """In Arabic Mission Control reads from right to left: arrows, icons, rows and spacing follow."""
-
-    @staticmethod
-    def _arrow_image(widget: MissionWidget, back: bool) -> QImage:
-        """Return the picture on one of the arrows that scroll the missions."""
-        arrow = widget._chip_left if back else widget._chip_right  # pylint: disable=protected-access
-        return arrow.icon().pixmap(arrow.iconSize()).toImage()
-
-    def test_chip_arrows_point_to_their_own_edge(self, qapp) -> None:  # pylint: disable=unused-argument
-        """In English the back arrow points left and the other right, each the mirror of the other."""
-        widget = MissionWidget()
-        widget.apply_style()
-        back = self._arrow_image(widget, True)
-        more = self._arrow_image(widget, False)
-        assert back == more.mirrored(True, False) and back != more
-        widget.deleteLater()
-
-    def test_chip_arrows_swap_in_arabic(self, qapp) -> None:
-        """In Arabic, back is at the right, so the back arrow points right, as English's other arrow does."""
-        english = MissionWidget()
-        english.apply_style()
-        english_more = self._arrow_image(english, False)
-        manager = LanguageManager()
-        original = manager.current_language()
-        manager.set_language(LanguageCode.AR)
-        qapp.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        try:
-            widget = MissionWidget()
-            widget.apply_style()
-            assert self._arrow_image(widget, True) == english_more
-
-        finally:
-            manager.set_language(original)
-            qapp.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
-
-        english.deleteLater()
-        widget.deleteLater()
 
     def test_send_icon_points_the_way_the_text_reads(self, qapp) -> None:  # pylint: disable=unused-argument
         """The paper plane flies right in English and left in Arabic."""
@@ -1966,104 +1882,6 @@ class TestFriendlyDashboard:
         journey.deleteLater()
 
 
-def _many_chips(count: int, selected: int) -> list[MissionChipView]:
-    return [
-        MissionChipView(f"m{index}", f"Mission number {index} with a long title", MissionTone.ACCENT, index == selected)
-        for index in range(count)
-    ]
-
-
-def _shown_strip(width: int, chips: list[MissionChipView]) -> MissionWidget:
-    """Return a widget of the given width, shown, with its mission chips laid out."""
-    widget = MissionWidget()
-    widget.resize(width, 800)
-    widget.apply_style()
-    widget.show()
-    widget.set_missions(chips, new_mission_selected=False)
-    for _ in range(3):
-        QApplication.processEvents()
-
-    return widget
-
-
-class TestMissionChipStrip:
-    """Missions that do not fit scroll sideways, with arrows and swipes, while New mission stays put."""
-
-    def test_arrows_appear_only_when_missions_overflow(self, qapp) -> None:  # pylint: disable=unused-argument
-        """A few missions need no arrows; many missions get them."""
-        widget = _shown_strip(1400, _many_chips(2, 0))
-        assert widget._chip_left.isHidden() and widget._chip_right.isHidden()  # pylint: disable=protected-access
-        widget.deleteLater()
-
-        widget = _shown_strip(700, _many_chips(8, 0))
-        assert not widget._chip_left.isHidden() and not widget._chip_right.isHidden()  # pylint: disable=protected-access
-        assert not widget._chip_left.isEnabled() and widget._chip_right.isEnabled()  # pylint: disable=protected-access
-        widget.deleteLater()
-
-    def test_new_mission_stays_outside_the_scrolling_strip(self, qapp) -> None:  # pylint: disable=unused-argument
-        """New mission is never scrolled away."""
-        widget = _shown_strip(700, _many_chips(8, 0))
-        new_chip = widget.findChildren(QPushButton, "MissionNewChip")[0]
-
-        assert not widget._chip_strip.isAncestorOf(new_chip)  # pylint: disable=protected-access
-        widget.deleteLater()
-
-    def test_right_arrow_scrolls_towards_later_missions(self, qapp) -> None:  # pylint: disable=unused-argument
-        """The right arrow moves the strip, after which the left arrow can move it back."""
-        widget = _shown_strip(700, _many_chips(8, 0))
-        strip = widget._chip_strip  # pylint: disable=protected-access
-        strip._animation.setDuration(0)  # pylint: disable=protected-access
-
-        widget._chip_right.click()  # pylint: disable=protected-access
-        QApplication.processEvents()
-
-        assert strip.horizontalScrollBar().value() > 0
-        assert widget._chip_left.isEnabled()  # pylint: disable=protected-access
-        widget.deleteLater()
-
-    def test_sideways_swipe_moves_the_strip_and_vertical_scroll_does_not(self, qapp) -> None:  # pylint: disable=unused-argument
-        """A trackpad swipe sideways scrolls the missions; scrolling up or down is left to the page."""
-        widget = _shown_strip(700, _many_chips(8, 0))
-        strip = widget._chip_strip  # pylint: disable=protected-access
-        centre = QPointF(strip.width() / 2, strip.height() / 2)
-
-        def wheel(dx: int, dy: int) -> QWheelEvent:
-            return QWheelEvent(
-                centre, strip.mapToGlobal(centre), QPoint(dx, dy), QPoint(dx, dy),
-                Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier, Qt.ScrollPhase.NoScrollPhase, False
-            )
-
-        vertical = wheel(0, -120)
-        strip.wheelEvent(vertical)
-        assert strip.horizontalScrollBar().value() == 0
-        assert not vertical.isAccepted()
-
-        sideways = wheel(-120, 0)
-        strip.wheelEvent(sideways)
-        assert strip.horizontalScrollBar().value() == 120
-        assert sideways.isAccepted()
-        widget.deleteLater()
-
-    def test_selected_mission_is_scrolled_into_view(self, qapp) -> None:  # pylint: disable=unused-argument
-        """Selecting a mission at the far end glides its chip into view."""
-        widget = _shown_strip(700, _many_chips(8, 7))
-        QTest.qWait(400)
-
-        assert widget._chip_strip.horizontalScrollBar().value() > 0  # pylint: disable=protected-access
-        widget.deleteLater()
-
-    def test_strip_keeps_its_height_when_missions_arrive_later(self, qapp) -> None:  # pylint: disable=unused-argument
-        """Missions added after the strip is shown are drawn at full height, not squashed out of sight."""
-        widget = _shown_strip(1000, _many_chips(1, 0))
-        widget.set_missions(_many_chips(3, 0), new_mission_selected=False)
-        QTest.qWait(50)
-
-        strip = widget._chip_strip  # pylint: disable=protected-access
-        assert strip.height() > 0
-        assert strip.height() == strip.sizeHint().height()
-        widget.deleteLater()
-
-
 class TestSmoothScrolling:
     """Moving the page to show something glides there rather than jumping."""
 
@@ -2156,18 +1974,6 @@ class TestAnsweringInPlace:
 class TestWaitingAlerts:
     """A mission waiting for an answer is pointed out from wherever the user is."""
 
-    def test_a_waiting_mission_shows_a_count_on_its_chip(self, qapp) -> None:  # pylint: disable=unused-argument
-        """Only the chip of a waiting mission carries the count."""
-        widget = MissionWidget()
-        widget.set_missions([
-            MissionChipView("m1", "First", MissionTone.ACCENT, True),
-            MissionChipView("m2", "Second", MissionTone.WARNING, False, "Needs you", waiting_text="2"),
-        ], False)
-        badges = widget.findChildren(QWidget, "MissionChipWaiting")
-        assert len(badges) == 1
-        assert badges[0].toolTip() == "Needs you"
-        widget.deleteLater()
-
     def test_another_waiting_mission_is_one_click_away(self, qapp) -> None:  # pylint: disable=unused-argument
         """The notice names the waiting mission and its button opens it."""
         widget = MissionWidget()
@@ -2217,7 +2023,6 @@ class TestWaitingAlerts:
         assert [d.decision_id for d in widget._decisions] == ["d2"]  # pylint: disable=protected-access
         assert widget._elsewhere_mission_id == "m2"  # pylint: disable=protected-access
         assert widget._elsewhere_text.text() == "“Second” is waiting for your decision"  # pylint: disable=protected-access
-        assert [chip.waiting_text for chip in widget._chips] == ["", "1"]  # pylint: disable=protected-access
         tab._service = None  # pylint: disable=protected-access
         tab.deleteLater()
 
@@ -2467,19 +2272,6 @@ class TestGliding:
         assert widget._highlighted_card is None  # pylint: disable=protected-access
         widget.deleteLater()
 
-    def test_choosing_an_earlier_mission_glides_the_chips_back(self, qapp) -> None:  # pylint: disable=unused-argument
-        """The strip glides back towards the start when an earlier mission is selected."""
-        widget = _shown_strip(600, _many_chips(10, 9))
-        QTest.qWait(500)
-        scrollbar = widget._chip_strip.horizontalScrollBar()  # pylint: disable=protected-access
-        assert scrollbar.value() > 0
-
-        widget.set_missions(_many_chips(10, 0), new_mission_selected=False)
-        QTest.qWait(500)
-        assert scrollbar.value() == scrollbar.minimum()
-        widget.deleteLater()
-
-
 class TestDesignSystemButtons:
     """Mission Control's buttons are painted in the application's button colours."""
 
@@ -2721,7 +2513,6 @@ class TestWaitingElsewhereText:
         tab = self._tab("m1", [])
         widget = tab._widget  # pylint: disable=protected-access
         assert widget._elsewhere.isHidden()  # pylint: disable=protected-access
-        assert all(not chip.waiting_text for chip in widget._chips)  # pylint: disable=protected-access
         tab._service = None  # pylint: disable=protected-access
         tab.deleteLater()
 
@@ -3673,14 +3464,14 @@ class TestRefreshDescribesTheSelectedMission:
     """A refresh reads only the mission on show, however many missions there are."""
 
     def test_refresh_snapshots_only_the_selected_mission(self, mindspace_sandbox, submitted, monkeypatch) -> None:  # pylint: disable=unused-argument
-        """Other missions appear as chips without their conversations being read again."""
+        """Other missions are not described again when the mission on show is refreshed."""
         async def run() -> None:
             tab = MissionTab("mission-tab")
             tab.attach_service()
             service = tab._service  # pylint: disable=protected-access
-            first = await service.create_mission("First objective")
+            await service.create_mission("First objective")
             second = await service.create_mission("Second objective")
-            tab._on_mission_selected(second.mission_id)  # pylint: disable=protected-access
+            tab.show_mission(second.mission_id)
             described: list[str] = []
             original = type(service).snapshot
             monkeypatch.setattr(
@@ -3690,9 +3481,6 @@ class TestRefreshDescribesTheSelectedMission:
             tab._refresh()  # pylint: disable=protected-access
 
             assert described == [second.mission_id]
-            chips = tab._widget._chips  # pylint: disable=protected-access
-            assert chips is not None
-            assert {chip.mission_id for chip in chips} == {first.mission_id, second.mission_id}
             tab.close_tab()
             tab.deleteLater()
             MissionServiceHolder().release()
@@ -3712,7 +3500,7 @@ class TestEverythingNeedsNoAnswer:
         assert widget._decision_cards["d1"] is not None  # pylint: disable=protected-access
         assert not widget.findChildren(QPushButton, "MissionApprove")
         assert not widget.findChildren(QPushButton, "MissionApproveDestructive")
-        assert not widget.findChildren(QPushButton, "MissionSecondaryButton")
+        assert not widget._inbox_card.findChildren(QPushButton, "MissionSecondaryButton")  # pylint: disable=protected-access
         widget.deleteLater()
 
     def test_only_requests_of_a_mission_at_everything_are_unanswerable(self, mindspace_sandbox, submitted) -> None:  # pylint: disable=unused-argument
@@ -3746,19 +3534,6 @@ class TestEverythingNeedsNoAnswer:
             MissionServiceHolder().release()
 
         asyncio.run(run())
-
-
-class TestIconLabels:
-    """Controls drawn only as a symbol say what they do."""
-
-    def test_chip_arrows_are_labelled(self, qapp) -> None:  # pylint: disable=unused-argument
-        """The arrows that scroll the missions have a tooltip and a name for assistive technology."""
-        widget = MissionWidget()
-
-        for arrow in (widget._chip_left, widget._chip_right):  # pylint: disable=protected-access
-            assert arrow.toolTip() and arrow.accessibleName() == arrow.toolTip()
-
-        widget.deleteLater()
 
 
 class TestReportHeadlineStaysInView:
@@ -3985,7 +3760,7 @@ class TestMissionNotifier:
         window.isActiveWindow = lambda: window_active  # type: ignore[method-assign]
         marked: list[str] = []
         shown: list[tuple] = []
-        notifier = MissionNotifier(window, lambda _mission_id: None, lambda: marked.append("marked"))
+        notifier = MissionNotifier(window, lambda _mission_id: None, marked.append)
         notifier._notify = lambda *args: shown.append(args)  # type: ignore[method-assign]  # pylint: disable=protected-access
         listeners: list = []
         service = types.SimpleNamespace(
@@ -4004,7 +3779,7 @@ class TestMissionNotifier:
         service.statuses["m"] = status
 
     def test_finished_mission_in_the_background_is_announced(self, qapp) -> None:  # pylint: disable=unused-argument
-        """While the window is in the background, a finished mission marks Mission Control and shows a notification."""
+        """While the window is in the background, a finished mission marks its tab and shows a notification."""
         notifier, service, marked, shown = self._notifier(window_active=False)
         self._add(service, MissionStatus.RUNNING)
         notifier.follow(service)  # type: ignore[arg-type]
@@ -4014,14 +3789,14 @@ class TestMissionNotifier:
         with mock.patch.object(QApplication, "alert") as alert:
             notifier._check()  # pylint: disable=protected-access
 
-        assert marked == ["marked"]
+        assert marked == ["m"]
         alert.assert_called_once()
         assert shown == [("m", "Mission accomplished", "Write the guide")]
         notifier.follow(None)
         assert not service.listeners
 
     def test_user_in_the_window_only_sees_the_tab_marked(self, qapp) -> None:  # pylint: disable=unused-argument
-        """While the user is in Humbug, nothing pops up: Mission Control is only marked as updated."""
+        """While the user is in Humbug, nothing pops up: the mission's tab is only marked as updated."""
         notifier, service, marked, shown = self._notifier(window_active=True)
         self._add(service, MissionStatus.RUNNING)
         notifier.follow(service)  # type: ignore[arg-type]
@@ -4030,7 +3805,7 @@ class TestMissionNotifier:
         with mock.patch.object(QApplication, "alert") as alert:
             notifier._check()  # pylint: disable=protected-access
 
-        assert marked == ["marked"]
+        assert marked == ["m"]
         alert.assert_not_called()
         assert not shown
 
@@ -4495,10 +4270,10 @@ class TestNewMissionScreenKeepsToTheEssentials:
         """Examples help with a first mission and are put away once there are missions."""
         widget = MissionWidget()
         widget.set_mission(None)
-        widget.set_missions([], True)
+        widget.set_has_missions(False)
         assert not widget._examples.isHidden()  # pylint: disable=protected-access
 
-        widget.set_missions(_many_chips(1, -1), True)
+        widget.set_has_missions(True)
         assert widget._examples.isHidden()  # pylint: disable=protected-access
         widget.deleteLater()
 
@@ -4510,6 +4285,72 @@ class TestNewMissionScreenKeepsToTheEssentials:
         widget.set_new_mission_auto_approve(level)
         assert widget._hero_auto_approve_note.isHidden() != shown  # pylint: disable=protected-access
         assert widget._hero_auto_approve_buttons[level].toolTip()  # pylint: disable=protected-access
+        widget.deleteLater()
+
+
+class TestTokenLimitScreen:
+    """A token limit is chosen for a new mission, and a mission that used it offers two ways to carry on."""
+
+    @pytest.mark.parametrize("text, tokens", [
+        ("50000", 50000), ("50,000", 50000), ("50k", 50000), ("1.5m", 1_500_000), (" 200K ", 200000),
+        ("", 0), ("lots", 0), ("0", 0), ("-5k", 0), ("nan", 0), ("inf", 0),
+    ])
+    def test_typed_token_counts_are_read(self, text: str, tokens: int) -> None:
+        """Plain numbers, thousands separators and k or m are understood; anything else is no number of tokens."""
+        assert parse_token_count(text) == tokens
+
+    def test_new_mission_has_no_limit_unless_one_is_chosen(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The limit is optional: without the option, typed or not, the next mission has none."""
+        widget = MissionWidget()
+        widget.set_mission(None)
+        widget._token_limit_input.setText("100k")  # pylint: disable=protected-access
+        assert widget.token_budget() == 0
+
+        widget._token_limit_option.setChecked(True)  # pylint: disable=protected-access
+        assert widget.token_budget() == 100000
+        widget.deleteLater()
+
+    def test_chosen_limit_shows_as_a_chip_that_removes_it(self, qapp) -> None:  # pylint: disable=unused-argument
+        """A limit chosen in the options shows on the screen; its chip takes the limit off."""
+        widget = MissionWidget()
+        widget.set_mission(None)
+        widget._token_limit_option.setChecked(True)  # pylint: disable=protected-access
+        widget._token_limit_input.setText("200k")  # pylint: disable=protected-access
+        chip = widget._tokens_chip  # pylint: disable=protected-access
+        assert not chip.isHidden() and "200k" in chip.text()
+
+        chip.click()
+        assert widget.token_budget() == 0 and chip.isHidden()
+        widget.deleteLater()
+
+    def test_mission_out_of_tokens_offers_to_add_tokens_or_remove_the_limit(self, qapp) -> None:  # pylint: disable=unused-argument
+        """The notice offers both ways on; adding needs a number of tokens, and each reports the user's choice."""
+        widget = MissionWidget()
+        view = _view(completed=False, stage=2)
+        widget.set_mission(dataclasses.replace(
+            view, header=dataclasses.replace(view.header, token_limit_text="Used 205k of 200k tokens")
+        ))
+        added: list[int] = []
+        removed: list[bool] = []
+        widget.token_limit_extended.connect(added.append)
+        widget.token_limit_removed.connect(lambda: removed.append(True))
+        assert not widget._token_limit_box.isHidden()  # pylint: disable=protected-access
+
+        add = widget._token_add_button  # pylint: disable=protected-access
+        assert not add.isEnabled()
+        widget._token_amount.setText("50k")  # pylint: disable=protected-access
+        add.click()
+        assert added == [50000]
+
+        widget._token_remove_button.click()  # pylint: disable=protected-access
+        assert removed == [True]
+        widget.deleteLater()
+
+    def test_mission_within_its_limit_shows_no_notice(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Without the limit reached there is nothing to choose, so the notice is not shown."""
+        widget = MissionWidget()
+        widget.set_mission(_view(completed=False, stage=2))
+        assert widget._token_limit_box.isHidden()  # pylint: disable=protected-access
         widget.deleteLater()
 
 
@@ -4735,7 +4576,7 @@ class TestPlanReady:
         tab = MissionTab("mission")
         created: list[bool] = []
 
-        async def create(_objective, _level, _attachments, _settings, review_plan=False, done_checks=None):  # pylint: disable=unused-argument
+        async def create(_objective, _level, _attachments, _settings, review_plan=False, done_checks=None, token_budget=0):  # pylint: disable=unused-argument
             created.append(review_plan)
             raise mission_tab_module.MissionError("stop here")
 
@@ -4767,7 +4608,7 @@ class TestDoneChecksScreen:
         tab = MissionTab("mission")
         created: list[list[str] | None] = []
 
-        async def create(_objective, _level, _attachments, _settings, review_plan=False, done_checks=None):  # pylint: disable=unused-argument
+        async def create(_objective, _level, _attachments, _settings, review_plan=False, done_checks=None, token_budget=0):  # pylint: disable=unused-argument
             created.append(done_checks)
             return types.SimpleNamespace(mission_id="m")
 
@@ -5000,10 +4841,10 @@ class TestTokenUse:
         assert "10.1k" in header.tokens_detail and "2.3k" in header.tokens_detail
         tab.deleteLater()
 
-    @pytest.mark.parametrize("count, text", [(950, "950"), (12_400, "12.4k"), (1_250_000, "1.2M")])
+    @pytest.mark.parametrize("count, text", [(950, "950"), (12_400, "12.4k"), (200_000, "200k"), (1_250_000, "1.2M"), (2_000_000, "2M")])
     def test_counts_are_compact(self, count, text) -> None:
         """Counts are written as they are read: thousands as k and millions as M."""
-        assert mission_tab_module._token_count(count) == text  # pylint: disable=protected-access
+        assert token_count(count) == text
 
 
 class TestFilesChanged:
@@ -5338,78 +5179,12 @@ class TestReportActions:
         widget.deleteLater()
 
 
-class TestFindingMissions:
-    """Missions can be searched, and archived ones are kept out of the way until asked for."""
-
-    @staticmethod
-    def _chips() -> list[MissionChipView]:
-        return [
-            MissionChipView("m1", "Write the guide", MissionTone.ACCENT, True, search_text="Write the guide\ndocs"),
-            MissionChipView("m2", "Fix flaky tests", MissionTone.SUCCESS, False, search_text="Fix flaky tests\nCI"),
-            MissionChipView("m3", "Release notes", MissionTone.NEUTRAL, False, search_text="Release notes\nv2"),
-            MissionChipView("m4", "Old audit", MissionTone.NEUTRAL, False, archived=True, search_text="Old audit\n"),
-            MissionChipView("m5", "Tidy imports", MissionTone.NEUTRAL, False, search_text="Tidy imports\n"),
-        ]
-
-    @staticmethod
-    def _shown(widget: MissionWidget) -> list[str]:
-        return [chip.mission_id for chip in widget._shown_chip_views]  # pylint: disable=protected-access
-
-    def test_archived_missions_are_hidden_until_asked_for(self, qapp) -> None:  # pylint: disable=unused-argument
-        """Archived missions are left out, counted on a switch that shows them."""
-        widget = MissionWidget()
-        widget.set_missions(self._chips(), False)
-        assert self._shown(widget) == ["m1", "m2", "m3", "m5"]
-        assert widget._archived_toggle.text() == "Archived (1)"  # pylint: disable=protected-access
-
-        widget._archived_toggle.setChecked(True)  # pylint: disable=protected-access
-        assert "m4" in self._shown(widget)
-        widget.deleteLater()
-
-    def test_search_matches_title_and_request(self, qapp) -> None:  # pylint: disable=unused-argument
-        """Every word typed must appear in a mission's name or request; the mission on screen always stays."""
-        widget = MissionWidget()
-        widget.set_missions(self._chips(), False)
-        assert not widget._mission_search.isHidden()  # pylint: disable=protected-access
-
-        widget._mission_search.setText("ci flaky")  # pylint: disable=protected-access
-        assert self._shown(widget) == ["m1", "m2"]
-        widget._mission_search.setText("nothing like it")  # pylint: disable=protected-access
-        assert self._shown(widget) == ["m1"]
-        widget.deleteLater()
-
-    def test_few_missions_need_no_search(self, qapp) -> None:  # pylint: disable=unused-argument
-        """With only a few missions, there is no search box."""
-        widget = MissionWidget()
-        widget.set_missions(self._chips()[:2], False)
-        assert widget._mission_search.isHidden()  # pylint: disable=protected-access
-        widget.deleteLater()
-
-    def test_chip_menu_archives_and_brings_back(self, qapp, monkeypatch) -> None:  # pylint: disable=unused-argument
-        """A mission's menu archives it, or brings back an archived one."""
-        widget = MissionWidget()
-        widget.set_missions(self._chips(), False)
-        requested: list[tuple[str, bool]] = []
-        widget.mission_archive_requested.connect(lambda m, a: requested.append((m, a)))
-        strings = widget._language_manager.strings()  # pylint: disable=protected-access
-        for mission_id, label in (("m2", strings.mission_archive), ("m4", strings.mission_unarchive)):
-            menu = mock.MagicMock()
-            menu.addAction.side_effect = lambda text: text
-            menu.exec.side_effect = lambda _position, chosen=label: chosen
-            monkeypatch.setattr(widget._style_manager, "create_menu", lambda _parent, m=menu: m)  # pylint: disable=protected-access
-            widget._show_chip_menu(mission_id, QPoint())  # pylint: disable=protected-access
-
-        assert requested == [("m2", True), ("m4", False)]
-        widget.deleteLater()
-
-
 class TestRunAgain:
     """An earlier mission can be started again from its menu or its report."""
 
-    def test_menus_ask_to_run_again(self, qapp, monkeypatch) -> None:  # pylint: disable=unused-argument
-        """Run again in a chip's menu names that mission; on the report it means the mission on screen."""
+    def test_report_asks_to_run_again(self, qapp, monkeypatch) -> None:  # pylint: disable=unused-argument
+        """Run again on the report means the mission on screen."""
         widget = MissionWidget()
-        widget.set_missions([MissionChipView("m1", "Guide", MissionTone.ACCENT, True)], False)
         widget.set_mission(_view(completed=True, stage=3))
         asked: list[str] = []
         widget.mission_rerun_requested.connect(asked.append)
@@ -5419,10 +5194,9 @@ class TestRunAgain:
         menu.exec.side_effect = lambda _position: strings.mission_run_again
         monkeypatch.setattr(widget._style_manager, "create_menu", lambda _parent: menu)  # pylint: disable=protected-access
 
-        widget._show_chip_menu("m1", QPoint())  # pylint: disable=protected-access
         widget._show_report_actions()  # pylint: disable=protected-access
 
-        assert asked == ["m1", ""]
+        assert asked == [""]
         widget.deleteLater()
 
 
@@ -5509,3 +5283,71 @@ class TestFriendlyFailures:
         assert widget._failed_notice.text().startswith("My last reply ended in an error")  # pylint: disable=protected-access
         assert widget._failed_notice.toolTip() == "boom"  # pylint: disable=protected-access
         tab.deleteLater()
+
+
+class TestOneMissionPerTab:
+    """Each Mission Control tab shows one mission, so missions can be watched side by side."""
+
+    def test_a_new_tab_waits_for_a_request_and_then_follows_its_mission(self, mindspace_sandbox, submitted) -> None:  # pylint: disable=unused-argument
+        """A new tab shows the new-mission screen even when missions exist, and is named after the mission it starts."""
+        async def run() -> None:
+            service = MissionServiceHolder().service_for(mindspace_sandbox.manager.mindspace())
+            await service.create_mission("Earlier work")
+            tab = MissionTab("mission-tab")
+            titles: list[str] = []
+            tab.tab_label_changed.connect(lambda _tab_id, title: titles.append(title))
+            tab.attach_service()
+            tab._refresh()  # pylint: disable=protected-access
+            assert tab.mission_id() == ""
+            assert tab.tab_title_from_path() == tab._strings().mission_new  # pylint: disable=protected-access
+
+            tab._widget.submit_requested.emit("Write release notes")  # pylint: disable=protected-access
+            for _ in range(5):
+                await asyncio.sleep(0)
+
+            tab._refresh()  # pylint: disable=protected-access
+            mission = next(m for m in service.missions() if m.mission_id == tab.mission_id())
+            assert mission.objective == "Write release notes"
+            assert titles[-1] == mission.title == tab.tab_title_from_path()
+            tab.close_tab()
+            tab.deleteLater()
+            MissionServiceHolder().release()
+
+        asyncio.run(run())
+
+    def test_other_missions_are_opened_rather_than_shown_here(self, qapp) -> None:  # pylint: disable=unused-argument
+        """Going to a waiting mission or starting a new one asks for another tab, leaving this one as it is."""
+        tab = MissionTab("mission-tab", selected_mission_id="mine")
+        opened: list[str] = []
+        new_tabs: list[bool] = []
+        tab.mission_open_requested.connect(opened.append)
+        tab.new_mission_tab_requested.connect(lambda: new_tabs.append(True))
+
+        tab._widget.mission_selected.emit("other")  # pylint: disable=protected-access
+        tab._widget.new_mission_requested.emit()  # pylint: disable=protected-access
+
+        assert opened == ["other"] and new_tabs == [True]
+        assert tab.mission_id() == "mine"
+        tab.deleteLater()
+
+    def test_running_again_opens_the_new_mission_elsewhere(self, mindspace_sandbox, submitted) -> None:  # pylint: disable=unused-argument
+        """Run again starts a new mission and asks for it to be opened, leaving the earlier one on show here."""
+        async def run() -> None:
+            service = MissionServiceHolder().service_for(mindspace_sandbox.manager.mindspace())
+            earlier = await service.create_mission("Earlier work")
+            tab = MissionTab("mission-tab", selected_mission_id=earlier.mission_id)
+            tab.attach_service()
+            opened: list[str] = []
+            tab.mission_open_requested.connect(opened.append)
+
+            tab._widget.mission_rerun_requested.emit("")  # pylint: disable=protected-access
+            for _ in range(5):
+                await asyncio.sleep(0)
+
+            assert len(opened) == 1 and opened[0] != earlier.mission_id
+            assert tab.mission_id() == earlier.mission_id
+            tab.close_tab()
+            tab.deleteLater()
+            MissionServiceHolder().release()
+
+        asyncio.run(run())

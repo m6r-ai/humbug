@@ -133,6 +133,35 @@ action, and **Edit → Redo** reapplies it — so long as the Conversations view
 a tab focused these act on that tab's own history instead. Deletions go to the [trash](trash.md)
 in the meantime, so undo is a convenience rather than the only way back.
 
+A mission's conversations (its lead, and the helpers the lead handed work to) are not listed here:
+they are in the Missions view, so your own conversations are not buried under mission work. A
+mission conversation you have pinned still appears under **Pinned**.
+
+### Missions view
+
+The **Missions** view, the rocket icon just below Conversations on the rail, lists every
+[Mission Control](mission-control.md) mission in the mindspace, newest first. Each mission shows a
+coloured dot and a word or two saying what it is doing, such as **Working** or **Needs you**, and an
+amber count when requests from it are waiting for your decision. The rocket icon carries the total,
+so you can see that a mission needs you while the panel shows another view.
+
+- **Click** a mission to open it in a tab of its own: a single click opens a temporary tab, a
+  double click one that stays, as for conversations
+- **Unfold** a mission to see its conversations: the lead, with the helpers it handed work to
+  beneath it. Click one to open it, as in the Conversations view
+- **Right-click** a mission to open, rename, run again, archive or delete it, or to switch it
+  between Classic and Autonomous mode; right-click one of its conversations for the mode switch
+- **+** in the view's header starts a new mission
+- **Search missions**, at the top once there are more than a few, keeps the missions whose name or
+  request contains every word you type
+- **Archived (n)**, at the bottom when you have archived missions, shows them; they are otherwise
+  left out
+
+While a mission's tab is the current tab, that mission is highlighted here, and while a
+mission's conversation is the current tab, that conversation is.
+
+A mission's conversations cannot be renamed, duplicated, moved or deleted from this view.
+
 ### Files view
 
 The **Files** view shows the files and folders in your mindspace. It works like a standard file

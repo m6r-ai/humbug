@@ -21,7 +21,7 @@ three, in reverse.
 | `what-is-humbug.md` | The idea, not the code: `blueprint.md` for purpose and intent |
 | `installation.md` | Release builds, `pyproject.toml`, `src/desktop/__main__.py`, the onboarding tour in `src/desktop/tour/` |
 | `first-conversation.md` | `src/desktop/conversation_tab/` (`conversation_input.py`, `conversation_message.py`), tool approval widgets |
-| `mindspaces.md` | `src/mindspace/`, `src/desktop/mindspace/`, `src/desktop/sidebar_manager/`, `src/desktop/conversation_sidebar/`, `src/desktop/file_sidebar/` |
+| `mindspaces.md` | `src/mindspace/`, `src/desktop/mindspace/`, `src/desktop/sidebar_manager/`, `src/desktop/conversation_sidebar/`, `src/desktop/mission_sidebar/`, `src/desktop/file_sidebar/` |
 | `tabs-and-columns.md` | `src/desktop/tab_manager/`, `src/desktop/tab/`, `src/context/` (ADR-0008) |
 | `conversations.md` | `src/ai/`, `src/desktop/conversation_tab/` (`prompt_minimap.py`), `src/conversation_context/`, `src/desktop/language/` (status bar strings) |
 | `ai-models-and-backends.md` | `src/ai/ai_model.py`, `src/ai/ai_conversation_settings.py`, `src/ai/<backend>/`, the AI Backends settings page |
@@ -39,7 +39,7 @@ three, in reverse.
 | `forking-conversations.md` | `src/desktop/conversation_sidebar/` (folders, pinning, undo/redo), `src/conversation_dag/`, ADR-0019 |
 | `delegation.md` | `src/delegate_ai_tool/`, `src/conversation_dag/`, ADR-0011 |
 | `token-usage.md` | `src/desktop/usage_tab/`, `src/mindspace/mindspace_usage.py` |
-| `mission-control.md` | `src/desktop/mission_tab/`, `src/mission/`, ADR-0026 (autonomous mode) |
+| `mission-control.md` | `src/desktop/mission_tab/`, `src/mission/`, `src/desktop/mission_sidebar/`, ADR-0026 (autonomous mode) |
 | `user-settings.md` | `src/desktop/user/`, `src/desktop/settings_dialog.py` (`_build_display_page`, `_build_file_access_page`, `_build_network_access_page`, `_build_ai_backends_page`), `src/filesystem_ai_tool/filesystem_access_settings.py`, `src/http_ai_tool/http_access_settings.py` |
 | `mindspace-settings.md` | `src/mindspace/mindspace_settings.py`, `src/desktop/settings_dialog.py` (the `This Mindspace` pages) |
 | `conversation-settings.md` | `src/desktop/conversation_tab/conversation_settings_dialog.py`, `src/ai/ai_conversation_settings.py` |

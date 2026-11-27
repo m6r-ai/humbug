@@ -73,6 +73,11 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
     - A child conversation that has multiple parents (because its parent was
       forked) appears under each parent.  is_shared is set on those nodes so
       the view can render a distinct icon.
+    - Conversations set aside with set_hidden_paths (a mission's lead, listed
+      in the panel's Missions section instead) are left out of the natural
+      tree, along with the conversations they delegated to.  One pinned on
+      its own is still shown under Pinned, because pinning it was the user's
+      choice.
 
     The model rebuilds completely whenever the index emits changed().  Because
     the index is already incremental, rebuilds are fast.
@@ -112,6 +117,7 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
         self._language_manager = LanguageManager()
         self._timestamp_cache: dict[str, float] = {}
         self._prompt_cache: dict[str, tuple[tuple[int, int], str | None]] = {}
+        self._hidden_paths: set[str] = set()
 
         # Node registry: int key -> _DirNode | _ConvNode | _PinnedSectionNode | _PinnedGroupNode
         self._nodes: dict[int, _DirNode | _ConvNode | _PinnedSectionNode | _PinnedGroupNode] = {}
@@ -134,6 +140,20 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
         self._index.structure_changed.disconnect(self._on_index_changed)
         self._index = index
         self._index.structure_changed.connect(self._on_index_changed)
+        self._rebuild()
+
+    def set_hidden_paths(self, paths: set[str]) -> None:
+        """
+        Leave these conversations, and those they delegated to, out of the natural tree.
+
+        Args:
+            paths: Absolute paths of the conversations to leave out
+        """
+        paths = {os.path.normpath(path) for path in paths}
+        if paths == self._hidden_paths:
+            return
+
+        self._hidden_paths = paths
         self._rebuild()
 
     def _alloc_key(self) -> int:
@@ -450,6 +470,7 @@ class ConversationSidebarDAGModel(QAbstractItemModel):
 
             elif (
                 entry.lower().endswith('.conv')
+                and entry_path not in self._hidden_paths
                 and (show_pinned or not self._mindspace_manager.is_path_pinned(entry_path))
             ):
                 entry_infos.append((entry_path, False))

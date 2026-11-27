@@ -82,6 +82,8 @@ from desktop.usage_tab.usage_tab import UsageTab
 from desktop.mission_tab.mission_mode_menus import MissionModeMenus
 from desktop.mission_tab.mission_notifier import MissionNotifier
 from desktop.mission_tab.mission_service_holder import MissionServiceHolder
+from desktop.mission_sidebar.mission_sidebar import MissionSidebar, MissionSidebarEntry
+from desktop.mission_tab.mission_sidebar_mediator import MissionSidebarMediator
 from desktop.mission_tab.mission_tab import MissionTab
 from desktop.style_manager import StyleManager
 from desktop.tab.tab_base import TabBase
@@ -229,6 +231,12 @@ def _wire_conversation_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
     panel.file_opened_in_preview.connect(mgr.file_opened_in_preview)
     panel.file_opened_in_diff.connect(mgr.file_opened_in_diff)
     panel.new_conversation_requested.connect(mgr.new_conversation_requested)
+
+
+def _wire_mission_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
+    """Wire MissionSidebar signals to SidebarManager."""
+    assert isinstance(panel, MissionSidebar)
+    panel.file_clicked.connect(mgr.file_clicked)
 
 
 def _wire_vcs_sidebar(panel: SidebarBase, mgr: SidebarManager) -> None:
@@ -717,6 +725,9 @@ class MainWindow(QMainWindow):
             tooltip_key="mindspace_conversations",
         )
         self._sidebar_manager.register_panel(
+            "missions", "missions", MissionSidebar, _wire_mission_sidebar, tooltip_key="mindspace_missions",
+        )
+        self._sidebar_manager.register_panel(
             "files", "files", FileSidebar, _wire_file_sidebar, tooltip_key="mindspace_files",
         )
         self._sidebar_manager.register_panel(
@@ -786,8 +797,20 @@ class MainWindow(QMainWindow):
         # Conversations working for an autonomous mission open without taking focus.
         tab_manager.add_background_open_provider(self._mission_mode_menus.opens_in_background)
         conversation_sidebar = self._sidebar_manager.get_panel("conversations")
-        if isinstance(conversation_sidebar, ConversationSidebar):
-            conversation_sidebar.add_file_menu_provider(self._mission_mode_menus.file_entries)
+        assert isinstance(conversation_sidebar, ConversationSidebar)
+        conversation_sidebar.add_file_menu_provider(self._mission_mode_menus.file_entries)
+        # Missions, with the conversations working on them, have a panel of their own.
+        mission_sidebar = self._sidebar_manager.get_panel("missions")
+        assert isinstance(mission_sidebar, MissionSidebar)
+        mission_sidebar.add_file_menu_provider(self._mission_mode_menus.file_entries)
+        mission_sidebar.mission_activated.connect(self._show_mission)
+        mission_sidebar.new_mission_requested.connect(self._on_mission_control_requested)
+        conversation_sidebar.conversations_index().structure_changed.connect(mission_sidebar.refresh)
+        self._mission_sidebar_mediator = MissionSidebarMediator(
+            self, mission_sidebar, self._show_sidebar_missions,
+            lambda text: self._sidebar_manager.set_panel_badge("missions", text),
+            self._show_mission,
+        )
 
         # Set initial sidebar width
         sidebar_width = self._sidebar_manager.expanded_sidebar_width()
@@ -1478,12 +1501,14 @@ class MainWindow(QMainWindow):
         """Create Mission Control, following the mission it shows in the sidebar."""
         tab = _create_mission_tab(info, registry, parent)
         tab.lead_conversation_changed.connect(lambda path: self._on_mission_lead_conversation_changed(tab, path))
+        tab.mission_open_requested.connect(self._show_mission)
+        tab.new_mission_tab_requested.connect(self._on_mission_control_requested)
         return tab
 
     def _on_mission_lead_conversation_changed(self, tab: MissionTab, path: str) -> None:
-        """Highlight the selected mission's lead conversation, while Mission Control is the current tab."""
+        """Highlight the selected mission in the Missions panel, while Mission Control is the current tab."""
         if path and self._tab_manager.get_current_tab() is tab:
-            self._sidebar_manager.reveal_and_select_file("conversations", path)
+            self._sidebar_manager.reveal_and_select_file("missions", path)
 
     def _on_tab_manager_tab_changed(self) -> None:
         """Handle tab change events."""
@@ -1495,7 +1520,7 @@ class MainWindow(QMainWindow):
             # Mission Control has no file of its own; the mission it shows is led by a conversation.
             lead_path = current_tab.lead_conversation_path()
             if lead_path:
-                self._sidebar_manager.reveal_and_select_file("conversations", lead_path)
+                self._sidebar_manager.reveal_and_select_file("missions", lead_path)
 
             return
 
@@ -1505,6 +1530,9 @@ class MainWindow(QMainWindow):
 
         panel = self._TAB_PANEL_MAP.get(current_tab.tool_name(), "files")
         self._sidebar_manager.reveal_and_select_file(panel, path)
+        if panel == "conversations":
+            # A conversation working on a mission is listed in the Missions panel instead.
+            self._sidebar_manager.reveal_and_select_file("missions", path)
 
     def _on_tab_manager_status_message(self, message: StatusMessage) -> None:
         """Update status bar with new message."""
@@ -1841,6 +1869,7 @@ class MainWindow(QMainWindow):
                 return
 
             self._mission_notifier.follow(None)
+            self._mission_sidebar_mediator.follow(None)
             MissionServiceHolder().release()
             self._mindspace_manager.close_mindspace()
 
@@ -1902,6 +1931,7 @@ class MainWindow(QMainWindow):
         self._sidebar_manager.set_mindspace("")
 
         self._mission_notifier.follow(None)
+        self._mission_sidebar_mediator.follow(None)
         MissionServiceHolder().release()
         self._mindspace_manager.close_mindspace()
         self._update_instance_registry()
@@ -2765,58 +2795,93 @@ class MainWindow(QMainWindow):
         and resumed if the user chose that, without Mission Control being open.
         """
         if self._mindspace_manager.has_mindspace():
-            self._mission_notifier.follow(MissionServiceHolder().service_for(self._mindspace_manager.mindspace()))
+            service = MissionServiceHolder().service_for(self._mindspace_manager.mindspace())
+            self._mission_notifier.follow(service)
+            self._mission_sidebar_mediator.follow(service)
 
     def _on_mission_control_requested(self) -> None:
-        """Open Mission Control on the new-mission screen, as asked for from the menu."""
-        self._on_open_mission_control()
-        info = self._mission_control_context()
-        tab = self._tab_manager.get_tab_by_id(info.context_id) if info is not None else None
-        if isinstance(tab, MissionTab):
+        """
+        Open a tab on the new-mission screen, ready for a request.
+
+        A new-mission tab that is already open is reused, so asking again does not pile them up.
+        """
+        tab = next((t for t in self._mission_tabs() if not t.mission_id()), None)
+        if tab is None:
+            tab = self._open_mission_tab(ephemeral=False)
+
+        else:
+            self._mindspace_manager.mindspace().contexts().focus(tab.tab_id())
+
+        if tab is not None:
             tab.show_new_mission()
 
-    def _show_mission(self, mission_id: str) -> None:
-        """Open Mission Control showing a particular mission."""
-        self._on_open_mission_control()
-        info = self._mission_control_context()
-        tab = self._tab_manager.get_tab_by_id(info.context_id) if info is not None else None
-        if isinstance(tab, MissionTab):
+    def _show_mission(self, mission_id: str, ephemeral: bool = False) -> None:
+        """
+        Show a mission in its own tab, opening one unless it already has one.
+
+        Args:
+            mission_id: The mission to show
+            ephemeral: True for a temporary tab that the next one opened in its column replaces
+        """
+        tab = next((t for t in self._mission_tabs() if t.mission_id() == mission_id), None)
+        if tab is not None:
+            contexts = self._mindspace_manager.mindspace().contexts()
+            if not ephemeral:
+                contexts.make_permanent(tab.tab_id())
+
+            contexts.focus(tab.tab_id())
+            return
+
+        tab = self._open_mission_tab(ephemeral)
+        if tab is not None:
             tab.show_mission(mission_id)
 
-    def _mark_mission_control_updated(self) -> None:
-        """Highlight Mission Control's tab, if it is open, as having something new."""
-        info = self._mission_control_context()
-        tab = self._tab_manager.get_tab_by_id(info.context_id) if info is not None else None
-        if tab is not None:
-            tab.set_updated(True)
+    def _show_sidebar_missions(self, missions: list[MissionSidebarEntry]) -> None:
+        """List missions in the Missions panel, and take their conversations out of the Conversations panel."""
+        conversation_sidebar = self._sidebar_manager.get_panel("conversations")
+        mission_sidebar = self._sidebar_manager.get_panel("missions")
+        assert isinstance(conversation_sidebar, ConversationSidebar) and isinstance(mission_sidebar, MissionSidebar)
+        conversation_sidebar.set_mission_conversations({mission.lead_path for mission in missions if mission.lead_path})
+        mission_sidebar.set_missions(missions, conversation_sidebar.conversations_index().get_children)
 
-    def _mission_control_context(self) -> ContextInfo | None:
-        """Return the context of the open Mission Control tab, if there is one."""
+    def _mark_mission_control_updated(self, mission_id: str) -> None:
+        """Highlight the tab of a mission with something new, if it has one open."""
+        for tab in self._mission_tabs():
+            if tab.mission_id() == mission_id:
+                tab.set_updated(True)
+
+    def _mission_tabs(self) -> list[MissionTab]:
+        """Return the open Mission Control tabs, each showing a mission or the new-mission screen."""
+        if not self._mindspace_manager.has_mindspace():
+            return []
+
+        contexts = self._mindspace_manager.mindspace().contexts()
+        tabs = []
+        for info in contexts.list_all():
+            if info.context_type != "mission":
+                continue
+
+            tab = self._tab_manager.get_tab_by_id(info.context_id)
+            if isinstance(tab, MissionTab):
+                tabs.append(tab)
+
+            else:
+                # The context is stale (e.g. the tab failed to create on a previous attempt), so close it.
+                contexts.close(info.context_id)
+
+        return tabs
+
+    def _open_mission_tab(self, ephemeral: bool) -> MissionTab | None:
+        """Open a new Mission Control tab, on the new-mission screen until told otherwise."""
         if not self._mindspace_manager.has_mindspace():
             return None
 
-        contexts = self._mindspace_manager.mindspace().contexts()
-        return next((i for i in contexts.list_all() if i.context_type == "mission"), None)
-
-    def _on_open_mission_control(self) -> None:
-        """Open (or focus) Mission Control."""
-        if not self._mindspace_manager.has_mindspace():
-            return
-
-        contexts = self._mindspace_manager.mindspace().contexts()
-        existing = self._mission_control_context()
-        if existing:
-            # If the tab is already tracked by the tab manager, just focus it.
-            # If the context is stale (e.g. the tab failed to create on a
-            # previous attempt), close it so we can open a fresh one below.
-            if self._tab_manager.get_tab_by_id(existing.context_id):
-                contexts.focus(existing.context_id)
-                return
-
-            contexts.close(existing.context_id)
-
         strings = self._language_manager.strings()
-        contexts.open(context_type="mission", title=strings.mission_control)
+        context_id = self._mindspace_manager.mindspace().contexts().open(
+            context_type="mission", title=strings.mission_new, is_ephemeral=ephemeral
+        )
+        tab = self._tab_manager.get_tab_by_id(context_id)
+        return tab if isinstance(tab, MissionTab) else None
 
     def _on_open_humbug_shell(self) -> None:
         """Open the shell tab."""
@@ -3595,6 +3660,7 @@ class MainWindow(QMainWindow):
             return
 
         self._mission_notifier.follow(None)
+        self._mission_sidebar_mediator.follow(None)
         MissionServiceHolder().release()
         self._instance_registry.unregister()
         event.accept()

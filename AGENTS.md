@@ -236,6 +236,8 @@ modules, etc.). It is one of potentially several front-ends (e.g. a future CLI).
 - `log_tab/` - Log tab implementation
 - `markdown/` - Markdown and code rendering stack
 - `mission_tab/` - Mission Control tab, drawing the `src/mission/` backend
+- `mission_sidebar/` - Missions panel: lists missions with the conversations working on them;
+  `mission_tab/mission_sidebar_mediator.py` connects it to the mission service
 - `mindspace/` - Qt-facing mindspace singleton (`MindspaceManager`), directory tracking, VCS polling, and mindspace folder management
 - `preview_sidebar/` - Preview panel implementation
 - `preview_tab/` - Preview tab implementation

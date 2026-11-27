@@ -259,6 +259,8 @@ class Mission:
     then the lead is not asked to continue.  `input_tokens` and `output_tokens`
     count the tokens the mission's conversations have used, as far as Mission
     Control has seen them; a record from before they were counted starts at none.
+    `token_budget` is the most tokens the user let the mission use before it pauses
+    for them to raise or remove the limit, or 0 for no limit.
     `conversation_ids` identifies every conversation that has taken part, lead
     and helpers, which is how the change journal's records of the mission's file
     changes are found; `journal_from` is the journal's first record that can be
@@ -304,6 +306,7 @@ class Mission:
     plan_approved: bool = False
     input_tokens: int = 0
     output_tokens: int = 0
+    token_budget: int = 0
     conversation_ids: list[str] = field(default_factory=list)
     journal_from: int = 0
     undone_paths: list[str] = field(default_factory=list)
@@ -346,6 +349,7 @@ class Mission:
             "planApproved": self.plan_approved,
             "inputTokens": self.input_tokens,
             "outputTokens": self.output_tokens,
+            "tokenBudget": self.token_budget,
             "conversationIds": list(self.conversation_ids),
             "journalFrom": self.journal_from,
             "undonePaths": list(self.undone_paths),
@@ -410,6 +414,7 @@ class Mission:
             plan_approved=bool(data.get("planApproved", False)),
             input_tokens=_count(data.get("inputTokens")),
             output_tokens=_count(data.get("outputTokens")),
+            token_budget=_count(data.get("tokenBudget")),
             conversation_ids=_texts(data.get("conversationIds")),
             journal_from=_count(data.get("journalFrom")),
             undone_paths=_texts(data.get("undonePaths")),
@@ -428,6 +433,14 @@ class Mission:
             mission.celebrated = mission.is_complete()
 
         return mission
+
+    def tokens_used(self) -> int:
+        """Return how many tokens the mission's conversations have used, as far as Mission Control has seen."""
+        return self.input_tokens + self.output_tokens
+
+    def over_budget(self) -> bool:
+        """Return True when the mission has a token limit and has used all of it."""
+        return self.token_budget > 0 and self.tokens_used() >= self.token_budget
 
     def completed_count(self) -> int:
         """Return how many tasks are completed."""
