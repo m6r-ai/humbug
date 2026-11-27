@@ -32,96 +32,57 @@ New features:
 - Panel tooltips now give a path as it sits in the mindspace instead of in full.
 - Editor auto backup now keeps its copies under `.humbug/backups`, rather than saving one as `file.txt.backup`
   beside the file itself.
-- Mission Control stays responsive while the mission lead writes a long reply: updating a busy mission now takes
-  a few milliseconds instead of more than 40, because the conversation's messages are no longer measured again on
-  every update. The stage journey also redraws only the parts that move while the AI works.
-- Mission Control's message box can now attach files and change the AI settings, with the same paperclip and
-  cog as a conversation's input box. It no longer repeats the selected mission's name, and its scrollbar now
-  matches the others.
-- Mission Control's conversation card now shows, beside the lead's name, the AI model that wrote each reply, since
-  a mission may be answered by a different model from the one set now.
-- The conversation card in Mission Control takes only the room its messages need, up to a set height, and scrolls
-  beyond that with the newest message in view unless you have scrolled up to read an earlier one.
-- The lead's latest message card in Mission Control is always just as tall as the message, growing for a long one
-  and shrinking again for a short one that follows it.
-- The conversation card in Mission Control is no longer folded behind a heading: it is always open, so the
-  conversation with the lead is there to read without a click.
-- The picture of who is working in Mission Control can now be used without a mouse: tab to it and use the arrow
-  keys to move between agents, Home and End to jump to the ends, Enter to open the highlighted agent's
-  conversation and Esc to drop the highlight, with the same summary a hover gives.
-- A mission whose lead's latest turn ended in an error now shows as **Failed**, rather than as answered or
-  completed, and offers **Retry** to send the same request again and **Open the lead's conversation** to see
-  why. **Resume**, and the notice that Humbug was closed, are now kept for missions that really were interrupted.
-- While the mission shown in Mission Control is at **Everything** auto-approve, a red banner under the title
-  says so, stays in view as the page scrolls, and offers **Turn off** to set the mission back to **Off**.
-- A mission in Autonomous mode can now be paused. Whatever is running finishes, then nothing is approved
-  automatically and the lead does not carry on by itself until you click **Continue**. The pause is kept across
-  restarts, and automatic resume leaves a paused mission alone.
-- Approval requests in Mission Control's Decision Inbox now say what they act on (a file, a move, a command or a
-  URL), and a destructive request says whether Humbug can undo it before you approve it. An agent's bubble no
-  longer approves a destructive request in one click: it offers **Review**, which opens the request in the inbox.
-- Mission Control has a **Reduce motion** option for people who find movement on screen uncomfortable or
-  distracting: everything is drawn still and in its final state, with nothing hidden.
-- Mission Control's **Reduce motion** and **Auto-resume after restart** are mindspace settings, shown on a
-  **Mission Control** page in **Settings** as well as at the top of Mission Control.
-- Screen readers can now follow the picture of who is working in Mission Control: it describes every agent and
-  what it is doing, and announces the highlighted agent as it moves.
-- Mission Control sums each autonomous mission up **At a glance**: what is happening now, what is holding it up,
-  what waits for you and what it last finished. **Hide details** folds the rest of the dashboard away.
-- When you send the lead a message, including a follow-up to a finished mission, a strip at the top of Mission
-  Control names your message and says it is being worked on until the lead replies.
-- Mission Control no longer stalls while a mission is busy: an update now keeps the conversation messages and
-  activity lines already on screen and adds only what is new, instead of rebuilding them all each time.
-- A mission in Mission Control is shown as completed only when every step is done and nothing you sent is still
-  waiting for a reply; until then, a line says which step is done and what comes next. The confetti for a
-  finished mission now plays once, when you watch it finish, and never again for that mission.
-- **Mission accomplished** in Mission Control now means the goal you asked for is met, as the lead reports it,
-  not just that one plan has run out of steps. A lead that finishes part of the work keeps it as a finished
-  phase and is asked to plan what is left.
-- A finished mission you ask for more no longer flashes **Mission accomplished** while the lead works on it: a
-  request being approved automatically, or the moment before the lead is asked to carry on, no longer counts as
-  the mission being idle, and the mission shows **Planning** until the lead has planned the new work. If Humbug
-  closes while the lead is on such a follow-up, the mission now comes back **Interrupted** and can be resumed.
-- When the lead starts planning new work after a finished plan, the Mission Plan now starts again at 0% for the
-  new plan and shows the finished plan under **History**, instead of showing the finished plan at 100% until the
-  new plan arrives.
-- A mission interrupted before its lead had reported a plan is now resumed by carrying on with the request
-  rather than with a next unfinished task, of which there were none.
-- A new **Missions** panel, the rocket icon below Conversations on the sidebar rail, lists every mission with its
-  status, and unfolds each one to its lead and helper conversations, which no longer crowd the Conversations
-  panel. Right-click a mission to open, rename, run again, archive or delete it, or to switch its mode; a search
-  box appears once there are more than a few missions, and **Archived (n)** shows the ones put away. A mission
-  waiting for your decision shows a count, and the rocket icon carries the total.
-- Each mission now opens in a tab of its own, named after it, so two missions can be watched side by side. A
-  click in the Missions panel opens a temporary tab and a double click one that stays, as for conversations;
-  **+**, **Ctrl+Shift+M** and **Mindspace → Mission Control** open a new-mission tab.
-- A mission can be given a token limit when it is started, in the new-mission options. When it is used up the
-  mission stops, shows **Token limit reached** and tells you, and you can add more tokens or remove the limit to
-  carry on.
-- A file an unfinished mission has changed is now locked to it. Another mission's request to change the file
-  waits in the Decision Inbox, saying which mission holds it, and cannot be approved until that mission
-  finishes, stops or fails; you are then told the file is free and decide whether the request goes ahead.
-  Terminal commands, and helpers within the same mission, are not covered.
-- **Files Changed** in Mission Control lists only files a mission actually changed: one it rewrote unchanged,
-  or changed and changed back, is left out.
+- New **Mission Control** (Autonomous mode). You describe an objective, and a lead AI conversation plans the
+  work, hands independent parts to helper conversations and keeps going by itself, while you follow it on one
+  dashboard and keep the decisions that matter. See the new Mission Control chapter of the user manual.
+  - **Missions panel and tabs**: the rocket icon below Conversations on the sidebar rail lists every mission
+    with its status, its lead and helper conversations, and a count of requests waiting for you. Each mission
+    opens in a tab of its own, so missions can run and be watched side by side. Open a new one with **+**,
+    **Ctrl+Shift+M** or **Mindspace → Mission Control**; rename, run again, archive or delete one from the panel.
+  - **Planning**: the lead plans any big task, including one that changes nothing, such as a review or an
+    investigation, and answers a simple question without a plan. You can ask to review the plan before work
+    starts, then approve it, ask for changes, or drag steps into another order and skip steps yourself; a paused
+    mission's plan can be rearranged the same way.
+  - **Done checks**: optional checks, such as `npm test passes`, that the lead must report as passed, with
+    evidence, before a mission counts as accomplished. A failing check sends the lead back to fix the work.
+  - **Templates** for requests you make again and again, kept with the mindspace.
+  - **Token limits**: a mission can be given a limit when it is started. When it is used up the mission stops
+    and shows **Token limit reached**, and you can add more tokens or remove the limit to carry on.
+  - **Auto-approve levels**: **Off** (the default), **Safe actions**, where file changes the change journal
+    records are approved and an AI reviewer decides other non-destructive requests, and **Everything**, which
+    approves every request without a review, after you confirm, and shows a red banner while it is on.
+  - **Decision Inbox**: every request waiting for you, saying what it acts on and whether Humbug can undo it.
+    Requests from conversations outside any mission are listed too.
+  - **File locks between missions**: a file an unfinished mission has changed is locked to it. Another
+    mission's request to change it waits, saying which mission holds it, until that mission finishes, stops or
+    fails; you are then told the file is free and decide. Terminal commands, and helpers within the same
+    mission, are not covered.
+  - **Keeping going, safely**: a mission can be paused and continued, retries by itself when the AI service
+    cannot be reached, and shows **Looks stuck** when it keeps getting nowhere, with **Carry on** to let it
+    continue. A mission interrupted by Humbug closing is marked **Interrupted** and can be resumed, by hand or
+    automatically with **Auto-resume after restart**. Humbug asks before quitting while a mission's lead is
+    still replying, and stops a mission's conversations when it is deleted.
+  - **Being told**: when a mission needs a decision, finishes, answers, fails, looks stuck, reaches its token
+    limit or has a locked file freed, the mission's tab is highlighted and, while Humbug is in the background,
+    a system notification names the mission.
+  - **The report**: a finished mission shows the lead's final report, which can be copied, saved as a Word
+    document or copied as an image, and **Files Changed**, the files the mission actually changed, each with
+    its line counts, a diff, **Open** and **Undo**, and **Undo all**. **Run again** starts the same mission
+    afresh.
+  - **Classic mode**: a mission can be switched to an ordinary conversation tab that you drive yourself, and
+    back again.
+  - **Accessibility**: the picture of who is working can be used from the keyboard and is described to screen
+    readers, **Reduce motion** draws everything still, and Mission Control reads right to left in Arabic.
+    **Reduce motion** and **Auto-resume after restart** are mindspace settings, also on a **Mission Control**
+    page in **Settings**.
+  - **Limits**: the plan, progress and done-check results are the lead's own report, which Mission Control
+    does not verify; resuming relies on the lead checking what was finished; recent activity is not kept after
+    the mindspace closes; and auto-approve's protection is only as good as the change journal, which covers
+    files inside the mindspace below its size limit. Missions are stored in `.humbug/missions/`.
 - The change journal now ignores editor swap files (`*.swp`) by default, so they no longer appear in the
   change list.
 - Added GPT 6.2 models.
 - Added Claude Fable 5.2.
-
-Behaviour changes:
-
-- Auto-approve set to **Everything** now approves every request straight away, without the AI reviewer, so a
-  mission runs end to end without stopping. Previously the reviewer still decided, so a request it was unsure
-  about came back to you.
-- The mission lead now plans any big task, even one that changes nothing, such as reviewing a pull request, a
-  branch or several files, investigating a problem or researching a topic in depth. Only a simple question, or a
-  quick explanation or opinion that needs at most a brief look at a file or two, is answered without a plan.
-- The row of mission chips at the top of Mission Control is gone; the Missions panel does what it did. A Mission
-  Control tab no longer switches to the newest mission by itself: it shows the new-mission screen until you start
-  one, or the mission it was opened on.
-- While another mission is in progress, a mission at **Everything** no longer gets a standing approval for file
-  changes, so each change is checked against the file locks.
 
 Bug fixes:
 
