@@ -2395,7 +2395,7 @@ class ConversationWidget(QWidget):
         Returns:
             The ConversationMessage containing the widget, or None if not found
         """
-        current: QObject = widget
+        current: QObject | None = widget
         while current:
             if isinstance(current, ConversationMessage):
                 return current

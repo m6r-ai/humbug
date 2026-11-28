@@ -773,11 +773,15 @@ class ThemeColorPickerDialog(QDialog):
 
     # Emits (mode, custom_colors, active_custom_theme_name). The active name is None when the
     # user is hand-editing ("Manually"), or a saved theme name when one is selected unchanged.
-    theme_settings_changed = Signal(ColorTheme, dict, object)
+    theme_settings_changed: "Signal[tuple[ColorTheme, dict[str, dict[str, str]], str | None]]" = Signal(
+        ColorTheme, dict, object
+    )
     # Emits (saved_themes_map, theme_to_use, active_custom_theme_name) after a save or delete.
     # This persists immediately so saved themes appear in the menu and a deleted active theme
     # reverts the app to the default theme without needing a separate Apply.
-    saved_color_themes_changed = Signal(dict, object, object)
+    saved_color_themes_changed: "Signal[tuple[dict[str, dict[str, dict[str, str]]], ColorTheme, str | None]]" = Signal(
+        dict, object, object
+    )
 
     def __init__(self, initial_mode: ColorTheme | None = None, parent: QWidget | None = None) -> None:
         """Initialize the dialog, snapshot current settings for cancel-revert, and build the UI."""
@@ -871,7 +875,7 @@ class ThemeColorPickerDialog(QDialog):
             btn = QPushButton(label)
             btn.setCheckable(True)
             btn.setProperty("colorMode", mode.name)
-            btn.clicked.connect(lambda checked, m=mode: self._on_mode_selected(m))
+            btn.clicked.connect(lambda _checked=False, m=mode: self._on_mode_selected(m))
             self._mode_buttons[mode] = btn
             mode_row.addWidget(btn)
 
@@ -964,7 +968,7 @@ class ThemeColorPickerDialog(QDialog):
             btn.setProperty("presetGradStart", grad_start)
             btn.setProperty("presetGradEnd", grad_end)
             btn.setChecked(name == self._active_preset_name)
-            btn.clicked.connect(lambda _, n=name, c=colors: self._on_preset_clicked(n, c))
+            btn.clicked.connect(lambda _checked=False, n=name, c=colors: self._on_preset_clicked(n, c))
             presets_layout.addWidget(btn)
             self._preset_button_map[name] = btn
 
@@ -1035,7 +1039,7 @@ class ThemeColorPickerDialog(QDialog):
                     a11y_btn.setToolTip(a11y_desc)
                     a11y_btn.setProperty("a11yPreset", True)
                     a11y_btn.clicked.connect(
-                        lambda _, c=a11y_colors: self._on_accessibility_preset_clicked(c)
+                        lambda _checked=False, c=a11y_colors: self._on_accessibility_preset_clicked(c)
                     )
                     a11y_row.addWidget(a11y_btn)
 
@@ -1045,9 +1049,7 @@ class ThemeColorPickerDialog(QDialog):
 
             reset_btn = QPushButton("Reset section to defaults")
             reset_btn.setProperty("section_idx", len(self._section_pages))
-            reset_btn.clicked.connect(
-                lambda checked, p=page: self._on_reset_section(p)
-            )
+            reset_btn.clicked.connect(lambda _checked=False, p=page: self._on_reset_section(p))
             inner_layout.addWidget(reset_btn, alignment=Qt.AlignmentFlag.AlignLeft)
             inner.setLayout(inner_layout)
             scroll.setWidget(inner)

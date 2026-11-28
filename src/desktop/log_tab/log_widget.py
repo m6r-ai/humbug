@@ -641,7 +641,7 @@ class LogWidget(QWidget):
         Returns:
             The LogMessage containing the widget, or None if not found
         """
-        current: QObject = widget
+        current: QObject | None = widget
         while current:
             if isinstance(current, LogMessage):
                 return current

@@ -53,7 +53,9 @@ class SidebarManager(QWidget):
     tab_carousel_requested = Signal()
 
     # panel_id, path, ephemeral, query, case_sensitive, regexp, line_number, message_id
-    search_result_activated = Signal(str, str, bool, str, bool, bool, object, object)
+    search_result_activated: "Signal[tuple[str, str, bool, str, bool, bool, int | None, str | None]]" = Signal(
+        str, str, bool, str, bool, bool, object, object
+    )
     search_highlights_cleared = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -209,16 +211,9 @@ class SidebarManager(QWidget):
 
             button.hide()
 
-        if on_activated is not None:
-            on_act = on_activated
-            button.clicked.connect(
-                lambda checked, pid=panel_id, cb=on_act: self._on_panel_button_clicked(pid, checked, cb)
-            )
-
-        else:
-            button.clicked.connect(
-                lambda checked, pid=panel_id: self._on_panel_button_clicked(pid, checked, None)
-            )
+        button.clicked.connect(
+            lambda _checked=False, pid=panel_id, cb=on_activated: self._on_panel_button_clicked(pid, _checked, cb)
+        )
 
         if place_at_bottom:
             self._rail_layout.insertWidget(self._rail_layout.indexOf(self._settings_button), button)

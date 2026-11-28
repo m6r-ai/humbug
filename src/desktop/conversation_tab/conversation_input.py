@@ -433,7 +433,7 @@ class ConversationInput(ConversationMessage):
             remove_button.setObjectName("_attachment_remove")
             remove_button.setIcon(QIcon(self._style_manager.scale_icon("close", icon_base_size)))
             remove_button.setIconSize(icon_size)
-            remove_button.clicked.connect(lambda _checked, i=index: self._remove_attachment(i))
+            remove_button.clicked.connect(lambda _checked=False, i=index: self._remove_attachment(i))
             attachment_layout.addWidget(remove_button)
 
             self._attachments_layout.insertWidget(self._attachments_layout.count() - 1, attachment_widget)

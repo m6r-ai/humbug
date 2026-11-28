@@ -237,7 +237,7 @@ class TerminalTab(TabBase):
             # terminal output.  This approach isn't perfect but it gets us functional
             # scrollbacks that work well in most scenarios.
             if sys.platform == 'win32':
-                if rows > self._prev_rows and self._prev_rows > 0:
+                if 0 < self._prev_rows < rows:
                     delta = rows - self._prev_rows
                     if self._terminal_widget.has_scrollback():
                         self._terminal_widget.append_lines_to_visible(delta)

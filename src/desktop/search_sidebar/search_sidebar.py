@@ -131,7 +131,9 @@ class SearchSidebar(SidebarBase):
     file_clicked = Signal(str, str, bool)               # panel_id, path, ephemeral
 
     # panel_id, path, ephemeral, query, case_sensitive, regexp, line_number, message_id
-    result_activated = Signal(str, str, bool, str, bool, bool, object, object)
+    result_activated: "Signal[tuple[str, str, bool, str, bool, bool, int | None, str | None]]" = Signal(
+        str, str, bool, str, bool, bool, object, object
+    )
     highlights_cleared = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:

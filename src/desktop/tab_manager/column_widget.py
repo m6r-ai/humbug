@@ -2,16 +2,19 @@ from PySide6.QtWidgets import QTabWidget, QWidget
 from PySide6.QtCore import Signal, QEvent, QObject, QPoint
 from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent
 
-from desktop.drop_payload import read_drop_payload
+from desktop.drop_payload import DropPayload, read_drop_payload
 from desktop.tab_manager.tab_bar import TabBar
 
 
 class ColumnWidget(QTabWidget):
     """Enhanced QTabWidget for use in columns with drag and drop support."""
 
-    column_activated = Signal(QTabWidget)
-    tab_dropped = Signal(str, QTabWidget, int)  # tab_id, target_column, target_index
-    payload_dropped = Signal(object, QTabWidget, int)  # DropPayload, target_column, target_index
+    # The column argument is always the emitting ColumnWidget, but the runtime signal is
+    # declared with the QTabWidget base because ColumnWidget does not exist yet here.
+    column_activated: "Signal[tuple[ColumnWidget]]" = Signal(QTabWidget)
+    tab_dropped: "Signal[tuple[str, ColumnWidget, int]]" = Signal(str, QTabWidget, int)  # tab_id, target_column, target_index
+    # DropPayload, target_column, target_index
+    payload_dropped: "Signal[tuple[DropPayload, ColumnWidget, int]]" = Signal(object, QTabWidget, int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the tab widget."""

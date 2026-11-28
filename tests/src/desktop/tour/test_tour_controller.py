@@ -132,3 +132,27 @@ class TestRestart:
         controller.start()
         assert controller._overlay is not None
         assert controller._overlay._title_label.text() == "title 0"
+
+
+class TestWithoutCentralWidget:
+    """A window with no central widget has nothing to overlay, so the tour does not start."""
+
+    @pytest.fixture
+    def bare_window(self, qapp):
+        window = QMainWindow()
+        window.resize(800, 600)
+        yield window
+        window.deleteLater()
+        qapp.processEvents()
+
+    def test_start_creates_no_overlay(self, fake_user_manager, bare_window):
+        controller = TourController(bare_window, steps=make_steps())
+        controller.start()
+        assert controller._overlay is None
+
+    def test_the_tour_is_left_unrecorded_so_it_can_run_on_a_later_launch(self, fake_user_manager, bare_window):
+        fake_user_manager.settings().onboarding_tour_version = 0
+        controller = TourController(bare_window, steps=make_steps())
+        controller.maybe_start_on_launch()
+        assert controller._overlay is None
+        assert fake_user_manager.settings().onboarding_tour_version == 0

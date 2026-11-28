@@ -51,6 +51,10 @@ class TourController(QObject):
 
         if self._overlay is None:
             central_widget = self._main_window.centralWidget()
+            if central_widget is None:
+                self._logger.warning("Cannot start the tour: the main window has no central widget.")
+                return
+
             self._overlay = TourOverlay(central_widget)
             self._overlay.setGeometry(central_widget.rect())
             self._overlay.next_requested.connect(self._on_next)
@@ -62,8 +66,10 @@ class TourController(QObject):
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         if self._overlay is not None and watched is self._main_window and event.type() == QEvent.Type.Resize:
-            self._overlay.setGeometry(self._main_window.centralWidget().rect())
-            self._overlay.refresh_layout()
+            central_widget = self._main_window.centralWidget()
+            if central_widget is not None:
+                self._overlay.setGeometry(central_widget.rect())
+                self._overlay.refresh_layout()
 
         return super().eventFilter(watched, event)
 

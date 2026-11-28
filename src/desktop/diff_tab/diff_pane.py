@@ -354,10 +354,7 @@ class DiffPane(QPlainTextEdit):
                 data = block.userData()
                 if isinstance(data, _BlockData) and data.line_no is not None:
                     block_num = block.blockNumber()
-                    in_active_hunk = (
-                        self._active_hunk_start >= 0
-                        and self._active_hunk_start <= block_num <= self._active_hunk_end
-                    )
+                    in_active_hunk = 0 <= self._active_hunk_start <= block_num <= self._active_hunk_end
                     painter.setPen(self._style_manager.get_color(
                         ColorRole.DIFF_HUNK_LINE_NUMBER if in_active_hunk else ColorRole.LINE_NUMBER
                     ))

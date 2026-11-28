@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent, QPainter, QPaintEvent, QPixmap
 
 from desktop.color_role import ColorRole
-from desktop.drop_payload import read_drop_payload
+from desktop.drop_payload import DropPayload, read_drop_payload
 from desktop.style_manager import StyleManager
 from desktop.language.language_manager import LanguageManager
 from desktop.user.user_settings import UserSettings
@@ -15,7 +15,7 @@ from version import CURRENT_VERSION
 
 class WelcomeWidget(QFrame):
     """Widget showing welcome message when no tabs are open."""
-    payload_dropped = Signal(object)  # DropPayload
+    payload_dropped: "Signal[tuple[DropPayload]]" = Signal(object)  # DropPayload
     user_settings_requested = Signal()  # Emitted when user wants to open settings
 
     def __init__(self, parent: QWidget | None = None):

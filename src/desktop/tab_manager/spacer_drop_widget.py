@@ -3,14 +3,14 @@ from PySide6.QtCore import Signal
 from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent, QPainter, QPaintEvent, QColor
 
 from desktop.color_role import ColorRole
-from desktop.drop_payload import read_drop_payload
+from desktop.drop_payload import DropPayload, read_drop_payload
 from desktop.style_manager import StyleManager
 
 
 class SpacerDropWidget(QWidget):
     """A spacer widget that accepts path drops."""
 
-    payload_dropped = Signal(object)  # DropPayload
+    payload_dropped: "Signal[tuple[DropPayload]]" = Signal(object)  # DropPayload
     tab_dropped = Signal(str)  # tab_id
 
     def __init__(self, line_on_right: bool, parent: QWidget | None = None) -> None:
