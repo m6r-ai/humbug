@@ -36,6 +36,7 @@ New features:
   change list.
 - Added GPT 6.2 models.
 - Added Claude Fable 5.2.
+- Added Inkling 2 Mini to the Ollama models.
 
 Bug fixes:
 

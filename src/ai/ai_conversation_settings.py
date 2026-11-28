@@ -275,6 +275,16 @@ class AIConversationSettings:
         ),
 
         # Ollama local models
+        ("inkling-2-mini", "ollama"): AIModel(
+            name="inkling-2-mini",
+            provider="ollama",
+            display_name="Inkling 2 Mini",
+            context_window=1000000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING,
+        ),
         ("gpt-oss:20b", "ollama"): AIModel(
             name="gpt-oss:20b",
             provider="ollama",
